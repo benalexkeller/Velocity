@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "snapshot": "node scripts/snapshot.js http://localhost:3111 ../velocity-preview.html"
   },
   "dependencies": {
     "next": "16.3.6",

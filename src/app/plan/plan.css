@@ -1,0 +1,84 @@
+/* ---------- Plan page ---------- */
+.plan { padding-right: 18px; min-width: 0; }
+.plan-head { display: flex; align-items: center; gap: 14px; padding: 8px 0 10px; flex-wrap: wrap; }
+.plan-head .back { width: 36px; height: 36px; border-radius: 50%; background: var(--surface); box-shadow: var(--shadow); border: 0; display: inline-flex; align-items: center; justify-content: center; }
+.plan-head .back svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.plan-head h1 { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; }
+.plan-head h1 .dot { color: var(--muted-2); margin: 0 8px; }
+.plan-head .grow { flex: 1; }
+.plan-head .btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+/* week grid */
+.wg { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
+.wg-head { display: grid; grid-template-columns: 52px repeat(7, 1fr); }
+.wg-day { padding: 8px 8px 6px; text-align: center; border-left: 1px solid var(--line-2); }
+.wg-day span { display: block; font-size: 11px; letter-spacing: 0.1em; color: var(--muted); font-weight: 600; }
+.wg-day b { display: block; font-size: 18px; font-weight: 600; margin-top: 1px; }
+.wg-day.today { background: var(--accent-soft); }
+.wg-day.today span, .wg-day.today b { color: var(--accent); }
+.wg-body { display: grid; grid-template-columns: 52px repeat(7, 1fr); position: relative; }
+.wg-hours { position: relative; }
+.wg-hours span { position: absolute; right: 8px; transform: translateY(-50%); font-size: 11px; color: var(--muted); }
+.wg-col { position: relative; border-left: 1px solid var(--line-2); background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 39px, var(--line-2) 39px, var(--line-2) 40px); }
+.wg-col.today { background-color: var(--accent-soft); }
+.wg-now { position: absolute; left: 0; right: 0; height: 0; border-top: 2px solid var(--accent); z-index: 2; }
+.wg-now::before { content: ""; position: absolute; left: -1px; top: -5px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
+.wg-now span { position: absolute; right: 4px; top: -15px; font-size: 9.5px; font-weight: 700; color: var(--accent); letter-spacing: 0.06em; background: var(--surface); padding: 1px 4px; border-radius: 4px; }
+.wg-ev { position: absolute; left: 4px; right: 4px; border-radius: 8px; padding: 5px 6px 5px 7px; font-size: 11px; line-height: 1.25; overflow: hidden; z-index: 1; display: flex; align-items: center; gap: 7px; }
+.wg-ev .txt { min-width: 0; }
+.wg-ev b { display: flex; align-items: center; gap: 3px; font-size: 11.5px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wg-ev b .dot { opacity: 0.6; font-weight: 400; }
+.wg-ev small { display: block; font-size: 10px; opacity: 0.8; margin-top: 2px; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wg-ev .ck { width: 14px; height: 14px; display: inline-flex; }
+.wg-ev .ck svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
+/* status drives color: outstanding = light blue, completed = black */
+.wg-ev { background: var(--swim-soft); color: var(--ink); }
+.wg-ev .sport-icon, .wg-ev .ck { color: var(--accent); }
+.wg-ev.done { background: var(--run-soft); color: #fff; }
+.wg-ev.done .sport-icon, .wg-ev.done .ck { color: #fff; }
+.wg-ev.done small { opacity: 0.75; }
+.wg-ev.rest { background: var(--strength-soft); }
+.wg-ev.rest .sport-icon { color: var(--ink-2); }
+.wg-ev.rest.done { background: var(--run-soft); color: #fff; }
+.wg-ev.rest.done .sport-icon { color: #fff; }
+
+/* month grid */
+.mg { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px; }
+.mg-h { font-size: 11px; letter-spacing: 0.1em; color: var(--muted); font-weight: 600; text-align: center; padding: 4px 0 6px; }
+.mg-c { min-height: 92px; border-radius: 8px; border: 1px solid var(--line-2); padding: 6px; display: flex; flex-direction: column; gap: 3px; }
+.mg-c .n { font-weight: 600; font-size: 12.5px; color: var(--ink-2); }
+.mg-c.dim { opacity: 0.4; }
+.mg-c.today { border-color: var(--accent); background: var(--accent-soft); }
+.mg-c.today .n { color: var(--accent); }
+.mg-s { display: flex; align-items: center; gap: 5px; font-size: 10.5px; border-radius: 5px; padding: 2px 5px; background: var(--swim-soft); }
+.mg-s .sport-icon { color: var(--accent); }
+.mg-s.rest { background: var(--strength-soft); } .mg-s.rest .sport-icon { color: var(--ink-2); }
+.mg-c.done .mg-s { background: var(--run-soft); color: #fff; } .mg-c.done .mg-s .sport-icon { color: #fff; }
+.mg-s em { margin-left: auto; font-style: normal; opacity: 0.7; }
+
+/* road to race */
+.section { margin-top: 18px; }
+.section-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px; flex-wrap: wrap; }
+.section-head h2 { font-size: 22px; letter-spacing: -0.02em; }
+.section-head .sub { color: var(--muted); font-size: 13.5px; }
+.section-head .legend { margin-left: auto; display: flex; gap: 16px; font-size: 12.5px; color: var(--ink-2); }
+.legend i { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+svg.ramp { width: 100%; height: auto; display: block; }
+
+/* plan explained */
+.pe { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 40px; }
+.pe-head { display: flex; align-items: baseline; gap: 10px; }
+.pe-head h3 { font-size: 17px; }
+.pe-phase p { margin: 2px 0 10px; font-size: 13px; }
+.pe ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.pe li { display: grid; grid-template-columns: 22px 150px 1fr; gap: 10px; align-items: baseline; padding: 7px 0; border-top: 1px solid var(--line-2); font-size: 13px; }
+.pe li b { font-weight: 600; }
+.pe li .n { color: var(--muted); font-size: 12px; }
+
+@media (max-width: 900px) {
+  .wg-head, .wg-body { grid-template-columns: 40px repeat(7, 1fr); }
+  .wg-ev { padding: 4px 5px; font-size: 10px; } .wg-ev small { display: none; } .wg-ev b { font-size: 11px; }
+  .pe { grid-template-columns: 1fr; }
+  .pe li { grid-template-columns: 20px 1fr; } .pe li .muted { grid-column: 2; }
+  .mg-c { min-height: 60px; } .mg-s span { display: none; }
+}

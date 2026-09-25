@@ -1,0 +1,90 @@
+"use client";
+import { PHASES, WEEKS, actualByDiscipline, currentWeek, plannedByDiscipline, sumH } from "@/lib/data";
+import { ATHLETE } from "@/lib/config";
+
+/** "The road to 140.6" — planned hours per week stacked by discipline; the last bar is race day. */
+export function RampChart() {
+  const cur = currentWeek().week;
+  const W = 1180, H = 250, L = 46, R = 40, T = 56, B = 30;
+  const n = WEEKS.length; // 33 incl. race week
+  const gw = (W - L - R) / (n + 1); // +1 slot for the race bar
+  const bw = gw * 0.62;
+  const maxH = 16;
+  const y = (h: number) => H - B - (h / maxH) * (H - T - B);
+  const rs = ATHLETE.raceSplits;
+  const raceTotal = rs.swim + rs.bike + rs.run + rs.transitions;
+
+  const bars = WEEKS.map((w) => ({ w, p: plannedByDiscipline(w), a: actualByDiscipline(w) }));
+  const x = (i: number) => L + i * gw + (gw - bw) / 2;
+
+  return (
+    <svg className="chart ramp" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Planned weekly training hours by discipline across the plan, ending in the race">
+      {/* y axis */}
+      <text x={L - 6} y={T - 6} textAnchor="end" fontSize="11">Hours</text>
+      {[5, 10, 15].map((h) => (
+        <g key={h}>
+          <line x1={L} y1={y(h)} x2={W - R} y2={y(h)} stroke="var(--grid)" />
+          <text x={L - 8} y={y(h) + 4} textAnchor="end">{h}</text>
+        </g>
+      ))}
+      {/* phase brackets */}
+      {PHASES.map((p) => {
+        const x0 = L + (p.from - 1) * gw + 4, x1 = L + p.to * gw - 4;
+        return (
+          <g key={p.short}>
+            <line x1={x0} y1={T - 20} x2={x1} y2={T - 20} stroke="var(--line)" />
+            <line x1={x0} y1={T - 26} x2={x0} y2={T - 20} stroke="var(--line)" />
+            <text x={(x0 + x1) / 2} y={T - 30} textAnchor="middle" className="ink" fontWeight={600} fontSize="12">{p.short}</text>
+            <text x={(x0 + x1) / 2} y={T - 17 + 12} textAnchor="middle" fontSize="10.5">Weeks {p.from}{p.to !== p.from ? ` – ${p.to}` : ""}</text>
+          </g>
+        );
+      })}
+      {/* bars */}
+      {bars.map(({ w, p, a }, i) => {
+        const isCur = w.week === cur, done = w.week < cur;
+        const stack = done ? a : p;
+        const total = sumH(stack);
+        let acc = 0;
+        const segs = [["run", stack.run, "var(--run)"], ["bike", stack.bike, "var(--bike)"], ["swim", stack.swim, "var(--swim)"]] as const;
+        return (
+          <g key={w.week} opacity={done || isCur ? 1 : 0.9}>
+            {segs.map(([k, h, col]) => {
+              const y1 = y(acc + h), y0 = y(acc);
+              acc += h;
+              return h > 0 ? <rect key={k} x={x(i)} y={y1} width={bw} height={Math.max(0, y0 - y1 - 1)} fill={col} rx={1.5} /> : null;
+            })}
+            {isCur && (
+              <>
+                <rect x={x(i) - 3} y={y(total) - 3} width={bw + 6} height={y(0) - y(total) + 6} fill="none" stroke="var(--accent)" strokeWidth={1.5} rx={4} />
+                <line x1={x(i) + bw / 2} y1={y(total) - 4} x2={x(i) + bw / 2} y2={y(total) - 16} stroke="var(--accent)" />
+                <circle cx={x(i) + bw / 2} cy={y(total) - 17} r={3} fill="var(--accent)" />
+                <text x={x(i) + bw / 2} y={y(total) - 23} textAnchor="middle" className="accent" fontWeight={700} fontSize="11">NOW</text>
+              </>
+            )}
+            <text x={x(i) + bw / 2} y={H - 10} textAnchor="middle" fontSize="10.5">{w.week}</text>
+          </g>
+        );
+      })}
+      {/* race bar */}
+      {(() => {
+        const i = n;
+        let acc = 0;
+        const segs = [["run", rs.run, "var(--run)"], ["bike", rs.bike, "var(--bike)"], ["swim", rs.swim, "var(--swim)"], ["t", rs.transitions, "var(--muted-2)"]] as const;
+        return (
+          <g>
+            <line x1={x(i) + bw / 2} y1={T - 8} x2={x(i) + bw / 2} y2={y(0)} stroke="var(--accent)" strokeDasharray="3 3" />
+            {segs.map(([k, h, col]) => {
+              const y1 = y(acc + h), y0 = y(acc);
+              acc += h;
+              return <rect key={k} x={x(i)} y={y1} width={bw} height={Math.max(0, y0 - y1 - 1)} fill={col} opacity={0.35} rx={1.5} />;
+            })}
+            <circle cx={x(i) + bw / 2} cy={T - 8} r={3} fill="var(--accent)" />
+            <text x={x(i) + bw / 2} y={T - 30} textAnchor="middle" className="accent" fontWeight={700} fontSize="12">RACE</text>
+            <text x={x(i) + bw / 2} y={T - 17} textAnchor="middle" className="accent" fontWeight={700} fontSize="11">{formatH(raceTotal)}</text>
+          </g>
+        );
+      })()}
+    </svg>
+  );
+}
+function formatH(h: number) { const H = Math.floor(h), M = Math.round((h - H) * 60); return `${H}:${String(M).padStart(2, "0")}`; }
