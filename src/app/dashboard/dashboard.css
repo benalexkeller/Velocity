@@ -95,7 +95,8 @@
 
 /* next days */
 .next { padding: 16px 20px 18px; display: grid; gap: 10px; grid-template-rows: auto minmax(0, 1fr); color: var(--ink); cursor: pointer; }
-.next:hover, .hero:hover { box-shadow: 0 1px 2px rgba(16,17,20,0.04), 0 0 0 1px var(--line), 0 10px 26px rgba(16,17,20,0.10); }
+.tw { display: block; color: var(--ink); cursor: pointer; }
+.tw:hover, .next:hover, .hero:hover { box-shadow: 0 1px 2px rgba(16,17,20,0.04), 0 0 0 1px var(--line), 0 10px 26px rgba(16,17,20,0.10); }
 .next .row { align-self: center; }
 .next .date { color: var(--muted); font-size: 14px; margin-top: 2px; }
 .next .row { display: flex; align-items: center; gap: 16px; }
