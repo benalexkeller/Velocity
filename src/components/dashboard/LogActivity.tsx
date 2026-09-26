@@ -34,6 +34,14 @@ export function LogActivity({ open, onClose, onSaved }: { open: boolean; onClose
   const [feel, setFeel] = useState("");
   const [note, setNote] = useState("");
   const [last, setLast] = useState<("dist" | "dur" | "pace")[]>([]); // the two most recently edited fields drive the third
+  // open → slide in; close → slide back, then unmount
+  const [phase, setPhase] = useState<"closed" | "open" | "closing">(open ? "open" : "closed");
+  useEffect(() => {
+    if (open) { setPhase("open"); return; }
+    setPhase((p) => (p === "open" ? "closing" : p));
+    const t = setTimeout(() => setPhase("closed"), 300);
+    return () => clearTimeout(t);
+  }, [open]);
 
   const touch = (k: "dist" | "dur" | "pace") => setLast((l) => [k, ...l.filter((x) => x !== k)].slice(0, 2));
   const timed = sport === "swim" || sport === "bike" || sport === "run";
@@ -74,26 +82,28 @@ export function LogActivity({ open, onClose, onSaved }: { open: boolean; onClose
     setName(""); setDist(""); setDur(""); setPace(""); setElev(""); setEffort(0); setFeel(""); setNote(""); setLast([]);
   };
 
-  if (!open) return null;
+  if (phase === "closed") return null;
   return (
-    <form className="card logform" onSubmit={(e) => { e.preventDefault(); if (valid) save(); }} aria-label="Log an activity">
+    <form className={`card logform${phase === "closing" ? " closing" : ""}`} onSubmit={(e) => { e.preventDefault(); if (valid) save(); }} aria-label="Log an activity">
       <button className="close" type="button" onClick={onClose} aria-label="Close"><Icon name="close" /></button>
-      <div className="lf-top">
-        <SportIcon sport={sport} size={30} />
-        <input className="lf-name" value={name} onChange={(e) => setName(e.target.value)} placeholder={placeholder} aria-label="Activity name" />
+      <div className="lf-left">
+        <div className="lf-top">
+          <SportIcon sport={sport} size={28} />
+          <input className="lf-name" value={name} onChange={(e) => setName(e.target.value)} placeholder={placeholder} aria-label="Activity name" />
+        </div>
+        <div className="lf-row sports" role="radiogroup" aria-label="Sport">
+          {SPORTS.map((s) => <button key={s.k} type="button" role="radio" aria-checked={sport === s.k} className={sport === s.k ? "on" : ""} onClick={() => { setSport(s.k); setDist(""); setPace(""); setLast([]); }}><SportIcon sport={s.k} size={15} />{s.label}</button>)}
+        </div>
+        <div className="lf-grid">
+          <label>Day<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
+          <label>Start time<input type="time" step={900} value={time} onChange={(e) => setTime(e.target.value)} /></label>
+          <label>Duration<input value={dur} onChange={(e) => { setDur(e.target.value); touch("dur"); }} placeholder="h:mm:ss" inputMode="numeric" /></label>
+          {(timed || sport === "hike") ? <label>Distance ({unit})<input value={dist} onChange={(e) => { setDist(e.target.value); touch("dist"); }} placeholder={sport === "swim" ? "1640" : "6.2"} inputMode="decimal" /></label> : <span />}
+          {timed ? <label>{sport === "bike" ? "Avg speed (mph)" : sport === "swim" ? "Pace per 100 yd" : "Pace per mile"}<input value={pace} onChange={(e) => { setPace(e.target.value); touch("pace"); }} placeholder={sport === "bike" ? "17.5" : sport === "swim" ? "1:50" : "9:30"} inputMode="decimal" /></label> : <span />}
+          {(sport === "bike" || sport === "run" || sport === "hike") ? <label>Elevation gain (ft)<input value={elev} onChange={(e) => setElev(e.target.value)} placeholder="0" inputMode="numeric" /></label> : <span />}
+        </div>
       </div>
-      <div className="lf-row sports" role="radiogroup" aria-label="Sport">
-        {SPORTS.map((s) => <button key={s.k} type="button" role="radio" aria-checked={sport === s.k} className={sport === s.k ? "on" : ""} onClick={() => { setSport(s.k); setDist(""); setPace(""); setLast([]); }}><SportIcon sport={s.k} size={16} />{s.label}</button>)}
-      </div>
-      <div className="lf-grid">
-        <label>Day<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
-        <label>Start time<input type="time" step={900} value={time} onChange={(e) => setTime(e.target.value)} /></label>
-        <label>Duration<input value={dur} onChange={(e) => { setDur(e.target.value); touch("dur"); }} placeholder="h:mm:ss" inputMode="numeric" /></label>
-        {(timed || sport === "hike") && <label>Distance ({unit})<input value={dist} onChange={(e) => { setDist(e.target.value); touch("dist"); }} placeholder={sport === "swim" ? "1640" : "6.2"} inputMode="decimal" /></label>}
-        {timed && <label>{sport === "bike" ? "Avg speed (mph)" : sport === "swim" ? "Pace per 100 yd" : "Pace per mile"}<input value={pace} onChange={(e) => { setPace(e.target.value); touch("pace"); }} placeholder={sport === "bike" ? "17.5" : sport === "swim" ? "1:50" : "9:30"} inputMode="decimal" /></label>}
-        {(sport === "bike" || sport === "run" || sport === "hike") && <label>Elevation gain (ft)<input value={elev} onChange={(e) => setElev(e.target.value)} placeholder="0" inputMode="numeric" /></label>}
-      </div>
-      <div className="lf-details">
+      <div className="lf-right">
         <div>
           <div className="k">How hard · 1–10</div>
           <div className="lf-row effort">{Array.from({ length: 10 }, (_, i) => i + 1).map((n) => <button key={n} type="button" className={n <= effort ? "on" : ""} onClick={() => setEffort(n === effort ? 0 : n)} aria-label={`Effort ${n}`}>{n}</button>)}</div>
@@ -102,12 +112,12 @@ export function LogActivity({ open, onClose, onSaved }: { open: boolean; onClose
           <div className="k">How it felt</div>
           <div className="lf-row feels">{FEELS.map((f) => <button key={f} type="button" className={feel === f ? "on" : ""} onClick={() => setFeel(feel === f ? "" : f)}>{f}</button>)}</div>
         </div>
-      </div>
-      <textarea className="lf-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Notes — what happened, pain, conditions" rows={2} />
-      <div className="lf-actions">
-        <span className="muted">{valid ? `${SPORTS.find((s) => s.k === sport)?.label} · ${dur}${dist ? ` · ${dist} ${unit}` : ""}${pace ? ` · ${pace}${sport === "bike" ? " mph" : ""}` : ""}` : "Duration is required"}</span>
-        <button type="button" className="btn ghost" onClick={onClose}>Cancel</button>
-        <button type="submit" className="btn" disabled={!valid}>Save activity</button>
+        <textarea className="lf-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Notes — what happened, pain, conditions" rows={2} />
+        <div className="lf-actions">
+          <span className="muted">{valid ? `${SPORTS.find((s) => s.k === sport)?.label} · ${dur}${dist ? ` · ${dist} ${unit}` : ""}${pace ? ` · ${pace}${sport === "bike" ? " mph" : ""}` : ""}` : "Duration is required"}</span>
+          <button type="button" className="btn ghost" onClick={onClose}>Cancel</button>
+          <button type="submit" className="btn" disabled={!valid}>Save</button>
+        </div>
       </div>
     </form>
   );

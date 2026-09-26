@@ -82,10 +82,10 @@ export default function Dashboard() {
 
           <section className="card logcard" aria-label="Log activity">
             <button type="button" className="plus" aria-label="Log activity" aria-expanded={logging} onClick={() => setLogging((o) => !o)}><Icon name="plus" /></button>
-            <b>Log activity</b>
-            <small>Manually log a swim, bike or run</small>
-            <LogActivity open={logging} onClose={() => setLogging(false)} onSaved={(a) => { setLogging(false); setToast(`Saved · ${a.name} · ${fmtHMS(a.min)}`); }} />
+            <b>Add manually</b>
+            <small>Log a swim, bike, run or anything else</small>
           </section>
+          <LogActivity open={logging} onClose={() => setLogging(false)} onSaved={(a) => { setLogging(false); setToast(`Saved · ${a.name} · ${fmtHMS(a.min)}`); }} />
           </div>
           <div className="dash-row2">
           {next.map(({ off, s }) => {
