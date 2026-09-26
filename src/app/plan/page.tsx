@@ -54,8 +54,8 @@ function Plan() {
           <button className="btn" type="button"><Icon name="plus" />Add workout</button>
         </div>
 
+        {view === "week" ? <WeekGrid week={week} selectedId={sel} onPick={(x) => setSel(x.id)} /> : <MonthGrid year={mo.y} month={mo.m} />}
         <SessionPanel id={sel} onClose={() => setSel(null)} />
-        {view === "week" ? <WeekGrid week={week} selectedId={sel} onPick={(x) => { setSel(x.id); window.scrollTo({ top: 0, behavior: "smooth" }); }} /> : <MonthGrid year={mo.y} month={mo.m} />}
 
         <section className="section">
           <div className="section-head">
