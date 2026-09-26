@@ -1,5 +1,5 @@
 // A round multisport watch, drawn in SVG. Used as the "hovering" device on the dashboard hero.
-export function Watch({ width = 118, time = "07:42", hr = 58 }: { width?: number; time?: string; hr?: number }) {
+export function Watch({ width = 118, time = "42:18", dist = "5.2 mi", hr = 148 }: { width?: number; time?: string; dist?: string; hr?: number }) {
   const height = Math.round((width * 164) / 120);
   return (
     <svg className="watch" width={width} height={height} viewBox="0 0 120 164" role="img" aria-label="Garmin watch">
@@ -31,14 +31,19 @@ export function Watch({ width = 118, time = "07:42", hr = 58 }: { width?: number
         const a = (i / 12) * Math.PI * 2, r = (n: number) => Math.round(n * 100) / 100; // rounded so server and browser render identical numbers
         return <line key={i} x1={r(60 + Math.cos(a) * 43)} y1={r(82 + Math.sin(a) * 43)} x2={r(60 + Math.cos(a) * 46)} y2={r(82 + Math.sin(a) * 46)} stroke="#6A6E76" strokeWidth="1" />;
       })}
-      {/* face */}
+      {/* face: activity screen — sport icon, elapsed time, distance, heart rate (stacked like a Garmin data page) */}
       <circle cx="60" cy="82" r="39" fill="url(#w-face)" />
-      <circle cx="60" cy="82" r="35" fill="none" stroke="#1E2A45" strokeWidth="3" />
-      <path d="M 60 47 A 35 35 0 1 1 30 65" fill="none" stroke="#2459FE" strokeWidth="3" strokeLinecap="round" />
-      <text x="60" y="80" textAnchor="middle" fill="#FFFFFF" fontSize="17" fontWeight="600" fontFamily="inherit" letterSpacing="-0.02em">{time}</text>
-      <path d="M 52 92 c -2.4 -2.2 -2.4 -5.4 0 -7 c 1.4 -1 3.2 -0.5 4 0.9 c 0.8 -1.4 2.6 -1.9 4 -0.9 c 2.4 1.6 2.4 4.8 0 7 l -4 3.6 z" fill="#EF4444" />
-      <text x="64" y="95" textAnchor="start" fill="#C9CDD4" fontSize="9" fontFamily="inherit">{hr} bpm</text>
-      <text x="60" y="108" textAnchor="middle" fill="#7C8290" fontSize="7" letterSpacing="0.14em" fontFamily="inherit">GARMIN</text>
+      <circle cx="60" cy="82" r="36" fill="none" stroke="#1B1E24" strokeWidth="2" />
+      <g transform="translate(55.8 49) scale(0.34)" fill="#FFFFFF">
+        <circle cx="17" cy="4" r="3.2" />
+        <path d="M13.5 9.5 8 13l1.6 2.6 4.4-2.6 2.2 4.2-4.6 4.6 1.1 7.4 2.8-.6-.6-5.6 3.6-3.4 2.6 4.4 5.6 3.6 1.4-2.4-4.4-3-3.6-7.2 2.6-1.2 3.2 3.4 2-1.8-4.6-4.6z" />
+      </g>
+      <text x="60" y="76" textAnchor="middle" fill="#FFFFFF" fontSize="16" fontWeight="600" fontFamily="inherit" letterSpacing="-0.02em">{time}</text>
+      <line x1="38" y1="81.5" x2="82" y2="81.5" stroke="#2A2E36" strokeWidth="1" />
+      <text x="60" y="93" textAnchor="middle" fill="#FFFFFF" fontSize="10" fontWeight="600" fontFamily="inherit">{dist}</text>
+      <path transform="translate(42 98) scale(0.58)" d="M 5 9 c -2.4 -2.2 -2.4 -5.4 0 -7 c 1.4 -1 3.2 -0.5 4 0.9 c 0.8 -1.4 2.6 -1.9 4 -0.9 c 2.4 1.6 2.4 4.8 0 7 l -4 3.6 z" fill="#EF4444" />
+      <text x="53" y="105" textAnchor="start" fill="#FFFFFF" fontSize="9.5" fontWeight="600" fontFamily="inherit">{hr} bpm</text>
+      <text x="60" y="116" textAnchor="middle" fill="#6B7280" fontSize="6" letterSpacing="0.16em" fontFamily="inherit">GARMIN</text>
     </svg>
   );
 }

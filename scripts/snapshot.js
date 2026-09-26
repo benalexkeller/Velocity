@@ -8,6 +8,10 @@ const PAGES = [
   { id: 'dashboard', label: 'Dashboard', path: '/dashboard' },
   { id: 'plan', label: 'Plan', path: '/plan' },
   { id: 'activities', label: 'Activities', path: '/activities', after: async (p) => { const r = await p.$$('tr.row'); if (r[2]) await r[2].click(); await p.waitForTimeout(300); } },
+  { id: 'analysis', label: 'Analysis', path: '/analysis', after: async (p) => { await p.click('.an-pick .plus'); await p.waitForTimeout(200); const opts = await p.$$eval('.an-select option', os => os.map(o => o.value)); if (opts[3]) await p.selectOption('.an-select', opts[3]); await p.waitForTimeout(400); } },
+  { id: 'nutrition', label: 'Nutrition', path: '/nutrition', after: async (p) => { const c = await p.$$('.cube'); if (c[0]) await c[0].click(); await p.waitForTimeout(300); } },
+  { id: 'calculator', label: 'Calculator', path: '/calculator', after: async (p) => { const c = await p.$$('.cube'); if (c[0]) await c[0].click(); await p.waitForTimeout(300); } },
+  { id: 'store', label: 'Store', path: '/store' },
 ];
 (async () => {
   const b = await chromium.launch();
@@ -38,7 +42,7 @@ const PAGES = [
   }
   css = css.replace(/\/\*# sourceMappingURL=[^*]*\*\//g, '').replace(/@font-face\s*\{[^}]*__nextjs-Geist[^}]*\}/g, '');
   const fontClass = sections[0].fontClass;
-  const html = `<title>Velocity Preview</title>
+  const html = `<meta charset="utf-8"><title>Velocity Preview</title>
 <style>${css}
 .pv-tabs{position:sticky;top:0;z-index:50;display:flex;gap:6px;padding:10px 16px;background:#101114;color:#fff;font:600 13px/1 Inter,system-ui,sans-serif}
 .pv-tabs button{border:0;border-radius:999px;padding:8px 14px;background:transparent;color:#cfd3da;cursor:pointer;font:inherit}

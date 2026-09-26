@@ -1,0 +1,13 @@
+[
+  { "date": "2026-09-15", "rhr": 46, "hrv": 77, "sleep_h": 7.1, "sleep_score": 84, "stress": 22, "vo2": 52.5 },
+  { "date": "2026-09-16", "rhr": 44, "hrv": 82, "sleep_h": 7.4, "sleep_score": 89, "stress": 21 },
+  { "date": "2026-09-17", "rhr": 43, "hrv": 88, "sleep_h": 7.3, "sleep_score": 88, "stress": 33 },
+  { "date": "2026-09-18", "rhr": 47, "hrv": 77, "sleep_h": 6.6, "sleep_score": 79, "stress": 14 },
+  { "date": "2026-09-19", "rhr": 50, "stress": 36, "vo2": 52.8 },
+  { "date": "2026-09-20", "rhr": 49, "hrv": 82, "sleep_h": 7.5, "sleep_score": 84, "stress": 24 },
+  { "date": "2026-09-21", "rhr": 46, "hrv": 80, "sleep_h": 7.2, "sleep_score": 86, "stress": 25 },
+  { "date": "2026-09-22", "rhr": 47, "hrv": 72, "sleep_h": 6.6, "sleep_score": 80, "stress": 26 },
+  { "date": "2026-09-23", "rhr": 46, "hrv": 79, "sleep_h": 7.1, "sleep_score": 87, "stress": 22 },
+  { "date": "2026-09-24", "rhr": 43, "hrv": 69, "sleep_h": 6.5, "sleep_score": 78, "stress": 26 },
+  { "date": "2026-09-25", "rhr": 45, "hrv": 82, "sleep_h": 4.5, "sleep_score": 59, "stress": 31 }
+]

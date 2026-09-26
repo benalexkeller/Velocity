@@ -5,6 +5,7 @@ import { Icon } from "@/components/icons";
 import { SportIcon } from "@/components/SportIcon";
 import { RouteMap } from "@/components/RouteMap";
 import { Watch } from "@/components/Watch";
+import { CoachBar } from "@/components/CoachBar";
 import { PaceChart, VolumeChart } from "@/components/dashboard/Charts";
 import { ACTIVITIES, PHASES, WEEKS, currentWeek, rollingCompliance, weekStatus, type Session } from "@/lib/data";
 import { ATHLETE } from "@/lib/config";
@@ -60,7 +61,7 @@ export default function Dashboard() {
               <div className="title">{todayS ? todayS.title : "Rest"}</div>
               <div className="sub">{todayS ? heroSub(todayS) : "No plan for today"}</div>
             </div>
-            <div className="garmin" aria-hidden="true"><Watch width={112} /></div>
+            <div className="garmin" aria-hidden="true"><Watch width={116} /></div>
             <div className="stats">
               {todayS && todayS.sport !== "rest" && (
                 <>
@@ -152,11 +153,7 @@ export default function Dashboard() {
           <VolumeChart />
         </div>
 
-        <form className="card coachbar" onSubmit={(e) => e.preventDefault()}>
-          <span className="spark"><Icon name="spark" /></span>
-          <input id="dash-coach" placeholder="Ask your coach anything…" aria-label="Ask your coach" />
-          <button className="send" type="submit" aria-label="Send"><Icon name="arrow" /></button>
-        </form>
+        <CoachBar id="dash-coach" />
       </div>
     </main>
   );
