@@ -8,7 +8,7 @@ const H0 = 5, H1 = 21, ROW = 20; // 05:00–21:00, 26px per hour (labels every 2
 
 function toH(hhmm?: string) { if (!hhmm) return H0; const [h, m] = hhmm.split(":").map(Number); return h + m / 60; }
 
-export function WeekGrid({ week }: { week: Week }) {
+export function WeekGrid({ week, selectedId, onPick }: { week: Week; selectedId?: string | null; onPick?: (s: Session) => void }) {
   const start = fromYmd(week.start);
   const t = today();
   const nowD = new Date();
@@ -43,7 +43,7 @@ export function WeekGrid({ week }: { week: Week }) {
           const sessions = week.sessions.filter((s) => s.dayIndex === i);
           return (
             <div key={i} className={`wg-col${isT ? " today" : ""}`}>
-              {sessions.map((s) => <Block key={s.id} s={s} y={y} />)}
+              {sessions.map((s) => <Block key={s.id} s={s} y={y} selected={s.id === selectedId} onPick={onPick} />)}
               {isT && nowH >= H0 && nowH <= H1 && (
                 <div className="wg-now" style={{ top: y(nowH) }}>
                   <span>NOW {hoursToClock(nowH)}</span>
@@ -57,10 +57,10 @@ export function WeekGrid({ week }: { week: Week }) {
   );
 }
 
-function Block({ s, y }: { s: Session; y: (h: number) => number }) {
+function Block({ s, y, selected, onPick }: { s: Session; y: (h: number) => number; selected?: boolean; onPick?: (s: Session) => void }) {
   if (s.sport === "rest") {
     return (
-      <div className={`wg-ev rest${s.status === "done" ? " done" : ""}`} style={{ top: 6 }}>
+      <div className={`wg-ev rest${s.status === "done" ? " done" : ""}${selected ? " sel" : ""}`} style={{ top: 6 }} onClick={() => onPick?.(s)} role={onPick ? "button" : undefined} tabIndex={onPick ? 0 : undefined}>
         <SportIcon sport="rest" size={20} />
         <div className="txt"><b>Rest day{s.status === "done" && <span className="ck"><Icon name="check" /></span>}</b><small>No session</small></div>
       </div>
@@ -69,7 +69,7 @@ function Block({ s, y }: { s: Session; y: (h: number) => number }) {
   const h0 = toH(s.start), h1 = h0 + s.min / 60;
   const done = s.status === "done";
   return (
-    <div className={`wg-ev ${s.sport}${done ? " done" : ""}`} style={{ top: y(h0) + 2, height: Math.max(44, (h1 - h0) * ROW - 4) }} title={s.text}>
+    <div className={`wg-ev ${s.sport}${done ? " done" : ""}${selected ? " sel" : ""}`} style={{ top: y(h0) + 2, height: Math.max(44, (h1 - h0) * ROW - 4) }} title={s.text} onClick={() => onPick?.(s)} role={onPick ? "button" : undefined} tabIndex={onPick ? 0 : undefined}>
       <SportIcon sport={s.sport} size={20} />
       <div className="txt">
         <b>{s.title}{done && <span className="ck"><Icon name="check" /></span>}<span className="dot">·</span>{s.start}</b>

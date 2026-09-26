@@ -1,21 +1,31 @@
 "use client";
-import { useState } from "react";
+import { Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import "./plan.css";
 import { Icon } from "@/components/icons";
 import { CoachRail } from "@/components/CoachRail";
 import { WeekGrid, weekTitle } from "@/components/plan/WeekGrid";
+import { SessionPanel, findSession } from "@/components/plan/SessionPanel";
 import { MonthGrid } from "@/components/plan/MonthGrid";
 import { RampChart } from "@/components/plan/RampChart";
 import { PlanExplained } from "@/components/plan/PlanExplained";
 import { COACH_THREAD, WEEKS, currentWeek, weekByNumber, weekStatus } from "@/lib/data";
 import { ATHLETE } from "@/lib/config";
-import { fromYmd, fmtHours } from "@/lib/format";
+import { dateLabel, fromYmd, fmtHours } from "@/lib/format";
 
 const M = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 
 export default function PlanPage() {
+  return <Suspense fallback={null}><Plan /></Suspense>;
+}
+
+function Plan() {
+  const params = useSearchParams();
+  const fromUrl = params.get("session");
   const cur = currentWeek();
-  const [wk, setWk] = useState(cur.week);
+  const [sel, setSel] = useState<string | null>(fromUrl);
+  const [wk, setWk] = useState(findSession(fromUrl)?.w.week ?? cur.week);
+  useEffect(() => { if (fromUrl) { setSel(fromUrl); const hit = findSession(fromUrl); if (hit) setWk(hit.w.week); } }, [fromUrl]);
   const [view, setView] = useState<"week" | "month">("week");
   const week = weekByNumber(wk);
   const ws = weekStatus(week);
@@ -44,12 +54,13 @@ export default function PlanPage() {
           <button className="btn" type="button"><Icon name="plus" />Add workout</button>
         </div>
 
-        {view === "week" ? <WeekGrid week={week} /> : <MonthGrid year={mo.y} month={mo.m} />}
+        <SessionPanel id={sel} onClose={() => setSel(null)} />
+        {view === "week" ? <WeekGrid week={week} selectedId={sel} onPick={(x) => { setSel(x.id); window.scrollTo({ top: 0, behavior: "smooth" }); }} /> : <MonthGrid year={mo.y} month={mo.m} />}
 
         <section className="section">
           <div className="section-head">
             <h2>The road to {ATHLETE.race.distanceLabel}</h2>
-            <span className="sub">{WEEKS.length} weeks · Build consistently. Arrive ready.</span>
+            <span className="sub">{WEEKS.length} weeks · 7 phases · race {dateLabel(ATHLETE.race.date)} 2027</span>
             <span className="legend">
               <span><i style={{ background: "var(--swim)" }} />Swim</span>
               <span><i style={{ background: "var(--bike)" }} />Bike</span>
@@ -62,7 +73,7 @@ export default function PlanPage() {
         <section className="section">
           <div className="section-head">
             <h2>Your plan explained</h2>
-            <span className="sub">A clear structure to build fitness, stay healthy and arrive ready on race day.</span>
+            <span className="sub">Each phase: what changes and the milestones to hit.</span>
           </div>
           <PlanExplained />
         </section>

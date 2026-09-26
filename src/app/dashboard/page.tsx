@@ -55,7 +55,7 @@ export default function Dashboard() {
         <div className="dash-top">
           <div className="dash-left">
           <div className="dash-row1">
-          <section className={`hero${done ? " done" : ""}`} aria-label="Today's session">
+          <Link href={todayS ? `/plan?session=${todayS.id}` : "/plan"} className={`hero${done ? " done" : ""}`} aria-label="Today's session — open in plan">
             <div className="top"><span>Today&apos;s session{done ? <span className="donetag">✓ Completed</span> : null}</span><span>{DAYS[(t.getDay() + 6) % 7]} {t.getDate()} {MONTHS[t.getMonth()]}</span></div>
             <div>
               <div className="title">{todayS ? todayS.title : "Rest"}</div>
@@ -72,7 +72,7 @@ export default function Dashboard() {
               )}
               <div className="stat gm"><div className="k">Garmin</div><div className="v"><i className="led" />Connected</div></div>
             </div>
-          </section>
+          </Link>
 
           <section className="card logcard" aria-label="Log activity">
             <button type="button" className="plus" aria-label="Log activity"><Icon name="plus" /></button>
@@ -84,7 +84,7 @@ export default function Dashboard() {
           {next.map(({ off, s }) => {
             const d = addDays(t, off);
             return (
-              <section key={off} className="card next" aria-label={off === 1 ? "Tomorrow" : DAYS[(d.getDay() + 6) % 7]}>
+              <Link key={off} href={s ? `/plan?session=${s.id}` : "/plan"} className="card next" aria-label={off === 1 ? "Tomorrow" : DAYS[(d.getDay() + 6) % 7]}>
                 <div>
                   <div className="eyebrow">{off === 1 ? "Tomorrow" : ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"][(d.getDay() + 6) % 7]}</div>
                   <div className="date">{dateLabel(ymd(d))}</div>
@@ -97,7 +97,7 @@ export default function Dashboard() {
                   </div>
                   <span className="chev"><Icon name="chevron" /></span>
                 </div>
-              </section>
+              </Link>
             );
           })}
           </div>
