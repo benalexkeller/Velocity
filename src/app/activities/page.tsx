@@ -1,6 +1,6 @@
 "use client";
 import "./activities.css";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Icon } from "@/components/icons";
 import { SportIcon } from "@/components/SportIcon";
@@ -62,6 +62,16 @@ function Activities() {
   // the detail panel is always showing one activity: the one from the link, else the most recent; clicking a row swaps it in
   const [sel, setSel] = useState<string | null>(fromUrl ?? ACTIVITIES[ACTIVITIES.length - 1]?.id ?? null);
   useEffect(() => { if (fromUrl) setSel(fromUrl); }, [fromUrl]);
+  // everything above the table (title, search, detail panel, tabs) is frozen; the column header row sticks right under it
+  const stickyRef = useRef<HTMLDivElement>(null);
+  const [stickyH, setStickyH] = useState(0);
+  useLayoutEffect(() => {
+    const el = stickyRef.current; if (!el) return;
+    const measure = () => setStickyH(el.getBoundingClientRect().height);
+    measure();
+    const ro = new ResizeObserver(measure); ro.observe(el);
+    return () => ro.disconnect();
+  }, [sel]);
   const list = useMemo(() => {
     const t = q.trim().toLowerCase();
     return [...ACTIVITIES].reverse().filter((a) => (tab === "all" || a.sport === tab) && (!t || a.name.toLowerCase().includes(t) || a.date.includes(t)));
@@ -73,6 +83,7 @@ function Activities() {
     <main className="main" style={{ padding: 0 }}>
       <div className="acts">
         <div className="acts-main">
+          <div className="acts-sticky" ref={stickyRef}>
           <div className="acts-head">
             <div>
               <div className="eyebrow muted">Activity archive</div>
@@ -86,7 +97,8 @@ function Activities() {
           <div className="tabs" role="tablist">
             {(["all", "swim", "bike", "run"] as Tab[]).map((k) => <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>{k}</button>)}
           </div>
-          <table className="tbl">
+          </div>
+          <table className="tbl acts-tbl" style={{ ["--acts-top" as string]: `${stickyH}px` }}>
             <thead>
               <tr><th>Date</th><th>Activity</th><th>Distance</th><th>Time</th><th className="hide-sm">Pace / speed</th><th className="hide-sm">Elevation</th><th className="hide-sm">Effort</th><th /><th /></tr>
             </thead>
