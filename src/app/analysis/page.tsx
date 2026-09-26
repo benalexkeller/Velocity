@@ -2,43 +2,43 @@
 import "./analysis.css";
 import { useState } from "react";
 import { CoachBar } from "@/components/CoachBar";
-import { ActivityAnalyzer, ActivityPanel, BodyPanel, LoadChart, PaceCorridor, ScoreRow, TotalsPanel, VolumeStack, type Range } from "@/components/analysis/Panels";
+import { ActivityAnalyzer, ActivityPanel } from "@/components/analysis/Panels";
+import { KpiRow, LoadDistribution, Observations, Overview, Progress, Quality, RaceReadiness, Recovery, SportRow, Volume, type Range } from "@/components/analysis/Analytics";
+import { ATHLETE } from "@/lib/config";
+import { addDays, dateLabel, today } from "@/lib/format";
 
 export default function AnalysisPage() {
   const [range, setRange] = useState<Range>(12);
   const [sel, setSel] = useState<string | null>(null);
+  const pick = (id: string) => { setSel(id); window.scrollTo({ top: 0, behavior: "smooth" }); };
+  const from = addDays(today(), -(range === 99 ? 365 : range * 7));
   return (
     <main className="main">
-      <div className="an">
-        <div className="page-head">
+      <div className="ax">
+        <div className="page-head ax-top">
           <div>
-            <div className="eyebrow muted">Am I getting fitter?</div>
             <h1>Analysis</h1>
+            <div className="muted sub">{ATHLETE.firstName} · {ATHLETE.race.name}</div>
           </div>
           <span className="grow" />
-          <ActivityAnalyzer selectedId={sel} onSelect={setSel} />
           <div className="pill-group" role="group" aria-label="Time range">
-            {([4, 12, 99] as Range[]).map((r) => <button key={r} type="button" className={range === r ? "on" : ""} onClick={() => setRange(r)}>{r === 99 ? "All" : `${r} wk`}</button>)}
+            {([4, 12, 99] as Range[]).map((r) => <button key={r} type="button" className={range === r ? "on" : ""} onClick={() => setRange(r)}>{r === 99 ? "All" : `Last ${r} weeks`}</button>)}
           </div>
+          <span className="badge muted">{range === 99 ? `Since ${dateLabel(ATHLETE.planStart)}` : `${dateLabel(from.toISOString().slice(0, 10))} – ${dateLabel(today().toISOString().slice(0, 10))}`}</span>
+          <ActivityAnalyzer selectedId={sel} onSelect={setSel} />
         </div>
 
         <ActivityPanel id={sel} onClose={() => setSel(null)} />
-        <ScoreRow />
-        <div className="an-charts">
-          <LoadChart range={range} />
-          <VolumeStack range={range} />
-        </div>
-        <PaceCorridor range={range} onPick={(id) => { setSel(id); window.scrollTo({ top: 0, behavior: "smooth" }); }} />
-        <BodyPanel />
-        <TotalsPanel />
-        <section className="card an-how" aria-label="How the scores are calculated">
-          <div className="eyebrow">How the numbers are calculated</div>
-          <div className="cols">
-            <p><b>Race capability</b> = 0.40 run + 0.35 bike + 0.15 swim + 0.10 durability. Each part: 70 at your plan-start pace, 100 at the race-day target pace (4-week duration-weighted average). Durability: 70 at 60% compliance, 100 at 100%.</p>
-            <p><b>Health</b> = 0.50 VO2max + 0.25 resting HR + 0.25 HRV, 7-day averages from Garmin. 70 at the start values (52 · 46 · 77), 100 at the targets (60 · 38 · 96).</p>
-            <p><b>Load</b> = minutes × intensity factor (heart-rate based; exertion when there is no HR). Fitness = 42-day weighted load, Fatigue = 7-day, Form = Fitness − Fatigue. A week-over-week ramp above 10% is flagged.</p>
-          </div>
-        </section>
+        <KpiRow />
+        <Overview range={range} />
+        <Volume range={range} />
+        <LoadDistribution range={range} />
+        <SportRow />
+        <Progress range={range} onPick={pick} />
+        <Recovery />
+        <Quality onPick={pick} />
+        <RaceReadiness />
+        <Observations />
         <CoachBar id="an-coach" />
       </div>
     </main>

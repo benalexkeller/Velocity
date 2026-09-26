@@ -1,7 +1,7 @@
 // Analysis math. Everything here is computed from the same data the rest of the app uses
 // (plan + activities + body metrics). Formulas are documented inline so the page can show them.
 import bodySeed from "./data/seed/body.json";
-import { ACTIVITIES, WEEKS, PHASES, activityLoad, activitiesOn, actualByDiscipline, plannedByDiscipline, currentWeek, rollingCompliance, type Activity, type Session, type Sport } from "./data";
+import { ACTIVITIES, WEEKS, PHASES, activityLoad, activitiesOn, actualByDiscipline, plannedByDiscipline, currentWeek, rollingCompliance, weekStatus, type Activity, type Session, type Sport } from "./data";
 import { ATHLETE } from "./config";
 import { addDays, fromYmd, today, ymd } from "./format";
 
@@ -194,3 +194,131 @@ export function analyzeActivity(a: Activity) {
   const efAvg = sameType.length ? sameType.reduce((s, x) => { const p = paceOf(x, sp as "run") as number; return s + (sp === "bike" ? p / (x.hr as number) : ((1 / p) * 3600) / (x.hr as number)); }, 0) / sameType.length : null;
   return { planned, zone, range, pace, verdict, load, durDelta, fitnessEffect: load / 42, fatigueEffect: load / 7, ef, efAvg, efN: sameType.length, sport: sp as Sport | null };
 }
+
+// =====================================================================
+// Analytics page (mock v2) — every panel below is computed from the same data.
+// =====================================================================
+const dayLoad = (d: Date) => activitiesOn(ymd(d)).reduce((s, a) => s + activityLoad(a), 0);
+const pctDelta = (cur: number | null, prev: number | null) => (cur == null || prev == null || !prev ? null : ((cur - prev) / Math.abs(prev)) * 100);
+const between = (a: Activity, from: Date, to: Date) => { const d = fromYmd(a.date); return d > from && d <= to; };
+
+/** Top KPI tiles. Deltas compare with the previous period of the same length. */
+export function kpis() {
+  const t = today();
+  const avgLoad = (endOffset: number) => { let s = 0; for (let i = 0; i < 7; i++) s += dayLoad(addDays(t, -endOffset - i)); return s / 7; };
+  const load7 = avgLoad(0), load7prev = avgLoad(7);
+  const last = LOAD_SERIES[LOAD_SERIES.length - 1], wkAgo = LOAD_SERIES[Math.max(0, LOAD_SERIES.length - 8)];
+  const cur = currentWeek(), prev = cur.week > 1 ? WEEKS[cur.week - 2] : null;
+  const volNow = weekStatus(cur).actualH, volPrev = prev ? weekStatus(prev).actualH : null;
+  const comp12 = complianceFor(WEEKS.slice(Math.max(0, cur.week - 12), cur.week).flatMap((w) => w.sessions));
+  const compPrev = cur.week > 12 ? complianceFor(WEEKS.slice(Math.max(0, cur.week - 24), cur.week - 12).flatMap((w) => w.sessions)) : { pct: null };
+  const spark = (k: "fitness" | "fatigue" | "form") => LOAD_SERIES.slice(-28).map((p) => p[k]);
+  const loadBars = Array.from({ length: 14 }, (_, i) => dayLoad(addDays(t, -13 + i)));
+  const volBars = WEEKS.slice(Math.max(0, cur.week - 12), cur.week).map((w) => weekStatus(w).actualH);
+  const compBars = WEEKS.slice(Math.max(0, cur.week - 12), cur.week).map((w) => complianceFor(w.sessions).pct ?? 0);
+  return {
+    load: { v: load7, d: pctDelta(load7, load7prev), bars: loadBars },
+    fitness: { v: last.fitness, d: pctDelta(last.fitness, wkAgo.fitness), spark: spark("fitness") },
+    fatigue: { v: last.fatigue, d: pctDelta(last.fatigue, wkAgo.fatigue), spark: spark("fatigue") },
+    form: { v: last.form, dAbs: last.form - wkAgo.form, spark: spark("form") },
+    volume: { v: volNow, d: pctDelta(volNow, volPrev), bars: volBars },
+    consistency: { v: comp12.pct, dAbs: comp12.pct != null && compPrev.pct != null ? comp12.pct - compPrev.pct : null, bars: compBars },
+  };
+}
+
+/** Heart-rate zone of a session from its average HR (per-second HR arrives with the Garmin API). */
+export function zoneOf(a: Activity): 1 | 2 | 3 | 4 | 5 | null {
+  if (!a.hr) return null;
+  return a.hr < 135 ? 1 : a.hr < 148 ? 2 : a.hr < 158 ? 3 : a.hr < 168 ? 4 : 5;
+}
+export function zoneDistribution(days = 84) {
+  const t = today(), from = addDays(t, -days);
+  const acts = ACTIVITIES.filter((a) => between(a, from, t));
+  const load = [0, 0, 0, 0, 0, 0];
+  let total = 0, unknown = 0;
+  for (const a of acts) { const z = zoneOf(a), l = activityLoad(a); total += l; if (z) load[z] += l; else unknown += l; }
+  const known = total - unknown || 1;
+  const zones = [1, 2, 3, 4, 5].map((z) => ({ z, load: Math.round(load[z]), pct: Math.round((load[z] / known) * 100) }));
+  const easy = zones[0].pct + zones[1].pct, moderate = zones[2].pct, hard = zones[3].pct + zones[4].pct;
+  // previous window for the trend line
+  const pf = addDays(from, -days);
+  const prevActs = ACTIVITIES.filter((a) => between(a, pf, from));
+  let pe = 0, pt = 0;
+  for (const a of prevActs) { const z = zoneOf(a), l = activityLoad(a); if (z) { pt += l; if (z <= 2) pe += l; } }
+  const prevEasy = pt ? Math.round((pe / pt) * 100) : null;
+  return { total: Math.round(total), zones, easy, moderate, hard, prevEasy, sessions: acts.length, withHr: acts.filter((a) => a.hr).length };
+}
+
+/** Sport cards: current 4 weeks vs the 4 before, plus a 12-week weekly trend. */
+export function sportPerformance(sp: "swim" | "bike" | "run") {
+  const t = today();
+  const win = (endOffset: number) => ACTIVITIES.filter((a) => a.sport === sp && between(a, addDays(t, -endOffset - 28), addDays(t, -endOffset)));
+  const cur = win(0), prev = win(28);
+  const wavg = (xs: Activity[], f: (a: Activity) => number | null) => { const v = xs.filter((a) => f(a) != null); const w = v.reduce((s, a) => s + a.min, 0); return w ? v.reduce((s, a) => s + (f(a) as number) * a.min, 0) / w : null; };
+  const pace = (a: Activity) => paceOf(a, sp);
+  const hr = (a: Activity) => a.hr ?? null;
+  const best = (xs: Activity[]) => { const v = xs.map(pace).filter((x): x is number => x != null); return v.length ? (sp === "bike" ? Math.max(...v) : Math.min(...v)) : null; };
+  const longest = (xs: Activity[]) => { const v = xs.map((a) => (sp === "swim" ? a.yd ?? 0 : a.mi ?? 0)); return v.length ? Math.max(...v) : null; };
+  const rows = [
+    { k: sp === "bike" ? "Avg speed" : "Pace", cur: wavg(cur, pace), prev: wavg(prev, pace), kind: sp === "bike" ? "speed" : "pace" as const },
+    { k: sp === "bike" ? "Best speed" : "Best pace", cur: best(cur), prev: best(prev), kind: sp === "bike" ? "speed" : "pace" as const },
+    { k: "Heart rate", cur: wavg(cur, hr), prev: wavg(prev, hr), kind: "hr" as const },
+    { k: sp === "swim" ? "Longest swim" : sp === "bike" ? "Longest ride" : "Longest run", cur: longest(cur), prev: longest(prev), kind: "dist" as const },
+  ];
+  // weekly trend (12 weeks): duration-weighted pace per week
+  const wk = currentWeek();
+  const trend = WEEKS.slice(Math.max(0, wk.week - 12), wk.week).map((w) => { const s = fromYmd(w.start), e = addDays(s, 7); const xs = ACTIVITIES.filter((a) => a.sport === sp && between(a, addDays(s, -1), e)); return { week: w.week, v: wavg(xs, pace) }; });
+  return { rows, trend, sessions: cur.length };
+}
+
+export type Metric = "pace" | "hr" | "distance" | "duration" | "load";
+export const METRICS: { k: Metric; label: string }[] = [{ k: "pace", label: "Pace" }, { k: "hr", label: "Heart rate" }, { k: "distance", label: "Distance" }, { k: "duration", label: "Duration" }, { k: "load", label: "Load" }];
+export function progressSeries(sp: "swim" | "bike" | "run", metric: Metric, days = 84) {
+  const t = today(), from = addDays(t, -days);
+  const val = (a: Activity): number | null => metric === "pace" ? paceOf(a, sp) : metric === "hr" ? a.hr ?? null : metric === "distance" ? (sp === "swim" ? a.yd ?? null : a.mi ?? null) : metric === "duration" ? a.min : activityLoad(a);
+  const pts = ACTIVITIES.filter((a) => a.sport === sp && between(a, from, t)).map((a) => ({ id: a.id, date: a.date, v: val(a) })).filter((p): p is { id: string; date: string; v: number } => p.v != null);
+  const cur = pts.length ? pts[pts.length - 1].v : null;
+  const first = pts.length ? pts[0].v : null;
+  return { pts, cur, first, delta: pctDelta(cur, first) };
+}
+
+/** Recent sessions with planned vs actual and an execution score. */
+export function trainingQuality(n = 6) {
+  return [...ACTIVITIES].reverse().slice(0, n).map((a) => {
+    const r = analyzeActivity(a);
+    const durScore = r.planned ? Math.min(1, a.min / Math.max(1, r.planned.min)) : 1;
+    const paceScore = r.verdict === "in range" ? 1 : r.verdict ? 0.8 : 1;
+    const execution = Math.round(durScore * paceScore * 100);
+    const facts: string[] = [];
+    if (r.planned) facts.push(`${a.min} of ${r.planned.min} min planned`); else facts.push("no session planned that day");
+    if (r.verdict && r.verdict !== "in range") facts.push(r.verdict); else if (r.verdict) facts.push("pace in range");
+    if (r.planned && r.planned.sport !== a.sport && r.planned.sport !== "brick") facts.push(`plan was ${r.planned.title.toLowerCase()}`);
+    return { a, planned: r.planned, load: r.load, execution, level: execution >= 90 ? "good" : execution >= 75 ? "ok" : "low", insight: facts.join(" · ") };
+  });
+}
+
+export function raceReadiness() {
+  const p = raceProjection();
+  const goal = ATHLETE.raceSplits;
+  const goalTotal = goal.swim + goal.bike + goal.run + goal.transitions;
+  const range = (h: number | null) => (h == null ? null : { lo: h * 0.97, hi: h * 1.04 });
+  const gapMin = p.total != null ? (p.total - goalTotal) * 60 : null;
+  const t = today();
+  const n = ACTIVITIES.filter((a) => between(a, addDays(t, -28), t)).length;
+  return { ...p, goalTotal, ranges: { swim: range(p.swimH), bike: range(p.bikeH), run: range(p.runH), total: range(p.total) }, gapMin, onTrack: gapMin != null ? gapMin <= 0 : null, sessions4w: n, score: raceScore().score };
+}
+
+/** Three factual observations for the Sunday review, no advice. */
+export function observations() {
+  const out: { title: string; text: string }[] = [];
+  const cur = currentWeek(), st = weekStatus(cur);
+  const ld = loadNow();
+  out.push({ title: "Load", text: `Fitness ${ld.fitness.toFixed(0)}, fatigue ${ld.fatigue.toFixed(0)}, form ${ld.form > 0 ? "+" : ""}${ld.form.toFixed(0)}. This week ${ld.thisWeek} load vs ${ld.lastWeek} last week (${ld.ramp > 0 ? "+" : ""}${(ld.ramp * 100).toFixed(0)}%).` });
+  const c = rollingCompliance(28);
+  out.push({ title: "Sessions", text: `${st.done} of ${st.total} sessions this week, ${fmtH(st.actualH)} of ${fmtH(st.plannedH)} planned. 28-day compliance ${c.pct}% (${c.done} of ${c.planned}).` });
+  const tt = totals();
+  const lr = tt.bests.longestRun, lb = tt.bests.longestRide, ls = tt.bests.longestSwim;
+  out.push({ title: "Long sessions", text: `Longest so far: run ${lr?.mi != null ? lr.mi.toFixed(1) + " mi" : "—"}, ride ${lb?.mi != null ? lb.mi.toFixed(1) + " mi" : "—"}, swim ${ls?.yd != null ? ls.yd.toLocaleString() + " yd" : "—"}. Race day: 26.2 mi · 112 mi · 4,224 yd.` });
+  return out;
+}
+const fmtH = (h: number) => `${h.toFixed(1)} h`;

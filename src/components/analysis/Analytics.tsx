@@ -1,0 +1,367 @@
+"use client";
+import { useState } from "react";
+import Link from "next/link";
+import { Icon } from "../icons";
+import { SportIcon } from "../SportIcon";
+import { CoachNote } from "../CoachNote";
+import { ACTIVITIES, activityLoad, currentWeek, WEEKS } from "@/lib/data";
+import { LOAD_SERIES, METRICS, bodySummary, healthScore, kpis, observations, progressSeries, raceReadiness, sportPerformance, trainingQuality, zoneDistribution, type Metric } from "@/lib/analysis";
+import { ATHLETE } from "@/lib/config";
+import { addDays, dateLabel, fmtHMS, fmtPace, fromYmd, shortDate, today } from "@/lib/format";
+import { fmtDist, runPace, swimDist, swimPace } from "@/lib/units";
+
+type Sp = "swim" | "bike" | "run";
+export type Range = 4 | 12 | 99;
+const sign = (n: number | null | undefined, digits = 0, suffix = "") => (n == null ? "—" : `${n > 0 ? "+" : ""}${n.toFixed(digits)}${suffix}`);
+const fmtV = (sp: Sp, v: number) => (sp === "bike" ? `${v.toFixed(1)}` : sp === "run" ? fmtPace(runPace(v).s) : fmtPace(swimPace(v).s));
+const unitOf = (sp: Sp) => (sp === "bike" ? "mph" : sp === "run" ? runPace(0).u : swimPace(0).u);
+
+// ---------- small marks ----------
+function Delta({ v, good = "up", suffix = "%", digits = 0 }: { v: number | null | undefined; good?: "up" | "down"; suffix?: string; digits?: number }) {
+  if (v == null || !isFinite(v)) return <span className="delta muted">—</span>;
+  const up = v > 0, positive = good === "up" ? up : !up;
+  return <span className={`delta ${v === 0 ? "" : positive ? "pos" : "neg"}`}>{up ? "↑" : v < 0 ? "↓" : "→"} {Math.abs(v).toFixed(digits)}{suffix}</span>;
+}
+function Spark({ pts, w = 110, h = 30, color = "var(--accent)" }: { pts: (number | null)[]; w?: number; h?: number; color?: string }) {
+  const v = pts.filter((p): p is number => p != null);
+  if (v.length < 2) return <svg width={w} height={h} />;
+  const lo = Math.min(...v), hi = Math.max(...v);
+  const y = (n: number) => (hi === lo ? h / 2 : h - 3 - ((n - lo) / (hi - lo)) * (h - 6));
+  const x = (i: number) => 2 + (i / (pts.length - 1)) * (w - 4);
+  const d = pts.map((p, i) => (p == null ? "" : `${i === 0 || pts[i - 1] == null ? "M" : "L"}${x(i)} ${y(p)}`)).join("");
+  return <svg className="spark" width={w} height={h} viewBox={`0 0 ${w} ${h}`}><path d={d} fill="none" stroke={color} strokeWidth={1.8} /></svg>;
+}
+function Bars({ pts, w = 110, h = 30, color = "var(--accent)", soft = "var(--swim-soft)" }: { pts: number[]; w?: number; h?: number; color?: string; soft?: string }) {
+  const hi = Math.max(1, ...pts);
+  const bw = w / Math.max(1, pts.length);
+  return <svg className="spark" width={w} height={h} viewBox={`0 0 ${w} ${h}`}>{pts.map((p, i) => <rect key={i} x={i * bw + 1} y={h - (p / hi) * h} width={Math.max(2, bw - 2)} height={(p / hi) * h} rx={1} fill={i === pts.length - 1 ? color : soft} />)}</svg>;
+}
+
+// ---------- 1. KPI tiles ----------
+export function KpiRow() {
+  const k = kpis();
+  return (
+    <div className="ax-kpis">
+      <div className="card kpi"><div className="k">Training load</div><div className="row"><div className="v">{k.load.v.toFixed(0)}</div><Delta v={k.load.d} /></div><div className="u">7-day avg · load</div><Bars pts={k.load.bars} /></div>
+      <div className="card kpi"><div className="k">Fitness</div><div className="row"><div className="v">{k.fitness.v.toFixed(0)}</div><Delta v={k.fitness.d} /></div><div className="u">42-day load</div><Spark pts={k.fitness.spark} /></div>
+      <div className="card kpi"><div className="k">Fatigue</div><div className="row"><div className="v">{k.fatigue.v.toFixed(0)}</div><Delta v={k.fatigue.d} good="down" /></div><div className="u">7-day load</div><Spark pts={k.fatigue.spark} color="var(--ink)" /></div>
+      <div className="card kpi"><div className="k">Form</div><div className="row"><div className="v">{sign(k.form.v)}</div><Delta v={k.form.dAbs} suffix="" /></div><div className="u">fitness − fatigue</div><Spark pts={k.form.spark} color="var(--swim)" /></div>
+      <div className="card kpi"><div className="k">Weekly volume</div><div className="row"><div className="v">{k.volume.v.toFixed(1)}<small> h</small></div><Delta v={k.volume.d} /></div><div className="u">This week</div><Bars pts={k.volume.bars} /></div>
+      <div className="card kpi"><div className="k">Consistency</div><div className="row"><div className="v">{k.consistency.v ?? "—"}<small>%</small></div><Delta v={k.consistency.dAbs} suffix=" pts" /></div><div className="u">12-week sessions done</div><Bars pts={k.consistency.bars} /></div>
+    </div>
+  );
+}
+
+// ---------- 2. Performance overview (fitness / fatigue / form) ----------
+export function Overview({ range }: { range: Range }) {
+  const days = range === 99 ? LOAD_SERIES.length : Math.min(LOAD_SERIES.length, range * 7);
+  const pts = LOAD_SERIES.slice(-days);
+  const [hover, setHover] = useState<number | null>(null);
+  const i = hover ?? pts.length - 1;
+  const W = 760, H = 230, L = 40, R = 16, T = 12, B = 28;
+  const top = Math.max(10, Math.ceil((Math.max(...pts.map((p) => Math.max(p.fitness, p.fatigue))) * 1.3) / 10) * 10);
+  const bottom = Math.min(0, Math.floor((Math.min(...pts.map((p) => p.form)) * 1.2) / 10) * 10);
+  const y = (v: number) => T + ((top - v) / (top - bottom)) * (H - T - B);
+  const x = (j: number) => L + (pts.length < 2 ? 0 : (j / (pts.length - 1)) * (W - L - R));
+  const line = (k: "fitness" | "fatigue" | "form") => pts.map((p, j) => `${j ? "L" : "M"}${x(j)} ${y(p[k])}`).join("");
+  const area = `${line("fitness")} L${x(pts.length - 1)} ${y(0)} L${x(0)} ${y(0)} Z`;
+  const span = top - bottom, step = span > 200 ? 50 : span > 100 ? 25 : span > 40 ? 10 : 5;
+  const ticks: number[] = []; for (let v = Math.ceil(bottom / step) * step; v <= top; v += step) ticks.push(v);
+  const every = Math.max(1, Math.round(pts.length / 10));
+  const p = pts[i];
+  return (
+    <section className="card ax-panel" aria-label="Performance overview">
+      <div className="ax-head">
+        <div><h2>Performance overview</h2><p>Fitness, fatigue and form over the last {range === 99 ? `${Math.round(pts.length / 7)} weeks` : `${range} weeks`}</p></div>
+        <span className="lgd"><span><i style={{ background: "var(--accent)" }} />Fitness</span><span><i style={{ background: "var(--ink)" }} />Fatigue</span><span><i style={{ background: "var(--swim)" }} />Form</span></span>
+      </div>
+      <div className="ax-overview">
+        <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Fitness, fatigue and form" onMouseLeave={() => setHover(null)} onMouseMove={(e) => { const r = (e.currentTarget as SVGSVGElement).getBoundingClientRect(); const px = ((e.clientX - r.left) / r.width) * W; const j = Math.round(((px - L) / (W - L - R)) * (pts.length - 1)); setHover(Math.max(0, Math.min(pts.length - 1, j))); }}>
+          {ticks.map((v) => <g key={v}><line x1={L} y1={y(v)} x2={W - R} y2={y(v)} stroke={v === 0 ? "var(--line)" : "var(--grid)"} /><text x={L - 6} y={y(v) + 4} textAnchor="end">{v}</text></g>)}
+          <path d={area} fill="var(--accent-soft)" opacity={0.7} />
+          <path d={line("form")} fill="none" stroke="var(--swim)" strokeWidth={1.6} />
+          <path d={line("fatigue")} fill="none" stroke="var(--ink)" strokeWidth={1.6} />
+          <path d={line("fitness")} fill="none" stroke="var(--accent)" strokeWidth={2.2} />
+          {pts.map((q, j) => j % every === 0 || j === pts.length - 1 ? <circle key={q.date} cx={x(j)} cy={y(q.fitness)} r={3} fill="var(--accent)" stroke="var(--surface)" strokeWidth={1.5} /> : null)}
+          <line x1={x(i)} y1={T} x2={x(i)} y2={H - B} stroke="var(--muted-2)" strokeDasharray="3 3" />
+          <circle cx={x(i)} cy={y(p.fitness)} r={5} fill="var(--accent)" stroke="var(--surface)" strokeWidth={2} />
+          <circle cx={x(i)} cy={y(p.fatigue)} r={4} fill="var(--ink)" stroke="var(--surface)" strokeWidth={2} />
+          <circle cx={x(i)} cy={y(p.form)} r={4} fill="var(--swim)" stroke="var(--surface)" strokeWidth={2} />
+          {pts.map((q, j) => (j === pts.length - 1 || (j % every === 0 && j <= pts.length - 1 - every)) ? <text key={"l" + q.date} x={x(j)} y={H - 8} textAnchor={j === pts.length - 1 ? "end" : j === 0 ? "start" : "middle"}>{shortDate(q.date)}</text> : null)}
+        </svg>
+        <div className="ax-tip">
+          <div className="d">{dateLabel(p.date)}</div>
+          <div><span><i style={{ background: "var(--accent)" }} />Fitness</span><b>{p.fitness.toFixed(0)}</b></div>
+          <div><span><i style={{ background: "var(--ink)" }} />Fatigue</span><b>{p.fatigue.toFixed(0)}</b></div>
+          <div><span><i style={{ background: "var(--swim)" }} />Form</span><b>{sign(p.form)}</b></div>
+          <div><span><i style={{ background: "var(--track)" }} />Day load</span><b>{p.load}</b></div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ---------- 3. Training volume ----------
+export function Volume({ range }: { range: Range }) {
+  const [mode, setMode] = useState<"hours" | "distance" | "load">("hours");
+  const cur = currentWeek();
+  const n = range === 99 ? cur.week : Math.min(cur.week, range);
+  const weeks = WEEKS.slice(cur.week - n, cur.week);
+  const per = (w: (typeof weeks)[number]) => {
+    const s = fromYmd(w.start), e = addDays(s, 7);
+    const acts = ACTIVITIES.filter((a) => { const d = fromYmd(a.date); return d >= s && d < e; });
+    const g = { swim: 0, bike: 0, run: 0, other: 0 };
+    for (const a of acts) {
+      const k = a.sport === "swim" || a.sport === "bike" || a.sport === "run" ? a.sport : "other";
+      g[k] += mode === "hours" ? a.min / 60 : mode === "load" ? activityLoad(a) : a.sport === "swim" ? (a.yd ?? 0) / 1760 : a.mi ?? 0;
+    }
+    const planned = mode === "hours" ? w.plannedMin / 60 : mode === "load" ? w.sessions.reduce((s2, x) => s2 + (x.sport === "rest" ? 0 : Math.round(x.min * 0.75)), 0) : null;
+    return { w, g, planned };
+  };
+  const rows = weeks.map(per);
+  const W = 760, H = 220, L = 34, R = 10, T = 14, B = 26;
+  const max = Math.max(1, ...rows.map((r) => Math.max(r.g.swim + r.g.bike + r.g.run + r.g.other, r.planned ?? 0)));
+  const nice = mode === "hours" ? Math.ceil(max / 2) * 2 : Math.ceil(max / 50) * 50 || 50;
+  const y = (v: number) => H - B - (v / nice) * (H - T - B);
+  const gw = (W - L - R) / Math.max(1, rows.length), bw = Math.min(40, gw * 0.55);
+  const ticks = mode === "hours" ? [0, nice / 2, nice] : [0, nice / 2, nice];
+  const unit = mode === "hours" ? "h" : mode === "load" ? "load" : "mi";
+  return (
+    <section className="card ax-panel" aria-label="Training volume">
+      <div className="ax-head">
+        <div><h2>Training volume</h2><p>Weekly volume by sport · planned vs completed</p></div>
+        <div className="ax-tools">
+          <div className="pill-group">{(["hours", "distance", "load"] as const).map((m) => <button key={m} type="button" className={mode === m ? "on" : ""} onClick={() => setMode(m)}>{m === "hours" ? "Hours" : m === "distance" ? "Distance" : "Load"}</button>)}</div>
+          <span className="lgd"><span><i style={{ background: "var(--swim)" }} />Swim</span><span><i style={{ background: "var(--bike)" }} />Bike</span><span><i style={{ background: "var(--run)" }} />Run</span><span><i style={{ background: "var(--strength-soft)", border: "1px solid var(--line)" }} />Other</span><span><i className="dash" />Planned</span></span>
+        </div>
+      </div>
+      <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Weekly volume">
+        {ticks.map((v) => <g key={v}><line x1={L} y1={y(v)} x2={W - R} y2={y(v)} stroke="var(--grid)" /><text x={L - 6} y={y(v) + 4} textAnchor="end">{mode === "hours" ? v : Math.round(v)}</text></g>)}
+        {rows.map((r, i) => {
+          const cx = L + i * gw + gw / 2;
+          const segs: [number, string][] = [[r.g.run, "var(--run)"], [r.g.bike, "var(--bike)"], [r.g.swim, "var(--swim)"], [r.g.other, "var(--strength-soft)"]];
+          let acc = 0;
+          return (
+            <g key={r.w.week}>
+              {r.planned != null && <rect x={cx - bw / 2 - 3} y={y(r.planned)} width={bw + 6} height={Math.max(0, y(0) - y(r.planned))} fill="none" stroke="var(--muted-2)" strokeDasharray="3 3" rx={3} />}
+              {segs.map(([v, c], k) => { const el = v > 0 ? <rect key={k} x={cx - bw / 2} y={y(acc + v)} width={bw} height={Math.max(0, y(0) - y(v))} fill={c} /> : null; acc += v; return el; })}
+              <text x={cx} y={H - 8} textAnchor="middle">{shortDate(r.w.start)}</text>
+            </g>
+          );
+        })}
+      </svg>
+      <div className="ax-foot muted">Bars: completed {unit} per week. Dashed outline: the plan. {mode === "distance" ? "Swim yards converted to miles." : ""}</div>
+    </section>
+  );
+}
+
+// ---------- 4. Load distribution ----------
+export function LoadDistribution({ range }: { range: Range }) {
+  const z = zoneDistribution(range === 99 ? 400 : range * 7);
+  const colors = ["#DCE6FB", "var(--swim)", "var(--accent)", "var(--run)", "#0E2E8A"];
+  const r = 52, c = 2 * Math.PI * r;
+  let off = 0;
+  const easyDelta = z.prevEasy != null ? z.easy - z.prevEasy : null;
+  return (
+    <section className="card ax-panel" aria-label="Load distribution">
+      <div className="ax-head"><div><h2>Load distribution</h2><p>By heart-rate zone · {z.withHr} of {z.sessions} sessions have heart rate</p></div></div>
+      <div className="ax-dist">
+        <div className="donut-wrap">
+          <svg viewBox="0 0 140 140" className="donut" role="img" aria-label="Load by zone">
+            {z.zones.map((zz, i) => { const len = (zz.pct / 100) * c; const el = <circle key={zz.z} cx="70" cy="70" r={r} fill="none" stroke={colors[i]} strokeWidth="18" strokeDasharray={`${len} ${c - len}`} strokeDashoffset={-off} transform="rotate(-90 70 70)" />; off += len; return el; })}
+            <text x="70" y="66" textAnchor="middle" className="ink" fontSize="24" fontWeight="600">{z.total}</text>
+            <text x="70" y="84" textAnchor="middle" fontSize="10">load · {range === 99 ? "all" : `${range} wk`}</text>
+          </svg>
+          <table className="zones"><tbody>{z.zones.map((zz, i) => <tr key={zz.z}><td><i style={{ background: colors[i] }} />Zone {zz.z}</td><td>{zz.pct}%</td><td className="muted">{zz.load}</td></tr>)}</tbody></table>
+        </div>
+        <div className="intensity">
+          <div className="k">Intensity distribution</div>
+          <div className="ibar"><i style={{ width: `${z.easy}%`, background: "var(--swim)" }} /><i style={{ width: `${z.moderate}%`, background: "var(--accent)" }} /><i style={{ width: `${z.hard}%`, background: "var(--run)" }} /></div>
+          <div className="ilbl"><div><b>{z.easy}%</b><span>Easy (Z1–Z2)</span></div><div><b>{z.moderate}%</b><span>Moderate (Z3)</span></div><div><b>{z.hard}%</b><span>Hard (Z4–Z5)</span></div></div>
+        </div>
+        <div className={`note ${easyDelta != null && easyDelta >= 0 ? "ok" : ""}`}>
+          <div className="t">Easy share {z.easy}%{easyDelta != null ? ` · ${sign(easyDelta)} pts vs previous period` : ""}</div>
+          <div className="s">Base-phase target: 75–80% of load easy. Zones are from each session's average heart rate until per-second data arrives.</div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ---------- 5. Sport performance ----------
+function SportCard({ sp }: { sp: Sp }) {
+  const p = sportPerformance(sp);
+  const fmtRow = (kind: string, v: number | null) => v == null ? "—" : kind === "pace" ? `${fmtV(sp, v)} ${unitOf(sp)}` : kind === "speed" ? `${v.toFixed(1)} mph` : kind === "hr" ? `${v.toFixed(0)} bpm` : sp === "swim" ? `${swimDist(v).v.toLocaleString()} ${swimDist(0).u}` : fmtDist(v);
+  const good = (kind: string) => (kind === "pace" || kind === "hr" ? "down" : "up");
+  const W = 230, H = 70, L = 40, R = 6, T = 6, B = 16;
+  const pts = p.trend;
+  const v = pts.map((q) => q.v).filter((q): q is number => q != null);
+  const lo = v.length ? Math.min(...v) : 0, hi = v.length ? Math.max(...v) : 1;
+  const pad = (hi - lo) * 0.3 || 1;
+  const inv = sp !== "bike";
+  const y = (n: number) => (inv ? T + ((n - (lo - pad)) / (hi - lo + 2 * pad)) * (H - T - B) : H - B - ((n - (lo - pad)) / (hi - lo + 2 * pad)) * (H - T - B));
+  const x = (i: number) => L + (pts.length < 2 ? 0 : (i / (pts.length - 1)) * (W - L - R));
+  let d = "", started = false;
+  pts.forEach((q, i) => { if (q.v == null) { started = false; return; } d += `${started ? "L" : "M"}${x(i)} ${y(q.v)}`; started = true; });
+  return (
+    <div className="sport">
+      <div className="sh"><SportIcon sport={sp} size={26} /><b>{sp[0].toUpperCase() + sp.slice(1)}</b><span className="muted">{p.sessions} sessions · 4 wk</span></div>
+      <table><tbody>{p.rows.map((r) => <tr key={r.k}><td>{r.k}</td><td><b>{fmtRow(r.kind, r.cur)}</b></td><td><Delta v={r.cur != null && r.prev ? ((r.cur - r.prev) / r.prev) * 100 : null} good={good(r.kind)} /></td></tr>)}</tbody></table>
+      <div className="k">{sp === "bike" ? "Speed trend" : "Pace trend"} · weekly</div>
+      <svg className="chart" viewBox={`0 0 ${W} ${H}`}>
+        {v.length ? [lo, hi].map((t, i) => <text key={i} x={L - 6} y={y(t) + 4} textAnchor="end">{fmtV(sp, t)}</text>) : null}
+        <line x1={L} y1={H - B} x2={W - R} y2={H - B} stroke="var(--grid)" />
+        <path d={d} fill="none" stroke="var(--accent)" strokeWidth={1.8} />
+        {pts.map((q, i) => q.v != null ? <circle key={i} cx={x(i)} cy={y(q.v)} r={2.5} fill="var(--accent)" /> : null)}
+        {pts.length ? [0, pts.length - 1].map((i) => <text key={i} x={x(i)} y={H - 4} textAnchor={i ? "end" : "start"}>W{pts[i].week}</text>) : null}
+      </svg>
+    </div>
+  );
+}
+export function SportRow() {
+  return (
+    <section className="card ax-panel" aria-label="Sport performance">
+      <div className="ax-head"><div><h2>Sport performance</h2><p>Last 4 weeks vs the 4 weeks before</p></div></div>
+      <div className="ax-sports"><SportCard sp="swim" /><SportCard sp="bike" /><SportCard sp="run" /></div>
+    </section>
+  );
+}
+
+// ---------- 6. Progress over time ----------
+export function Progress({ range, onPick }: { range: Range; onPick: (id: string) => void }) {
+  const [sp, setSp] = useState<Sp>("run");
+  const [m, setM] = useState<Metric>("pace");
+  const days = range === 99 ? 400 : range * 7;
+  const s = progressSeries(sp, m, days);
+  const W = 760, H = 210, L = 46, R = 12, T = 14, B = 26;
+  const pts = s.pts;
+  const inv = m === "pace" && sp !== "bike";
+  const v = pts.map((q) => q.v);
+  let lo = v.length ? Math.min(...v) : 0, hi = v.length ? Math.max(...v) : 1;
+  const pad = (hi - lo) * 0.2 || 1; lo -= pad; hi += pad;
+  const start = pts.length ? fromYmd(pts[0].date) : addDays(today(), -days), end = today();
+  const x = (dt: string) => L + ((fromYmd(dt).getTime() - start.getTime()) / Math.max(1, end.getTime() - start.getTime())) * (W - L - R);
+  const y = (n: number) => (inv ? T + ((n - lo) / (hi - lo)) * (H - T - B) : H - B - ((n - lo) / (hi - lo)) * (H - T - B));
+  const fmt = (n: number) => m === "pace" ? fmtV(sp, n) : m === "hr" ? `${n.toFixed(0)}` : m === "distance" ? (sp === "swim" ? `${Math.round(n)}` : n.toFixed(1)) : m === "duration" ? fmtHMS(n) : n.toFixed(0);
+  const unit = m === "pace" ? unitOf(sp) : m === "hr" ? "bpm" : m === "distance" ? (sp === "swim" ? "yd" : "mi") : m === "duration" ? "" : "load";
+  const goodDir = m === "pace" ? (sp === "bike" ? "up" : "down") : m === "hr" ? "down" : "up";
+  const ticks = 4;
+  return (
+    <section className="card ax-panel" aria-label="Progress over time">
+      <div className="ax-head">
+        <div><h2>Progress over time</h2><p>Every session as a point · click a point to analyse it</p></div>
+        <div className="ax-tools"><div className="pill-group">{(["swim", "bike", "run"] as Sp[]).map((k) => <button key={k} type="button" className={sp === k ? "on" : ""} onClick={() => setSp(k)}>{k[0].toUpperCase() + k.slice(1)}</button>)}</div></div>
+      </div>
+      <div className="tabs ax-tabs">{METRICS.map((t) => <button key={t.k} type="button" className={m === t.k ? "on" : ""} onClick={() => setM(t.k)}>{t.label}</button>)}</div>
+      <div className="ax-progress">
+        <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${sp} ${m} over time`}>
+          {Array.from({ length: ticks + 1 }, (_, k) => lo + ((hi - lo) * k) / ticks).map((t, k) => <g key={k}><line x1={L} y1={y(t)} x2={W - R} y2={y(t)} stroke="var(--grid)" /><text x={L - 6} y={y(t) + 4} textAnchor="end">{fmt(t)}</text></g>)}
+          {pts.length > 1 && <path d={`${pts.map((q, i) => `${i ? "L" : "M"}${x(q.date)} ${y(q.v)}`).join("")} L${x(pts[pts.length - 1].date)} ${y(inv ? hi : lo)} L${x(pts[0].date)} ${y(inv ? hi : lo)} Z`} fill="var(--accent-soft)" opacity={0.6} />}
+          {pts.length > 1 && <path d={pts.map((q, i) => `${i ? "L" : "M"}${x(q.date)} ${y(q.v)}`).join("")} fill="none" stroke="var(--accent)" strokeWidth={2} />}
+          {pts.map((q) => <circle key={q.id} cx={x(q.date)} cy={y(q.v)} r={4} fill="var(--accent)" stroke="var(--surface)" strokeWidth={1.5} style={{ cursor: "pointer" }} onClick={() => onPick(q.id)}><title>{`${dateLabel(q.date)} · ${fmt(q.v)} ${unit}`}</title></circle>)}
+          {pts.length ? [pts[0], pts[pts.length - 1]].map((q, i) => <text key={i} x={x(q.date)} y={H - 8} textAnchor={i ? "end" : "start"}>{shortDate(q.date)}</text>) : <text x={W / 2} y={H / 2} textAnchor="middle">No {sp} sessions in range</text>}
+        </svg>
+        <div className="ax-current">
+          <div className="k">Current value</div>
+          <div className="v">{s.cur != null ? fmt(s.cur) : "—"}<small> {unit}</small></div>
+          <Delta v={s.delta} good={goodDir} />
+          <div className="u">vs first session in range</div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ---------- 7. Recovery ----------
+export function Recovery() {
+  const w = bodySummary(7), p = bodySummary(7, 7);
+  const h = healthScore();
+  const bars = (k: "rhr" | "hrv" | "sleep_h" | "stress") => [...Array(14)].map((_, i) => { const d = addDays(today(), -13 + i); const day = bodySummary(1, 13 - i); return k === "rhr" ? day.rhr ?? 0 : k === "hrv" ? day.hrv ?? 0 : k === "sleep_h" ? day.sleep ?? 0 : day.stress ?? 0; }).map((v) => v ?? 0);
+  const ring = h.score ?? 0, r = 46, c = 2 * Math.PI * r, len = (Math.min(100, ring) / 100) * c;
+  const tile = (label: string, v: string, delta: number | null, good: "up" | "down", k: "rhr" | "hrv" | "sleep_h" | "stress", suffix = "", digits = 0) => (
+    <div className="rt"><div className="k">{label}</div><div className="v">{v}</div><Delta v={delta} good={good} suffix={suffix} digits={digits} /><div className="u">7-day avg</div><Bars pts={bars(k)} w={120} h={26} /></div>
+  );
+  const pct = (a: number | null, b: number | null) => (a != null && b ? ((a - b) / b) * 100 : null);
+  return (
+    <section className="card ax-panel" aria-label="Recovery">
+      <div className="ax-head"><div><h2>Recovery</h2><p>Garmin body data · evidence for the Sunday review, not a daily verdict</p></div></div>
+      <div className="ax-recovery">
+        <div className="tiles">
+          {tile("Sleep", w.sleep != null ? `${Math.floor(w.sleep)} h ${Math.round((w.sleep % 1) * 60)} m` : "—", pct(w.sleep, p.sleep), "up", "sleep_h")}
+          {tile("HRV", w.hrv != null ? `${w.hrv.toFixed(0)} ms` : "—", pct(w.hrv, p.hrv), "up", "hrv")}
+          {tile("Resting HR", w.rhr != null ? `${w.rhr.toFixed(0)} bpm` : "—", pct(w.rhr, p.rhr), "down", "rhr")}
+          {tile("Stress", w.stress != null ? w.stress.toFixed(0) : "—", pct(w.stress, p.stress), "down", "stress")}
+        </div>
+        <div className="score">
+          <div className="k">Health score</div>
+          <div className="ringwrap">
+            <svg viewBox="0 0 120 120" className="ring"><circle cx="60" cy="60" r={r} fill="none" stroke="var(--track)" strokeWidth="10" /><circle cx="60" cy="60" r={r} fill="none" stroke="var(--accent)" strokeWidth="10" strokeLinecap="round" strokeDasharray={`${len} ${c - len}`} transform="rotate(-90 60 60)" /><text x="60" y="58" textAnchor="middle" className="ink" fontSize="26" fontWeight="600">{h.score ?? "—"}</text><text x="60" y="76" textAnchor="middle" fontSize="10">/ 100</text></svg>
+            <div>
+              <b>{h.score == null ? "No data" : h.score >= 100 ? "Targets met" : h.score >= 85 ? "Near targets" : "Building"}</b>
+              <p>VO2max {h.inputs.vo2 ?? "—"} (target 60) · resting HR {h.inputs.rhr?.toFixed(0) ?? "—"} (38) · HRV {h.inputs.hrv?.toFixed(0) ?? "—"} (96). 70 = plan-start values, 100 = all targets.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ---------- 8. Training quality ----------
+export function Quality({ onPick }: { onPick: (id: string) => void }) {
+  const rows = trainingQuality(6);
+  return (
+    <section className="card ax-panel" aria-label="Training quality">
+      <div className="ax-head"><div><h2>Training quality</h2><p>Recent sessions and execution</p></div><Link href="/activities" className="link">View all activities →</Link></div>
+      <table className="tbl small ax-quality">
+        <thead><tr><th>Date</th><th>Session</th><th>Planned</th><th>Actual</th><th>Load</th><th>Execution</th><th>Facts</th></tr></thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.a.id} className="row" onClick={() => onPick(r.a.id)}>
+              <td className="nowrap">{dateLabel(r.a.date)}</td>
+              <td><span className="sess"><SportIcon sport={r.a.sport} size={18} />{r.a.name}</span></td>
+              <td>{r.planned ? `${r.planned.min} min` : "—"}</td>
+              <td>{fmtHMS(r.a.min)}</td>
+              <td>{r.load}</td>
+              <td><span className="exec"><b>{r.execution}%</b><i className={r.level}><span style={{ width: `${r.execution}%` }} /></i></span></td>
+              <td className="facts"><i className={`dot ${r.level}`} /><CoachNote text={r.insight} /></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </section>
+  );
+}
+
+// ---------- 9. Race readiness ----------
+export function RaceReadiness() {
+  const r = raceReadiness();
+  const h = (x: number | null | undefined) => (x == null ? "—" : fmtHMS(x * 60));
+  const rng = (x: { lo: number; hi: number } | null) => (x ? `${h(x.lo)} – ${h(x.hi)}` : "—");
+  return (
+    <section className="card ax-panel" aria-label="Race readiness">
+      <div className="ax-head"><div><h2>Race readiness</h2><p>Projected from current 4-week average pace · no fatigue adjustment</p></div><span className="badge">{ATHLETE.race.name} · {ATHLETE.race.distanceLabel}</span></div>
+      <div className="ax-race">
+        <div className="leg"><SportIcon sport="swim" size={22} /><div><div className="k">Swim · 2.4 mi</div><div className="v">{h(r.swimH)}</div><div className="u">{rng(r.ranges.swim)}</div></div></div>
+        <div className="leg"><SportIcon sport="bike" size={22} /><div><div className="k">Bike · 112 mi</div><div className="v">{h(r.bikeH)}</div><div className="u">{rng(r.ranges.bike)}</div></div></div>
+        <div className="leg"><SportIcon sport="run" size={22} /><div><div className="k">Run · 26.2 mi</div><div className="v">{h(r.runH)}</div><div className="u">{rng(r.ranges.run)}</div></div></div>
+        <div className="leg total"><span className="trophy"><Icon name="check" /></span><div><div className="k">Total finish time</div><div className="v">{h(r.total)}</div><div className="u">{rng(r.ranges.total)} · incl. {h(r.transitions)} transitions</div></div></div>
+        <div className={`verdict ${r.onTrack ? "ok" : "warn"}`}>
+          <b>{r.onTrack == null ? "Not enough data" : r.onTrack ? `On track for ${ATHLETE.race.goal}` : `${Math.round(r.gapMin ?? 0)} min behind ${ATHLETE.race.goal}`}</b>
+          <p>Goal {h(r.goalTotal)} · projected {h(r.total)} ({sign(r.gapMin != null ? Math.round(r.gapMin) : null)} min). {r.sessions4w} sessions in the last 4 weeks. Race capability score {r.score ?? "—"}.</p>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// ---------- 10. Observations ----------
+export function Observations() {
+  const o = observations();
+  return (
+    <section className="card ax-panel" aria-label="Sunday review facts">
+      <div className="ax-head"><div><h2>Sunday review · facts</h2><p>What the coach reads before proposing any change</p></div></div>
+      <div className="ax-obs">{o.map((x, i) => <div key={x.title} className="ob"><span className="n">{i + 1}</span><div><b>{x.title}</b><p><CoachNote text={x.text} /></p></div></div>)}</div>
+    </section>
+  );
+}
