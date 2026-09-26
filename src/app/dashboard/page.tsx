@@ -51,6 +51,7 @@ export default function Dashboard() {
   const stopAt = (k: string) => { const p = PHASES.find((x) => x.short.startsWith(k)); return p ? (p.from - 1) / (WEEKS.length - 1) : 1; };
   const pos = (cur.week - 1) / (WEEKS.length - 1);
   const [logging, setLogging] = useState(false);
+  const [mapOpen, setMapOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), 4000); return () => clearTimeout(t); }, [toast]);
 
@@ -119,7 +120,7 @@ export default function Dashboard() {
             </div>
           </Link>
 
-          <section className="card la lastact" aria-label="Last activity">
+          <section className={`card la lastact${mapOpen ? " map-open" : ""}`} aria-label="Last activity">
             <div className="head"><span className="eyebrow">Last activity</span><Link href={last ? `/activities?a=${last.id}` : "/activities"}>View all activities →</Link></div>
             {last ? (
               <>
@@ -134,8 +135,8 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="map">
-                  <RouteMap route={last.route} height={140} />
-                  <Link className="exp" href={`/activities?a=${last.id}`} aria-label="Open activity"><Icon name="expand" /></Link>
+                  <RouteMap route={last.route} height={mapOpen ? 320 : 140} />
+                  <button className="exp" type="button" onClick={() => setMapOpen((o) => !o)} aria-label={mapOpen ? "Shrink map" : "Expand map"} aria-expanded={mapOpen}><Icon name={mapOpen ? "close" : "expand"} /></button>
                   {last.route && <span className="loc">{ATHLETE.city}</span>}
                 </div>
               </>
