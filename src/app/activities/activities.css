@@ -17,7 +17,7 @@
 
 /* detail panel — horizontal, above the list (the one deliberate dark surface) */
 .acts { display: block; }
-.drawer { position: relative; background: #131517; color: #fff; border-radius: 16px; padding: 20px 22px 18px; margin: 4px 0 18px; display: grid; grid-template-columns: 250px minmax(0, 1fr) 280px; gap: 26px; }
+.drawer { position: sticky; top: 56px; z-index: 4; background: #131517; color: #fff; border-radius: 16px; padding: 20px 22px 18px; margin: 2px 0 14px; display: grid; grid-template-columns: 250px minmax(0, 1fr) 280px; gap: 26px; box-shadow: 0 12px 32px rgba(16,17,20,0.18); }
 .drawer .close { position: absolute; top: 14px; right: 14px; width: 30px; height: 30px; border-radius: 8px; background: rgba(255,255,255,0.08); border: 0; color: #fff; display: inline-flex; align-items: center; justify-content: center; }
 .drawer .close svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; }
 .drawer .hd { display: flex; gap: 12px; align-items: flex-start; }

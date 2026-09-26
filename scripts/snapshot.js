@@ -51,6 +51,7 @@ const PAGES = [
 .pv-page{display:none}.pv-page.on{display:block}
 .pv-page .coach{top:96px}
 .pv-page .topbar{top:48px}
+.pv-page .drawer{top:104px}
 .pv-page .nav{top:104px}
 .pv-root{font-family:var(--font-inter),system-ui,sans-serif;color:#101114}
 .pv-root .shell{background:var(--bg)}

@@ -59,7 +59,8 @@ function Activities() {
   const fromUrl = params.get("a");
   const [tab, setTab] = useState<Tab>("all");
   const [q, setQ] = useState("");
-  const [sel, setSel] = useState<string | null>(fromUrl);
+  // the detail panel is always showing one activity: the one from the link, else the most recent; clicking a row swaps it in
+  const [sel, setSel] = useState<string | null>(fromUrl ?? ACTIVITIES[ACTIVITIES.length - 1]?.id ?? null);
   useEffect(() => { if (fromUrl) setSel(fromUrl); }, [fromUrl]);
   const list = useMemo(() => {
     const t = q.trim().toLowerCase();
@@ -72,7 +73,6 @@ function Activities() {
     <main className="main" style={{ padding: 0 }}>
       <div className="acts">
         <div className="acts-main">
-          {selected && <Drawer a={selected} onClose={() => setSel(null)} />}
           <div className="acts-head">
             <div>
               <div className="eyebrow muted">Activity archive</div>
@@ -82,6 +82,7 @@ function Activities() {
             <label className="search"><Icon name="search" /><input id="act-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search activities…" aria-label="Search activities" /></label>
             <button className="iconbtn" type="button" aria-label="Filters"><Icon name="filter" /></button>
           </div>
+          {selected && <Drawer a={selected} />}
           <div className="tabs" role="tablist">
             {(["all", "swim", "bike", "run"] as Tab[]).map((k) => <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>{k}</button>)}
           </div>
@@ -97,7 +98,7 @@ function Activities() {
                 const w = when(a), pp = paceOrPower(a);
                 return (
                   <FragmentRow key={a.id} showGroup={showGroup} group={g}>
-                    <tr className={`row${sel === a.id ? " sel" : ""}`} onClick={() => setSel(sel === a.id ? null : a.id)}>
+                    <tr className={`row${sel === a.id ? " sel" : ""}`} onClick={() => { setSel(a.id); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
                       <td className="when">{w.l1}<small>{w.l2}</small></td>
                       <td><div className="act"><SportIcon sport={a.sport} size={30} /><div><b>{a.name}</b><small>{subtitle(a)}</small></div></div></td>
                       <td className="num">{distance(a)}</td>
@@ -129,11 +130,10 @@ function FragmentRow({ showGroup, group, children }: { showGroup: boolean; group
   );
 }
 
-function Drawer({ a, onClose }: { a: Activity; onClose: () => void }) {
+function Drawer({ a }: { a: Activity }) {
   const w = when(a), pp = paceOrPower(a);
   return (
     <section className="drawer" aria-label="Activity detail">
-      <button className="close" type="button" onClick={onClose} aria-label="Close"><Icon name="close" /></button>
       <div className="d-info">
         <div className="hd">
           <SportIcon sport={a.sport} size={40} />
