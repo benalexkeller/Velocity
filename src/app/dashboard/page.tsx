@@ -67,7 +67,6 @@ export default function Dashboard() {
               <div className="title">{todayS ? todayS.title : "Rest"}</div>
               <div className="sub">{todayS ? heroSub(todayS) : "No plan for today"}</div>
             </div>
-            <div className="garmin" aria-hidden="true"><Watch width={116} /></div>
             <div className="stats">
               {todayS && todayS.sport !== "rest" && (
                 <>
@@ -76,7 +75,7 @@ export default function Dashboard() {
                   {tgt && <div className="stat"><div className="k">{tgt.k}</div><div className="v">{tgt.v}</div><div className="u">{tgt.u}</div></div>}
                 </>
               )}
-              <div className="stat gm"><div className="k">Garmin</div><div className="v"><i className="led" />Connected</div></div>
+              <div className="stat gm"><div className="garmin" aria-hidden="true"><Watch width={116} /></div><div className="k">Garmin</div><div className="v"><i className="led" />Connected</div></div>
             </div>
           </Link>
 

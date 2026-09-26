@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { ACTIVITIES, actualByDiscipline, currentWeek, plannedByDiscipline, type Activity } from "@/lib/data";
 import { fmtPace, fromYmd, shortDate, today, addDays, fmtHours } from "@/lib/format";
 import { runPace, swimPace } from "@/lib/units";
@@ -13,6 +14,7 @@ function paceOf(a: Activity, sp: Sp): number | null {
 const UNIT: Record<Sp, string> = { run: `min${runPace(0).u}`, swim: `min${swimPace(0).u}`, bike: "mph" };
 
 export function PaceChart() {
+  const router = useRouter();
   const [sp, setSp] = useState<Sp>("run");
   const since = addDays(today(), -56);
   const pts = ACTIVITIES.filter((a) => a.sport === sp && fromYmd(a.date) >= since).map((a) => ({ date: a.date, v: paceOf(a, sp), min: a.min })).filter((p): p is { date: string; v: number; min: number } => p.v != null);
@@ -33,10 +35,10 @@ export function PaceChart() {
   const best = last4.length ? (sp === "bike" ? Math.max(...last4.map((p) => p.v)) : Math.min(...last4.map((p) => p.v))) : null;
 
   return (
-    <div className="card chartcard">
+    <div className="card chartcard linked" role="link" tabIndex={0} onClick={() => router.push("/analysis")} onKeyDown={(e) => { if (e.key === "Enter") router.push("/analysis"); }} aria-label="Average pace — open analysis">
       <div className="head">
         <span className="eyebrow">Average pace</span>
-        <div className="pill-group">
+        <div className="pill-group" onClick={(e) => e.stopPropagation()}>
           {(["swim", "bike", "run"] as Sp[]).map((k) => <button key={k} type="button" className={sp === k ? "on" : ""} onClick={() => setSp(k)}>{k[0].toUpperCase() + k.slice(1)}</button>)}
         </div>
       </div>
@@ -66,6 +68,7 @@ export function PaceChart() {
 }
 
 export function VolumeChart() {
+  const router = useRouter();
   const wk = currentWeek();
   const a = actualByDiscipline(wk), p = plannedByDiscipline(wk);
   const rows = [["Swim", a.swim, p.swim], ["Bike", a.bike, p.bike], ["Run", a.run, p.run]] as const;
@@ -75,7 +78,7 @@ export function VolumeChart() {
   const gw = (W - L - R) / 3, bw = 40;
   const totalA = a.swim + a.bike + a.run + a.other, totalP = wk.plannedMin / 60;
   return (
-    <div className="card chartcard">
+    <div className="card chartcard linked" role="link" tabIndex={0} onClick={() => router.push("/analysis")} onKeyDown={(e) => { if (e.key === "Enter") router.push("/analysis"); }} aria-label="Weekly volume — open analysis">
       <div className="head">
         <span className="eyebrow">Weekly volume vs plan</span>
         <span className="lgd"><span><i style={{ background: "var(--accent)" }} />Actual</span><span><i className="hollow" />Planned</span></span>
