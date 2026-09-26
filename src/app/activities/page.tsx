@@ -1,6 +1,7 @@
 "use client";
 import "./activities.css";
-import { useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { Icon } from "@/components/icons";
 import { SportIcon } from "@/components/SportIcon";
 import { RouteMap } from "@/components/RouteMap";
@@ -49,9 +50,16 @@ function Effort({ n }: { n: number }) {
 }
 
 export default function ActivitiesPage() {
+  return <Suspense fallback={null}><Activities /></Suspense>;
+}
+
+function Activities() {
+  const params = useSearchParams();
+  const fromUrl = params.get("a");
   const [tab, setTab] = useState<Tab>("all");
   const [q, setQ] = useState("");
-  const [sel, setSel] = useState<string | null>(null);
+  const [sel, setSel] = useState<string | null>(fromUrl);
+  useEffect(() => { if (fromUrl) setSel(fromUrl); }, [fromUrl]);
   const list = useMemo(() => {
     const t = q.trim().toLowerCase();
     return [...ACTIVITIES].reverse().filter((a) => (tab === "all" || a.sport === tab) && (!t || a.name.toLowerCase().includes(t) || a.date.includes(t)));

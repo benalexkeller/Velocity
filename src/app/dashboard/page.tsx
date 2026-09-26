@@ -6,6 +6,8 @@ import { SportIcon } from "@/components/SportIcon";
 import { RouteMap } from "@/components/RouteMap";
 import { Watch } from "@/components/Watch";
 import { CoachBar } from "@/components/CoachBar";
+import { LogActivity } from "@/components/dashboard/LogActivity";
+import { useEffect, useState } from "react";
 import { PaceChart, VolumeChart } from "@/components/dashboard/Charts";
 import { ACTIVITIES, PHASES, WEEKS, currentWeek, rollingCompliance, weekStatus, type Session } from "@/lib/data";
 import { ATHLETE } from "@/lib/config";
@@ -48,6 +50,9 @@ export default function Dashboard() {
   const stops = ["Base", "Build", "Peak", "Race"];
   const stopAt = (k: string) => { const p = PHASES.find((x) => x.short.startsWith(k)); return p ? (p.from - 1) / (WEEKS.length - 1) : 1; };
   const pos = (cur.week - 1) / (WEEKS.length - 1);
+  const [logging, setLogging] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
+  useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), 4000); return () => clearTimeout(t); }, [toast]);
 
   return (
     <main className="main">
@@ -75,9 +80,10 @@ export default function Dashboard() {
           </Link>
 
           <section className="card logcard" aria-label="Log activity">
-            <button type="button" className="plus" aria-label="Log activity"><Icon name="plus" /></button>
+            <button type="button" className="plus" aria-label="Log activity" aria-expanded={logging} onClick={() => setLogging((o) => !o)}><Icon name="plus" /></button>
             <b>Log activity</b>
             <small>Manually log a swim, bike or run</small>
+            <LogActivity open={logging} onClose={() => setLogging(false)} onSaved={(a) => { setLogging(false); setToast(`Saved · ${a.name} · ${fmtHMS(a.min)}`); }} />
           </section>
           </div>
           <div className="dash-row2">
@@ -114,10 +120,10 @@ export default function Dashboard() {
           </section>
 
           <section className="card la lastact" aria-label="Last activity">
-            <div className="head"><span className="eyebrow">Last activity</span><Link href="/activities">View all activities →</Link></div>
+            <div className="head"><span className="eyebrow">Last activity</span><Link href={last ? `/activities?a=${last.id}` : "/activities"}>View all activities →</Link></div>
             {last ? (
               <>
-                <div className="name">{last.name}</div>
+                <Link href={`/activities?a=${last.id}`} className="name">{last.name}</Link>
                 <div className="date">{dateLabel(last.date)}{last.start ? ` · ${last.start}` : ""}</div>
                 <div className="stats">
                   <div><div className="k">{last.sport === "swim" ? "Distance" : "Distance"}</div><div className="v">{last.sport === "swim" ? `${swimDist(last.yd ?? 0).v} ${swimDist(0).u}` : fmtDist(last.mi)}</div></div>
@@ -129,7 +135,7 @@ export default function Dashboard() {
                 </div>
                 <div className="map">
                   <RouteMap route={last.route} height={140} />
-                  <button className="exp" type="button" aria-label="Expand map"><Icon name="expand" /></button>
+                  <Link className="exp" href={`/activities?a=${last.id}`} aria-label="Open activity"><Icon name="expand" /></Link>
                   {last.route && <span className="loc">{ATHLETE.city}</span>}
                 </div>
               </>
@@ -153,6 +159,7 @@ export default function Dashboard() {
           <VolumeChart />
         </div>
 
+        {toast && <div className="toast" role="status">✓ {toast} <span className="muted">· stored on this device until accounts exist</span></div>}
         <CoachBar id="dash-coach" />
       </div>
     </main>
