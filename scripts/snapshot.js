@@ -10,7 +10,7 @@ const PAGES = [
   { id: 'activities', label: 'Activities', path: '/activities', after: async (p) => { const r = await p.$$('tr.row'); if (r[2]) await r[2].click(); await p.waitForTimeout(300); } },
   { id: 'analysis', label: 'Analysis', path: '/analysis', after: async (p) => { await p.click('.an-pick .plus'); await p.waitForTimeout(200); const opts = await p.$$eval('.an-select option', os => os.map(o => o.value)); if (opts[3]) await p.selectOption('.an-select', opts[3]); await p.waitForTimeout(400); } },
   { id: 'nutrition', label: 'Nutrition', path: '/nutrition', after: async (p) => { const c = await p.$$('.cube'); if (c[0]) await c[0].click(); await p.waitForTimeout(300); } },
-  { id: 'calculator', label: 'Calculator', path: '/calculator', after: async (p) => { const c = await p.$$('.cube'); if (c[0]) await c[0].click(); await p.waitForTimeout(300); } },
+  { id: 'calculator', label: 'Calculator', path: '/calculator' },
   { id: 'store', label: 'Store', path: '/store' },
 ];
 (async () => {
