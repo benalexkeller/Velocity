@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import { Icon } from "@/components/icons";
 import { SportIcon } from "@/components/SportIcon";
 import { RouteMap } from "@/components/RouteMap";
+import { CoachNote } from "@/components/CoachNote";
 import { ACTIVITIES, activityLoad, type Activity } from "@/lib/data";
 import { ATHLETE } from "@/lib/config";
 import { DAYS, MONTHS, addDays, fmtHMS, fmtPace, fromYmd, today } from "@/lib/format";
@@ -154,7 +155,7 @@ function Drawer({ a, onClose }: { a: Activity; onClose: () => void }) {
           <div><div className="v">{activityLoad(a)}</div><div className="k">Load</div></div>
           <div><div className="v"><Effort n={effortLevel(a) || 1} /></div><div className="k">Effort</div></div>
         </div>
-        {a.coachNote && (<><h4>Coach insight</h4><div className="note">{a.coachNote}</div></>)}
+        {a.coachNote && (<><h4>Coach insight</h4><div className="note"><CoachNote text={a.coachNote} /></div></>)}
         {a.note && (<><h4>Your note</h4><div className="note">{a.note}</div></>)}
       </div>
       <div className="d-map">

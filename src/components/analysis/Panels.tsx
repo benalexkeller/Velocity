@@ -3,6 +3,7 @@ import { useMemo, useState } from "react";
 import { Icon } from "../icons";
 import { SportIcon } from "../SportIcon";
 import { RouteMap } from "../RouteMap";
+import { CoachNote } from "../CoachNote";
 import { ACTIVITIES, currentWeek, rollingCompliance, weekStatus, type Activity } from "@/lib/data";
 import { BODY, LOAD_SERIES, analyzeActivity, bodySummary, complianceByPhase, corridorAt, healthScore, loadNow, paceSeries, raceProjection, raceScore, totals, volumeWeekly, weightedAvgPace } from "@/lib/analysis";
 import { ATHLETE } from "@/lib/config";
@@ -329,7 +330,7 @@ export function ActivityPanel({ id, onClose }: { id: string | null; onClose: () 
           <table className="tbl small"><tbody>
             <tr><td>Exertion</td><td>{a.exertion ? `${a.exertion} / 10` : "—"}</td></tr>
             <tr><td>Your note</td><td>{a.note ?? "—"}</td></tr>
-            <tr><td>Coach</td><td>{a.coachNote ?? "—"}</td></tr>
+            <tr><td>Coach</td><td>{a.coachNote ? <CoachNote text={a.coachNote} /> : "—"}</td></tr>
           </tbody></table>
         </div>
         <div className="blk map"><RouteMap route={a.route} height={150} bg="var(--surface-2)" /></div>

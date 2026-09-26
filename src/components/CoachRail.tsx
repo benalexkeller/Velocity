@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Icon } from "./icons";
+import { CoachNote } from "./CoachNote";
 
 export interface CoachMsg { who: "You" | "Coach" | "action"; at?: string; text: string }
 
@@ -27,7 +28,7 @@ export function CoachRail({ thread, placeholder = "Ask your coach or log how it 
           ) : (
             <div key={i} className={`msg ${m.who === "You" ? "user" : "coach-msg"}`}>
               <span className="who">{m.who} {m.at && <span style={{ marginLeft: 6 }}>{m.at}</span>}</span>
-              {m.text}
+              {m.who === "Coach" ? <CoachNote text={m.text} /> : m.text}
             </div>
           )
         )}
