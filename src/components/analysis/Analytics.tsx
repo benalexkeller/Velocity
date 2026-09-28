@@ -4,10 +4,11 @@ import Link from "next/link";
 import { Icon } from "../icons";
 import { SportIcon } from "../SportIcon";
 import { CoachNote } from "../CoachNote";
-import { ACTIVITIES, activityLoad, currentWeek, WEEKS } from "@/lib/data";
-import { LOAD_SERIES, METRICS, bodySummary, healthScore, kpis, observations, progressSeries, raceReadiness, sportPerformance, trainingQuality, zoneDistribution, type Metric } from "@/lib/analysis";
+import { activityLoad } from "@/lib/data";
+import { METRICS, bodySummary, type Metric } from "@/lib/analysis";
+import { useAnalysis } from "@/lib/useAnalysis";
 import { ATHLETE } from "@/lib/config";
-import { addDays, dateLabel, fmtHMS, fmtPace, fromYmd, shortDate, today } from "@/lib/format";
+import { addDays, dateLabel, fmtHMS, fmtHours, fmtPace, fromYmd, shortDate, today } from "@/lib/format";
 import { fmtDist, runPace, swimDist, swimPace } from "@/lib/units";
 
 type Sp = "swim" | "bike" | "run";
@@ -59,7 +60,8 @@ export const KPI_INFO = {
 
 // ---------- 1. KPI tiles ----------
 export function KpiRow() {
-  const k = kpis();
+  const an = useAnalysis();
+  const k = an.kpis();
   return (
     <div className="ax-kpis">
       <div className="card kpi"><div className="k">Training load<Info {...KPI_INFO.load} /></div><div className="row"><div className="v">{k.load.v.toFixed(0)}</div><Delta v={k.load.d} /></div><div className="u">7-day avg · load</div><Bars pts={k.load.bars} /></div>
@@ -74,6 +76,7 @@ export function KpiRow() {
 
 // ---------- 2. Performance overview (fitness / fatigue / form) ----------
 export function Overview({ range }: { range: Range }) {
+  const { LOAD_SERIES } = useAnalysis();
   const days = range === 99 ? LOAD_SERIES.length : Math.min(LOAD_SERIES.length, range * 7);
   const pts = LOAD_SERIES.slice(-days);
   const [hover, setHover] = useState<number | null>(null);
@@ -123,20 +126,25 @@ export function Overview({ range }: { range: Range }) {
 
 // ---------- 3. Training volume ----------
 export function Volume({ range }: { range: Range }) {
+  const an = useAnalysis();
   const [mode, setMode] = useState<"hours" | "distance" | "load">("hours");
-  const cur = currentWeek();
+  const [hov, setHov] = useState<number | null>(null);
+  const cur = an.currentWeek();
   const n = range === 99 ? cur.week : Math.min(cur.week, range);
-  const weeks = WEEKS.slice(cur.week - n, cur.week);
+  const weeks = an.weeks.slice(cur.week - n, cur.week);
   const per = (w: (typeof weeks)[number]) => {
     const s = fromYmd(w.start), e = addDays(s, 7);
-    const acts = ACTIVITIES.filter((a) => { const d = fromYmd(a.date); return d >= s && d < e; });
+    const acts = an.activities.filter((a) => { const d = fromYmd(a.date); return d >= s && d < e; });
     const g = { swim: 0, bike: 0, run: 0, other: 0 };
+    const hours = { swim: 0, bike: 0, run: 0, other: 0 }, count = { swim: 0, bike: 0, run: 0, other: 0 };
     for (const a of acts) {
       const k = a.sport === "swim" || a.sport === "bike" || a.sport === "run" ? a.sport : "other";
       g[k] += mode === "hours" ? a.min / 60 : mode === "load" ? activityLoad(a) : a.sport === "swim" ? (a.yd ?? 0) / 1760 : a.mi ?? 0;
+      hours[k] += a.min / 60; count[k]++;
     }
     const planned = mode === "hours" ? w.plannedMin / 60 : mode === "load" ? w.sessions.reduce((s2, x) => s2 + (x.sport === "rest" ? 0 : Math.round(x.min * 0.75)), 0) : null;
-    return { w, g, planned };
+    const plannedSessions = w.sessions.filter((x) => x.sport !== "rest").length;
+    return { w, g, planned, hours, count, activities: acts.length, hoursTotal: acts.reduce((t, a) => t + a.min, 0) / 60, plannedH: w.plannedMin / 60, plannedSessions };
   };
   const rows = weeks.map(per);
   const W = 760, H = 220, L = 34, R = 10, T = 14, B = 26;
@@ -155,29 +163,47 @@ export function Volume({ range }: { range: Range }) {
           <span className="lgd"><span><i style={{ background: "var(--swim)" }} />Swim</span><span><i style={{ background: "var(--bike)" }} />Bike</span><span><i style={{ background: "var(--run)" }} />Run</span><span><i style={{ background: "var(--strength-soft)", border: "1px solid var(--line)" }} />Other</span><span><i className="dash" />Planned</span></span>
         </div>
       </div>
-      <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Weekly volume">
-        {ticks.map((v) => <g key={v}><line x1={L} y1={y(v)} x2={W - R} y2={y(v)} stroke="var(--grid)" /><text x={L - 6} y={y(v) + 4} textAnchor="end">{mode === "hours" ? v : Math.round(v)}</text></g>)}
-        {rows.map((r, i) => {
-          const cx = L + i * gw + gw / 2;
-          const segs: [number, string][] = [[r.g.run, "var(--run)"], [r.g.bike, "var(--bike)"], [r.g.swim, "var(--swim)"], [r.g.other, "var(--strength-soft)"]];
-          let acc = 0;
+      <div className="ax-volwrap" onMouseLeave={() => setHov(null)}>
+        <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Weekly volume">
+          {ticks.map((v) => <g key={v}><line x1={L} y1={y(v)} x2={W - R} y2={y(v)} stroke="var(--grid)" /><text x={L - 6} y={y(v) + 4} textAnchor="end">{mode === "hours" ? v : Math.round(v)}</text></g>)}
+          {rows.map((r, i) => {
+            const cx = L + i * gw + gw / 2;
+            const segs: [number, string][] = [[r.g.run, "var(--run)"], [r.g.bike, "var(--bike)"], [r.g.swim, "var(--swim)"], [r.g.other, "var(--strength-soft)"]];
+            let acc = 0;
+            return (
+              <g key={r.w.week} onMouseEnter={() => setHov(i)} opacity={hov == null || hov === i ? 1 : 0.6}>
+                <rect x={L + i * gw} y={T} width={gw} height={H - T - B} fill="transparent" />
+                {r.planned != null && <rect x={cx - bw / 2 - 3} y={y(r.planned)} width={bw + 6} height={Math.max(0, y(0) - y(r.planned))} fill="none" stroke="var(--muted-2)" strokeDasharray="3 3" rx={3} />}
+                {segs.map(([v, c], k) => { const el = v > 0 ? <rect key={k} x={cx - bw / 2} y={y(acc + v)} width={bw} height={Math.max(0, y(0) - y(v))} fill={c} /> : null; acc += v; return el; })}
+                <text x={cx} y={H - 8} textAnchor="middle" fontWeight={hov === i ? 600 : undefined}>{shortDate(r.w.start)}</text>
+              </g>
+            );
+          })}
+        </svg>
+        {hov != null && rows[hov] && (() => {
+          const r = rows[hov];
+          const cx = (L + hov * gw + gw / 2) / W;
+          const line = (k: "swim" | "bike" | "run" | "other", label: string, col: string) => r.count[k] ? <div key={k}><span><i style={{ background: col }} />{label}</span><b>{fmtHours(r.hours[k])}</b><span className="n">{r.count[k]} {r.count[k] === 1 ? "activity" : "activities"}</span></div> : null;
           return (
-            <g key={r.w.week}>
-              {r.planned != null && <rect x={cx - bw / 2 - 3} y={y(r.planned)} width={bw + 6} height={Math.max(0, y(0) - y(r.planned))} fill="none" stroke="var(--muted-2)" strokeDasharray="3 3" rx={3} />}
-              {segs.map(([v, c], k) => { const el = v > 0 ? <rect key={k} x={cx - bw / 2} y={y(acc + v)} width={bw} height={Math.max(0, y(0) - y(v))} fill={c} /> : null; acc += v; return el; })}
-              <text x={cx} y={H - 8} textAnchor="middle">{shortDate(r.w.start)}</text>
-            </g>
+            <div className="ax-vtip" style={{ left: `${cx * 100}%`, transform: cx > 0.75 ? "translateX(-100%)" : cx < 0.2 ? "none" : "translateX(-50%)" }}>
+              <div className="d">Week {r.w.week} · {dateLabel(r.w.start)}</div>
+              <div className="tot"><b>{fmtHours(r.hoursTotal)}</b> done · <b>{r.activities}</b> {r.activities === 1 ? "activity" : "activities"}</div>
+              <div className="sub">plan {fmtHours(r.plannedH)} · {r.plannedSessions} sessions</div>
+              {line("swim", "Swim", "var(--swim)")}{line("bike", "Bike", "var(--bike)")}{line("run", "Run", "var(--run)")}{line("other", "Other", "var(--strength-soft)")}
+              {!r.activities && <div className="sub">No activities logged</div>}
+            </div>
           );
-        })}
-      </svg>
-      <div className="ax-foot muted">Bars: completed {unit} per week. Dashed outline: the plan. {mode === "distance" ? "Swim yards converted to miles." : ""}</div>
+        })()}
+      </div>
+      <div className="ax-foot muted">Bars: completed {unit} per week. Dashed outline: the plan. Hover a week for hours and activities. {mode === "distance" ? "Swim yards converted to miles." : ""}</div>
     </section>
   );
 }
 
 // ---------- 4. Load distribution ----------
 export function LoadDistribution({ range }: { range: Range }) {
-  const z = zoneDistribution(range === 99 ? 400 : range * 7);
+  const an = useAnalysis();
+  const z = an.zoneDistribution(range === 99 ? 400 : range * 7);
   const colors = ["#DCE6FB", "var(--swim)", "var(--accent)", "var(--run)", "#0E2E8A"];
   const r = 52, c = 2 * Math.PI * r;
   let off = 0;
@@ -210,7 +236,8 @@ export function LoadDistribution({ range }: { range: Range }) {
 
 // ---------- 5. Sport performance ----------
 function SportCard({ sp }: { sp: Sp }) {
-  const p = sportPerformance(sp);
+  const an = useAnalysis();
+  const p = an.sportPerformance(sp);
   const fmtRow = (kind: string, v: number | null) => v == null ? "—" : kind === "pace" ? `${fmtV(sp, v)} ${unitOf(sp)}` : kind === "speed" ? `${v.toFixed(1)} mph` : kind === "hr" ? `${v.toFixed(0)} bpm` : sp === "swim" ? `${swimDist(v).v.toLocaleString()} ${swimDist(0).u}` : fmtDist(v);
   const good = (kind: string) => (kind === "pace" || kind === "hr" ? "down" : "up");
   const W = 240, H = 92, L = 42, R = 8, T = 8, B = 18;
@@ -252,6 +279,7 @@ export function SportRow() {
 
 // ---------- 6. Progress over time ----------
 export function Progress({ range, onPick }: { range: Range; onPick: (id: string) => void }) {
+  const an = useAnalysis();
   const [sp, setSp] = useState<Sp | "all">("run");
   const [m, setM] = useState<Metric>("pace");
   const days = range === 99 ? 400 : range * 7;
@@ -261,7 +289,7 @@ export function Progress({ range, onPick }: { range: Range; onPick: (id: string)
   // in "all" mode the sports have different units for pace and distance, so each is plotted as % of its first session
   const normalise = sp === "all" && (m === "pace" || m === "distance");
   // bike "pace" is a speed, so its ratio is flipped to keep "faster = up" consistent with run and swim
-  const series = sports.map((k) => { const s = progressSeries(k, m, days); const base = s.pts[0]?.v ?? 1; return { k, ...s, plot: s.pts.map((q) => ({ ...q, y: normalise ? (m === "pace" && k === "bike" ? (base / q.v) * 100 : (q.v / base) * 100) : q.v })) }; });
+  const series = sports.map((k) => { const s = an.progressSeries(k, m, days); const base = s.pts[0]?.v ?? 1; return { k, ...s, plot: s.pts.map((q) => ({ ...q, y: normalise ? (m === "pace" && k === "bike" ? (base / q.v) * 100 : (q.v / base) * 100) : q.v })) }; });
   const all = series.flatMap((s) => s.plot);
   const inv = m === "pace" && sp !== "bike" && !normalise ? true : normalise && m === "pace";
   const vals = all.map((q) => q.y);
@@ -321,8 +349,9 @@ export function Progress({ range, onPick }: { range: Range; onPick: (id: string)
 
 // ---------- 7. Recovery ----------
 export function Recovery() {
+  const an = useAnalysis();
   const w = bodySummary(7), p = bodySummary(7, 7);
-  const h = healthScore();
+  const h = an.healthScore();
   const bars = (k: "rhr" | "hrv" | "sleep_h" | "stress") => [...Array(14)].map((_, i) => { const d = addDays(today(), -13 + i); const day = bodySummary(1, 13 - i); return k === "rhr" ? day.rhr ?? 0 : k === "hrv" ? day.hrv ?? 0 : k === "sleep_h" ? day.sleep ?? 0 : day.stress ?? 0; }).map((v) => v ?? 0);
   const ring = h.score ?? 0, r = 46, c = 2 * Math.PI * r, len = (Math.min(100, ring) / 100) * c;
   const tile = (label: string, v: string, delta: number | null, good: "up" | "down", k: "rhr" | "hrv" | "sleep_h" | "stress", suffix = "", digits = 0) => (
@@ -356,7 +385,8 @@ export function Recovery() {
 
 // ---------- 8. Training quality ----------
 export function Quality({ onPick }: { onPick: (id: string) => void }) {
-  const rows = trainingQuality(6);
+  const an = useAnalysis();
+  const rows = an.trainingQuality(6);
   return (
     <section className="card ax-panel" aria-label="Training quality">
       <div className="ax-head"><div><h2>Training quality</h2><p>Recent sessions and execution</p></div><Link href="/activities" className="link">View all activities →</Link></div>
@@ -382,7 +412,8 @@ export function Quality({ onPick }: { onPick: (id: string) => void }) {
 
 // ---------- 9. Race readiness ----------
 export function RaceReadiness() {
-  const r = raceReadiness();
+  const an = useAnalysis();
+  const r = an.raceReadiness();
   const h = (x: number | null | undefined) => (x == null ? "—" : fmtHMS(x * 60));
   const rng = (x: { lo: number; hi: number } | null) => (x ? `${h(x.lo)} – ${h(x.hi)}` : "—");
   return (
@@ -404,7 +435,8 @@ export function RaceReadiness() {
 
 // ---------- 10. Observations ----------
 export function Observations() {
-  const o = observations();
+  const an = useAnalysis();
+  const o = an.observations();
   return (
     <section className="card ax-panel" aria-label="Sunday review facts">
       <div className="ax-head"><div><h2>Sunday review · facts</h2><p>What the coach reads before proposing any change</p></div></div>

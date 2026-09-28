@@ -4,8 +4,9 @@ import { Icon } from "../icons";
 import { SportIcon } from "../SportIcon";
 import { RouteMap } from "../RouteMap";
 import { CoachNote } from "../CoachNote";
-import { ACTIVITIES, currentWeek, rollingCompliance, weekStatus, type Activity } from "@/lib/data";
-import { BODY, LOAD_SERIES, analyzeActivity, bodySummary, complianceByPhase, corridorAt, healthScore, loadNow, paceSeries, raceProjection, raceScore, totals, volumeWeekly, weightedAvgPace } from "@/lib/analysis";
+import type { Activity } from "@/lib/data";
+import { BODY, bodySummary, corridorAt } from "@/lib/analysis";
+import { useAnalysis } from "@/lib/useAnalysis";
 import { ATHLETE } from "@/lib/config";
 import { addDays, dateLabel, fmtHMS, fmtHours, fmtPace, fromYmd, shortDate, today } from "@/lib/format";
 import { elev, fmtDist, fmtSpeed, runPace, swimDist, swimPace } from "@/lib/units";
@@ -34,12 +35,13 @@ function Spark({ pts, w = 120, h = 34 }: { pts: (number | null)[]; w?: number; h
 }
 
 export function ScoreRow() {
-  const race = raceScore(), health = healthScore();
-  const raceHist = [28, 21, 14, 7, 0].map((o) => raceScore(o).score);
-  const healthHist = [28, 21, 14, 7, 0].map((o) => healthScore(o).score);
-  const load = loadNow();
-  const comp = rollingCompliance(28), wk = weekStatus(currentWeek());
-  const phases = complianceByPhase();
+  const an = useAnalysis();
+  const race = an.raceScore(), health = an.healthScore();
+  const raceHist = [28, 21, 14, 7, 0].map((o) => an.raceScore(o).score);
+  const healthHist = [28, 21, 14, 7, 0].map((o) => an.healthScore(o).score);
+  const load = an.loadNow();
+  const comp = an.rollingCompliance(28), wk = an.weekStatus(an.currentWeek());
+  const phases = an.complianceByPhase();
   const delta = (h: (number | null)[]) => (h[4] != null && h[0] != null ? (h[4] as number) - (h[0] as number) : null);
   return (
     <div className="an-scores">
@@ -83,6 +85,7 @@ export function ScoreRow() {
 
 // ---------- Load chart ----------
 export function LoadChart({ range }: { range: Range }) {
+  const { LOAD_SERIES } = useAnalysis();
   const days = range === 99 ? LOAD_SERIES.length : Math.min(LOAD_SERIES.length, range * 7);
   const pts = LOAD_SERIES.slice(-days);
   const W = 640, H = 200, L = 36, R = 12, T = 12, B = 26;
@@ -123,8 +126,9 @@ export function LoadChart({ range }: { range: Range }) {
 
 // ---------- Weekly volume, stacked by discipline ----------
 export function VolumeStack({ range }: { range: Range }) {
+  const an = useAnalysis();
   const [sp, setSp] = useState<"all" | Sp>("all");
-  const weeks = volumeWeekly(range === 99 ? 99 : range);
+  const weeks = an.volumeWeekly(range === 99 ? 99 : range);
   const W = 640, H = 210, L = 34, R = 10, T = 14, B = 26;
   const val = (w: (typeof weeks)[number], k: "actual" | "planned") => (sp === "all" ? w[k].swim + w[k].bike + w[k].run + w[k].other : w[k][sp]);
   const max = Math.max(2, Math.ceil(Math.max(...weeks.flatMap((w) => [val(w, "actual"), val(w, "planned")])) / 2) * 2);
@@ -165,9 +169,10 @@ export function VolumeStack({ range }: { range: Range }) {
 
 // ---------- Pace trend with corridor ----------
 export function PaceCorridor({ range, onPick }: { range: Range; onPick: (id: string) => void }) {
+  const an = useAnalysis();
   const [sp, setSp] = useState<Sp>("run");
   const days = range === 99 ? 400 : range * 7;
-  const pts = paceSeries(sp, days);
+  const pts = an.paceSeries(sp, days);
   const inv = sp !== "bike";
   const W = 640, H = 210, L = 44, R = 12, T = 14, B = 26;
   const start = pts.length ? fromYmd(pts[0].date) : addDays(today(), -days), end = today();
@@ -177,7 +182,7 @@ export function PaceCorridor({ range, onPick }: { range: Range; onPick: (id: str
   const x = (d: string) => L + ((fromYmd(d).getTime() - start.getTime()) / Math.max(1, end.getTime() - start.getTime())) * (W - L - R);
   const y = (v: number) => (inv ? T + ((v - lo) / (hi - lo)) * (H - T - B) : H - B - ((v - lo) / (hi - lo)) * (H - T - B));
   const band = `M${L} ${y(cs.lo)} L${W - R} ${y(ce.lo)} L${W - R} ${y(ce.hi)} L${L} ${y(cs.hi)} Z`;
-  const avg = weightedAvgPace(sp, 28);
+  const avg = an.weightedAvgPace(sp, 28);
   const now = corridorAt(sp, end);
   const ticks = 4;
   return (
@@ -230,7 +235,8 @@ export function BodyPanel() {
 
 // ---------- Totals + bests + projection ----------
 export function TotalsPanel() {
-  const t = totals(), p = raceProjection();
+  const an = useAnalysis();
+  const t = an.totals(), p = an.raceProjection();
   const h = (x: number | null) => (x == null ? "—" : fmtHMS(x * 60));
   const goalTotal = ATHLETE.raceSplits.swim + ATHLETE.raceSplits.bike + ATHLETE.raceSplits.run + ATHLETE.raceSplits.transitions;
   return (
@@ -272,8 +278,9 @@ export function TotalsPanel() {
 
 // ---------- Single-activity analysis ----------
 export function ActivityAnalyzer({ selectedId, onSelect }: { selectedId: string | null; onSelect: (id: string | null) => void }) {
+  const an = useAnalysis();
   const [open, setOpen] = useState(false);
-  const list = useMemo(() => [...ACTIVITIES].reverse(), []);
+  const list = useMemo(() => [...an.activities].reverse(), [an.activities]);
   return (
     <>
       <div className="an-pick">
@@ -289,9 +296,10 @@ export function ActivityAnalyzer({ selectedId, onSelect }: { selectedId: string 
 }
 
 export function ActivityPanel({ id, onClose }: { id: string | null; onClose: () => void }) {
-  const a = ACTIVITIES.find((x) => x.id === id) ?? null;
+  const an = useAnalysis();
+  const a = an.activities.find((x) => x.id === id) ?? null;
   if (!a) return null;
-  const r = analyzeActivity(a);
+  const r = an.analyzeActivity(a);
   const sp = r.sport as Sp | null;
   const paceStr = sp && r.pace != null ? `${fmtV(sp, r.pace)} ${UNIT[sp]}` : "—";
   const rangeStr = sp && r.range ? `${fmtV(sp, r.range[0])}–${fmtV(sp, r.range[1])} ${UNIT[sp]}` : "—";
@@ -303,7 +311,7 @@ export function ActivityPanel({ id, onClose }: { id: string | null; onClose: () 
         <div>
           <div className="eyebrow muted">Activity analysis</div>
           <h2>{a.name}</h2>
-          <div className="muted">{dateLabel(a.date)}{a.start ? ` · ${a.start}` : ""} · {a.source === "garmin" ? "Garmin" : "Manual"}{r.planned ? (r.planned.sport === a.sport || r.planned.sport === "brick" ? ` · matches plan: ${r.planned.title} ${r.planned.intensity} ${r.planned.min} min` : ` · planned that day: ${r.planned.title} ${r.planned.intensity} ${r.planned.min} min (different sport)`) : " · no planned session that day"}</div>
+          <div className="muted">{dateLabel(a.date)}{a.start ? ` · ${a.start}` : ""} · {a.source === "garmin" ? "Garmin" : "Manual"}{r.planned ? (r.planned.sport === a.sport || r.planned.sport === "brick" ? ` · matches plan: ${r.planned.title} ${r.planned.intensity} ${r.planned.min} min` : ` · planned that day: ${r.planned.title} ${r.planned.intensity} ${r.planned.min} min (different sport)`) : r.restDay ? " · rest day in the plan" : " · no planned session that day"}</div>
         </div>
       </div>
       <div className="an-activity-grid">

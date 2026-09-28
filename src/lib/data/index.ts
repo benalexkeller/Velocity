@@ -126,7 +126,7 @@ export const ACTIVITIES: Activity[] = (actSeed as SeedDay[]).flatMap((d) =>
   }))
 ).sort((a, b) => (a.date + (a.start ?? "")).localeCompare(b.date + (b.start ?? "")));
 
-export const activitiesOn = (date: string) => ACTIVITIES.filter((a) => a.date === date);
+export const activitiesOn = (date: string, acts: Activity[] = ACTIVITIES) => acts.filter((a) => a.date === date);
 
 // ---------- plan ----------
 type SeedWeek = { week: number; start: string; phase: string; focus: string; recovery: boolean; race: boolean; days: { text: string; min: number }[] };
@@ -156,8 +156,8 @@ export const WEEKS: Week[] = (planSeed as SeedWeek[]).map((w) => {
   };
 });
 
-export function weekOf(date: Date): Week | undefined {
-  return WEEKS.find((w) => {
+export function weekOf(date: Date, weeks: Week[] = WEEKS): Week | undefined {
+  return weeks.find((w) => {
     const s = fromYmd(w.start);
     return date >= s && date <= addDays(s, 6);
   });
@@ -165,8 +165,8 @@ export function weekOf(date: Date): Week | undefined {
 export function weekByNumber(n: number) {
   return WEEKS[Math.min(Math.max(n, 1), WEEKS.length) - 1];
 }
-export function currentWeek() {
-  return weekOf(today()) ?? WEEKS[0];
+export function currentWeek(weeks: Week[] = WEEKS) {
+  return weekOf(today(), weeks) ?? weeks[0];
 }
 
 // ---------- phases ----------
@@ -211,10 +211,10 @@ export function plannedByDiscipline(w: Week) {
   }
   return o;
 }
-export function actualByDiscipline(w: Week) {
+export function actualByDiscipline(w: Week, acts: Activity[] = ACTIVITIES) {
   const o = { swim: 0, bike: 0, run: 0, other: 0 };
   for (let i = 0; i < 7; i++) {
-    for (const a of activitiesOn(ymd(addDays(fromYmd(w.start), i)))) {
+    for (const a of activitiesOn(ymd(addDays(fromYmd(w.start), i)), acts)) {
       const h = a.min / 60;
       if (a.sport === "swim" || a.sport === "bike" || a.sport === "run") o[a.sport] += h;
       else o.other += h;
@@ -231,18 +231,18 @@ export function activityLoad(a: Activity) {
   const ifac = a.hr ? Math.min(1.2, (a.hr / 155) ** 2) : a.exertion ? a.exertion / 8 : 0.75;
   return Math.round(a.min * ifac);
 }
-export function weekLoad(w: Week) {
+export function weekLoad(w: Week, acts: Activity[] = ACTIVITIES) {
   const planned = w.sessions.reduce((s, x) => s + plannedLoad(x), 0);
   let actual = 0;
-  for (let i = 0; i < 7; i++) for (const a of activitiesOn(ymd(addDays(fromYmd(w.start), i)))) actual += activityLoad(a);
+  for (let i = 0; i < 7; i++) for (const a of activitiesOn(ymd(addDays(fromYmd(w.start), i)), acts)) actual += activityLoad(a);
   return { planned, actual };
 }
 
 // ---------- compliance ----------
-export function rollingCompliance(days = 28) {
+export function rollingCompliance(days = 28, weeks: Week[] = WEEKS) {
   const t = today();
   let planned = 0, done = 0;
-  for (const w of WEEKS) for (const s of w.sessions) {
+  for (const w of weeks) for (const s of w.sessions) {
     const d = fromYmd(s.date);
     if (s.sport === "rest" || d > t || d < addDays(t, -days)) continue;
     planned++;
@@ -250,10 +250,10 @@ export function rollingCompliance(days = 28) {
   }
   return { planned, done, pct: planned ? Math.round((done / planned) * 100) : 0 };
 }
-export function weekStatus(w: Week) {
+export function weekStatus(w: Week, acts: Activity[] = ACTIVITIES) {
   const sessions = w.sessions.filter((s) => s.sport !== "rest");
   const done = sessions.filter((s) => s.status === "done").length;
-  return { done, total: sessions.length, actualH: sumH(actualByDiscipline(w)), plannedH: w.plannedMin / 60, load: weekLoad(w) };
+  return { done, total: sessions.length, actualH: sumH(actualByDiscipline(w, acts)), plannedH: w.plannedMin / 60, load: weekLoad(w, acts) };
 }
 
 // ---------- coach transcript (seed) ----------

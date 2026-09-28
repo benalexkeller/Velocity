@@ -1,7 +1,8 @@
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ACTIVITIES, actualByDiscipline, currentWeek, plannedByDiscipline, type Activity } from "@/lib/data";
+import { actualByDiscipline, plannedByDiscipline, type Activity } from "@/lib/data";
+import { usePlan } from "@/lib/store";
 import { fmtPace, fromYmd, shortDate, today, addDays, fmtHours } from "@/lib/format";
 import { runPace, swimPace } from "@/lib/units";
 
@@ -15,9 +16,10 @@ const UNIT: Record<Sp, string> = { run: `min${runPace(0).u}`, swim: `min${swimPa
 
 export function PaceChart() {
   const router = useRouter();
+  const plan = usePlan();
   const [sp, setSp] = useState<Sp>("run");
   const since = addDays(today(), -56);
-  const pts = ACTIVITIES.filter((a) => a.sport === sp && fromYmd(a.date) >= since).map((a) => ({ date: a.date, v: paceOf(a, sp), min: a.min })).filter((p): p is { date: string; v: number; min: number } => p.v != null);
+  const pts = plan.activities.filter((a) => a.sport === sp && fromYmd(a.date) >= since).map((a) => ({ date: a.date, v: paceOf(a, sp), min: a.min })).filter((p): p is { date: string; v: number; min: number } => p.v != null);
   const inv = sp !== "bike"; // pace: faster (lower seconds) plotted higher, like the mock
   const W = 420, H = 190, L = 44, R = 10, T = 12, B = 26;
   let lo = pts.length ? Math.min(...pts.map((p) => p.v)) : 0, hi = pts.length ? Math.max(...pts.map((p) => p.v)) : 1;
@@ -27,7 +29,7 @@ export function PaceChart() {
   const y = (v: number) => (inv ? T + ((v - lo) / (hi - lo)) * (H - T - B) : H - B - ((v - lo) / (hi - lo)) * (H - T - B));
   const ticks = 4;
   const fmt = (v: number) => (sp === "bike" ? v.toFixed(1) : fmtPace(v));
-  const wk = currentWeek();
+  const wk = plan.currentWeek();
   const thisWeek = pts.filter((p) => fromYmd(p.date) >= fromYmd(wk.start));
   const wavg = (arr: typeof pts) => (arr.length ? arr.reduce((s, p) => s + p.v * p.min, 0) / arr.reduce((s, p) => s + p.min, 0) : null);
   const last4 = pts.filter((p) => fromYmd(p.date) >= addDays(today(), -28));
@@ -69,8 +71,9 @@ export function PaceChart() {
 
 export function VolumeChart() {
   const router = useRouter();
-  const wk = currentWeek();
-  const a = actualByDiscipline(wk), p = plannedByDiscipline(wk);
+  const plan = usePlan();
+  const wk = plan.currentWeek();
+  const a = actualByDiscipline(wk, plan.activities), p = plannedByDiscipline(wk);
   const rows = [["Swim", a.swim, p.swim], ["Bike", a.bike, p.bike], ["Run", a.run, p.run]] as const;
   const W = 420, H = 190, L = 34, R = 10, T = 12, B = 26;
   const max = Math.max(2, Math.ceil(Math.max(...rows.flatMap((r) => [r[1], r[2]])) / 2) * 2);

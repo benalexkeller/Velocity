@@ -8,7 +8,7 @@ const PAGES = [
   { id: 'dashboard', label: 'Dashboard', path: '/dashboard' },
   { id: 'plan', label: 'Plan', path: '/plan', after: async (p) => { const ev = await p.$$('.wg-ev'); const pick = ev[2] || ev[ev.length - 1]; if (pick) await pick.click(); await p.waitForTimeout(400); const bars = await p.$$('svg.ramp g > rect[fill="transparent"]'); if (bars[11]) await bars[11].click(); await p.waitForTimeout(400); } },
   { id: 'activities', label: 'Activities', path: '/activities', after: async (p) => { const r = await p.$$('tr.row'); if (r[2]) await r[2].click(); await p.waitForTimeout(300); } },
-  { id: 'analysis', label: 'Analysis', path: '/analysis', after: async (p) => { await p.click('.an-pick .plus'); await p.waitForTimeout(200); const opts = await p.$$eval('.an-select option', os => os.map(o => o.value)); if (opts[3]) await p.selectOption('.an-select', opts[3]); await p.waitForTimeout(400); } },
+  { id: 'analysis', label: 'Analysis', path: '/analysis', after: async (p) => { await p.click('.an-pick .plus'); await p.waitForTimeout(200); const opts = await p.$$eval('.an-select option', os => os.map(o => o.value)); if (opts[3]) await p.selectOption('.an-select', opts[3]); await p.waitForTimeout(400); const vg = await p.$$('.ax-volwrap svg > g'); if (vg.length) { await vg[vg.length - 1].hover(); await p.waitForTimeout(250); } } },
   { id: 'nutrition', label: 'Nutrition', path: '/nutrition', after: async (p) => { const c = await p.$$('.cube'); if (c[0]) await c[0].click(); await p.waitForTimeout(300); } },
   { id: 'calculator', label: 'Calculator', path: '/calculator' },
   { id: 'store', label: 'Store', path: '/store' },

@@ -2,7 +2,7 @@
 import { useState } from "react";
 import type { Cube } from "@/components/Cubes";
 import { fmtHMS, fmtPace } from "@/lib/format";
-import { raceProjection } from "@/lib/analysis";
+import { SEED_ANALYSIS } from "@/lib/analysis";
 
 // ---------- helpers ----------
 const num = (s: string) => { const n = parseFloat(s); return isNaN(n) ? 0 : n; };
@@ -33,7 +33,7 @@ function RaceTime() {
   const swimS = (d.swimYd / 100) * toSec(swim), bikeS = num(bike) ? (d.bikeMi / num(bike)) * 3600 : 0, runS = d.runMi * toSec(run);
   const tr = d.swimYd ? (num(t1) + num(t2)) * 60 : 0;
   const total = swimS + bikeS + runS + tr;
-  const mine = () => { const p = raceProjection(); const s = p.swimH && d.swimYd ? (p.swimH * 3600) / (4224 / 100) : null; const b = p.bikeH ? 112 / p.bikeH : null; const r = p.runH ? (p.runH * 3600) / 26.2 : null; if (s) setSwim(fmtPace(s)); if (b) setBike(b.toFixed(1)); if (r) setRun(fmtPace(r)); };
+  const mine = () => { const p = SEED_ANALYSIS.raceProjection(); const s = p.swimH && d.swimYd ? (p.swimH * 3600) / (4224 / 100) : null; const b = p.bikeH ? 112 / p.bikeH : null; const r = p.runH ? (p.runH * 3600) / 26.2 : null; if (s) setSwim(fmtPace(s)); if (b) setBike(b.toFixed(1)); if (r) setRun(fmtPace(r)); };
   return (
     <div className="calc">
       <div className="inputs">

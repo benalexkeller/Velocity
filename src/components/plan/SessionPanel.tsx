@@ -5,18 +5,13 @@ import { Icon } from "../icons";
 import { SportIcon } from "../SportIcon";
 import { RouteMap } from "../RouteMap";
 import { LogActivity } from "../dashboard/LogActivity";
-import { WEEKS, activityLoad, plannedLoad, type Session, type Sport } from "@/lib/data";
+import { activityLoad, plannedLoad, type Session, type Sport } from "@/lib/data";
 import { usePlan } from "@/lib/store";
 import { ATHLETE } from "@/lib/config";
 import { dateLabel, fmtHMS, fmtPace } from "@/lib/format";
 import { elev, fmtDist, fmtSpeed, runPace, swimDist, swimPace } from "@/lib/units";
 import { workoutFor, zoneName, type Segment, type Zone } from "@/lib/workout";
 
-export function findSession(id: string | null) {
-  if (!id) return null;
-  for (const w of WEEKS) { const s = w.sessions.find((x) => x.id === id); if (s) return { s, w }; }
-  return null;
-}
 const INTENSITIES = ["Zone 2", "Aerobic", "Technique", "Endurance", "Tempo", "Intervals", "Race"];
 const SPORTS: Sport[] = ["swim", "bike", "run", "brick", "strength", "hike", "other", "rest"];
 
