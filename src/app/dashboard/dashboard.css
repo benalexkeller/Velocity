@@ -24,7 +24,7 @@
 .hero .donetag { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; letter-spacing: 0.08em; background: rgba(255,255,255,0.16); border-radius: 999px; padding: 2px 9px; margin-left: 12px; vertical-align: 1px; }
 
 /* Garmin: watch hovering on the right of the hero; status lives in the stats row */
-.hero .stat.gm { position: relative; }
+.hero .stat.gm { position: relative; margin-left: auto; margin-right: 0; padding-right: 0; border-right: 0; }
 .hero .garmin { position: absolute; left: 50%; margin-left: -58px; bottom: calc(100% + 10px); width: 116px; filter: drop-shadow(0 0 18px rgba(255,255,255,0.22)) drop-shadow(0 14px 20px rgba(0,0,0,0.5)); animation: hover 4s ease-in-out infinite; }
 @keyframes hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
 .hero .stat.gm .v { display: inline-flex; align-items: center; gap: 9px; font-size: 24px; height: 34px; }

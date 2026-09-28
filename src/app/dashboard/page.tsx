@@ -9,15 +9,13 @@ import { CoachBar } from "@/components/CoachBar";
 import { LogActivity } from "@/components/dashboard/LogActivity";
 import { useEffect, useState } from "react";
 import { PaceChart, VolumeChart } from "@/components/dashboard/Charts";
-import { ACTIVITIES, PHASES, WEEKS, currentWeek, rollingCompliance, weekStatus, type Session } from "@/lib/data";
+import { PHASES, WEEKS, rollingCompliance, weekLoad, type Session } from "@/lib/data";
+import { usePlan } from "@/lib/store";
 import { ATHLETE } from "@/lib/config";
 import { DAYS, MONTHS, addDays, dateLabel, fmtDur, fmtHMS, fromYmd, today, ymd } from "@/lib/format";
 import { fmtDist, fmtSpeed, runPace, swimDist, swimPace } from "@/lib/units";
 import { fmtPace } from "@/lib/format";
 
-function sessionOn(date: string): Session | undefined {
-  for (const w of WEEKS) for (const s of w.sessions) if (s.date === date) return s;
-}
 function heroSub(s: Session) {
   if (s.sport === "rest") return "Recovery day";
   const t = s.text.toLowerCase();
@@ -36,14 +34,15 @@ function target(s: Session) {
 }
 
 export default function Dashboard() {
+  const plan = usePlan();
   const t = today();
   const ds = ymd(t);
-  const cur = currentWeek();
-  const ws = weekStatus(cur);
+  const cur = plan.currentWeek();
+  const ws = { ...plan.weekStatus(cur), load: weekLoad(cur) };
   const comp = rollingCompliance(28);
-  const todayS = sessionOn(ds);
-  const next = [1, 2].map((n) => ({ off: n, s: sessionOn(ymd(addDays(t, n))) }));
-  const last = ACTIVITIES[ACTIVITIES.length - 1];
+  const todayS = plan.sessionOn(ds);
+  const next = [1, 2].map((n) => ({ off: n, s: plan.sessionOn(ymd(addDays(t, n))) }));
+  const last = plan.activities[plan.activities.length - 1];
   const done = todayS?.status === "done";
   const tgt = todayS ? target(todayS) : null;
   const phase = PHASES.find((p) => cur.week >= p.from && cur.week <= p.to);
@@ -68,11 +67,17 @@ export default function Dashboard() {
               <div className="sub">{todayS ? heroSub(todayS) : "No plan for today"}</div>
             </div>
             <div className="stats">
-              {todayS && todayS.sport !== "rest" && (
+              {todayS && todayS.sport !== "rest" ? (
                 <>
                   <div className="stat"><div className="k">Duration</div><div className="v">{todayS.min} min</div></div>
                   <div className="stat"><div className="k">Intensity</div><div className="v">{todayS.intensity}</div></div>
                   {tgt && <div className="stat"><div className="k">{tgt.k}</div><div className="v">{tgt.v}</div><div className="u">{tgt.u}</div></div>}
+                </>
+              ) : (
+                <>
+                  <div className="stat"><div className="k">Duration</div><div className="v">0 min</div></div>
+                  <div className="stat"><div className="k">Intensity</div><div className="v">Rest</div></div>
+                  <div className="stat"><div className="k">Next session</div><div className="v">{next[0].s ? `${next[0].s.title} ${next[0].s.min} min` : "—"}</div><div className="u">{next[0].s ? `${DAYS[(addDays(t, 1).getDay() + 6) % 7]}${next[0].s.start ? ` · ${next[0].s.start}` : ""}` : ""}</div></div>
                 </>
               )}
               <div className="stat gm"><div className="garmin" aria-hidden="true"><Watch width={116} /></div><div className="k">Garmin</div><div className="v"><i className="led" />Connected</div></div>
@@ -84,7 +89,7 @@ export default function Dashboard() {
             <b>Add manually</b>
             <small>Log a swim, bike, run or anything else</small>
           </section>
-          <LogActivity open={logging} onClose={() => setLogging(false)} onSaved={(a) => { setLogging(false); setToast(`Saved · ${a.name} · ${fmtHMS(a.min)}`); }} />
+          <LogActivity open={logging} onClose={() => setLogging(false)} onSaved={(a) => { plan.logActivity(a); setLogging(false); setToast(`Saved · ${a.name} · ${fmtHMS(a.min)}`); }} />
           </div>
           <div className="dash-row2">
           {next.map(({ off, s }) => {
@@ -159,7 +164,7 @@ export default function Dashboard() {
           <VolumeChart />
         </div>
 
-        {toast && <div className="toast" role="status">✓ {toast} <span className="muted">· stored on this device until accounts exist</span></div>}
+        {toast && <div className="toast" role="status">✓ {toast} <span className="muted">· saved on this device until accounts exist</span></div>}
         <CoachBar id="dash-coach" />
       </div>
     </main>

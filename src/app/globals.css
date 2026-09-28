@@ -123,7 +123,16 @@ h1, h2, h3, h4 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
 .send svg { width: 20px; height: 20px; stroke: #fff; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
 /* coach bar: stays pinned to the bottom of the screen while the page scrolls */
-.coachbar { position: sticky; bottom: 12px; z-index: 6; display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 18px; box-shadow: 0 1px 2px rgba(16,17,20,0.04), 0 0 0 1px var(--line), 0 12px 32px rgba(16,17,20,0.10); }
+.coachbar-wrap { position: sticky; bottom: 12px; z-index: 6; display: grid; gap: 8px; }
+.coachbar-reply { position: relative; padding: 12px 40px 12px 14px; display: grid; gap: 8px; box-shadow: 0 1px 2px rgba(16,17,20,0.04), 0 0 0 1px var(--line), 0 12px 32px rgba(16,17,20,0.10); }
+.coachbar-reply .close { position: absolute; top: 8px; right: 8px; width: 26px; height: 26px; border-radius: 7px; background: var(--surface-2); border: 0; display: inline-flex; align-items: center; justify-content: center; }
+.coachbar-reply .close svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; }
+.coachbar-reply .msg { max-width: 100%; }
+.coach .menu { position: absolute; right: 0; top: 28px; z-index: 20; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 32px rgba(16,17,20,0.12); padding: 6px; min-width: 240px; display: grid; gap: 4px; }
+.coach .menu button { border: 0; background: none; text-align: left; padding: 8px 10px; border-radius: 8px; font-size: 13px; color: var(--ink); }
+.coach .menu button:hover { background: var(--surface-2); }
+.coach .menu .small { font-size: 11.5px; padding: 4px 10px 6px; }
+.coachbar { position: relative; z-index: 6; display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 18px; box-shadow: 0 1px 2px rgba(16,17,20,0.04), 0 0 0 1px var(--line), 0 12px 32px rgba(16,17,20,0.10); }
 .coachbar .spark { width: 22px; height: 22px; color: var(--accent); }
 .coachbar .spark svg { stroke: currentColor; fill: none; stroke-width: 1.6; }
 .coachbar input { flex: 1; border: 0; font: inherit; font-size: 15px; background: transparent; outline: none; color: var(--ink); }

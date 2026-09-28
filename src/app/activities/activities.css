@@ -43,3 +43,10 @@
   .search { width: 100%; }
   .tbl .hide-sm { display: none; }
 }
+
+/* filters popover */
+.menu.filters { position: absolute; right: 0; top: 50px; z-index: 30; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 32px rgba(16,17,20,0.12); padding: 12px; min-width: 240px; display: grid; gap: 10px; }
+.menu.filters .k { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.menu.filters .chk { display: flex; align-items: center; gap: 8px; font-size: 13px; }
+.pill-group.small button { padding: 5px 12px; font-size: 12.5px; }
+.iconbtn.on { color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }

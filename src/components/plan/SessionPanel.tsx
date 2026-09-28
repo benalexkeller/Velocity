@@ -1,9 +1,12 @@
 "use client";
+import { useState } from "react";
 import Link from "next/link";
 import { Icon } from "../icons";
 import { SportIcon } from "../SportIcon";
 import { RouteMap } from "../RouteMap";
-import { WEEKS, activitiesOn, activityLoad, plannedLoad, type Session } from "@/lib/data";
+import { LogActivity } from "../dashboard/LogActivity";
+import { WEEKS, activityLoad, plannedLoad, type Session, type Sport } from "@/lib/data";
+import { usePlan } from "@/lib/store";
 import { ATHLETE } from "@/lib/config";
 import { dateLabel, fmtHMS, fmtPace } from "@/lib/format";
 import { elev, fmtDist, fmtSpeed, runPace, swimDist, swimPace } from "@/lib/units";
@@ -13,6 +16,41 @@ export function findSession(id: string | null) {
   if (!id) return null;
   for (const w of WEEKS) { const s = w.sessions.find((x) => x.id === id); if (s) return { s, w }; }
   return null;
+}
+const INTENSITIES = ["Zone 2", "Aerobic", "Technique", "Endurance", "Tempo", "Intervals", "Race"];
+const SPORTS: Sport[] = ["swim", "bike", "run", "brick", "strength", "hike", "other", "rest"];
+
+// Move: pick a new day and start time. Saves to the local store.
+function MoveForm({ s, onDone }: { s: Session; onDone: () => void }) {
+  const plan = usePlan();
+  const [date, setDate] = useState(s.date);
+  const [start, setStart] = useState(s.start ?? "06:30");
+  return (
+    <form className="sp-form" onSubmit={(e) => { e.preventDefault(); plan.moveSession(s.id, { date, start }); onDone(); }}>
+      <label>Day<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
+      <label>Start<input type="time" step={900} value={start} onChange={(e) => setStart(e.target.value)} /></label>
+      <div className="row"><button type="submit" className="btn">Move session</button><button type="button" className="btn ghost" onClick={onDone}>Cancel</button></div>
+    </form>
+  );
+}
+// Edit: sport, duration, intensity, description. Delete removes it from the plan.
+function EditForm({ s, onDone }: { s: Session; onDone: () => void }) {
+  const plan = usePlan();
+  const [sport, setSport] = useState<Sport>(s.sport);
+  const [min, setMin] = useState(String(s.min));
+  const [intensity, setIntensity] = useState(s.intensity);
+  const [text, setText] = useState(s.text);
+  return (
+    <form className="sp-form" onSubmit={(e) => { e.preventDefault(); plan.editSession(s.id, { sport, min: Math.max(0, parseInt(min) || 0), intensity, text }); onDone(); }}>
+      <div className="two">
+        <label>Sport<select value={sport} onChange={(e) => setSport(e.target.value as Sport)}>{SPORTS.map((k) => <option key={k} value={k}>{k[0].toUpperCase() + k.slice(1)}</option>)}</select></label>
+        <label>Duration (min)<input value={min} onChange={(e) => setMin(e.target.value)} inputMode="numeric" /></label>
+      </div>
+      <label>Intensity<select value={intensity} onChange={(e) => setIntensity(e.target.value)}>{INTENSITIES.map((k) => <option key={k}>{k}</option>)}</select></label>
+      <label>Session description<input value={text} onChange={(e) => setText(e.target.value)} /></label>
+      <div className="row"><button type="submit" className="btn">Save changes</button><button type="button" className="btn ghost" onClick={onDone}>Cancel</button><span className="grow" /><button type="button" className="btn ghost danger" onClick={() => { if (confirm("Remove this session from the plan?")) { plan.deleteSession(s.id); onDone(); } }}>Delete</button></div>
+    </form>
+  );
 }
 
 function targetOf(s: Session) {
@@ -56,11 +94,14 @@ function IntervalChart({ segments }: { segments: Segment[] }) {
 
 // Large session view on the Plan page, under the calendar. Clicking any block swaps the session in.
 export function SessionPanel({ id, onClose }: { id: string | null; onClose: () => void }) {
-  const hit = findSession(id);
+  const plan = usePlan();
+  const [mode, setMode] = useState<"view" | "log" | "move" | "edit">("view");
+  const [toast, setToast] = useState<string | null>(null);
+  const hit = plan.findSession(id);
   if (!hit) return null;
   const { s, w } = hit;
   const tgt = targetOf(s);
-  const acts = activitiesOn(s.date);
+  const acts = plan.activitiesOn(s.date);
   const wk = workoutFor(s);
   const status = s.status === "done" ? "Completed" : s.status === "missed" ? "Missed" : "Planned";
   const zoneOfIntensity: Zone = s.intensity === "Tempo" ? 3 : s.intensity === "Intervals" || s.intensity === "Race" ? 4 : 2;
@@ -106,11 +147,19 @@ export function SessionPanel({ id, onClose }: { id: string | null; onClose: () =
               ))}
             </div>
           )}
-          {acts.length === 0 && s.status !== "done" && (
+          {mode === "view" && (
             <div className="sp-actions">
-              <button type="button" className="btn"><Icon name="plus" />Log activity</button>
-              <button type="button" className="btn ghost">Move</button>
-              <button type="button" className="btn ghost">Edit</button>
+              {s.sport !== "rest" && acts.length === 0 && <button type="button" className="btn" onClick={() => setMode("log")}><Icon name="plus" />Log activity</button>}
+              <button type="button" className="btn ghost" onClick={() => setMode("move")}>Move</button>
+              <button type="button" className="btn ghost" onClick={() => setMode("edit")}>Edit</button>
+              {toast && <span className="sp-toast">✓ {toast}</span>}
+            </div>
+          )}
+          {mode === "move" && <MoveForm s={s} onDone={() => { setMode("view"); setToast("Session moved"); }} />}
+          {mode === "edit" && <EditForm s={s} onDone={() => { setMode("view"); setToast("Saved"); }} />}
+          {mode === "log" && (
+            <div className="sp-log">
+              <LogActivity inline open onClose={() => setMode("view")} initial={{ sport: s.sport === "brick" ? "bike" : s.sport === "rest" ? "other" : s.sport, date: s.date, time: s.start ?? "06:30", min: s.min, name: `${s.title} · ${s.intensity}` }} onSaved={(a) => { plan.logActivity(a); setMode("view"); setToast(`Logged · ${a.name}`); }} />
             </div>
           )}
         </div>

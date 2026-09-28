@@ -122,3 +122,42 @@ svg.ramp { width: 100%; height: auto; display: block; }
   .pe li { grid-template-columns: 20px 1fr; } .pe li .muted { grid-column: 2; }
   .mg-c { min-height: 60px; } .mg-s span { display: none; }
 }
+
+/* forms inside the plan (move / edit / add workout) */
+.sp-form { display: grid; gap: 10px; margin-top: 10px; max-width: 560px; }
+.sp-form.add-workout { padding: 16px 18px; margin: 0 0 14px; max-width: none; }
+.sp-form label { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
+.sp-form input, .sp-form select { font: inherit; font-size: 14px; color: var(--ink); border: 1px solid var(--line); border-radius: 9px; padding: 8px 10px; background: var(--surface); outline: none; width: 100%; }
+.sp-form input:focus, .sp-form select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+.sp-form .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.sp-form .row { display: flex; gap: 8px; align-items: center; } .sp-form .row .grow { flex: 1; }
+.btn.danger { color: #B42318; }
+.btn.small { padding: 6px 12px; font-size: 13px; }
+.sp-toast { font-size: 13px; color: #157347; font-weight: 600; margin-left: 6px; }
+.sp-log .logform { position: relative; left: auto; right: auto; top: auto; bottom: auto; animation: none; width: auto; box-shadow: none; border: 1px solid var(--line-2); padding: 14px; margin-top: 10px; }
+.badge.ok-off .ok { background: var(--muted-2); }
+.ok.off { background: var(--muted-2); }
+.plan-head .menu { position: absolute; right: 0; top: 44px; z-index: 20; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 32px rgba(16,17,20,0.12); padding: 8px; min-width: 280px; display: grid; gap: 6px; }
+.plan-head .menu .small { font-size: 12.5px; color: var(--ink-2); line-height: 1.45; padding: 4px 6px; }
+.plan-head .menu button { border: 0; background: var(--surface-2); text-align: left; padding: 8px 10px; border-radius: 8px; font-size: 13px; color: var(--ink); font-weight: 600; }
+.plan-head .badge { cursor: pointer; border: 0; font: inherit; }
+
+/* week overview (from the road-to-race chart) */
+.week-overview { position: relative; margin-top: 12px; padding: 18px 22px 16px; display: grid; gap: 14px; }
+.week-overview .close { position: absolute; top: 12px; right: 12px; width: 28px; height: 28px; border-radius: 8px; background: var(--surface-2); border: 0; display: inline-flex; align-items: center; justify-content: center; }
+.week-overview .close svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; }
+.wo-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; padding-right: 36px; flex-wrap: wrap; }
+.wo-head h3 { font-size: 20px; letter-spacing: -0.02em; margin: 2px 0 4px; }
+.wo-head p { margin: 0; font-size: 13px; }
+.wo-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
+.wo-grid > div { border: 1px solid var(--line-2); border-radius: 10px; padding: 10px 12px; }
+.wo-grid .sport-icon { color: var(--accent); margin-bottom: 4px; }
+.wo-grid .k { font-size: 12px; color: var(--muted); } .wo-grid .v { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; } .wo-grid .u { font-size: 11.5px; color: var(--muted); margin-top: 2px; }
+.wo-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 4px 20px; font-size: 13px; }
+.wo-list li { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--line-2); }
+.wo-list .d { width: 30px; font-weight: 600; color: var(--muted); font-size: 11.5px; } .wo-list .d.done { color: #157347; } .wo-list .d.missed { color: #B42318; }
+.wo-list .sport-icon { color: var(--accent); flex: 0 0 auto; }
+.wo-list .t { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.wo-list .m { color: var(--muted); font-size: 12px; }
+.mg-s { cursor: pointer; } .mg-s.sel { box-shadow: 0 0 0 2px var(--accent); }
+@media (max-width: 1000px) { .wo-grid { grid-template-columns: repeat(3, 1fr); } }

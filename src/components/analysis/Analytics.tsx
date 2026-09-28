@@ -37,17 +37,37 @@ function Bars({ pts, w = 110, h = 30, color = "var(--accent)", soft = "var(--swi
   return <svg className="spark" width={w} height={h} viewBox={`0 0 ${w} ${h}`}>{pts.map((p, i) => <rect key={i} x={i * bw + 1} y={h - (p / hi) * h} width={Math.max(2, bw - 2)} height={(p / hi) * h} rx={1} fill={i === pts.length - 1 ? color : soft} />)}</svg>;
 }
 
+// ---------- info tooltip: the (i) appears on hover; the explanation opens on hover or focus ----------
+export function Info({ title, text }: { title: string; text: string }) {
+  return (
+    <span className="info">
+      <button type="button" className="info-btn" aria-label={`About ${title}`}>i</button>
+      <span className="info-pop" role="tooltip"><b>{title}</b>{text}</span>
+    </span>
+  );
+}
+export const KPI_INFO = {
+  load: { title: "Training load", text: "Average daily training load over the last 7 days. Load per session = duration in minutes × an intensity factor derived from average heart rate ((HR ÷ 155)², capped at 1.2), or from your 1–10 exertion when there is no heart rate. It is a TRIMP-style impulse: a 60-minute session at 155 bpm scores 60; the same hour at 170 bpm scores about 72. The change compares this 7-day average with the previous 7 days." },
+  fitness: { title: "Fitness (chronic load)", text: "An exponentially weighted moving average of daily load with a 42-day time constant — the same construction as CTL in the Banister impulse-response model. Each day it moves 1/42 of the way toward that day's load, so it rises slowly with sustained work and decays slowly with rest. Higher = a larger recent training base. Change is vs 7 days ago." },
+  fatigue: { title: "Fatigue (acute load)", text: "The same exponentially weighted average of daily load, but with a 7-day time constant (ATL). It reacts fast: a big week pushes it up within days and a rest week drops it. On its own it is neither good nor bad; read it against Fitness. A fall is shown as positive because it usually means recovery." },
+  form: { title: "Form (training stress balance)", text: "Fitness minus Fatigue (TSB). Negative during loading blocks (you are carrying more acute than chronic load), positive after a taper or rest week. Roughly: below −30 you are digging deep, −10 to +5 is normal build training, +5 to +25 is fresh. Race day should be positive. Change is in points vs 7 days ago." },
+  volume: { title: "Weekly volume", text: "Hours of completed activities in the current plan week (Monday to Sunday), all sports, taken from Garmin and manual logs. Change is vs the previous plan week. The dashboard's This week card shows the same number next to the planned hours." },
+  consistency: { title: "Consistency", text: "Sessions completed ÷ sessions planned over the last 12 plan weeks, rest days excluded. A session counts as completed when any activity is logged on its day. Compliance, not quality: it does not judge pace or duration. Change is in percentage points vs the 12 weeks before." },
+  zones: { title: "Load by heart-rate zone", text: "Each session's load is assigned to a zone by its average heart rate: Z1 below 135 bpm, Z2 135–147, Z3 148–157, Z4 158–167, Z5 168 and above (provisional zones, recalibrated at the week-4 threshold test). Share = that zone's load ÷ all load with heart rate. Load = the sum, minutes × intensity factor. Sessions without heart rate are excluded from the split. Per-second heart-rate data from the Garmin connection will replace the per-session average." },
+  intensity: { title: "Intensity distribution", text: "Easy = Z1 + Z2 (below the first ventilatory threshold, conversational), Moderate = Z3 (between thresholds, tempo), Hard = Z4 + Z5 (above the second threshold). Polarized and pyramidal endurance programmes put 75–85% of load in the easy band; this plan targets 75–80% in the Base phases." },
+} as const;
+
 // ---------- 1. KPI tiles ----------
 export function KpiRow() {
   const k = kpis();
   return (
     <div className="ax-kpis">
-      <div className="card kpi"><div className="k">Training load</div><div className="row"><div className="v">{k.load.v.toFixed(0)}</div><Delta v={k.load.d} /></div><div className="u">7-day avg · load</div><Bars pts={k.load.bars} /></div>
-      <div className="card kpi"><div className="k">Fitness</div><div className="row"><div className="v">{k.fitness.v.toFixed(0)}</div><Delta v={k.fitness.d} /></div><div className="u">42-day load</div><Spark pts={k.fitness.spark} /></div>
-      <div className="card kpi"><div className="k">Fatigue</div><div className="row"><div className="v">{k.fatigue.v.toFixed(0)}</div><Delta v={k.fatigue.d} good="down" /></div><div className="u">7-day load</div><Spark pts={k.fatigue.spark} color="var(--ink)" /></div>
-      <div className="card kpi"><div className="k">Form</div><div className="row"><div className="v">{sign(k.form.v)}</div><Delta v={k.form.dAbs} suffix="" /></div><div className="u">fitness − fatigue</div><Spark pts={k.form.spark} color="var(--swim)" /></div>
-      <div className="card kpi"><div className="k">Weekly volume</div><div className="row"><div className="v">{k.volume.v.toFixed(1)}<small> h</small></div><Delta v={k.volume.d} /></div><div className="u">This week</div><Bars pts={k.volume.bars} /></div>
-      <div className="card kpi"><div className="k">Consistency</div><div className="row"><div className="v">{k.consistency.v ?? "—"}<small>%</small></div><Delta v={k.consistency.dAbs} suffix=" pts" /></div><div className="u">12-week sessions done</div><Bars pts={k.consistency.bars} /></div>
+      <div className="card kpi"><div className="k">Training load<Info {...KPI_INFO.load} /></div><div className="row"><div className="v">{k.load.v.toFixed(0)}</div><Delta v={k.load.d} /></div><div className="u">7-day avg · load</div><Bars pts={k.load.bars} /></div>
+      <div className="card kpi"><div className="k">Fitness<Info {...KPI_INFO.fitness} /></div><div className="row"><div className="v">{k.fitness.v.toFixed(0)}</div><Delta v={k.fitness.d} /></div><div className="u">42-day load</div><Spark pts={k.fitness.spark} /></div>
+      <div className="card kpi"><div className="k">Fatigue<Info {...KPI_INFO.fatigue} /></div><div className="row"><div className="v">{k.fatigue.v.toFixed(0)}</div><Delta v={k.fatigue.d} good="down" /></div><div className="u">7-day load</div><Spark pts={k.fatigue.spark} color="var(--ink)" /></div>
+      <div className="card kpi"><div className="k">Form<Info {...KPI_INFO.form} /></div><div className="row"><div className="v">{sign(k.form.v)}</div><Delta v={k.form.dAbs} suffix="" /></div><div className="u">fitness − fatigue</div><Spark pts={k.form.spark} color="var(--swim)" /></div>
+      <div className="card kpi"><div className="k">Weekly volume<Info {...KPI_INFO.volume} /></div><div className="row"><div className="v">{k.volume.v.toFixed(1)}<small> h</small></div><Delta v={k.volume.d} /></div><div className="u">This week</div><Bars pts={k.volume.bars} /></div>
+      <div className="card kpi"><div className="k">Consistency<Info {...KPI_INFO.consistency} /></div><div className="row"><div className="v">{k.consistency.v ?? "—"}<small>%</small></div><Delta v={k.consistency.dAbs} suffix=" pts" /></div><div className="u">12-week sessions done</div><Bars pts={k.consistency.bars} /></div>
     </div>
   );
 }
@@ -172,10 +192,10 @@ export function LoadDistribution({ range }: { range: Range }) {
             <text x="70" y="66" textAnchor="middle" className="ink" fontSize="24" fontWeight="600">{z.total}</text>
             <text x="70" y="84" textAnchor="middle" fontSize="10">load · {range === 99 ? "all" : `${range} wk`}</text>
           </svg>
-          <table className="zones"><tbody>{z.zones.map((zz, i) => <tr key={zz.z}><td><i style={{ background: colors[i] }} />Zone {zz.z}</td><td>{zz.pct}%</td><td className="muted">{zz.load}</td></tr>)}</tbody></table>
+          <table className="zones"><thead><tr><th>Zone<Info {...KPI_INFO.zones} /></th><th>Share</th><th>Load</th></tr></thead><tbody>{z.zones.map((zz, i) => <tr key={zz.z}><td><i style={{ background: colors[i] }} />Zone {zz.z}</td><td>{zz.pct}%</td><td className="muted">{zz.load}</td></tr>)}</tbody></table>
         </div>
         <div className="intensity">
-          <div className="k">Intensity distribution</div>
+          <div className="k">Intensity distribution<Info {...KPI_INFO.intensity} /></div>
           <div className="ibar"><i style={{ width: `${z.easy}%`, background: "var(--swim)" }} /><i style={{ width: `${z.moderate}%`, background: "var(--accent)" }} /><i style={{ width: `${z.hard}%`, background: "var(--run)" }} /></div>
           <div className="ilbl"><div><b>{z.easy}%</b><span>Easy (Z1–Z2)</span></div><div><b>{z.moderate}%</b><span>Moderate (Z3)</span></div><div><b>{z.hard}%</b><span>Hard (Z4–Z5)</span></div></div>
         </div>
@@ -193,27 +213,30 @@ function SportCard({ sp }: { sp: Sp }) {
   const p = sportPerformance(sp);
   const fmtRow = (kind: string, v: number | null) => v == null ? "—" : kind === "pace" ? `${fmtV(sp, v)} ${unitOf(sp)}` : kind === "speed" ? `${v.toFixed(1)} mph` : kind === "hr" ? `${v.toFixed(0)} bpm` : sp === "swim" ? `${swimDist(v).v.toLocaleString()} ${swimDist(0).u}` : fmtDist(v);
   const good = (kind: string) => (kind === "pace" || kind === "hr" ? "down" : "up");
-  const W = 230, H = 70, L = 40, R = 6, T = 6, B = 16;
+  const W = 240, H = 92, L = 42, R = 8, T = 8, B = 18;
   const pts = p.trend;
   const v = pts.map((q) => q.v).filter((q): q is number => q != null);
   const lo = v.length ? Math.min(...v) : 0, hi = v.length ? Math.max(...v) : 1;
-  const pad = (hi - lo) * 0.3 || 1;
+  const pad = (hi - lo) * 0.35 || (sp === "bike" ? 1 : 15);
+  const ylo = lo - pad, yhi = hi + pad;
   const inv = sp !== "bike";
-  const y = (n: number) => (inv ? T + ((n - (lo - pad)) / (hi - lo + 2 * pad)) * (H - T - B) : H - B - ((n - (lo - pad)) / (hi - lo + 2 * pad)) * (H - T - B));
+  const y = (n: number) => (inv ? T + ((n - ylo) / (yhi - ylo)) * (H - T - B) : H - B - ((n - ylo) / (yhi - ylo)) * (H - T - B));
   const x = (i: number) => L + (pts.length < 2 ? 0 : (i / (pts.length - 1)) * (W - L - R));
   let d = "", started = false;
   pts.forEach((q, i) => { if (q.v == null) { started = false; return; } d += `${started ? "L" : "M"}${x(i)} ${y(q.v)}`; started = true; });
+  const guides = [ylo + (yhi - ylo) * 0.15, (ylo + yhi) / 2, yhi - (yhi - ylo) * 0.15];
   return (
     <div className="sport">
-      <div className="sh"><SportIcon sport={sp} size={26} /><b>{sp[0].toUpperCase() + sp.slice(1)}</b><span className="muted">{p.sessions} sessions · 4 wk</span></div>
+      <div className="sh"><SportIcon sport={sp} size={22} /><b>{sp[0].toUpperCase() + sp.slice(1)}</b><span className="muted">{p.sessions} sessions · 4 wk</span></div>
       <table><tbody>{p.rows.map((r) => <tr key={r.k}><td>{r.k}</td><td><b>{fmtRow(r.kind, r.cur)}</b></td><td><Delta v={r.cur != null && r.prev ? ((r.cur - r.prev) / r.prev) * 100 : null} good={good(r.kind)} /></td></tr>)}</tbody></table>
-      <div className="k">{sp === "bike" ? "Speed trend" : "Pace trend"} · weekly</div>
-      <svg className="chart" viewBox={`0 0 ${W} ${H}`}>
-        {v.length ? [lo, hi].map((t, i) => <text key={i} x={L - 6} y={y(t) + 4} textAnchor="end">{fmtV(sp, t)}</text>) : null}
-        <line x1={L} y1={H - B} x2={W - R} y2={H - B} stroke="var(--grid)" />
-        <path d={d} fill="none" stroke="var(--accent)" strokeWidth={1.8} />
-        {pts.map((q, i) => q.v != null ? <circle key={i} cx={x(i)} cy={y(q.v)} r={2.5} fill="var(--accent)" /> : null)}
-        {pts.length ? [0, pts.length - 1].map((i) => <text key={i} x={x(i)} y={H - 4} textAnchor={i ? "end" : "start"}>W{pts[i].week}</text>) : null}
+      <div className="k">{sp === "bike" ? "Speed" : "Pace"} · weekly average · {unitOf(sp)}{inv ? " · faster is higher" : ""}</div>
+      <svg className="chart mini" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${sp} weekly ${sp === "bike" ? "speed" : "pace"} trend`}>
+        {v.length ? guides.map((g, i) => <g key={i}><line x1={L} y1={y(g)} x2={W - R} y2={y(g)} stroke="var(--grid)" /><text x={L - 5} y={y(g) + 3} textAnchor="end" fontSize="9">{fmtV(sp, g)}</text></g>) : null}
+        <line x1={L} y1={H - B} x2={W - R} y2={H - B} stroke="var(--line)" />
+        <path d={d} fill="none" stroke="var(--accent)" strokeWidth={1.6} />
+        {pts.map((q, i) => q.v != null ? <circle key={i} cx={x(i)} cy={y(q.v)} r={2.4} fill="var(--accent)" stroke="var(--surface)" strokeWidth={1} /> : null)}
+        {pts.map((q, i) => (i === 0 || i === pts.length - 1 || i % 3 === 0) && pts.length > 1 ? <text key={"w" + i} x={x(i)} y={H - 5} textAnchor={i === 0 ? "start" : i === pts.length - 1 ? "end" : "middle"} fontSize="9">W{q.week}</text> : null)}
+        {!v.length && <text x={W / 2} y={H / 2} textAnchor="middle" fontSize="10">No {sp} sessions yet</text>}
       </svg>
     </div>
   );
@@ -229,43 +252,67 @@ export function SportRow() {
 
 // ---------- 6. Progress over time ----------
 export function Progress({ range, onPick }: { range: Range; onPick: (id: string) => void }) {
-  const [sp, setSp] = useState<Sp>("run");
+  const [sp, setSp] = useState<Sp | "all">("run");
   const [m, setM] = useState<Metric>("pace");
   const days = range === 99 ? 400 : range * 7;
-  const s = progressSeries(sp, m, days);
-  const W = 760, H = 210, L = 46, R = 12, T = 14, B = 26;
-  const pts = s.pts;
-  const inv = m === "pace" && sp !== "bike";
-  const v = pts.map((q) => q.v);
-  let lo = v.length ? Math.min(...v) : 0, hi = v.length ? Math.max(...v) : 1;
+  const W = 760, H = 220, L = 46, R = 12, T = 14, B = 26;
+  const COLORS: Record<Sp, string> = { swim: "var(--swim)", bike: "var(--bike)", run: "var(--run)" };
+  const sports: Sp[] = sp === "all" ? ["swim", "bike", "run"] : [sp];
+  // in "all" mode the sports have different units for pace and distance, so each is plotted as % of its first session
+  const normalise = sp === "all" && (m === "pace" || m === "distance");
+  // bike "pace" is a speed, so its ratio is flipped to keep "faster = up" consistent with run and swim
+  const series = sports.map((k) => { const s = progressSeries(k, m, days); const base = s.pts[0]?.v ?? 1; return { k, ...s, plot: s.pts.map((q) => ({ ...q, y: normalise ? (m === "pace" && k === "bike" ? (base / q.v) * 100 : (q.v / base) * 100) : q.v })) }; });
+  const all = series.flatMap((s) => s.plot);
+  const inv = m === "pace" && sp !== "bike" && !normalise ? true : normalise && m === "pace";
+  const vals = all.map((q) => q.y);
+  let lo = vals.length ? Math.min(...vals) : 0, hi = vals.length ? Math.max(...vals) : 1;
   const pad = (hi - lo) * 0.2 || 1; lo -= pad; hi += pad;
-  const start = pts.length ? fromYmd(pts[0].date) : addDays(today(), -days), end = today();
+  const start = all.length ? fromYmd(all.reduce((a, q) => (q.date < a ? q.date : a), all[0].date)) : addDays(today(), -days), end = today();
   const x = (dt: string) => L + ((fromYmd(dt).getTime() - start.getTime()) / Math.max(1, end.getTime() - start.getTime())) * (W - L - R);
   const y = (n: number) => (inv ? T + ((n - lo) / (hi - lo)) * (H - T - B) : H - B - ((n - lo) / (hi - lo)) * (H - T - B));
-  const fmt = (n: number) => m === "pace" ? fmtV(sp, n) : m === "hr" ? `${n.toFixed(0)}` : m === "distance" ? (sp === "swim" ? `${Math.round(n)}` : n.toFixed(1)) : m === "duration" ? fmtHMS(n) : n.toFixed(0);
-  const unit = m === "pace" ? unitOf(sp) : m === "hr" ? "bpm" : m === "distance" ? (sp === "swim" ? "yd" : "mi") : m === "duration" ? "" : "load";
+  const fmtFor = (k: Sp, n: number) => m === "pace" ? fmtV(k, n) : m === "hr" ? `${n.toFixed(0)}` : m === "distance" ? (k === "swim" ? `${Math.round(n)}` : n.toFixed(1)) : m === "duration" ? fmtHMS(n) : n.toFixed(0);
+  const fmtAxis = (n: number) => normalise ? `${n.toFixed(0)}%` : sp === "all" ? (m === "duration" ? fmtHMS(n) : n.toFixed(0)) : fmtFor(sp as Sp, n);
+  const unitFor = (k: Sp) => m === "pace" ? unitOf(k) : m === "hr" ? "bpm" : m === "distance" ? (k === "swim" ? "yd" : "mi") : m === "duration" ? "" : "load";
   const goodDir = m === "pace" ? (sp === "bike" ? "up" : "down") : m === "hr" ? "down" : "up";
   const ticks = 4;
+  const single = sp !== "all" ? series[0] : null;
   return (
     <section className="card ax-panel" aria-label="Progress over time">
       <div className="ax-head">
-        <div><h2>Progress over time</h2><p>Every session as a point · click a point to analyse it</p></div>
-        <div className="ax-tools"><div className="pill-group">{(["swim", "bike", "run"] as Sp[]).map((k) => <button key={k} type="button" className={sp === k ? "on" : ""} onClick={() => setSp(k)}>{k[0].toUpperCase() + k.slice(1)}</button>)}</div></div>
+        <div><h2>Progress over time</h2><p>Every session as a point · click a point to analyse it{normalise ? " · all sports shown as % of each sport's first session in range" : ""}</p></div>
+        <div className="ax-tools">
+          {sp === "all" && <span className="lgd">{sports.map((k) => <span key={k}><i style={{ background: COLORS[k] }} />{k[0].toUpperCase() + k.slice(1)}</span>)}</span>}
+          <div className="pill-group">{(["all", "swim", "bike", "run"] as const).map((k) => <button key={k} type="button" className={sp === k ? "on" : ""} onClick={() => setSp(k)}>{k === "all" ? "All" : k[0].toUpperCase() + k.slice(1)}</button>)}</div>
+        </div>
       </div>
       <div className="tabs ax-tabs">{METRICS.map((t) => <button key={t.k} type="button" className={m === t.k ? "on" : ""} onClick={() => setM(t.k)}>{t.label}</button>)}</div>
       <div className="ax-progress">
         <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${sp} ${m} over time`}>
-          {Array.from({ length: ticks + 1 }, (_, k) => lo + ((hi - lo) * k) / ticks).map((t, k) => <g key={k}><line x1={L} y1={y(t)} x2={W - R} y2={y(t)} stroke="var(--grid)" /><text x={L - 6} y={y(t) + 4} textAnchor="end">{fmt(t)}</text></g>)}
-          {pts.length > 1 && <path d={`${pts.map((q, i) => `${i ? "L" : "M"}${x(q.date)} ${y(q.v)}`).join("")} L${x(pts[pts.length - 1].date)} ${y(inv ? hi : lo)} L${x(pts[0].date)} ${y(inv ? hi : lo)} Z`} fill="var(--accent-soft)" opacity={0.6} />}
-          {pts.length > 1 && <path d={pts.map((q, i) => `${i ? "L" : "M"}${x(q.date)} ${y(q.v)}`).join("")} fill="none" stroke="var(--accent)" strokeWidth={2} />}
-          {pts.map((q) => <circle key={q.id} cx={x(q.date)} cy={y(q.v)} r={4} fill="var(--accent)" stroke="var(--surface)" strokeWidth={1.5} style={{ cursor: "pointer" }} onClick={() => onPick(q.id)}><title>{`${dateLabel(q.date)} · ${fmt(q.v)} ${unit}`}</title></circle>)}
-          {pts.length ? [pts[0], pts[pts.length - 1]].map((q, i) => <text key={i} x={x(q.date)} y={H - 8} textAnchor={i ? "end" : "start"}>{shortDate(q.date)}</text>) : <text x={W / 2} y={H / 2} textAnchor="middle">No {sp} sessions in range</text>}
+          {Array.from({ length: ticks + 1 }, (_, k) => lo + ((hi - lo) * k) / ticks).map((t, k) => <g key={k}><line x1={L} y1={y(t)} x2={W - R} y2={y(t)} stroke="var(--grid)" /><text x={L - 6} y={y(t) + 4} textAnchor="end">{fmtAxis(t)}</text></g>)}
+          {normalise && <line x1={L} y1={y(100)} x2={W - R} y2={y(100)} stroke="var(--muted-2)" strokeDasharray="4 4" />}
+          {series.map((s) => (
+            <g key={s.k}>
+              {s.plot.length > 1 && sp !== "all" && <path d={`${s.plot.map((q, i) => `${i ? "L" : "M"}${x(q.date)} ${y(q.y)}`).join("")} L${x(s.plot[s.plot.length - 1].date)} ${y(inv ? hi : lo)} L${x(s.plot[0].date)} ${y(inv ? hi : lo)} Z`} fill="var(--accent-soft)" opacity={0.6} />}
+              {s.plot.length > 1 && <path d={s.plot.map((q, i) => `${i ? "L" : "M"}${x(q.date)} ${y(q.y)}`).join("")} fill="none" stroke={sp === "all" ? COLORS[s.k] : "var(--accent)"} strokeWidth={2} />}
+              {s.plot.map((q) => <circle key={q.id} cx={x(q.date)} cy={y(q.y)} r={4} fill={sp === "all" ? COLORS[s.k] : "var(--accent)"} stroke="var(--surface)" strokeWidth={1.5} style={{ cursor: "pointer" }} onClick={() => onPick(q.id)}><title>{`${s.k} · ${dateLabel(q.date)} · ${fmtFor(s.k, q.v)} ${unitFor(s.k)}`}</title></circle>)}
+            </g>
+          ))}
+          {all.length ? <><text x={L} y={H - 8} textAnchor="start">{shortDate(all.reduce((a, q) => (q.date < a ? q.date : a), all[0].date))}</text><text x={W - R} y={H - 8} textAnchor="end">{shortDate(all.reduce((a, q) => (q.date > a ? q.date : a), all[0].date))}</text></> : <text x={W / 2} y={H / 2} textAnchor="middle">No sessions in range</text>}
         </svg>
         <div className="ax-current">
-          <div className="k">Current value</div>
-          <div className="v">{s.cur != null ? fmt(s.cur) : "—"}<small> {unit}</small></div>
-          <Delta v={s.delta} good={goodDir} />
-          <div className="u">vs first session in range</div>
+          {single ? (
+            <>
+              <div className="k">Current value</div>
+              <div className="v">{single.cur != null ? fmtFor(single.k, single.cur) : "—"}<small> {unitFor(single.k)}</small></div>
+              <Delta v={single.delta} good={goodDir} />
+              <div className="u">vs first session in range</div>
+            </>
+          ) : (
+            <div className="ax-all">
+              <div className="k">Latest per sport</div>
+              {series.map((s) => <div key={s.k} className="row"><i style={{ background: COLORS[s.k] }} /><span>{s.k[0].toUpperCase() + s.k.slice(1)}</span><b>{s.cur != null ? `${fmtFor(s.k, s.cur)} ${unitFor(s.k)}` : "—"}</b><Delta v={s.delta} good={m === "pace" ? (s.k === "bike" ? "up" : "down") : m === "hr" ? "down" : "up"} /></div>)}
+            </div>
+          )}
         </div>
       </div>
     </section>

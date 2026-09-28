@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import { AppShell } from "@/components/AppShell";
+import { PlanProvider } from "@/lib/store";
 
 const inter = localFont({ src: "./fonts/inter-latin-wght.woff2", variable: "--font-inter", weight: "100 900", display: "swap" });
 
@@ -14,7 +15,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={inter.variable}>
       <body>
-        <AppShell>{children}</AppShell>
+        <PlanProvider><AppShell>{children}</AppShell></PlanProvider>
       </body>
     </html>
   );

@@ -1,10 +1,15 @@
 "use client";
-import { PHASES, WEEKS, actualByDiscipline, currentWeek, plannedByDiscipline, sumH } from "@/lib/data";
+import { PHASES, plannedByDiscipline, sumH, type Week } from "@/lib/data";
+import { usePlan } from "@/lib/store";
 import { ATHLETE } from "@/lib/config";
 
 /** "The road to 140.6" — planned hours per week stacked by discipline; the last bar is race day. */
-export function RampChart() {
-  const cur = currentWeek().week;
+export function RampChart({ selected, onPick }: { selected?: number | null; onPick?: (week: number) => void }) {
+  const plan = usePlan();
+  const WEEKS = plan.weeks;
+  const cur = plan.currentWeek().week;
+  const selPhase = selected ? PHASES.find((p) => selected >= p.from && selected <= p.to) : null;
+  const actualOf = (w: Week) => plan.weekStatus(w).bySport;
   const W = 1180, H = 250, L = 46, R = 40, T = 56, B = 30;
   const n = WEEKS.length; // 33 incl. race week
   const gw = (W - L - R) / (n + 1); // +1 slot for the race bar
@@ -14,7 +19,7 @@ export function RampChart() {
   const rs = ATHLETE.raceSplits;
   const raceTotal = rs.swim + rs.bike + rs.run + rs.transitions;
 
-  const bars = WEEKS.map((w) => ({ w, p: plannedByDiscipline(w), a: actualByDiscipline(w) }));
+  const bars = WEEKS.map((w) => ({ w, p: plannedByDiscipline(w), a: actualOf(w) }));
   const x = (i: number) => L + i * gw + (gw - bw) / 2;
 
   return (
@@ -30,24 +35,28 @@ export function RampChart() {
       {/* phase brackets */}
       {PHASES.map((p) => {
         const x0 = L + (p.from - 1) * gw + 4, x1 = L + p.to * gw - 4;
+        const on = selPhase?.short === p.short;
         return (
-          <g key={p.short}>
-            <line x1={x0} y1={T - 20} x2={x1} y2={T - 20} stroke="var(--line)" />
-            <line x1={x0} y1={T - 26} x2={x0} y2={T - 20} stroke="var(--line)" />
-            <text x={(x0 + x1) / 2} y={T - 30} textAnchor="middle" className="ink" fontWeight={600} fontSize="12">{p.short}</text>
+          <g key={p.short} style={{ cursor: onPick ? "pointer" : undefined }} onClick={() => onPick?.(p.from)}>
+            {on && <rect x={x0 - 4} y={T - 40} width={x1 - x0 + 8} height={H - B - T + 40} fill="var(--accent-soft)" opacity={0.55} rx={6} />}
+            <line x1={x0} y1={T - 20} x2={x1} y2={T - 20} stroke={on ? "var(--accent)" : "var(--line)"} strokeWidth={on ? 2 : 1} />
+            <line x1={x0} y1={T - 26} x2={x0} y2={T - 20} stroke={on ? "var(--accent)" : "var(--line)"} />
+            <text x={(x0 + x1) / 2} y={T - 30} textAnchor="middle" className={on ? "accent" : "ink"} fontWeight={600} fontSize="12">{p.short}</text>
             <text x={(x0 + x1) / 2} y={T - 17 + 12} textAnchor="middle" fontSize="10.5">Weeks {p.from}{p.to !== p.from ? ` – ${p.to}` : ""}</text>
           </g>
         );
       })}
       {/* bars */}
       {bars.map(({ w, p, a }, i) => {
-        const isCur = w.week === cur, done = w.week < cur;
+        const isCur = w.week === cur, done = w.week < cur, isSel = w.week === selected;
         const stack = done ? a : p;
         const total = sumH(stack);
         let acc = 0;
         const segs = [["run", stack.run, "var(--run)"], ["bike", stack.bike, "var(--bike)"], ["swim", stack.swim, "var(--swim)"]] as const;
         return (
-          <g key={w.week} opacity={done || isCur ? 1 : 0.9}>
+          <g key={w.week} opacity={done || isCur ? 1 : 0.9} style={{ cursor: onPick ? "pointer" : undefined }} onClick={() => onPick?.(w.week)}>
+            <rect x={x(i) - (gw - bw) / 2} y={T - 8} width={gw} height={H - B - T + 8} fill="transparent" />
+            {isSel && !isCur && <rect x={x(i) - 3} y={y(Math.max(total, 0.5)) - 3} width={bw + 6} height={y(0) - y(Math.max(total, 0.5)) + 6} fill="none" stroke="var(--ink)" strokeWidth={1.5} rx={4} />}
             {segs.map(([k, h, col]) => {
               const y1 = y(acc + h), y0 = y(acc);
               acc += h;
@@ -61,7 +70,7 @@ export function RampChart() {
                 <text x={x(i) + bw / 2} y={y(total) - 23} textAnchor="middle" className="accent" fontWeight={700} fontSize="11">NOW</text>
               </>
             )}
-            <text x={x(i) + bw / 2} y={H - 10} textAnchor="middle" fontSize="10.5">{w.week}</text>
+            <text x={x(i) + bw / 2} y={H - 10} textAnchor="middle" fontSize="10.5" className={isSel ? "ink" : undefined} fontWeight={isSel ? 700 : undefined}>{w.week}</text>
           </g>
         );
       })}

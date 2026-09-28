@@ -69,7 +69,7 @@ export function sportOf(text: string): Sport {
 }
 export const SPORT_LABEL: Record<Sport, string> = { swim: "Swim", bike: "Bike", run: "Run", strength: "Strength", rest: "Rest day", hike: "Hike", other: "Session", brick: "Brick" };
 
-function intensityOf(text: string) {
+export function intensityOf(text: string) {
   const t = text.toLowerCase();
   if (/race sim|race day/.test(t)) return "Race";
   if (/\btempo\b|threshold|lthr/.test(t)) return "Tempo";
@@ -79,7 +79,7 @@ function intensityOf(text: string) {
   if (/long (ride|run)/.test(t)) return "Endurance";
   return "Aerobic";
 }
-function whyOf(text: string, sport: Sport) {
+export function whyOf(text: string, sport: Sport) {
   const t = text.toLowerCase();
   if (sport === "rest") return "No session planned. Recovery day.";
   if (/drill|technique/.test(t)) return "Drills and relaxed swimming to improve stroke efficiency.";

@@ -6,7 +6,8 @@ import { Icon } from "@/components/icons";
 import { SportIcon } from "@/components/SportIcon";
 import { RouteMap } from "@/components/RouteMap";
 import { CoachNote } from "@/components/CoachNote";
-import { ACTIVITIES, activityLoad, type Activity } from "@/lib/data";
+import { activityLoad, type Activity } from "@/lib/data";
+import { usePlan } from "@/lib/store";
 import { ATHLETE } from "@/lib/config";
 import { DAYS, MONTHS, addDays, fmtHMS, fmtPace, fromYmd, today } from "@/lib/format";
 import { elev, fmtDist, fmtSpeed, runPace, swimDist, swimPace } from "@/lib/units";
@@ -56,9 +57,14 @@ export default function ActivitiesPage() {
 
 function Activities() {
   const params = useSearchParams();
+  const plan = usePlan();
+  const ACTIVITIES = plan.activities;
   const fromUrl = params.get("a");
   const [tab, setTab] = useState<Tab>("all");
   const [q, setQ] = useState("");
+  const [filters, setFilters] = useState(false);
+  const [source, setSource] = useState<"all" | "garmin" | "manual">("all");
+  const [gpsOnly, setGpsOnly] = useState(false);
   // the detail panel is always showing one activity: the one from the link, else the most recent; clicking a row swaps it in
   const [sel, setSel] = useState<string | null>(fromUrl ?? ACTIVITIES[ACTIVITIES.length - 1]?.id ?? null);
   useEffect(() => { if (fromUrl) setSel(fromUrl); }, [fromUrl]);
@@ -74,8 +80,8 @@ function Activities() {
   }, [sel]);
   const list = useMemo(() => {
     const t = q.trim().toLowerCase();
-    return [...ACTIVITIES].reverse().filter((a) => (tab === "all" || a.sport === tab) && (!t || a.name.toLowerCase().includes(t) || a.date.includes(t)));
-  }, [tab, q]);
+    return [...ACTIVITIES].reverse().filter((a) => (tab === "all" || a.sport === tab) && (source === "all" || a.source === source) && (!gpsOnly || !!a.route) && (!t || a.name.toLowerCase().includes(t) || a.date.includes(t)));
+  }, [tab, q, source, gpsOnly, ACTIVITIES]);
   const selected = ACTIVITIES.find((a) => a.id === sel) ?? null;
 
   let lastGroup = "";
@@ -91,7 +97,17 @@ function Activities() {
             </div>
             <span className="grow" />
             <label className="search"><Icon name="search" /><input id="act-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search activities…" aria-label="Search activities" /></label>
-            <button className="iconbtn" type="button" aria-label="Filters"><Icon name="filter" /></button>
+            <span style={{ position: "relative" }}>
+              <button className={`iconbtn${source !== "all" || gpsOnly ? " on" : ""}`} type="button" aria-label="Filters" aria-expanded={filters} onClick={() => setFilters((f) => !f)}><Icon name="filter" /></button>
+              {filters && (
+                <div className="menu filters" role="dialog" aria-label="Filters">
+                  <div className="k">Source</div>
+                  <div className="pill-group small">{(["all", "garmin", "manual"] as const).map((k) => <button key={k} type="button" className={source === k ? "on" : ""} onClick={() => setSource(k)}>{k === "all" ? "All" : k === "garmin" ? "Garmin" : "Manual"}</button>)}</div>
+                  <label className="chk"><input type="checkbox" checked={gpsOnly} onChange={(e) => setGpsOnly(e.target.checked)} /> With GPS route only</label>
+                  <button type="button" className="btn ghost small" onClick={() => { setSource("all"); setGpsOnly(false); setQ(""); setTab("all"); setFilters(false); }}>Clear filters</button>
+                </div>
+              )}
+            </span>
           </div>
           <div className="tabs" role="tablist">
             {(["all", "swim", "bike", "run"] as Tab[]).map((k) => <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>{k}</button>)}

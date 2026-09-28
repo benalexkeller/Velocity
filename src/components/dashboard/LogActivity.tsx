@@ -17,17 +17,19 @@ function defaultName(sport: Sport, time: string) {
   return `${part} ${SPORTS.find((x) => x.k === sport)?.label.toLowerCase() ?? "session"}`;
 }
 
-export interface ManualActivity { id: string; name: string; sport: Sport; date: string; start: string; min: number; mi?: number; yd?: number; pace_s?: number; mph?: number; p100_s?: number; elev_ft?: number; exertion?: number; feel?: string; note?: string; source: "manual" }
+import type { ManualActivity } from "@/lib/store";
+export type { ManualActivity };
 
 // Expanding "bubble" for manual logging. Opens to the left over the hero; fields change with the sport.
-export function LogActivity({ open, onClose, onSaved }: { open: boolean; onClose: () => void; onSaved: (a: ManualActivity) => void }) {
+export interface LogInitial { sport?: Sport; date?: string; time?: string; min?: number; name?: string }
+export function LogActivity({ open, onClose, onSaved, initial, inline }: { open: boolean; onClose: () => void; onSaved: (a: ManualActivity) => void; initial?: LogInitial; inline?: boolean }) {
   const now = new Date();
-  const [sport, setSport] = useState<Sport>("run");
-  const [date, setDate] = useState(ymd(now));
-  const [time, setTime] = useState(`${String(now.getHours()).padStart(2, "0")}:00`);
-  const [name, setName] = useState("");
+  const [sport, setSport] = useState<Sport>(initial?.sport ?? "run");
+  const [date, setDate] = useState(initial?.date ?? ymd(now));
+  const [time, setTime] = useState(initial?.time ?? `${String(now.getHours()).padStart(2, "0")}:00`);
+  const [name, setName] = useState(initial?.name ?? "");
   const [dist, setDist] = useState(""); // mi, or yd for swim
-  const [dur, setDur] = useState(""); // h:mm:ss
+  const [dur, setDur] = useState(initial?.min ? `${initial.min}:00` : ""); // h:mm:ss
   const [pace, setPace] = useState(""); // m:ss per mi / per 100 yd, or mph for bike
   const [elev, setElev] = useState("");
   const [effort, setEffort] = useState(0);
@@ -77,14 +79,13 @@ export function LogActivity({ open, onClose, onSaved }: { open: boolean; onClose
     else if (sport === "run") { if (num(dist)) a.mi = num(dist); if (toSec(pace)) a.pace_s = toSec(pace); }
     else if (sport === "hike") { if (num(dist)) a.mi = num(dist); }
     if (num(elev)) a.elev_ft = num(elev);
-    try { const key = "velocity.manualActivities"; const cur = JSON.parse(localStorage.getItem(key) || "[]"); cur.push(a); localStorage.setItem(key, JSON.stringify(cur)); } catch { /* storage unavailable: still report saved for this session */ }
     onSaved(a);
     setName(""); setDist(""); setDur(""); setPace(""); setElev(""); setEffort(0); setFeel(""); setNote(""); setLast([]);
   };
 
   if (phase === "closed") return null;
   return (
-    <form className={`card logform${phase === "closing" ? " closing" : ""}`} onSubmit={(e) => { e.preventDefault(); if (valid) save(); }} aria-label="Log an activity">
+    <form className={`card logform${inline ? " inline" : ""}${phase === "closing" ? " closing" : ""}`} onSubmit={(e) => { e.preventDefault(); if (valid) save(); }} aria-label="Log an activity">
       <button className="close" type="button" onClick={onClose} aria-label="Close"><Icon name="close" /></button>
       <div className="lf-left">
         <div className="lf-top">
