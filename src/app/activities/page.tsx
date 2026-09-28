@@ -93,7 +93,6 @@ function Activities() {
             <label className="search"><Icon name="search" /><input id="act-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search activities…" aria-label="Search activities" /></label>
             <button className="iconbtn" type="button" aria-label="Filters"><Icon name="filter" /></button>
           </div>
-          {selected && <Drawer a={selected} />}
           <div className="tabs" role="tablist">
             {(["all", "swim", "bike", "run"] as Tab[]).map((k) => <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>{k}</button>)}
           </div>
@@ -128,6 +127,7 @@ function Activities() {
             </tbody>
           </table>
         </div>
+        {selected && <Drawer a={selected} />}
       </div>
     </main>
   );
@@ -145,35 +145,31 @@ function FragmentRow({ showGroup, group, children }: { showGroup: boolean; group
 function Drawer({ a }: { a: Activity }) {
   const w = when(a), pp = paceOrPower(a);
   return (
-    <section className="drawer" aria-label="Activity detail">
-      <div className="d-info">
-        <div className="hd">
-          <SportIcon sport={a.sport} size={40} />
-          <div><b>{a.name}</b><small>{w.l1}{w.l2 ? ` · ${w.l2}` : ""}</small><small>{subtitle(a)}</small></div>
-        </div>
-        <div className="kv">
-          <div><span>Activity type</span><span>{a.sport === "bike" ? "Ride" : a.sport[0].toUpperCase() + a.sport.slice(1)}</span></div>
-          <div><span>Source</span><span>{a.source === "garmin" ? "Garmin" : "Manual"}</span></div>
-          {a.route && <div><span>Location</span><span>{ATHLETE.city}</span></div>}
-        </div>
+    <aside className="card drawer" aria-label="Activity detail">
+      <div className="hd">
+        <SportIcon sport={a.sport} size={40} />
+        <div><b>{a.name}</b><small>{w.l1}{w.l2 ? ` · ${w.l2}` : ""}</small><small>{subtitle(a)}</small></div>
       </div>
-      <div className="d-stats">
-        <div className="grid">
-          <div><div className="v">{distance(a)}</div><div className="k">Distance</div></div>
-          <div><div className="v">{fmtHMS(a.min)}</div><div className="k">Time</div></div>
-          <div><div className="v">{pp.v}<small>{pp.u}</small></div><div className="k">{a.sport === "bike" ? "Avg speed" : "Pace"}</div></div>
-          {a.elev_ft ? <div><div className="v">{elev(a.elev_ft).v.toLocaleString()}<small>{elev(0).u}</small></div><div className="k">Elevation gain</div></div> : null}
-          {a.hr ? <div><div className="v">{Math.round(a.hr)}<small>bpm</small></div><div className="k">Avg heart rate</div></div> : null}
-          <div><div className="v">{activityLoad(a)}</div><div className="k">Load</div></div>
-          <div><div className="v"><Effort n={effortLevel(a) || 1} /></div><div className="k">Effort</div></div>
-        </div>
-        {a.coachNote && (<><h4>Coach insight</h4><div className="note"><CoachNote text={a.coachNote} /></div></>)}
-        {a.note && (<><h4>Your note</h4><div className="note">{a.note}</div></>)}
+      <div className="grid">
+        <div><div className="v">{distance(a)}</div><div className="k">Distance</div></div>
+        <div><div className="v">{fmtHMS(a.min)}</div><div className="k">Time</div></div>
+        <div><div className="v">{pp.v}<small>{pp.u}</small></div><div className="k">{a.sport === "bike" ? "Avg speed" : "Pace"}</div></div>
+        {a.hr ? <div><div className="v">{Math.round(a.hr)}<small>bpm</small></div><div className="k">Avg heart rate</div></div> : null}
+        {a.elev_ft ? <div><div className="v">{elev(a.elev_ft).v.toLocaleString()}<small>{elev(0).u}</small></div><div className="k">Elevation gain</div></div> : null}
+        <div><div className="v">{activityLoad(a)}</div><div className="k">Load</div></div>
+        <div><div className="v"><Effort n={effortLevel(a) || 1} /></div><div className="k">Effort</div></div>
       </div>
-      <div className="d-map">
-        <h4 style={{ marginTop: 0 }}>Route</h4>
-        <RouteMap route={a.route} height={150} bg="#1C2030" stroke="#5B8CFF" />
+      <h4>Route</h4>
+      <RouteMap route={a.route} height={150} />
+      {a.coachNote && (<><h4>Coach insight</h4><div className="note"><CoachNote text={a.coachNote} /></div></>)}
+      {a.note && (<><h4>Your note</h4><div className="note">{a.note}</div></>)}
+      <h4>Details</h4>
+      <div className="kv">
+        <div><span>Activity type</span><span>{a.sport === "bike" ? "Ride" : a.sport[0].toUpperCase() + a.sport.slice(1)}</span></div>
+        <div><span>Source</span><span>{a.source === "garmin" ? "Garmin" : "Manual"}</span></div>
+        {a.route && <div><span>Location</span><span>{ATHLETE.city}</span></div>}
+        <div><span>Start</span><span>{w.l2 || "—"}</span></div>
       </div>
-    </section>
+    </aside>
   );
 }

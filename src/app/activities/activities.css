@@ -15,32 +15,30 @@
 .tbl .thumb { width: 52px; height: 36px; border-radius: 6px; overflow: hidden; }
 .tbl .chev { width: 18px; height: 18px; color: var(--muted); } .tbl .chev svg { stroke: currentColor; fill: none; stroke-width: 1.8; }
 
-/* frozen block: title + search + detail panel + tabs; the column headers stick just below it */
+/* frozen block: title + search + tabs; the column headers stick just below it */
 .acts-sticky { position: sticky; top: 56px; z-index: 5; background: var(--bg); padding-top: 4px; }
 .acts-tbl thead th { position: sticky; top: calc(56px + var(--acts-top, 0px)); background: var(--bg); z-index: 4; }
 
-/* detail panel — horizontal, above the list (the one deliberate dark surface) */
-.acts { display: block; }
-.drawer { position: relative; background: #131517; color: #fff; border-radius: 16px; padding: 20px 22px 18px; margin: 2px 0 14px; display: grid; grid-template-columns: 250px minmax(0, 1fr) 280px; gap: 26px; box-shadow: 0 12px 32px rgba(16,17,20,0.18); }
-.drawer .close { position: absolute; top: 14px; right: 14px; width: 30px; height: 30px; border-radius: 8px; background: rgba(255,255,255,0.08); border: 0; color: #fff; display: inline-flex; align-items: center; justify-content: center; }
-.drawer .close svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; }
+/* detail panel — white, on the right, pinned while the list scrolls; always shows one activity */
+.acts { display: grid; grid-template-columns: minmax(0, 1fr) 380px; gap: 18px; align-items: start; }
+.drawer { position: sticky; top: 68px; align-self: start; padding: 20px 20px 18px; display: grid; gap: 12px; max-height: calc(100vh - 84px); overflow: auto; }
 .drawer .hd { display: flex; gap: 12px; align-items: flex-start; }
-.drawer .hd .sport-icon { color: var(--accent); }
-.drawer .hd b { display: block; font-size: 15px; letter-spacing: 0.02em; text-transform: uppercase; font-weight: 700; line-height: 1.2; }
-.drawer .hd small { display: block; color: rgba(255,255,255,0.65); font-size: 12.5px; margin-top: 2px; }
-.drawer .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 12px 10px; }
-.drawer .grid .v { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; white-space: nowrap; } .drawer .grid .v small { font-size: 12px; font-weight: 400; margin-left: 3px; color: rgba(255,255,255,0.7); }
-.drawer .grid .k { font-size: 12px; color: rgba(255,255,255,0.65); }
-.drawer h4 { font-size: 13px; margin: 14px 0 6px; color: rgba(255,255,255,0.8); display: flex; justify-content: space-between; }
-.drawer .kv { margin-top: 12px; }
-.drawer .kv div { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.08); font-size: 12.5px; }
-.drawer .kv div span:first-child { color: rgba(255,255,255,0.65); }
-.drawer .note b { color: #fff; font-weight: 700; }
-.drawer .note { font-size: 13px; line-height: 1.45; color: rgba(255,255,255,0.85); background: rgba(255,255,255,0.06); border-radius: 10px; padding: 10px 12px; }
-.drawer .effort i { background: rgba(255,255,255,0.18); } .drawer .effort i.on { background: #5B8CFF; }
+.drawer .hd .sport-icon { color: var(--accent); flex: 0 0 auto; }
+.drawer .hd b { display: block; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.2; }
+.drawer .hd small { display: block; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+.drawer .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 10px; padding: 12px 0 4px; border-top: 1px solid var(--line-2); }
+.drawer .grid .v { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; white-space: nowrap; } .drawer .grid .v small { font-size: 12px; font-weight: 400; margin-left: 3px; color: var(--muted); }
+.drawer .grid .k { font-size: 12px; color: var(--muted); }
+.drawer h4 { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin: 6px 0 -4px; }
+.drawer .kv div { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--line-2); font-size: 13px; }
+.drawer .kv div span:first-child { color: var(--muted); }
+.drawer .note { font-size: 13px; line-height: 1.45; color: var(--ink-2); background: var(--surface-2); border-radius: 10px; padding: 10px 12px; }
+.drawer .note b { color: var(--ink); font-weight: 700; }
+.drawer .effort i { background: var(--track); } .drawer .effort i.on { background: var(--accent); }
 
 @media (max-width: 1000px) {
-  .drawer { grid-template-columns: 1fr; gap: 16px; }
+  .acts { grid-template-columns: 1fr; }
+  .drawer { position: relative; top: 0; max-height: none; }
   .acts-head h1 { font-size: 30px; }
   .search { width: 100%; }
   .tbl .hide-sm { display: none; }
