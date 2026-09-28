@@ -50,3 +50,10 @@
 .menu.filters .chk { display: flex; align-items: center; gap: 8px; font-size: 13px; }
 .pill-group.small button { padding: 5px 12px; font-size: 12.5px; }
 .iconbtn.on { color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
+
+/* exclude / delete */
+.drawer .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.drawer .actions .btn.on { background: var(--ink); color: #fff; border-color: var(--ink); }
+.drawer .confirm { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-2); }
+.acts-tbl tr.row.excluded td { opacity: 0.55; }
+.acts-tbl tr.row.excluded td .tag { display: inline-block; margin-left: 8px; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); border-radius: 999px; padding: 2px 7px; vertical-align: middle; }

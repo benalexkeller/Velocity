@@ -65,6 +65,7 @@ ${sections.map((s, i) => `<div class="pv-page${i === 0 ? ' on' : ''}" id="pv-${s
 <script>
 document.querySelectorAll('[data-pv]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('[data-pv]').forEach(x=>x.classList.toggle('on',x===b));document.querySelectorAll('.pv-page').forEach(p=>p.classList.toggle('on',p.id==='pv-'+b.dataset.pv));window.scrollTo(0,0);}));
 document.querySelectorAll('.pv-page a').forEach(a=>a.addEventListener('click',e=>{e.preventDefault();const m=(a.getAttribute('href')||'').replace('/','');const b=document.querySelector('[data-pv="'+m+'"]');if(b)b.click();}));
+const wgs=()=>document.querySelectorAll('.wg-scroll').forEach(b=>{b.scrollTop=12});wgs();document.querySelectorAll('[data-pv]').forEach(b=>b.addEventListener('click',()=>setTimeout(wgs,0)));
 </script>`;
   fs.writeFileSync(out, html);
   console.log('wrote', out, (html.length / 1024).toFixed(0) + 'KB');

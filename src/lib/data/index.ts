@@ -52,6 +52,7 @@ export interface Activity {
   note?: string;
   exertion?: number;
   coachNote?: string;
+  excluded?: boolean; // kept in the list, but not counted in analysis, volume or session status
 }
 
 // ---------- classification helpers ----------

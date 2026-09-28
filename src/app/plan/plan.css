@@ -16,10 +16,11 @@
 .wg-day b { display: block; font-size: 18px; font-weight: 600; margin-top: 1px; }
 .wg-day.today { background: var(--accent-soft); }
 .wg-day.today span, .wg-day.today b { color: var(--accent); }
+.wg-scroll { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
 .wg-body { display: grid; grid-template-columns: 52px repeat(7, 1fr); position: relative; }
 .wg-hours { position: relative; }
 .wg-hours span { position: absolute; right: 8px; transform: translateY(-50%); font-size: 11px; color: var(--muted); }
-.wg-col { position: relative; border-left: 1px solid var(--line-2); background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 39px, var(--line-2) 39px, var(--line-2) 40px); }
+.wg-col { position: relative; border-left: 1px solid var(--line-2); background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 19px, var(--line-2) 19px, var(--line-2) 20px, transparent 20px, transparent 40px); }
 .wg-col.today { background-color: var(--accent-soft); }
 .wg-now { position: absolute; left: 0; right: 0; height: 0; border-top: 2px solid var(--accent); z-index: 2; }
 .wg-now::before { content: ""; position: absolute; left: -1px; top: -5px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
@@ -131,8 +132,6 @@ svg.ramp { width: 100%; height: auto; display: block; }
 .sp-form input:focus, .sp-form select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .sp-form .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .sp-form .row { display: flex; gap: 8px; align-items: center; } .sp-form .row .grow { flex: 1; }
-.btn.danger { color: #B42318; }
-.btn.small { padding: 6px 12px; font-size: 13px; }
 .sp-toast { font-size: 13px; color: #157347; font-weight: 600; margin-left: 6px; }
 .sp-log .logform { position: relative; left: auto; right: auto; top: auto; bottom: auto; animation: none; width: auto; box-shadow: none; border: 1px solid var(--line-2); padding: 14px; margin-top: 10px; }
 .badge.ok-off .ok { background: var(--muted-2); }

@@ -82,7 +82,7 @@ function Activities() {
     const t = q.trim().toLowerCase();
     return [...ACTIVITIES].reverse().filter((a) => (tab === "all" || a.sport === tab) && (source === "all" || a.source === source) && (!gpsOnly || !!a.route) && (!t || a.name.toLowerCase().includes(t) || a.date.includes(t)));
   }, [tab, q, source, gpsOnly, ACTIVITIES]);
-  const selected = ACTIVITIES.find((a) => a.id === sel) ?? null;
+  const selected = ACTIVITIES.find((a) => a.id === sel) ?? ACTIVITIES[ACTIVITIES.length - 1] ?? null;
 
   let lastGroup = "";
   return (
@@ -125,9 +125,9 @@ function Activities() {
                 const w = when(a), pp = paceOrPower(a);
                 return (
                   <FragmentRow key={a.id} showGroup={showGroup} group={g}>
-                    <tr className={`row${sel === a.id ? " sel" : ""}`} onClick={() => { setSel(a.id); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
+                    <tr className={`row${sel === a.id ? " sel" : ""}${a.excluded ? " excluded" : ""}`} onClick={() => { setSel(a.id); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
                       <td className="when">{w.l1}<small>{w.l2}</small></td>
-                      <td><div className="act"><SportIcon sport={a.sport} size={30} /><div><b>{a.name}</b><small>{subtitle(a)}</small></div></div></td>
+                      <td><div className="act"><SportIcon sport={a.sport} size={30} /><div><b>{a.name}{a.excluded && <span className="tag">Excluded</span>}</b><small>{subtitle(a)}</small></div></div></td>
                       <td className="num">{distance(a)}</td>
                       <td className="num">{fmtHMS(a.min)}</td>
                       <td className="num hide-sm">{pp.v}<small>{pp.u}</small></td>
@@ -143,7 +143,7 @@ function Activities() {
             </tbody>
           </table>
         </div>
-        {selected && <Drawer a={selected} />}
+        {selected && <Drawer a={selected} onDeleted={() => setSel(null)} />}
       </div>
     </main>
   );
@@ -158,14 +158,26 @@ function FragmentRow({ showGroup, group, children }: { showGroup: boolean; group
   );
 }
 
-function Drawer({ a }: { a: Activity }) {
+function Drawer({ a, onDeleted }: { a: Activity; onDeleted: () => void }) {
+  const plan = usePlan();
   const w = when(a), pp = paceOrPower(a);
+  const [confirm, setConfirm] = useState(false);
+  useEffect(() => setConfirm(false), [a.id]);
   return (
     <aside className="card drawer" aria-label="Activity detail">
       <div className="hd">
         <SportIcon sport={a.sport} size={40} />
-        <div><b>{a.name}</b><small>{w.l1}{w.l2 ? ` · ${w.l2}` : ""}</small><small>{subtitle(a)}</small></div>
+        <div><b>{a.name}</b><small>{w.l1}{w.l2 ? ` · ${w.l2}` : ""}</small><small>{subtitle(a)}{a.excluded ? " · excluded from analysis" : ""}</small></div>
       </div>
+      <div className="actions">
+        <button type="button" className={`btn ghost small${a.excluded ? " on" : ""}`} onClick={() => plan.toggleExcluded(a.id)} aria-pressed={!!a.excluded}>{a.excluded ? "Include in analysis" : "Exclude from analysis"}</button>
+        {confirm ? (
+          <span className="confirm"><span>Delete this activity?</span><button type="button" className="btn danger small" onClick={() => { plan.deleteActivity(a.id); onDeleted(); }}>Delete</button><button type="button" className="btn ghost small" onClick={() => setConfirm(false)}>Cancel</button></span>
+        ) : (
+          <button type="button" className="btn ghost small" onClick={() => setConfirm(true)}>Delete</button>
+        )}
+      </div>
+      {a.excluded && <div className="note">Not counted in analysis, weekly volume, load or session status. It stays in this list.</div>}
       <div className="grid">
         <div><div className="v">{distance(a)}</div><div className="k">Distance</div></div>
         <div><div className="v">{fmtHMS(a.min)}</div><div className="k">Time</div></div>

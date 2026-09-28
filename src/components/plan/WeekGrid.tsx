@@ -1,10 +1,12 @@
 "use client";
+import { useEffect, useRef } from "react";
 import { Icon } from "../icons";
 import { SportIcon } from "../SportIcon";
 import type { Session, Week } from "@/lib/data";
 import { DAYS, addDays, fromYmd, hoursToClock, today, ymd } from "@/lib/format";
 
-const H0 = 5, H1 = 21, ROW = 20; // 05:00–21:00, 26px per hour (labels every 2h); blocks keep a readable min height
+const H0 = 4, H1 = 23, ROW = 20; // the grid covers 04:00–23:00; the box shows 16 hours and scrolls for the rest
+const VIEW0 = 5, VIEW_H = 16; // opens at 05:00 showing 05:00–21:00, like before
 
 function toH(hhmm?: string) { if (!hhmm) return H0; const [h, m] = hhmm.split(":").map(Number); return h + m / 60; }
 
@@ -15,6 +17,8 @@ export function WeekGrid({ week, selectedId, onPick }: { week: Week; selectedId?
   const nowH = nowD.getHours() + nowD.getMinutes() / 60;
   const height = (H1 - H0) * ROW;
   const y = (h: number) => (h - H0) * ROW;
+  const box = useRef<HTMLDivElement>(null);
+  useEffect(() => { if (box.current) box.current.scrollTop = y(VIEW0) - 8; }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <div className="wg">
@@ -31,9 +35,10 @@ export function WeekGrid({ week, selectedId, onPick }: { week: Week; selectedId?
           );
         })}
       </div>
+      <div className="wg-scroll" ref={box} style={{ height: VIEW_H * ROW }}>
       <div className="wg-body" style={{ height }}>
         <div className="wg-hours">
-          {Array.from({ length: (H1 - H0) / 2 + 1 }, (_, k) => H0 + k * 2).map((h) => (
+          {Array.from({ length: Math.floor((H1 - H0 - 1) / 2) + 1 }, (_, k) => H0 + 1 + k * 2).map((h) => (
             <span key={h} style={{ top: y(h) }}>{String(h).padStart(2, "0")}:00</span>
           ))}
         </div>
@@ -53,6 +58,7 @@ export function WeekGrid({ week, selectedId, onPick }: { week: Week; selectedId?
           );
         })}
       </div>
+      </div>
     </div>
   );
 }
@@ -60,7 +66,7 @@ export function WeekGrid({ week, selectedId, onPick }: { week: Week; selectedId?
 function Block({ s, y, selected, onPick }: { s: Session; y: (h: number) => number; selected?: boolean; onPick?: (s: Session) => void }) {
   if (s.sport === "rest") {
     return (
-      <div className={`wg-ev rest${s.status === "done" ? " done" : ""}${selected ? " sel" : ""}`} style={{ top: 6 }} onClick={() => onPick?.(s)} role={onPick ? "button" : undefined} tabIndex={onPick ? 0 : undefined}>
+      <div className={`wg-ev rest${s.status === "done" ? " done" : ""}${selected ? " sel" : ""}`} style={{ top: y(VIEW0) + 6 }} onClick={() => onPick?.(s)} role={onPick ? "button" : undefined} tabIndex={onPick ? 0 : undefined}>
         <SportIcon sport="rest" size={20} />
         <div className="txt"><b>Rest day{s.status === "done" && <span className="ck"><Icon name="check" /></span>}</b><small>No session</small></div>
       </div>

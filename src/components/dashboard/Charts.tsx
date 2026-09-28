@@ -19,7 +19,7 @@ export function PaceChart() {
   const plan = usePlan();
   const [sp, setSp] = useState<Sp>("run");
   const since = addDays(today(), -56);
-  const pts = plan.activities.filter((a) => a.sport === sp && fromYmd(a.date) >= since).map((a) => ({ date: a.date, v: paceOf(a, sp), min: a.min })).filter((p): p is { date: string; v: number; min: number } => p.v != null);
+  const pts = plan.counted.filter((a) => a.sport === sp && fromYmd(a.date) >= since).map((a) => ({ date: a.date, v: paceOf(a, sp), min: a.min })).filter((p): p is { date: string; v: number; min: number } => p.v != null);
   const inv = sp !== "bike"; // pace: faster (lower seconds) plotted higher, like the mock
   const W = 420, H = 190, L = 44, R = 10, T = 12, B = 26;
   let lo = pts.length ? Math.min(...pts.map((p) => p.v)) : 0, hi = pts.length ? Math.max(...pts.map((p) => p.v)) : 1;
@@ -73,7 +73,7 @@ export function VolumeChart() {
   const router = useRouter();
   const plan = usePlan();
   const wk = plan.currentWeek();
-  const a = actualByDiscipline(wk, plan.activities), p = plannedByDiscipline(wk);
+  const a = actualByDiscipline(wk, plan.counted), p = plannedByDiscipline(wk);
   const rows = [["Swim", a.swim, p.swim], ["Bike", a.bike, p.bike], ["Run", a.run, p.run]] as const;
   const W = 420, H = 190, L = 34, R = 10, T = 12, B = 26;
   const max = Math.max(2, Math.ceil(Math.max(...rows.flatMap((r) => [r[1], r[2]])) / 2) * 2);

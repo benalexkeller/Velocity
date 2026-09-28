@@ -14,7 +14,7 @@ export function CoachRail({ thread, placeholder = "Ask your coach or log how it 
   const [menu, setMenu] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const msgs: CoachMsg[] = [...thread.filter((m) => !(plan.undone && m.who === "action")), ...(plan.undone ? [{ who: "action" as const, at: "", text: "Plan change reverted · ride back to 07:30" }] : []), ...plan.thread];
-  useEffect(() => { endRef.current?.scrollIntoView({ block: "end" }); }, [plan.thread.length]);
+  useEffect(() => { const box = endRef.current?.parentElement; if (box) box.scrollTop = box.scrollHeight; }, [plan.thread.length]);
   function send() {
     const t = draft.trim();
     if (!t) return;

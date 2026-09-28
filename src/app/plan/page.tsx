@@ -126,7 +126,7 @@ function Plan() {
             <button type="button" className={view === "month" ? "on" : ""} onClick={() => setView("month")}>Month</button>
           </div>
           <span style={{ position: "relative" }}>
-            <button type="button" className="badge" aria-expanded={calInfo} onClick={() => setCalInfo((o) => !o)}><span className={plan.calendar ? "ok" : "ok off"}>{plan.calendar ? "✓" : "–"}</span>Google Calendar <span className="muted">{plan.calendar ? "sync on" : "sync off"}</span></button>
+            <button type="button" className="badge" aria-expanded={calInfo} onClick={() => setCalInfo((o) => !o)} title={`Google Calendar sync ${plan.calendar ? "on" : "off"}`}><span className={plan.calendar ? "ok" : "ok off"}>{plan.calendar ? "✓" : "–"}</span>Calendar</button>
             {calInfo && (
               <div className="menu" role="dialog">
                 <div className="small"><b>Google Calendar</b><br />The Google connection isn't built yet. This switch records whether sessions should be written to your calendar once it is.</div>

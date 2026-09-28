@@ -38,11 +38,11 @@ export default function Dashboard() {
   const t = today();
   const ds = ymd(t);
   const cur = plan.currentWeek();
-  const ws = { ...plan.weekStatus(cur), load: weekLoad(cur, plan.activities) };
+  const ws = { ...plan.weekStatus(cur), load: weekLoad(cur, plan.counted) };
   const comp = rollingCompliance(28, plan.weeks);
   const todayS = plan.sessionOn(ds);
   const next = [1, 2].map((n) => ({ off: n, s: plan.sessionOn(ymd(addDays(t, n))) }));
-  const last = plan.activities[plan.activities.length - 1];
+  const last = plan.counted[plan.counted.length - 1];
   const done = todayS?.status === "done";
   const tgt = todayS ? target(todayS) : null;
   const phase = PHASES.find((p) => cur.week >= p.from && cur.week <= p.to);

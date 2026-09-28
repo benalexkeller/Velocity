@@ -6,5 +6,5 @@ import { createAnalysis } from "./analysis";
 
 export function useAnalysis() {
   const plan = usePlan();
-  return useMemo(() => createAnalysis(plan.activities, plan.weeks), [plan.activities, plan.weeks]);
+  return useMemo(() => createAnalysis(plan.counted, plan.weeks), [plan.counted, plan.weeks]);
 }
