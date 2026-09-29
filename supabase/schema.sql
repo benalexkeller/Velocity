@@ -97,16 +97,22 @@ create table if not exists public.coach_messages (
 );
 create index if not exists coach_messages_user on public.coach_messages (user_id, id);
 
+-- ---------- who is admin: any sign-up with one of these emails gets the admin flag ----------
+create table if not exists public.admin_emails (email text primary key);
+insert into public.admin_emails (email) values ('benalexkeller@gmail.com') on conflict do nothing;
+alter table public.admin_emails enable row level security; -- no policies: not readable through the API
+
 -- ---------- a profile row for every new sign-up ----------
 create or replace function public.handle_new_user()
 returns trigger language plpgsql security definer set search_path = public as $$
 begin
-  insert into public.profiles (id, email, name, avatar_url)
+  insert into public.profiles (id, email, name, avatar_url, is_admin)
   values (
     new.id,
     new.email,
     coalesce(new.raw_user_meta_data ->> 'full_name', new.raw_user_meta_data ->> 'name', split_part(coalesce(new.email, ''), '@', 1)),
-    new.raw_user_meta_data ->> 'avatar_url'
+    new.raw_user_meta_data ->> 'avatar_url',
+    lower(coalesce(new.email, '')) in (select lower(email) from public.admin_emails)
   )
   on conflict (id) do nothing;
   return new;
@@ -176,6 +182,5 @@ returns void language sql security definer set search_path = public as $$
   update public.profiles set last_seen = now() where id = auth.uid();
 $$;
 
--- ---------- make PR the admin (change the email if you sign up with another one) ----------
--- Run this line again after your first sign-in if the profile did not exist yet:
-update public.profiles set is_admin = true where lower(email) = lower('apykeller@gmail.com');
+-- ---------- make the admin flag right for accounts that already exist ----------
+update public.profiles p set is_admin = true where lower(p.email) in (select lower(email) from public.admin_emails);
