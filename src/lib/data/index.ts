@@ -95,13 +95,15 @@ export function whyOf(text: string, sport: Sport) {
 function shortPhase(p: string) {
   return p.split("—")[0].trim();
 }
-function timeFor(text: string, dayIndex: number, sport: Sport) {
+export interface Availability { days?: number[]; weekday_am?: string; weekday_pm?: string; weekend?: string }
+export const DEFAULT_AVAILABILITY: Required<Availability> = { days: [1, 2, 3, 4, 5, 6, 0], weekday_am: "06:30", weekday_pm: "18:00", weekend: "08:00" };
+function timeFor(text: string, dayIndex: number, sport: Sport, av: Availability = DEFAULT_AVAILABILITY) {
   if (sport === "rest") return undefined;
   const t = text.trim();
-  if (/^AM:/i.test(t)) return "06:30";
-  if (/^PM:/i.test(t)) return "18:00";
-  if (dayIndex >= 5) return "08:00";
-  return "06:30";
+  if (/^AM:/i.test(t)) return av.weekday_am ?? DEFAULT_AVAILABILITY.weekday_am;
+  if (/^PM:/i.test(t)) return av.weekday_pm ?? DEFAULT_AVAILABILITY.weekday_pm;
+  if (dayIndex >= 5) return av.weekend ?? DEFAULT_AVAILABILITY.weekend;
+  return av.weekday_am ?? DEFAULT_AVAILABILITY.weekday_am;
 }
 function cleanText(text: string) {
   return text.replace(/^(AM|PM):\s*/i, "");
@@ -130,32 +132,52 @@ export const ACTIVITIES: Activity[] = (actSeed as SeedDay[]).flatMap((d) =>
 export const activitiesOn = (date: string, acts: Activity[] = ACTIVITIES) => acts.filter((a) => a.date === date);
 
 // ---------- plan ----------
-type SeedWeek = { week: number; start: string; phase: string; focus: string; recovery: boolean; race: boolean; days: { text: string; min: number }[] };
+/** One plan week as stored (seed file and the plans table share this shape). */
+export type PlanWeekJson = { week: number; start: string; phase: string; focus: string; recovery: boolean; race: boolean; days: { text: string; min: number }[] };
+export const PLAN_SEED = planSeed as PlanWeekJson[];
 
-export const WEEKS: Week[] = (planSeed as SeedWeek[]).map((w) => {
-  const startD = fromYmd(w.start);
-  const sessions: Session[] = w.days.map((d, i) => {
-    const date = ymd(addDays(startD, i));
-    const sport = sportOf(d.text);
-    const acts = activitiesOn(date);
-    const isPast = fromYmd(date) < today();
-    const status: Status = acts.length ? "done" : sport === "rest" ? (isPast ? "done" : "planned") : isPast ? "missed" : "planned";
-    const intensity = intensityOf(d.text);
+export function sessionStatus(sport: Sport, date: string, acts: Activity[]): Status {
+  const isPast = fromYmd(date) < today();
+  return acts.length ? "done" : sport === "rest" ? (isPast ? "done" : "planned") : isPast ? "missed" : "planned";
+}
+
+/** Builds the app's week objects from a stored plan; statuses come from the activities given. */
+export function buildWeeks(plan: PlanWeekJson[], acts: Activity[] = [], av: Availability = DEFAULT_AVAILABILITY): Week[] {
+  return plan.map((w) => {
+    const startD = fromYmd(w.start);
+    const sessions: Session[] = w.days.map((d, i) => {
+      const date = ymd(addDays(startD, i));
+      const sport = sportOf(d.text);
+      const intensity = intensityOf(d.text);
+      return {
+        id: `w${w.week}-${i}`, date, dayIndex: i,
+        start: timeFor(d.text, i, sport, av),
+        min: d.min, sport,
+        title: SPORT_LABEL[sport],
+        detail: sport === "rest" ? "No session" : `${intensity} · ${d.min} min`,
+        text: cleanText(d.text), intensity, why: whyOf(d.text, sport), status: sessionStatus(sport, date, activitiesOn(date, acts)),
+      };
+    });
     return {
-      id: `w${w.week}-${i}`, date, dayIndex: i,
-      start: timeFor(d.text, i, sport),
-      min: d.min, sport,
-      title: SPORT_LABEL[sport],
-      detail: sport === "rest" ? "No session" : `${intensity} · ${d.min} min`,
-      text: cleanText(d.text), intensity, why: whyOf(d.text, sport), status,
+      week: w.week, start: w.start, phase: w.phase, phaseShort: shortPhase(w.phase), focus: w.focus,
+      recovery: w.recovery, race: w.race, sessions,
+      plannedMin: w.days.reduce((s, d) => s + (d.min || 0), 0) - (w.race ? 780 : 0),
     };
   });
-  return {
-    week: w.week, start: w.start, phase: w.phase, phaseShort: shortPhase(w.phase), focus: w.focus,
-    recovery: w.recovery, race: w.race, sessions,
-    plannedMin: w.days.reduce((s, d) => s + (d.min || 0), 0) - (w.race ? 780 : 0),
-  };
-});
+}
+
+/** No plan yet: empty weeks around today so the calendar, dashboard and analysis still have a frame. */
+export function virtualWeeks(anchor: Date = today(), back = 4, forward = 8): Week[] {
+  const mon = addDays(anchor, -((anchor.getDay() + 6) % 7));
+  const out: Week[] = [];
+  for (let i = -back; i <= forward; i++) {
+    const start = addDays(mon, i * 7);
+    out.push({ week: i + back + 1, start: ymd(start), phase: "No plan", phaseShort: "No plan", focus: "", recovery: false, race: false, sessions: [], plannedMin: 0 });
+  }
+  return out;
+}
+
+export const WEEKS: Week[] = buildWeeks(PLAN_SEED, ACTIVITIES);
 
 export function weekOf(date: Date, weeks: Week[] = WEEKS): Week | undefined {
   return weeks.find((w) => {
@@ -182,9 +204,10 @@ const PHASE_COPY: Record<string, { purpose: string; goals: [string, string][] }>
   "Taper": { purpose: "Volume drops. Short intensity touches remain.", goals: [["Taper 1", "Volume −35%. Bike serviced. Pacing chart drafted."], ["Taper 2", "Volume −50%. Fueling and travel finalized."], ["Race week", "Fly in mid-week. Short openers. Race Saturday."]] },
   "Race Week": { purpose: "Volume drops. Short intensity touches remain.", goals: [] },
 };
-export const PHASES: Phase[] = (() => {
+export function phasesOf(weeks: Week[]): Phase[] {
   const out: Phase[] = [];
-  for (const w of WEEKS) {
+  for (const w of weeks) {
+    if (w.phaseShort === "No plan") continue;
     const short = w.phaseShort === "Race Week" ? "Taper" : w.phaseShort;
     const last = out[out.length - 1];
     if (last && last.short === short) { last.to = w.week; last.weeks.push(w); }
@@ -196,7 +219,8 @@ export const PHASES: Phase[] = (() => {
     p.goals = (PHASE_COPY[p.short]?.goals ?? []).map(([title, desc]) => ({ n: n++, title, desc }));
   }
   return out;
-})();
+}
+export const PHASES: Phase[] = phasesOf(WEEKS);
 
 // ---------- volume by discipline (planned hours) ----------
 export function plannedByDiscipline(w: Week) {

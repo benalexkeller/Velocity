@@ -47,7 +47,7 @@ export function PaceChart() {
       <div>
         <div className="muted" style={{ fontSize: 11, marginBottom: 2 }}>{UNIT[sp]}</div>
         <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${sp} pace over the last eight weeks`}>
-          {Array.from({ length: ticks + 1 }, (_, k) => lo + ((hi - lo) * k) / ticks).map((v, k) => (
+          {pts.length > 0 && Array.from({ length: ticks + 1 }, (_, k) => lo + ((hi - lo) * k) / ticks).map((v, k) => (
             <g key={k}>
               <line x1={L} y1={y(v)} x2={W - R} y2={y(v)} stroke="var(--grid)" />
               <text x={L - 8} y={y(v) + 4} textAnchor="end">{fmt(v)}</text>

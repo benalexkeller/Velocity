@@ -156,3 +156,4 @@ a.next:hover .date, a.next:hover .d, a.tw:hover .k { color: var(--muted); }
   .chartcard { grid-template-columns: 1fr; } .chartcard .side { border-left: 0; padding-left: 0; }
   .review { flex-wrap: wrap; } .review .by { margin-left: 0; }
 }
+.hero .stat.gm .v .dim { font-size: 20px; opacity: 0.7; }

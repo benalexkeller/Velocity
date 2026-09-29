@@ -9,9 +9,8 @@ import { CoachBar } from "@/components/CoachBar";
 import { LogActivity } from "@/components/dashboard/LogActivity";
 import { useEffect, useState } from "react";
 import { PaceChart, VolumeChart } from "@/components/dashboard/Charts";
-import { PHASES, WEEKS, rollingCompliance, weekLoad, type Session } from "@/lib/data";
+import { rollingCompliance, weekLoad, type Session } from "@/lib/data";
 import { usePlan } from "@/lib/store";
-import { ATHLETE } from "@/lib/config";
 import { DAYS, MONTHS, addDays, dateLabel, fmtDur, fmtHMS, fromYmd, today, ymd } from "@/lib/format";
 import { fmtDist, fmtSpeed, runPace, swimDist, swimPace } from "@/lib/units";
 import { fmtPace } from "@/lib/format";
@@ -25,8 +24,7 @@ function heroSub(s: Session) {
   if (/strides/.test(t)) return "Aerobic + strides";
   return "Aerobic endurance";
 }
-function target(s: Session) {
-  const z = ATHLETE.zones;
+function target(s: Session, z: Record<string, Record<string, string>>) {
   if (s.sport === "run") return { k: "Target pace", v: z.run[s.intensity] ?? z.run["Zone 2"], u: `per ${runPace(0).u.replace("/", "")}` };
   if (s.sport === "bike" || s.sport === "brick") return { k: "Target speed", v: z.bike[s.intensity] ?? z.bike["Zone 2"], u: "" };
   if (s.sport === "swim") return { k: "Target pace", v: z.swim[s.intensity] ?? z.swim["Aerobic"], u: `per 100 ${swimDist(0).u}` };
@@ -43,12 +41,14 @@ export default function Dashboard() {
   const todayS = plan.sessionOn(ds);
   const next = [1, 2].map((n) => ({ off: n, s: plan.sessionOn(ymd(addDays(t, n))) }));
   const last = plan.counted[plan.counted.length - 1];
+  const garmin = plan.activities.some((a) => a.source === "garmin"); // until the Garmin connection exists, "connected" = Garmin data present
   const done = todayS?.status === "done";
-  const tgt = todayS ? target(todayS) : null;
+  const tgt = todayS ? target(todayS, plan.athlete.zones) : null;
+  const PHASES = plan.phases, WEEKS = plan.weeks;
   const phase = PHASES.find((p) => cur.week >= p.from && cur.week <= p.to);
   const stops = ["Base", "Build", "Peak", "Race"];
-  const stopAt = (k: string) => { const p = PHASES.find((x) => x.short.startsWith(k)); return p ? (p.from - 1) / (WEEKS.length - 1) : 1; };
-  const pos = (cur.week - 1) / (WEEKS.length - 1);
+  const stopAt = (k: string) => { const p = PHASES.find((x) => x.short.startsWith(k)); return p ? (p.from - 1) / Math.max(1, WEEKS.length - 1) : 1; };
+  const pos = (cur.week - 1) / Math.max(1, WEEKS.length - 1);
   const [logging, setLogging] = useState(false);
   const [mapOpen, setMapOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -63,8 +63,8 @@ export default function Dashboard() {
           <Link href={todayS ? `/plan?session=${todayS.id}` : "/plan"} className={`hero${done ? " done" : ""}`} aria-label="Today's session — open in plan">
             <div className="top"><span>Today&apos;s session{done ? <span className="donetag">✓ Completed</span> : null}</span><span>{DAYS[(t.getDay() + 6) % 7]} {t.getDate()} {MONTHS[t.getMonth()]}</span></div>
             <div>
-              <div className="title">{todayS ? todayS.title : "Rest"}</div>
-              <div className="sub">{todayS ? heroSub(todayS) : "No plan for today"}</div>
+              <div className="title">{todayS ? todayS.title : plan.hasPlan ? "Rest" : "No session"}</div>
+              <div className="sub">{todayS ? heroSub(todayS) : plan.hasPlan ? "No plan for today" : "No plan yet · add workouts in Plan"}</div>
             </div>
             <div className="stats">
               {todayS && todayS.sport !== "rest" ? (
@@ -76,11 +76,11 @@ export default function Dashboard() {
               ) : (
                 <>
                   <div className="stat"><div className="k">Duration</div><div className="v">0 min</div></div>
-                  <div className="stat"><div className="k">Intensity</div><div className="v">Rest</div></div>
+                  <div className="stat"><div className="k">Intensity</div><div className="v">{plan.hasPlan || todayS ? "Rest" : "—"}</div></div>
                   <div className="stat"><div className="k">Next session</div><div className="v">{next[0].s ? `${next[0].s.title} ${next[0].s.min} min` : "—"}</div><div className="u">{next[0].s ? `${DAYS[(addDays(t, 1).getDay() + 6) % 7]}${next[0].s.start ? ` · ${next[0].s.start}` : ""}` : ""}</div></div>
                 </>
               )}
-              <div className="stat gm"><div className="garmin" aria-hidden="true"><Watch width={116} /></div><div className="k">Garmin</div><div className="v"><i className="led" />Connected</div></div>
+              <div className="stat gm">{garmin && <div className="garmin" aria-hidden="true"><Watch width={116} /></div>}<div className="k">Garmin</div><div className="v">{garmin ? <><i className="led" />Connected</> : <span className="dim">Not connected</span>}</div></div>
             </div>
           </Link>
 
@@ -103,7 +103,7 @@ export default function Dashboard() {
                 <div className="row">
                   <SportIcon sport={s?.sport ?? "rest"} size={48} />
                   <div>
-                    <div className="t">{s ? (s.sport === "rest" ? "Rest day" : `${s.title} ${heroSub(s).toLowerCase()}`) : "—"}</div>
+                    <div className="t">{s ? (s.sport === "rest" ? "Rest day" : `${s.title} ${heroSub(s).toLowerCase()}`) : "Nothing planned"}</div>
                     <div className="d">{s ? (s.sport === "rest" ? "No session planned" : fmtDur(s.min)) : ""}</div>
                   </div>
                   <span className="chev"><Icon name="chevron" /></span>
@@ -141,7 +141,7 @@ export default function Dashboard() {
                 <div className="map">
                   <RouteMap route={last.route} height={mapOpen ? 320 : 140} />
                   <button className="exp" type="button" onClick={() => setMapOpen((o) => !o)} aria-label={mapOpen ? "Shrink map" : "Expand map"} aria-expanded={mapOpen}><Icon name={mapOpen ? "close" : "expand"} /></button>
-                  {last.route && <span className="loc">{ATHLETE.city}</span>}
+                  {last.route && plan.athlete.city && <span className="loc">{plan.athlete.city}</span>}
                 </div>
               </>
             ) : <div className="muted">No activities yet.</div>}
@@ -150,12 +150,12 @@ export default function Dashboard() {
         </div>
 
         <section className="card phase" aria-label="Training phase">
-          <div><div className="eyebrow">Training phase</div><div className="pos">{phase?.short ?? cur.phaseShort} · Week {cur.week} of {WEEKS.length}</div></div>
-          <div className="track">
+          <div><div className="eyebrow">Training phase</div><div className="pos">{plan.hasPlan ? `${phase?.short ?? cur.phaseShort} · Week ${cur.week} of ${WEEKS.length}` : "No plan yet"}</div></div>
+          {plan.hasPlan && <div className="track">
             <div className="line" /><div className="fill" style={{ width: `${pos * 100}%` }} />
             {stops.map((k) => { const f = stopAt(k); return (<span key={k}><span className="lbl" style={{ left: `${f * 100}%` }}>{k}</span><span className={`stop${pos >= f ? " on" : ""}`} style={{ left: `${f * 100}%` }} /></span>); })}
             <span className="stop on" style={{ left: `${pos * 100}%`, width: 18, height: 18, top: 18, boxShadow: "0 0 0 3px var(--surface)" }} />
-          </div>
+          </div>}
         </section>
 
 

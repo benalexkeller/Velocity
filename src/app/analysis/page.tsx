@@ -4,10 +4,11 @@ import { useState } from "react";
 import { CoachBar } from "@/components/CoachBar";
 import { ActivityAnalyzer, ActivityPanel } from "@/components/analysis/Panels";
 import { KpiRow, LoadDistribution, Observations, Overview, Progress, Quality, RaceReadiness, Recovery, SportRow, Volume, type Range } from "@/components/analysis/Analytics";
-import { ATHLETE } from "@/lib/config";
 import { addDays, dateLabel, today } from "@/lib/format";
+import { usePlan } from "@/lib/store";
 
 export default function AnalysisPage() {
+  const ATHLETE = usePlan().athlete;
   const [range, setRange] = useState<Range>(12);
   const [sel, setSel] = useState<string | null>(null);
   const pick = (id: string) => { setSel(id); window.scrollTo({ top: 0, behavior: "smooth" }); };
@@ -18,7 +19,7 @@ export default function AnalysisPage() {
         <div className="page-head ax-top">
           <div>
             <h1>Analysis</h1>
-            <div className="muted sub">{ATHLETE.firstName} · {ATHLETE.race.name}</div>
+            <div className="muted sub">{ATHLETE.firstName}{ATHLETE.hasRace ? ` · ${ATHLETE.race.name}` : ""}</div>
           </div>
           <span className="grow" />
           <div className="pill-group" role="group" aria-label="Time range">

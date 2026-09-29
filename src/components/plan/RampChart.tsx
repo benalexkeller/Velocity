@@ -1,12 +1,13 @@
 "use client";
-import { PHASES, plannedByDiscipline, sumH, type Week } from "@/lib/data";
+import { plannedByDiscipline, sumH, type Week } from "@/lib/data";
 import { usePlan } from "@/lib/store";
-import { ATHLETE } from "@/lib/config";
 
 /** "The road to 140.6" — planned hours per week stacked by discipline; the last bar is race day. */
 export function RampChart({ selected, onPick }: { selected?: number | null; onPick?: (week: number) => void }) {
   const plan = usePlan();
   const WEEKS = plan.weeks;
+  const PHASES = plan.phases;
+  const ATHLETE = plan.athlete;
   const cur = plan.currentWeek().week;
   const selPhase = selected ? PHASES.find((p) => selected >= p.from && selected <= p.to) : null;
   const actualOf = (w: Week) => plan.weekStatus(w).bySport;
@@ -22,6 +23,7 @@ export function RampChart({ selected, onPick }: { selected?: number | null; onPi
   const bars = WEEKS.map((w) => ({ w, p: plannedByDiscipline(w), a: actualOf(w) }));
   const x = (i: number) => L + i * gw + (gw - bw) / 2;
 
+  if (!plan.hasPlan) return <div className="card muted" style={{ padding: 18, fontSize: 13.5 }}>No plan yet. This chart shows planned hours per week by sport once a plan exists.{plan.athlete.hasRace ? "" : " Set your race under Profile first."}</div>;
   return (
     <svg className="chart ramp" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Planned weekly training hours by discipline across the plan, ending in the race">
       {/* y axis */}

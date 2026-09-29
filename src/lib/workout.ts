@@ -2,6 +2,7 @@
 // each with a duration, a zone and a target pace. Drives the session panel on the Plan page.
 import type { Session, Sport } from "./data";
 import { ATHLETE } from "./config";
+export type Zones = Record<string, Record<string, string>>;
 
 export type Zone = 1 | 2 | 3 | 4 | 5;
 export interface Segment { label: string; min: number; zone: Zone; target: string; kind: "warmup" | "main" | "interval" | "recovery" | "cooldown" | "drill" | "test" | "strength"; part?: "AM" | "PM" }
@@ -11,9 +12,9 @@ const ZONE_LABEL: Record<Zone, string> = { 1: "Z1 · very easy", 2: "Z2 · easy"
 export const zoneName = (z: Zone) => ZONE_LABEL[z];
 
 /** Target pace / speed text for a zone in a sport, from the athlete's provisional zones. */
-export function targetFor(sport: Sport, z: Zone): string {
+export function targetFor(sport: Sport, z: Zone, zonesAll: Zones = ATHLETE.zones): string {
   const sp = sport === "brick" ? "bike" : sport;
-  const zones = ATHLETE.zones[sp];
+  const zones = zonesAll[sp];
   if (!zones) return z <= 2 ? "easy" : z === 3 ? "moderately hard" : "hard";
   const unit = sp === "bike" ? "" : sp === "swim" ? " /100 yd" : " /mi";
   const slow = (range: string) => { // Z1: 8% slower than Z2 for pace sports, 10% lower for bike
@@ -30,11 +31,11 @@ export function targetFor(sport: Sport, z: Zone): string {
   return sp === "bike" ? "max effort" : "max effort";
 }
 
-const swimSecPer100 = () => { const m = (ATHLETE.zones.swim?.["Aerobic"] ?? "2:00 – 2:10").match(/(\d+):(\d+)/); return m ? +m[1] * 60 + +m[2] : 125; };
+const swimSecPer100 = (zones: Zones = ATHLETE.zones) => { const m = (zones.swim?.["Aerobic"] ?? "2:00 – 2:10").match(/(\d+):(\d+)/); return m ? +m[1] * 60 + +m[2] : 125; };
 
-function parsePart(text: string, sport: Sport, totalMin: number, part?: "AM" | "PM"): Segment[] {
+function parsePart(text: string, sport: Sport, totalMin: number, part?: "AM" | "PM", zones: Zones = ATHLETE.zones): Segment[] {
   const t = text.toLowerCase();
-  const seg = (label: string, min: number, zone: Zone, kind: Segment["kind"]): Segment => ({ label, min: Math.max(1, Math.round(min)), zone, target: kind === "strength" ? "bodyweight / light load" : kind === "drill" ? "technique focus" : targetFor(sport, zone), kind, part });
+  const seg = (label: string, min: number, zone: Zone, kind: Segment["kind"]): Segment => ({ label, min: Math.max(1, Math.round(min)), zone, target: kind === "strength" ? "bodyweight / light load" : kind === "drill" ? "technique focus" : targetFor(sport, zone, zones), kind, part });
   const out: Segment[] = [];
   if (sport === "rest") return out;
   if (sport === "strength" || /^strength|^bodyweight/.test(t)) return [seg("Strength & core", totalMin, 2, "strength")];
@@ -57,7 +58,7 @@ function parsePart(text: string, sport: Sport, totalMin: number, part?: "AM" | "
   if (iv) {
     const reps = +iv[1], n = +iv[2], unit = iv[3] ?? (sport === "swim" ? "yd" : "min"), desc = (iv[4] ?? "").trim();
     const isTime = /^s|sec|min/.test(unit);
-    const repMin = isTime ? (unit.startsWith("s") ? n / 60 : n) : sport === "swim" ? (n / 100) * (swimSecPer100() / 60) : n;
+    const repMin = isTime ? (unit.startsWith("s") ? n / 60 : n) : sport === "swim" ? (n / 100) * (swimSecPer100(zones) / 60) : n;
     const hard = /stride|pickup|tempo|fast|hard/.test(desc);
     const zone: Zone = /stride/.test(desc) ? 4 : /tempo|pickup|hard/.test(desc) ? 3 : /fast cadence/.test(desc) ? 2 : /drill/.test(desc) ? 2 : 2;
     const recMin = hard ? (unit.startsWith("s") ? 1 : Math.max(1, Math.round(repMin / 2))) : sport === "swim" ? 0.33 : 1;
@@ -98,7 +99,7 @@ function parsePart(text: string, sport: Sport, totalMin: number, part?: "AM" | "
   return out;
 }
 
-export function workoutFor(s: Session): Workout {
+export function workoutFor(s: Session, zones: Zones = ATHLETE.zones): Workout {
   const text = s.text.replace(/^(AM|PM):\s*/i, "");
   const parts = text.split(/\bPM:\s*/i);
   const segments: Segment[] = [];
@@ -109,12 +110,12 @@ export function workoutFor(s: Session): Workout {
     const amMin = (() => { const m = am.match(/(\d+):(\d+)/); return m ? +m[1] * 60 + +m[2] : Math.round(s.min * 0.7); })();
     const pmMin = Math.max(5, s.min - amMin);
     const amSport = guessSport(am), pmSport = guessSport(pm);
-    segments.push(...parsePart(am, amSport, amMin, "AM"), ...parsePart(pm, pmSport, pmMin, "PM"));
+    segments.push(...parsePart(am, amSport, amMin, "AM", zones), ...parsePart(pm, pmSport, pmMin, "PM", zones));
   } else if (/\+\s*strength/i.test(text)) {
     const m = text.match(/strength\s*(\d+):(\d+)/i); const stMin = m ? +m[1] * 60 + +m[2] : 15;
-    segments.push(...parsePart(text.split(/\+/)[0], s.sport === "brick" ? "swim" : s.sport, s.min - stMin), ...parsePart("Strength", "strength", stMin));
+    segments.push(...parsePart(text.split(/\+/)[0], s.sport === "brick" ? "swim" : s.sport, s.min - stMin, undefined, zones), ...parsePart("Strength", "strength", stMin, undefined, zones));
   } else {
-    segments.push(...parsePart(text, s.sport, s.min));
+    segments.push(...parsePart(text, s.sport, s.min, undefined, zones));
   }
   // human-readable steps (merge interval reps into one line)
   let i = 0;

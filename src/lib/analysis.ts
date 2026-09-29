@@ -3,24 +3,15 @@
 // `createAnalysis(activities, weeks)` builds the whole toolkit for a given data set, so the pages
 // can run it over the live plan store (seed + everything logged on this device) — see useAnalysis().
 import bodySeed from "./data/seed/body.json";
-import { ACTIVITIES as SEED_ACTIVITIES, WEEKS as SEED_WEEKS, PHASES, activityLoad, activitiesOn as activitiesOnIn, actualByDiscipline as actualByDisciplineIn, plannedByDiscipline, currentWeek as currentWeekIn, rollingCompliance as rollingComplianceIn, weekStatus as weekStatusIn, type Activity, type Session, type Sport, type Week } from "./data";
-import { ATHLETE } from "./config";
+import { ACTIVITIES as SEED_ACTIVITIES, WEEKS as SEED_WEEKS, PHASES as SEED_PHASES, activityLoad, activitiesOn as activitiesOnIn, actualByDiscipline as actualByDisciplineIn, plannedByDiscipline, currentWeek as currentWeekIn, rollingCompliance as rollingComplianceIn, weekStatus as weekStatusIn, type Activity, type Phase, type Session, type Sport, type Week } from "./data";
+import { DEFAULT_ATHLETE, type Athlete } from "./athlete";
 import { addDays, fromYmd, today, ymd } from "./format";
 
 // ---------- body metrics (Garmin) ----------
 export interface BodyDay { date: string; rhr?: number; hrv?: number; sleep_h?: number; sleep_score?: number; stress?: number; vo2?: number }
-export const BODY: BodyDay[] = (bodySeed as BodyDay[]).slice().sort((a, b) => a.date.localeCompare(b.date));
+export const BODY_SEED: BodyDay[] = (bodySeed as BodyDay[]).slice().sort((a, b) => a.date.localeCompare(b.date));
 
 function avg(xs: (number | undefined)[]) { const v = xs.filter((x): x is number => x != null); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : null; }
-export function bodyWindow(days: number, endOffset = 0) {
-  const end = addDays(today(), -endOffset), start = addDays(end, -days);
-  return BODY.filter((b) => { const d = fromYmd(b.date); return d > start && d <= end; });
-}
-export function bodySummary(days = 7, endOffset = 0) {
-  const w = bodyWindow(days, endOffset);
-  const vo2 = [...BODY].reverse().find((b) => b.vo2 != null && fromYmd(b.date) <= addDays(today(), -endOffset))?.vo2 ?? null;
-  return { rhr: avg(w.map((b) => b.rhr)), hrv: avg(w.map((b) => b.hrv)), sleep: avg(w.map((b) => b.sleep_h)), sleepScore: avg(w.map((b) => b.sleep_score)), stress: avg(w.map((b) => b.stress)), vo2, n: w.length };
-}
 
 // ---------- pace corridors (plan start → race day) ----------
 // Coach-set. Lower = faster for run/swim (seconds); bike is mph (higher = faster).
@@ -29,11 +20,13 @@ const CORRIDOR: Record<"run" | "swim" | "bike", { start: [number, number]; race:
   swim: { start: [100, 110], race: [88, 98] }, // 1:40–1:50 → 1:28–1:38 /100 yd
   bike: { start: [16.5, 18], race: [18.5, 20] }, // mph
 };
-export function corridorAt(sp: "run" | "swim" | "bike", date: Date) {
-  const s = fromYmd(ATHLETE.planStart), r = fromYmd(ATHLETE.race.date);
-  const f = Math.min(1, Math.max(0, (date.getTime() - s.getTime()) / (r.getTime() - s.getTime())));
-  const c = CORRIDOR[sp];
-  return { lo: c.start[0] + (c.race[0] - c.start[0]) * f, hi: c.start[1] + (c.race[1] - c.start[1]) * f };
+export function corridorFor(planStart: string, raceDate: string) {
+  return (sp: "run" | "swim" | "bike", date: Date) => {
+    const s = fromYmd(planStart), r = fromYmd(raceDate);
+    const f = Math.min(1, Math.max(0, (date.getTime() - s.getTime()) / Math.max(1, r.getTime() - s.getTime())));
+    const c = CORRIDOR[sp];
+    return { lo: c.start[0] + (c.race[0] - c.start[0]) * f, hi: c.start[1] + (c.race[1] - c.start[1]) * f };
+  };
 }
 export function paceOf(a: Activity, sp: "run" | "swim" | "bike"): number | null {
   if (sp === "run") return a.pace_s ?? null;
@@ -57,14 +50,30 @@ export interface LoadPoint { date: string; load: number; fitness: number; fatigu
 export type Metric = "pace" | "hr" | "distance" | "duration" | "load";
 export const METRICS: { k: Metric; label: string }[] = [{ k: "pace", label: "Pace" }, { k: "hr", label: "Heart rate" }, { k: "distance", label: "Distance" }, { k: "duration", label: "Duration" }, { k: "load", label: "Load" }];
 
-export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[]) {
+export interface AnalysisInputs { phases?: Phase[]; body?: BodyDay[]; athlete?: Athlete }
+export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: AnalysisInputs = {}) {
+  const PHASES = inputs.phases ?? SEED_PHASES;
+  const BODY = (inputs.body ?? BODY_SEED).slice().sort((a, b) => a.date.localeCompare(b.date));
+  const ATHLETE = inputs.athlete ?? DEFAULT_ATHLETE;
   const activitiesOn = (date: string) => activitiesOnIn(date, ACTIVITIES);
   const actualByDiscipline = (w: Week) => actualByDisciplineIn(w, ACTIVITIES);
   const currentWeek = () => currentWeekIn(WEEKS);
   const rollingCompliance = (days = 28) => rollingComplianceIn(days, WEEKS);
   const weekStatus = (w: Week) => weekStatusIn(w, ACTIVITIES);
-  const phaseWeeks = (p: (typeof PHASES)[number]) => WEEKS.slice(p.from - 1, p.to);
+  const phaseWeeks = (p: Phase) => WEEKS.slice(p.from - 1, p.to);
   const fmtH = (h: number) => `${h.toFixed(1)} h`;
+  const corridorAt = corridorFor(ATHLETE.planStart, ATHLETE.race.date);
+
+  // ---------- body metrics (Garmin) ----------
+  function bodyWindow(days: number, endOffset = 0) {
+    const end = addDays(today(), -endOffset), start = addDays(end, -days);
+    return BODY.filter((b) => { const d = fromYmd(b.date); return d > start && d <= end; });
+  }
+  function bodySummary(days = 7, endOffset = 0) {
+    const w = bodyWindow(days, endOffset);
+    const vo2 = [...BODY].reverse().find((b) => b.vo2 != null && fromYmd(b.date) <= addDays(today(), -endOffset))?.vo2 ?? null;
+    return { rhr: avg(w.map((b) => b.rhr)), hrv: avg(w.map((b) => b.hrv)), sleep: avg(w.map((b) => b.sleep_h)), sleepScore: avg(w.map((b) => b.sleep_score)), stress: avg(w.map((b) => b.stress)), vo2, n: w.length };
+  }
 
   // ---------- load model (earned from work done) ----------
   // Fitness = 42-day exponentially weighted daily load; Fatigue = 7-day; Form = Fitness − Fatigue.
@@ -184,9 +193,10 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[]) {
   // ---------- race projection (v1: current 4-week average pace, no fatigue adjustment) ----------
   function raceProjection() {
     const run = weightedAvgPace("run"), bike = weightedAvgPace("bike"), swim = weightedAvgPace("swim");
-    const swimH = swim != null ? (4224 / 100) * swim / 3600 : null; // 2.4 mi = 4224 yd
-    const bikeH = bike != null ? 112 / bike : null;
-    const runH = run != null ? (26.2 * run) / 3600 : null;
+    const D = ATHLETE.raceDist; // race-day distances for the athlete's event (e.g. 4,224 yd · 112 mi · 26.2 mi)
+    const swimH = D.swimYd === 0 ? 0 : swim != null ? (D.swimYd / 100) * swim / 3600 : null;
+    const bikeH = D.bikeMi === 0 ? 0 : bike != null ? D.bikeMi / bike : null;
+    const runH = D.runMi === 0 ? 0 : run != null ? (D.runMi * run) / 3600 : null;
     const tr = ATHLETE.raceSplits.transitions;
     const total = swimH != null && bikeH != null && runH != null ? swimH + bikeH + runH + tr : null;
     return { swimH, bikeH, runH, transitions: tr, total, goal: ATHLETE.raceSplits };
@@ -333,12 +343,12 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[]) {
     out.push({ title: "Sessions", text: `${st.done} of ${st.total} sessions this week, ${fmtH(st.actualH)} of ${fmtH(st.plannedH)} planned. 28-day compliance ${c.pct}% (${c.done} of ${c.planned}).` });
     const tt = totals();
     const lr = tt.bests.longestRun, lb = tt.bests.longestRide, ls = tt.bests.longestSwim;
-    out.push({ title: "Long sessions", text: `Longest so far: run ${lr?.mi != null ? lr.mi.toFixed(1) + " mi" : "—"}, ride ${lb?.mi != null ? lb.mi.toFixed(1) + " mi" : "—"}, swim ${ls?.yd != null ? ls.yd.toLocaleString() + " yd" : "—"}. Race day: 26.2 mi · 112 mi · 4,224 yd.` });
+    out.push({ title: "Long sessions", text: `Longest so far: run ${lr?.mi != null ? lr.mi.toFixed(1) + " mi" : "—"}, ride ${lb?.mi != null ? lb.mi.toFixed(1) + " mi" : "—"}, swim ${ls?.yd != null ? ls.yd.toLocaleString() + " yd" : "—"}. Race day: ${ATHLETE.raceDist.runMi ? ATHLETE.raceDist.runMi + " mi" : "—"} · ${ATHLETE.raceDist.bikeMi ? ATHLETE.raceDist.bikeMi + " mi" : "—"} · ${ATHLETE.raceDist.swimYd ? ATHLETE.raceDist.swimYd.toLocaleString() + " yd" : "—"}.` });
     return out;
   }
 
 
-  return { activities: ACTIVITIES, weeks: WEEKS, activitiesOn, actualByDiscipline, currentWeek, rollingCompliance, weekStatus, LOAD_SERIES, loadNow, loadWeekly, complianceFor, complianceByPhase, paceSeries, weightedAvgPace, healthScore, raceScore, volumeWeekly, totals, raceProjection, analyzeActivity, kpis, zoneDistribution, sportPerformance, progressSeries, trainingQuality, raceReadiness, observations };
+  return { activities: ACTIVITIES, weeks: WEEKS, phases: PHASES, athlete: ATHLETE, BODY, bodySummary, corridorAt, activitiesOn, actualByDiscipline, currentWeek, rollingCompliance, weekStatus, LOAD_SERIES, loadNow, loadWeekly, complianceFor, complianceByPhase, paceSeries, weightedAvgPace, healthScore, raceScore, volumeWeekly, totals, raceProjection, analyzeActivity, kpis, zoneDistribution, sportPerformance, progressSeries, trainingQuality, raceReadiness, observations };
 }
 export type Analysis = ReturnType<typeof createAnalysis>;
 /** The seed-only toolkit, for code that runs outside the plan store (content, scripts). */

@@ -5,9 +5,8 @@ import { Icon } from "../icons";
 import { SportIcon } from "../SportIcon";
 import { CoachNote } from "../CoachNote";
 import { activityLoad } from "@/lib/data";
-import { METRICS, bodySummary, type Metric } from "@/lib/analysis";
+import { METRICS, type Metric } from "@/lib/analysis";
 import { useAnalysis } from "@/lib/useAnalysis";
-import { ATHLETE } from "@/lib/config";
 import { addDays, dateLabel, fmtHMS, fmtHours, fmtPace, fromYmd, shortDate, today } from "@/lib/format";
 import { fmtDist, runPace, swimDist, swimPace } from "@/lib/units";
 
@@ -350,6 +349,7 @@ export function Progress({ range, onPick }: { range: Range; onPick: (id: string)
 // ---------- 7. Recovery ----------
 export function Recovery() {
   const an = useAnalysis();
+  const bodySummary = an.bodySummary;
   const w = bodySummary(7), p = bodySummary(7, 7);
   const h = an.healthScore();
   const bars = (k: "rhr" | "hrv" | "sleep_h" | "stress") => [...Array(14)].map((_, i) => { const d = addDays(today(), -13 + i); const day = bodySummary(1, 13 - i); return k === "rhr" ? day.rhr ?? 0 : k === "hrv" ? day.hrv ?? 0 : k === "sleep_h" ? day.sleep ?? 0 : day.stress ?? 0; }).map((v) => v ?? 0);
@@ -413,6 +413,7 @@ export function Quality({ onPick }: { onPick: (id: string) => void }) {
 // ---------- 9. Race readiness ----------
 export function RaceReadiness() {
   const an = useAnalysis();
+  const ATHLETE = an.athlete;
   const r = an.raceReadiness();
   const h = (x: number | null | undefined) => (x == null ? "—" : fmtHMS(x * 60));
   const rng = (x: { lo: number; hi: number } | null) => (x ? `${h(x.lo)} – ${h(x.hi)}` : "—");
@@ -425,7 +426,7 @@ export function RaceReadiness() {
         <div className="leg"><SportIcon sport="run" size={22} /><div><div className="k">Run · 26.2 mi</div><div className="v">{h(r.runH)}</div><div className="u">{rng(r.ranges.run)}</div></div></div>
         <div className="leg total"><span className="trophy"><Icon name="check" /></span><div><div className="k">Total finish time</div><div className="v">{h(r.total)}</div><div className="u">{rng(r.ranges.total)} · incl. {h(r.transitions)} transitions</div></div></div>
         <div className={`verdict ${r.onTrack ? "ok" : "warn"}`}>
-          <b>{r.onTrack == null ? "Not enough data" : r.onTrack ? `On track for ${ATHLETE.race.goal}` : `${Math.round(r.gapMin ?? 0)} min behind ${ATHLETE.race.goal}`}</b>
+          <b>{!ATHLETE.hasRace ? "No race set · add it under Profile" : r.onTrack == null ? "Not enough data" : r.onTrack ? `On track for ${ATHLETE.race.goal || "the goal"}` : `${Math.round(r.gapMin ?? 0)} min behind ${ATHLETE.race.goal || "the goal"}`}</b>
           <p>Goal {h(r.goalTotal)} · projected {h(r.total)} ({sign(r.gapMin != null ? Math.round(r.gapMin) : null)} min). {r.sessions4w} sessions in the last 4 weeks. Race capability score {r.score ?? "—"}.</p>
         </div>
       </div>

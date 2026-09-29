@@ -5,9 +5,7 @@ import { SportIcon } from "../SportIcon";
 import { RouteMap } from "../RouteMap";
 import { CoachNote } from "../CoachNote";
 import type { Activity } from "@/lib/data";
-import { BODY, bodySummary, corridorAt } from "@/lib/analysis";
 import { useAnalysis } from "@/lib/useAnalysis";
-import { ATHLETE } from "@/lib/config";
 import { addDays, dateLabel, fmtHMS, fmtHours, fmtPace, fromYmd, shortDate, today } from "@/lib/format";
 import { elev, fmtDist, fmtSpeed, runPace, swimDist, swimPace } from "@/lib/units";
 
@@ -36,6 +34,7 @@ function Spark({ pts, w = 120, h = 34 }: { pts: (number | null)[]; w?: number; h
 
 export function ScoreRow() {
   const an = useAnalysis();
+  const ATHLETE = an.athlete;
   const race = an.raceScore(), health = an.healthScore();
   const raceHist = [28, 21, 14, 7, 0].map((o) => an.raceScore(o).score);
   const healthHist = [28, 21, 14, 7, 0].map((o) => an.healthScore(o).score);
@@ -170,6 +169,8 @@ export function VolumeStack({ range }: { range: Range }) {
 // ---------- Pace trend with corridor ----------
 export function PaceCorridor({ range, onPick }: { range: Range; onPick: (id: string) => void }) {
   const an = useAnalysis();
+  const ATHLETE = an.athlete;
+  const corridorAt = an.corridorAt;
   const [sp, setSp] = useState<Sp>("run");
   const days = range === 99 ? 400 : range * 7;
   const pts = an.paceSeries(sp, days);
@@ -212,8 +213,9 @@ export function PaceCorridor({ range, onPick }: { range: Range; onPick: (id: str
 
 // ---------- Body ----------
 export function BodyPanel() {
-  const w7 = bodySummary(7), prev = bodySummary(7, 7);
-  const rows = [...BODY].reverse().slice(0, 7);
+  const an = useAnalysis();
+  const w7 = an.bodySummary(7), prev = an.bodySummary(7, 7);
+  const rows = [...an.BODY].reverse().slice(0, 7);
   const d = (a: number | null, b: number | null, digits = 0) => (a != null && b != null ? sign(a - b, digits) : "—");
   return (
     <section className="card an-body" aria-label="Body metrics">
@@ -236,6 +238,7 @@ export function BodyPanel() {
 // ---------- Totals + bests + projection ----------
 export function TotalsPanel() {
   const an = useAnalysis();
+  const ATHLETE = an.athlete;
   const t = an.totals(), p = an.raceProjection();
   const h = (x: number | null) => (x == null ? "—" : fmtHMS(x * 60));
   const goalTotal = ATHLETE.raceSplits.swim + ATHLETE.raceSplits.bike + ATHLETE.raceSplits.run + ATHLETE.raceSplits.transitions;

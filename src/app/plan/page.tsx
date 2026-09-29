@@ -10,9 +10,8 @@ import { SessionPanel } from "@/components/plan/SessionPanel";
 import { MonthGrid } from "@/components/plan/MonthGrid";
 import { RampChart } from "@/components/plan/RampChart";
 import { PlanExplained } from "@/components/plan/PlanExplained";
-import { COACH_THREAD, PHASES, plannedByDiscipline, plannedLoad, type Sport, type Week } from "@/lib/data";
+import { COACH_THREAD, plannedByDiscipline, plannedLoad, type Sport, type Week } from "@/lib/data";
 import { usePlan } from "@/lib/store";
-import { ATHLETE } from "@/lib/config";
 import { dateLabel, fromYmd, fmtHours, addDays, ymd } from "@/lib/format";
 
 const M = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -57,7 +56,7 @@ function WeekOverview({ week, onClose, onOpenWeek }: { week: Week; onClose: () =
   const plan = usePlan();
   const p = plannedByDiscipline(week);
   const st = plan.weekStatus(week);
-  const phase = PHASES.find((x) => week.week >= x.from && week.week <= x.to);
+  const phase = plan.phases.find((x) => week.week >= x.from && week.week <= x.to);
   const sessions = week.sessions.filter((s) => s.sport !== "rest");
   const count = (sp: string) => sessions.filter((s) => s.sport === sp).length;
   const n = (k: number) => `${k} session${k === 1 ? "" : "s"}`;
@@ -144,8 +143,8 @@ function Plan() {
 
         <section className="section">
           <div className="section-head">
-            <h2>The road to {ATHLETE.race.distanceLabel}</h2>
-            <span className="sub">{plan.weeks.length} weeks · 7 phases · race {dateLabel(ATHLETE.race.date)} 2027 · click a week</span>
+            <h2>{plan.hasPlan ? `The road to ${plan.athlete.race.distanceLabel || plan.athlete.race.name}` : "The road to race day"}</h2>
+            <span className="sub">{plan.hasPlan ? `${plan.weeks.length} weeks · ${plan.phases.length} phases · race ${dateLabel(plan.athlete.race.date)} ${plan.athlete.race.date.slice(0, 4)} · click a week` : plan.athlete.hasRace ? `${plan.athlete.race.name} · ${dateLabel(plan.athlete.race.date)} ${plan.athlete.race.date.slice(0, 4)} · no plan yet` : "No race set · add it under Profile"}</span>
             <span className="legend">
               <span><i style={{ background: "var(--swim)" }} />Swim</span>
               <span><i style={{ background: "var(--bike)" }} />Bike</span>

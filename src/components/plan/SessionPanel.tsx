@@ -7,7 +7,6 @@ import { RouteMap } from "../RouteMap";
 import { LogActivity } from "../dashboard/LogActivity";
 import { activityLoad, plannedLoad, type Session, type Sport } from "@/lib/data";
 import { usePlan } from "@/lib/store";
-import { ATHLETE } from "@/lib/config";
 import { dateLabel, fmtHMS, fmtPace } from "@/lib/format";
 import { elev, fmtDist, fmtSpeed, runPace, swimDist, swimPace } from "@/lib/units";
 import { workoutFor, zoneName, type Segment, type Zone } from "@/lib/workout";
@@ -48,9 +47,9 @@ function EditForm({ s, onDone }: { s: Session; onDone: () => void }) {
   );
 }
 
-function targetOf(s: Session) {
+function targetOf(s: Session, zones: Record<string, Record<string, string>>) {
   const sp = s.sport === "brick" ? "bike" : s.sport;
-  const z = ATHLETE.zones[sp]?.[s.intensity];
+  const z = zones[sp]?.[s.intensity];
   if (!z) return null;
   return { k: sp === "bike" ? "Target speed" : "Target pace", v: z, u: sp === "bike" ? "" : sp === "swim" ? "per 100 yd" : "per mile" };
 }
@@ -95,9 +94,9 @@ export function SessionPanel({ id, onClose }: { id: string | null; onClose: () =
   const hit = plan.findSession(id);
   if (!hit) return null;
   const { s, w } = hit;
-  const tgt = targetOf(s);
+  const tgt = targetOf(s, plan.athlete.zones);
   const acts = plan.activitiesOn(s.date);
-  const wk = workoutFor(s);
+  const wk = workoutFor(s, plan.athlete.zones);
   const status = s.status === "done" ? "Completed" : s.status === "missed" ? "Missed" : "Planned";
   const zoneOfIntensity: Zone = s.intensity === "Tempo" ? 3 : s.intensity === "Intervals" || s.intensity === "Race" ? 4 : 2;
   return (

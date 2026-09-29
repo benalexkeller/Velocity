@@ -1,7 +1,10 @@
-import { PHASES } from "@/lib/data";
+"use client";
+import { usePlan } from "@/lib/store";
 
 export function PlanExplained({ limit }: { limit?: number }) {
+  const PHASES = usePlan().phases;
   const phases = limit ? PHASES.slice(0, limit) : PHASES;
+  if (!phases.length) return <div className="card muted" style={{ padding: 18, fontSize: 13.5 }}>No plan yet. The coach service that builds a plan from your race and schedule isn't connected; until then, add workouts in the calendar above.</div>;
   return (
     <div className="pe">
       {phases.map((p) => (

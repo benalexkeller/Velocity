@@ -1,57 +1,39 @@
 "use client";
-// Local plan store. Until accounts + database exist, every change the athlete makes
-// (move / edit / add / delete a session, log an activity, coach messages) lives in this
-// browser's storage and is layered on top of the seed plan. Same shapes as the database will use.
-import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { ACTIVITIES, SPORT_LABEL, WEEKS, intensityOf, sportOf, sumH, whyOf, type Activity, type Session, type Sport, type Week } from "./data";
+// The athlete's data, live in the app. Loads once from the backend (browser or account), keeps the
+// working copy in memory, writes every change straight back. Everything the pages read comes from here.
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { ACTIVITIES as SEED_ACTIVITIES, PLAN_SEED, SPORT_LABEL, buildWeeks, intensityOf, phasesOf, sportOf, sumH, virtualWeeks, whyOf, type Activity, type Phase, type PlanWeekJson, type Session, type Sport, type Week } from "./data";
+import { BODY_SEED, type BodyDay } from "./analysis";
+import { athleteOf, type Athlete, type Profile, type Race } from "./athlete";
+import { EMPTY_DATA, makeBackend, readLocal, type AddedSession, type Backend, type PlanStateJson, type SessionPatch, type ThreadMsg, type UserData } from "./backend";
+import { ACCOUNTS_ON } from "./supabase/env";
 import { addDays, fromYmd, today, ymd } from "./format";
 
-export interface SessionPatch { date?: string; start?: string; min?: number; intensity?: string; text?: string; sport?: Sport; deleted?: boolean }
-export interface AddedSession { id: string; date: string; start?: string; min: number; sport: Sport; intensity: string; text: string }
+export type { AddedSession, SessionPatch, ThreadMsg } from "./backend";
 export interface ManualActivity { id: string; name: string; sport: Sport; date: string; start: string; min: number; mi?: number; yd?: number; pace_s?: number; mph?: number; p100_s?: number; elev_ft?: number; exertion?: number; feel?: string; note?: string; source: "manual" }
-export interface ThreadMsg { who: "You" | "Coach" | "action"; at: string; text: string }
-interface State { patches: Record<string, SessionPatch>; added: AddedSession[]; manual: ManualActivity[]; hidden: string[]; excluded: string[]; thread: ThreadMsg[]; undone: boolean; calendar: boolean }
-
-const KEY = "velocity.store.v1";
-const EMPTY: State = { patches: {}, added: [], manual: [], hidden: [], excluded: [], thread: [], undone: false, calendar: true };
-
-function load(): State {
-  try {
-    const raw = localStorage.getItem(KEY);
-    const s: State = raw ? { ...EMPTY, ...JSON.parse(raw) } : { ...EMPTY };
-    // pick up activities saved by the dashboard form before this store existed
-    const legacy = JSON.parse(localStorage.getItem("velocity.manualActivities") || "[]") as ManualActivity[];
-    for (const a of legacy) if (!s.manual.some((m) => m.id === a.id)) s.manual.push(a);
-    return s;
-  } catch { return { ...EMPTY }; }
-}
-function save(s: State) { try { localStorage.setItem(KEY, JSON.stringify(s)); } catch { /* storage unavailable */ } }
 
 const nowHM = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
 
-// ---------- derive plan + activities from seed + local changes ----------
-function toActivity(m: ManualActivity): Activity {
-  return { id: m.id, date: m.date, start: m.start, sport: m.sport, name: m.name, min: m.min, mi: m.mi, yd: m.yd, pace_s: m.pace_s, mph: m.mph, p100_s: m.p100_s, elev_ft: m.elev_ft, source: "manual", note: m.note, exertion: m.exertion };
-}
-function derive(state: State) {
-  // deleted activities are gone everywhere; excluded ones stay in the list but count nowhere
-  const hidden = new Set(state.hidden), excluded = new Set(state.excluded);
-  const activities = [...ACTIVITIES, ...state.manual.map(toActivity)].filter((a) => !hidden.has(a.id)).map((a) => (excluded.has(a.id) ? { ...a, excluded: true } : a)).sort((a, b) => (a.date + (a.start ?? "")).localeCompare(b.date + (b.start ?? "")));
+// ---------- derive weeks + activities from the athlete's records ----------
+function derive(data: UserData, athlete: Athlete) {
+  const activities = [...data.activities].sort((a, b) => (a.date + (a.start ?? "")).localeCompare(b.date + (b.start ?? "")));
   const counted = activities.filter((a) => !a.excluded);
   const on = (date: string) => counted.filter((a) => a.date === date);
   const t = today();
-  // all base sessions with patches applied, plus added ones
+  const baseWeeks = data.plan.length ? buildWeeks(data.plan, [], athlete.availability) : virtualWeeks();
+  const st = data.state;
   const base: Session[] = [];
-  for (const w of WEEKS) for (const s of w.sessions) {
-    const p = state.patches[s.id];
+  for (const w of baseWeeks) for (const s of w.sessions) {
+    const p = st.patches[s.id];
     if (p?.deleted) continue;
     const text = p?.text ?? s.text;
     const sport = p?.sport ?? (p?.text ? sportOf(text) : s.sport);
     const intensity = p?.intensity ?? (p?.text ? intensityOf(text) : s.intensity);
     base.push({ ...s, date: p?.date ?? s.date, start: p?.start ?? s.start, min: p?.min ?? s.min, sport, intensity, text, title: SPORT_LABEL[sport], detail: sport === "rest" ? "No session" : `${intensity} · ${p?.min ?? s.min} min`, why: whyOf(text, sport) });
   }
-  for (const a of state.added) base.push({ id: a.id, date: a.date, dayIndex: 0, start: a.start, min: a.min, sport: a.sport, title: SPORT_LABEL[a.sport], detail: `${a.intensity} · ${a.min} min`, text: a.text, intensity: a.intensity, why: whyOf(a.text, a.sport), status: "planned" });
-  const weeks: Week[] = WEEKS.map((w) => {
+  for (const a of st.added) base.push({ id: a.id, date: a.date, dayIndex: 0, start: a.start, min: a.min, sport: a.sport, title: SPORT_LABEL[a.sport], detail: `${a.intensity} · ${a.min} min`, text: a.text, intensity: a.intensity, why: whyOf(a.text, a.sport), status: "planned" });
+  const weeks: Week[] = baseWeeks.map((w) => {
     const start = fromYmd(w.start);
     const sessions = base.filter((s) => { const d = fromYmd(s.date); return d >= start && d <= addDays(start, 6); }).map((s) => {
       const d = fromYmd(s.date);
@@ -63,12 +45,20 @@ function derive(state: State) {
     }).sort((a, b) => a.dayIndex - b.dayIndex || (a.start ?? "").localeCompare(b.start ?? ""));
     return { ...w, sessions, plannedMin: sessions.reduce((x, s) => x + (s.min || 0), 0) - (w.race ? 780 : 0) };
   });
-  return { activities, counted, weeks, activitiesOn: on };
+  return { activities, counted, weeks, activitiesOn: on, phases: phasesOf(weeks) };
 }
 
 export interface PlanStore {
   ready: boolean;
+  accounts: boolean;
+  athlete: Athlete;
+  profile: Profile | null;
+  race: Race | null;
+  hasPlan: boolean;
+  planJson: PlanWeekJson[];
+  body: BodyDay[];
   weeks: Week[];
+  phases: Phase[];
   activities: Activity[]; // everything still in the list, including excluded
   counted: Activity[]; // what analysis, volume and session status use
   activitiesOn: (date: string) => Activity[];
@@ -93,20 +83,44 @@ export interface PlanStore {
   toggleCalendar: () => void;
   changes: number;
   reset: () => void;
+  saveProfile: (p: Partial<Profile>) => Promise<void>;
+  saveRace: (r: Race | null) => Promise<void>;
+  savePlan: (weeks: PlanWeekJson[]) => Promise<void>;
+  importSeed: () => Promise<void>;
+  signOut: () => Promise<void>;
+  reload: () => Promise<void>;
 }
 
 const Ctx = createContext<PlanStore | null>(null);
+const PUBLIC = (p: string) => p === "/login" || p.startsWith("/auth");
 
 export function PlanProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<State>(EMPTY);
+  const backend = useRef<Backend | null>(null);
+  if (!backend.current) backend.current = makeBackend();
+  const be = backend.current;
+  const path = usePathname();
+  const router = useRouter();
+  const [data, setData] = useState<UserData>(EMPTY_DATA);
   const [ready, setReady] = useState(false);
-  useEffect(() => { setState(load()); setReady(true); }, []);
-  const update = useCallback((f: (s: State) => State) => setState((s) => { const n = f(s); save(n); return n; }), []);
 
-  const d = useMemo(() => derive(state), [state]);
+  const reload = useCallback(async () => { try { setData(await be.load()); } catch (e) { console.error("[velocity] load", e); } setReady(true); }, [be]);
+  useEffect(() => { if (ACCOUNTS_ON && PUBLIC(path)) { setReady(true); return; } void reload(); }, [reload, path === "/login"]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // first sign-in: finish the profile before anything else
+  useEffect(() => {
+    if (!ACCOUNTS_ON || !ready || PUBLIC(path)) return;
+    if (data.profile && !data.profile.setup_done && path !== "/setup") router.replace("/setup");
+  }, [ready, data.profile, path, router]);
+
+  const athlete = useMemo(() => athleteOf(data.profile, data.race, data.plan[0]?.start ?? null), [data.profile, data.race, data.plan]);
+  const d = useMemo(() => derive(data, athlete), [data, athlete]);
+
+  // every write: update the working copy first (instant), then the backend
+  const setState = useCallback((f: (s: PlanStateJson) => PlanStateJson) => setData((cur) => { const state = f(cur.state); void be.saveState(state); return { ...cur, state }; }), [be]);
+
   const store = useMemo<PlanStore>(() => {
     const weekOf = (x: Date) => d.weeks.find((w) => { const s = fromYmd(w.start); return x >= s && x <= addDays(s, 6); });
-    const currentWeek = () => weekOf(today()) ?? d.weeks[0];
+    const currentWeek = () => weekOf(today()) ?? d.weeks[Math.min(d.weeks.length - 1, Math.max(0, d.weeks.findIndex((w) => fromYmd(w.start) > today()) - 1))] ?? d.weeks[0];
     const weekByNumber = (n: number) => d.weeks[Math.min(Math.max(n, 1), d.weeks.length) - 1];
     const weekStatus = (w: Week) => {
       const sessions = w.sessions.filter((s) => s.sport !== "rest");
@@ -116,25 +130,46 @@ export function PlanProvider({ children }: { children: ReactNode }) {
     };
     const sessionOn = (date: string) => { const w = weekOf(fromYmd(date)); return w?.sessions.find((s) => s.date === date); };
     const findSession = (id: string | null) => { if (!id) return null; for (const w of d.weeks) { const s = w.sessions.find((x) => x.id === id); if (s) return { s, w }; } return null; };
-    const changes = Object.keys(state.patches).length + state.added.length + state.manual.length + state.hidden.length + state.excluded.length;
+    const st = data.state;
+    const changes = Object.keys(st.patches).length + st.added.length + data.activities.filter((a) => a.source === "manual").length;
+    const toActivity = (m: ManualActivity): Activity => ({ id: m.id, date: m.date, start: m.start, sport: m.sport, name: m.name, min: m.min, mi: m.mi, yd: m.yd, pace_s: m.pace_s, mph: m.mph, p100_s: m.p100_s, elev_ft: m.elev_ft, source: "manual", note: m.note, exertion: m.exertion });
     return {
-      ready, weeks: d.weeks, activities: d.activities, counted: d.counted, activitiesOn: d.activitiesOn, weekOf, currentWeek, weekByNumber, weekStatus, sessionOn, findSession,
-      moveSession: (id, to) => update((s) => ({ ...s, patches: { ...s.patches, [id]: { ...s.patches[id], date: to.date, ...(to.start ? { start: to.start } : {}) } } })),
-      editSession: (id, patch) => update((s) => ({ ...s, patches: { ...s.patches, [id]: { ...s.patches[id], ...patch } } })),
-      deleteSession: (id) => update((s) => ({ ...s, patches: { ...s.patches, [id]: { ...s.patches[id], deleted: true } }, added: s.added.filter((a) => a.id !== id) })),
-      addSession: (a) => { const id = `add-${Date.now()}`; update((s) => ({ ...s, added: [...s.added, { ...a, id }] })); return id; },
-      logActivity: (a) => update((s) => ({ ...s, manual: [...s.manual.filter((m) => m.id !== a.id), a] })),
-      deleteActivity: (id) => update((s) => ({ ...s, manual: s.manual.filter((m) => m.id !== id), hidden: s.manual.some((m) => m.id === id) || s.hidden.includes(id) ? s.hidden : [...s.hidden, id], excluded: s.excluded.filter((x) => x !== id) })),
-      toggleExcluded: (id) => update((s) => ({ ...s, excluded: s.excluded.includes(id) ? s.excluded.filter((x) => x !== id) : [...s.excluded, id] })),
-      post: (text) => update((s) => ({ ...s, thread: [...s.thread, { who: "You", at: nowHM(), text }, { who: "Coach", at: nowHM(), text: coachReply(text, d) }] })),
-      thread: state.thread, undone: state.undone,
-      undoPlanUpdate: () => update((s) => ({ ...s, undone: !s.undone })),
-      calendar: state.calendar, toggleCalendar: () => update((s) => ({ ...s, calendar: !s.calendar })),
+      ready, accounts: ACCOUNTS_ON, athlete, profile: data.profile, race: data.race, hasPlan: data.plan.length > 0, planJson: data.plan, body: data.body,
+      weeks: d.weeks, phases: d.phases, activities: d.activities, counted: d.counted, activitiesOn: d.activitiesOn, weekOf, currentWeek, weekByNumber, weekStatus, sessionOn, findSession,
+      moveSession: (id, to) => setState((s) => ({ ...s, patches: { ...s.patches, [id]: { ...s.patches[id], date: to.date, ...(to.start ? { start: to.start } : {}) } } })),
+      editSession: (id, patch) => setState((s) => ({ ...s, patches: { ...s.patches, [id]: { ...s.patches[id], ...patch } } })),
+      deleteSession: (id) => setState((s) => ({ ...s, patches: { ...s.patches, [id]: { ...s.patches[id], deleted: true } }, added: s.added.filter((a) => a.id !== id) })),
+      addSession: (a) => { const id = `add-${Date.now()}`; setState((s) => ({ ...s, added: [...s.added, { ...a, id }] })); return id; },
+      logActivity: (m) => { const a = toActivity(m); setData((cur) => ({ ...cur, activities: [...cur.activities.filter((x) => x.id !== a.id), a] })); void be.upsertActivity(a); },
+      deleteActivity: (id) => { setData((cur) => ({ ...cur, activities: cur.activities.filter((x) => x.id !== id) })); void be.deleteActivity(id); },
+      toggleExcluded: (id) => { const cur = data.activities.find((a) => a.id === id); if (!cur) return; const excluded = !cur.excluded; setData((c) => ({ ...c, activities: c.activities.map((a) => (a.id === id ? { ...a, excluded: excluded || undefined } : a)) })); void be.setExcluded(id, excluded); },
+      post: (text) => { const msgs: ThreadMsg[] = [{ who: "You", at: nowHM(), text }, { who: "Coach", at: nowHM(), text: coachReply(text, d, athlete) }]; setData((cur) => ({ ...cur, thread: [...cur.thread, ...msgs] })); void be.appendThread(msgs); },
+      thread: data.thread, undone: st.undone,
+      undoPlanUpdate: () => setState((s) => ({ ...s, undone: !s.undone })),
+      calendar: st.calendar, toggleCalendar: () => setState((s) => ({ ...s, calendar: !s.calendar })),
       changes,
-      reset: () => update(() => ({ ...EMPTY })),
+      reset: () => { void be.reset().then(reload); },
+      saveProfile: async (p) => { await be.saveProfile(p); setData((cur) => ({ ...cur, profile: cur.profile ? { ...cur.profile, ...p } : cur.profile })); },
+      saveRace: async (r) => { await be.saveRace(r); setData((cur) => ({ ...cur, race: r })); },
+      savePlan: async (weeks) => { await be.savePlan(weeks); setData((cur) => ({ ...cur, plan: weeks })); },
+      importSeed: async () => {
+        // PR's data: the seed plan, Garmin activities and body data, plus whatever this browser saved in local mode
+        const local = readLocal();
+        const hidden = new Set(local.hidden), excluded = new Set(local.excluded);
+        const acts = [...SEED_ACTIVITIES, ...local.manual].filter((a) => !hidden.has(a.id)).map((a) => ({ ...a, excluded: excluded.has(a.id) || undefined }));
+        await be.savePlan(PLAN_SEED);
+        await be.replaceActivities(acts);
+        await be.saveBody(BODY_SEED);
+        await be.saveState({ patches: local.patches, added: local.added, undone: local.undone, calendar: local.calendar });
+        if (local.thread.length) await be.appendThread(local.thread);
+        await reload();
+      },
+      signOut: async () => { await be.signOut(); router.replace("/login"); },
+      reload,
     };
-  }, [d, state, ready, update]);
-  return <Ctx.Provider value={store}>{children}</Ctx.Provider>;
+  }, [d, data, ready, athlete, be, setState, reload, router]);
+
+  return <Ctx.Provider value={store}>{ACCOUNTS_ON && !ready ? <div className="app-loading" aria-busy="true" /> : children}</Ctx.Provider>;
 }
 
 export function usePlan(): PlanStore {
@@ -145,10 +180,11 @@ export function usePlan(): PlanStore {
 
 // The coach service (Claude API) is not connected yet. Until it is, answer from the data for the
 // questions the data can answer, and say plainly when it cannot.
-function coachReply(text: string, d: ReturnType<typeof derive>): string {
+function coachReply(text: string, d: ReturnType<typeof derive>, athlete: Athlete): string {
   const q = text.toLowerCase();
   const t = today();
   const wk = d.weeks.find((w) => { const s = fromYmd(w.start); return t >= s && t <= addDays(s, 6); }) ?? d.weeks[0];
+  if (!wk) return "No plan yet. Add workouts in the Plan tab; the coach service that builds plans isn't connected yet.";
   const done = wk.sessions.filter((s) => s.sport !== "rest" && s.status === "done").length, total = wk.sessions.filter((s) => s.sport !== "rest").length;
   const todayS = wk.sessions.find((s) => s.date === ymd(t));
   const tomorrow = ymd(addDays(t, 1));
@@ -156,8 +192,8 @@ function coachReply(text: string, d: ReturnType<typeof derive>): string {
   const say = (s: Session) => (s.sport === "rest" ? "rest day. " + s.text : `${s.title} · ${s.intensity} · ${s.min} min${s.start ? ` at ${s.start}` : ""}. ${s.text}`);
   if (/today/.test(q)) return todayS ? `Today: ${say(todayS)}` : "Nothing planned today.";
   if (/tomorrow/.test(q)) return tom ? `Tomorrow: ${say(tom)}` : "Nothing planned tomorrow.";
-  if (/this week|week/.test(q)) return `Week ${wk.week} (${wk.phaseShort}): ${done} of ${total} sessions done, ${(wk.plannedMin / 60).toFixed(1)} h planned. Focus: ${wk.focus}.`;
-  if (/move|swap|change|reschedule/.test(q)) return "To move or edit a session, open it in the Plan calendar and use Move or Edit — changes save on this device. The coach's own plan changes come with the Sunday review once the coach service is connected.";
-  if (/race|texas|goal/.test(q)) return "Race: IRONMAN Texas, Sat 24 Apr 2027, goal sub-13. Projection and readiness are on the Analysis tab.";
+  if (/this week|week/.test(q)) return `Week ${wk.week}${wk.phaseShort !== "No plan" ? ` (${wk.phaseShort})` : ""}: ${done} of ${total} sessions done, ${(wk.plannedMin / 60).toFixed(1)} h planned.${wk.focus ? ` Focus: ${wk.focus}.` : ""}`;
+  if (/move|swap|change|reschedule/.test(q)) return "To move or edit a session, open it in the Plan calendar and use Move or Edit. The coach's own plan changes come with the Sunday review once the coach service is connected.";
+  if (/race|goal/.test(q)) return athlete.hasRace ? `Race: ${athlete.race.name}, ${athlete.race.date}${athlete.race.goal ? `, goal ${athlete.race.goal}` : ""}. Projection and readiness are on the Analysis tab.` : "No race set yet. Add it under Profile.";
   return "The coach service isn't connected yet, so this message is saved but not answered. Questions about today, tomorrow, this week, moving sessions, or the race get a data answer now.";
 }

@@ -8,7 +8,6 @@ import { RouteMap } from "@/components/RouteMap";
 import { CoachNote } from "@/components/CoachNote";
 import { activityLoad, type Activity } from "@/lib/data";
 import { usePlan } from "@/lib/store";
-import { ATHLETE } from "@/lib/config";
 import { DAYS, MONTHS, addDays, fmtHMS, fmtPace, fromYmd, today } from "@/lib/format";
 import { elev, fmtDist, fmtSpeed, runPace, swimDist, swimPace } from "@/lib/units";
 
@@ -28,7 +27,7 @@ function when(a: Activity) {
 function subtitle(a: Activity) {
   if (a.sport === "swim") return "Pool session";
   if (a.sport === "bike") return a.route ? "Outdoor ride" : "Indoor trainer";
-  if (a.sport === "run") return a.route ? ATHLETE.city : "Run";
+  if (a.sport === "run") return "Run";
   if (a.sport === "hike") return "Hike";
   return "Session";
 }
@@ -195,7 +194,7 @@ function Drawer({ a, onDeleted }: { a: Activity; onDeleted: () => void }) {
       <div className="kv">
         <div><span>Activity type</span><span>{a.sport === "bike" ? "Ride" : a.sport[0].toUpperCase() + a.sport.slice(1)}</span></div>
         <div><span>Source</span><span>{a.source === "garmin" ? "Garmin" : "Manual"}</span></div>
-        {a.route && <div><span>Location</span><span>{ATHLETE.city}</span></div>}
+        {a.route && plan.athlete.city && <div><span>Location</span><span>{plan.athlete.city}</span></div>}
         <div><span>Start</span><span>{w.l2 || "—"}</span></div>
       </div>
     </aside>
