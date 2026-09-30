@@ -8,7 +8,7 @@ import { BODY_SEED, type BodyDay } from "./analysis";
 import type { Profile, Race } from "./athlete";
 import { supabase } from "./supabase/client";
 
-export interface SessionPatch { date?: string; start?: string; min?: number; intensity?: string; text?: string; sport?: Sport; deleted?: boolean }
+export interface SessionPatch { date?: string; start?: string; min?: number; intensity?: string; text?: string; sport?: Sport; deleted?: boolean; locked?: boolean }
 export interface AddedSession { id: string; date: string; start?: string; min: number; sport: Sport; intensity: string; text: string }
 export interface ThreadMsg { who: "You" | "Coach" | "action"; at: string; text: string }
 export interface PlanStateJson { patches: Record<string, SessionPatch>; added: AddedSession[]; undone: boolean; calendar: boolean }

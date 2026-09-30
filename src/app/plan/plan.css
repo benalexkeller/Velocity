@@ -3,8 +3,8 @@
 .plan-head { display: flex; align-items: center; gap: 14px; padding: 8px 0 10px; flex-wrap: wrap; }
 .plan-head .back { width: 36px; height: 36px; border-radius: 50%; background: var(--surface); box-shadow: var(--shadow); border: 0; display: inline-flex; align-items: center; justify-content: center; }
 .plan-head .back svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.plan-head h1 { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; }
-.plan-head h1 .dot { color: var(--muted-2); margin: 0 8px; }
+.plan-head h1 { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; width: 150px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.plan-head .range { font-size: 15px; color: var(--muted); white-space: nowrap; margin-left: -2px; }
 .plan-head .grow { flex: 1; }
 .plan-head .btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; }
 
@@ -43,8 +43,18 @@
 .wg-ev.rest.done { background: var(--run-soft); color: #fff; }
 .wg-ev.rest.done .sport-icon { color: #fff; }
 
-.wg-ev { cursor: pointer; }
+.wg-ev { cursor: grab; touch-action: none; user-select: none; }
+.wg-ev.done, .wg-ev.locked { cursor: pointer; }
 .wg-ev.sel { box-shadow: 0 0 0 2px var(--accent); }
+.wg-ev.drag { z-index: 5; box-shadow: 0 10px 28px rgba(16,17,20,0.22), 0 0 0 2px var(--accent); cursor: grabbing; opacity: 0.96; transition: none; }
+.wg.dragging .wg-ev:not(.drag) { pointer-events: none; }
+.wg-col.target { background-color: var(--surface-2); } .wg-col.today.target { background-color: var(--accent-soft); }
+.wg-day.target b { text-decoration: underline; text-underline-offset: 3px; }
+.wg-ev .lk { position: absolute; top: 3px; right: 3px; width: 18px; height: 18px; border-radius: 5px; border: 0; background: transparent; color: inherit; display: inline-flex; align-items: center; justify-content: center; opacity: 0; cursor: pointer; padding: 0; }
+.wg-ev .lk svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.wg-ev:hover .lk, .wg-ev.locked .lk { opacity: 0.85; }
+.wg-ev.locked .lk { background: rgba(16,17,20,0.08); }
+.wg-ev.done .lk { display: none; }
 
 /* session panel — large view of one session, under the calendar */
 .session-panel { position: relative; padding: 20px 24px 18px; margin: 16px 0 4px; display: grid; gap: 16px; }
@@ -57,6 +67,10 @@
 .sp-head .status { margin-left: auto; display: inline-block; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; border-radius: 999px; padding: 4px 10px; background: var(--swim-soft); color: var(--accent); }
 .sp-head .status.done { background: var(--run-soft); color: #fff; }
 .sp-head .status.missed { background: #FDECEC; color: #B42318; }
+.sp-head .status.locked { margin-left: auto; background: var(--surface-2); color: var(--ink-2); display: inline-flex; align-items: center; gap: 5px; } .sp-head .status.locked + .status { margin-left: 0; }
+.sp-head .status.locked svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+.sp-left .stat.actual .v { color: var(--accent); }
+.sp-actions .btn.on { border-color: var(--ink); color: var(--ink); }
 .sp-grid { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 24px; }
 .sp-left { display: grid; gap: 10px; align-content: start; border-right: 1px solid var(--line-2); padding-right: 20px; }
 .sp-left .stat .k { font-size: 12.5px; color: var(--muted); }

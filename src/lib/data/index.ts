@@ -21,6 +21,8 @@ export interface Session {
   intensity: string; // "Zone 2" / "Tempo" / ...
   why: string;
   status: Status;
+  locked?: boolean; // cannot be dragged or moved until unlocked
+  actual?: Activity; // the activity logged for this session, when it is done
 }
 export interface Week {
   week: number;

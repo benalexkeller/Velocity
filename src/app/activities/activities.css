@@ -1,9 +1,8 @@
 /* ---------- Activities ---------- */
 .acts { display: grid; grid-template-columns: minmax(0, 1fr) 0px; gap: 0; transition: grid-template-columns .2s ease; }
 .acts.open { grid-template-columns: minmax(0, 1fr) 420px; }
-.acts-main { padding: 10px 24px 30px 4px; min-width: 0; }
-.acts-head { display: flex; align-items: flex-end; gap: 16px; margin-bottom: 14px; }
-.acts-head h1 { font-size: 40px; letter-spacing: -0.03em; font-weight: 600; margin-top: 2px; }
+.acts-main { padding: 14px 24px 30px 12px; min-width: 0; }
+.acts-head { display: flex; align-items: flex-end; gap: 16px; margin: 4px 0 14px; }
 .acts-head .grow { flex: 1; }
 .tbl .when { color: var(--ink-2); font-size: 13px; white-space: nowrap; } .tbl .when small { display: block; color: var(--muted); }
 .tbl .act { display: flex; align-items: center; gap: 14px; }
@@ -39,7 +38,6 @@
 @media (max-width: 1000px) {
   .acts { grid-template-columns: 1fr; }
   .drawer { position: relative; top: 0; max-height: none; }
-  .acts-head h1 { font-size: 30px; }
   .search { width: 100%; }
   .tbl .hide-sm { display: none; }
 }

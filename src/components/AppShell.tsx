@@ -18,18 +18,6 @@ const NAV: { href: string; label: string; icon: Parameters<typeof Icon>[0]["name
   { href: "/calculator", label: "Calculator", icon: "calc" },
 ];
 
-const CRUMB: Record<string, string> = {
-  "/dashboard": "Dashboard",
-  "/plan": "Plan",
-  "/activities": "Activities",
-  "/analysis": "Analysis",
-  "/nutrition": "Nutrition",
-  "/store": "Store",
-  "/calculator": "Calculator",
-  "/profile": "Profile",
-  "/admin": "Admin",
-};
-
 // Avatar button top right: profile, admin (if admin), sign out.
 function AccountMenu() {
   const plan = usePlan();
@@ -64,7 +52,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="shell">
       <header className="topbar">
         <span className="wordmark">{BRAND.name}</span>
-        <span className="crumb">{CRUMB[path] ?? ""}</span>
         <span className="greet">
           {greet}, {ATHLETE.firstName}.
         </span>

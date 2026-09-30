@@ -108,6 +108,7 @@ export function SessionPanel({ id, onClose }: { id: string | null; onClose: () =
           <div className="eyebrow">{dateLabel(s.date)}{s.start ? ` · ${s.start}` : ""} · Week {w.week} · {w.phaseShort}</div>
           <h2>{s.title}{s.sport !== "rest" && <span className="dim"> · {s.intensity}</span>}</h2>
         </div>
+        {s.locked && s.status !== "done" && <span className="status locked" title="Locked: drag and Move are off until you unlock it"><Icon name="lock" />Locked</span>}
         <span className={`status ${s.status}`}>{s.status === "done" && "✓ "}{status}</span>
       </div>
 
@@ -119,6 +120,7 @@ export function SessionPanel({ id, onClose }: { id: string | null; onClose: () =
               <div className="stat"><div className="k">Zone</div><div className="v">{zoneName(zoneOfIntensity).split(" · ")[0]}<small> · {s.intensity}</small></div></div>
               {tgt && <div className="stat"><div className="k">{tgt.k}</div><div className="v">{tgt.v}</div>{tgt.u && <div className="u">{tgt.u}</div>}</div>}
               <div className="stat"><div className="k">Planned load</div><div className="v">{plannedLoad(s)}</div></div>
+              {s.actual && (s.actual.sport !== s.sport || Math.abs(s.actual.min - s.min) >= 5) && <div className="stat actual"><div className="k">Done as</div><div className="v">{s.actual.sport[0].toUpperCase() + s.actual.sport.slice(1)} {s.actual.min} min</div><div className="u">planned {s.title} {s.min} min</div></div>}
             </>
           ) : (
             <div className="stat"><div className="k">Rest day</div><div className="v">No session</div></div>
@@ -144,8 +146,9 @@ export function SessionPanel({ id, onClose }: { id: string | null; onClose: () =
           {mode === "view" && (
             <div className="sp-actions">
               {s.sport !== "rest" && acts.length === 0 && <button type="button" className="btn" onClick={() => setMode("log")}><Icon name="plus" />Log activity</button>}
-              <button type="button" className="btn ghost" onClick={() => setMode("move")}>Move</button>
+              {!s.locked && s.status !== "done" && <button type="button" className="btn ghost" onClick={() => setMode("move")}>Move</button>}
               <button type="button" className="btn ghost" onClick={() => setMode("edit")}>Edit</button>
+              {s.status !== "done" && <button type="button" className={`btn ghost${s.locked ? " on" : ""}`} onClick={() => { plan.toggleLock(s.id); setToast(s.locked ? "Unlocked · can be moved again" : "Locked · stays where it is"); }}><Icon name={s.locked ? "lock" : "unlock"} />{s.locked ? "Unlock" : "Lock"}</button>}
               {toast && <span className="sp-toast">✓ {toast}</span>}
             </div>
           )}

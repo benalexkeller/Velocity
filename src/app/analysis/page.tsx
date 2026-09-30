@@ -18,8 +18,8 @@ export default function AnalysisPage() {
       <div className="ax">
         <div className="page-head ax-top">
           <div>
+            <div className="eyebrow muted">Performance{ATHLETE.hasRace ? ` · ${ATHLETE.race.name}` : ""}</div>
             <h1>Analysis</h1>
-            <div className="muted sub">{ATHLETE.firstName}{ATHLETE.hasRace ? ` · ${ATHLETE.race.name}` : ""}</div>
           </div>
           <span className="grow" />
           <div className="pill-group" role="group" aria-label="Time range">

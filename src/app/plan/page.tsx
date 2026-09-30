@@ -5,7 +5,7 @@ import "./plan.css";
 import { Icon } from "@/components/icons";
 import { SportIcon } from "@/components/SportIcon";
 import { CoachRail } from "@/components/CoachRail";
-import { WeekGrid, weekTitle } from "@/components/plan/WeekGrid";
+import { WeekGrid, weekRange } from "@/components/plan/WeekGrid";
 import { SessionPanel } from "@/components/plan/SessionPanel";
 import { MonthGrid } from "@/components/plan/MonthGrid";
 import { RampChart } from "@/components/plan/RampChart";
@@ -101,6 +101,7 @@ function Plan() {
   const [overview, setOverview] = useState<number | null>(null);
   const [calInfo, setCalInfo] = useState(false);
   useEffect(() => { if (fromUrl) { setSel(fromUrl); const hit = plan.findSession(fromUrl); if (hit) setWk(hit.w.week); } }, [fromUrl, plan]);
+  useEffect(() => { if (plan.ready && !fromUrl) setWk(plan.currentWeek().week); }, [plan.ready]); // eslint-disable-line react-hooks/exhaustive-deps
   const week = plan.weekByNumber(wk);
   const ws = plan.weekStatus(week);
   const monthDate = fromYmd(week.start);
@@ -114,10 +115,11 @@ function Plan() {
           <button className="back" type="button" aria-label="Previous week" onClick={() => (view === "week" ? setWk(Math.max(1, wk - 1)) : setMo(({ y, m }) => (m === 0 ? { y: y - 1, m: 11 } : { y, m: m - 1 })))}>
             <Icon name="back" />
           </button>
-          <h1>{view === "week" ? weekTitle(week) : `${M[mo.m]} ${mo.y}`}</h1>
+          <h1>{view === "week" ? `Week ${week.week}` : M[mo.m]}</h1>
           <button className="back" type="button" aria-label="Next week" onClick={() => (view === "week" ? setWk(Math.min(plan.weeks.length, wk + 1)) : setMo(({ y, m }) => (m === 11 ? { y: y + 1, m: 0 } : { y, m: m + 1 })))}>
             <Icon name="chevron" />
           </button>
+          <span className="range">{view === "week" ? weekRange(week) : mo.y}</span>
           {wk !== cur.week && view === "week" && <button type="button" className="btn ghost small" onClick={() => setWk(cur.week)}>Today</button>}
           <span className="grow" />
           <div className="pill-group" role="tablist">

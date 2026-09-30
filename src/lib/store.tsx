@@ -11,7 +11,7 @@ import { ACCOUNTS_ON } from "./supabase/env";
 import { addDays, fromYmd, today, ymd } from "./format";
 
 export type { AddedSession, SessionPatch, ThreadMsg } from "./backend";
-export interface ManualActivity { id: string; name: string; sport: Sport; date: string; start: string; min: number; mi?: number; yd?: number; pace_s?: number; mph?: number; p100_s?: number; elev_ft?: number; exertion?: number; feel?: string; note?: string; source: "manual" }
+export interface ManualActivity { id: string; name: string; sport: Sport; date: string; start: string; min: number; mi?: number; yd?: number; pace_s?: number; mph?: number; p100_s?: number; hr?: number; elev_ft?: number; exertion?: number; feel?: string; note?: string; source: "manual" }
 
 const nowHM = () => { const d = new Date(); return `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
 
@@ -30,18 +30,35 @@ function derive(data: UserData, athlete: Athlete) {
     const text = p?.text ?? s.text;
     const sport = p?.sport ?? (p?.text ? sportOf(text) : s.sport);
     const intensity = p?.intensity ?? (p?.text ? intensityOf(text) : s.intensity);
-    base.push({ ...s, date: p?.date ?? s.date, start: p?.start ?? s.start, min: p?.min ?? s.min, sport, intensity, text, title: SPORT_LABEL[sport], detail: sport === "rest" ? "No session" : `${intensity} · ${p?.min ?? s.min} min`, why: whyOf(text, sport) });
+    base.push({ ...s, date: p?.date ?? s.date, start: p?.start ?? s.start, min: p?.min ?? s.min, sport, intensity, text, title: SPORT_LABEL[sport], detail: sport === "rest" ? "No session" : `${intensity} · ${p?.min ?? s.min} min`, why: whyOf(text, sport), locked: !!p?.locked });
   }
-  for (const a of st.added) base.push({ id: a.id, date: a.date, dayIndex: 0, start: a.start, min: a.min, sport: a.sport, title: SPORT_LABEL[a.sport], detail: `${a.intensity} · ${a.min} min`, text: a.text, intensity: a.intensity, why: whyOf(a.text, a.sport), status: "planned" });
+  for (const a of st.added) {
+    // sessions added by hand take the same patches (move, edit, lock) as plan sessions
+    const p = st.patches[a.id];
+    if (p?.deleted) continue;
+    const sport = p?.sport ?? a.sport, min = p?.min ?? a.min, intensity = p?.intensity ?? a.intensity, text = p?.text ?? a.text;
+    base.push({ id: a.id, date: p?.date ?? a.date, dayIndex: 0, start: p?.start ?? a.start, min, sport, title: SPORT_LABEL[sport], detail: `${intensity} · ${min} min`, text, intensity, why: whyOf(text, sport), status: "planned", locked: !!p?.locked });
+  }
   const weeks: Week[] = baseWeeks.map((w) => {
     const start = fromYmd(w.start);
-    const sessions = base.filter((s) => { const d = fromYmd(s.date); return d >= start && d <= addDays(start, 6); }).map((s) => {
+    const inWeek = base.filter((s) => { const d = fromYmd(s.date); return d >= start && d <= addDays(start, 6); });
+    // pair each day's sessions with what was logged: same sport first (brick = bike or run), then whatever is left, longest first
+    const actualOf = new Map<string, Activity>();
+    for (const date of new Set(inWeek.map((s) => s.date))) {
+      const acts = [...on(date)].sort((a, b) => b.min - a.min);
+      const ss = inWeek.filter((s) => s.date === date && s.sport !== "rest");
+      const free = new Set(acts.map((a) => a.id));
+      const fits = (s: Session, a: Activity) => a.sport === s.sport || (s.sport === "brick" && (a.sport === "bike" || a.sport === "run"));
+      for (const s of ss) { const a = acts.find((x) => free.has(x.id) && fits(s, x)); if (a) { actualOf.set(s.id, a); free.delete(a.id); } }
+      for (const s of ss) { if (actualOf.has(s.id)) continue; const a = acts.find((x) => free.has(x.id)); if (a) { actualOf.set(s.id, a); free.delete(a.id); } }
+    }
+    const sessions = inWeek.map((s) => {
       const d = fromYmd(s.date);
       const dayIndex = Math.round((d.getTime() - start.getTime()) / 86400000);
       const acts = on(s.date);
       const isPast = d < t;
       const status: Session["status"] = acts.length ? "done" : s.sport === "rest" ? (isPast ? "done" : "planned") : isPast ? "missed" : "planned";
-      return { ...s, dayIndex, status };
+      return { ...s, dayIndex, status, actual: actualOf.get(s.id) };
     }).sort((a, b) => a.dayIndex - b.dayIndex || (a.start ?? "").localeCompare(b.start ?? ""));
     return { ...w, sessions, plannedMin: sessions.reduce((x, s) => x + (s.min || 0), 0) - (w.race ? 780 : 0) };
   });
@@ -70,6 +87,7 @@ export interface PlanStore {
   findSession: (id: string | null) => { s: Session; w: Week } | null;
   moveSession: (id: string, to: { date: string; start?: string }) => void;
   editSession: (id: string, patch: SessionPatch) => void;
+  toggleLock: (id: string) => void;
   deleteSession: (id: string) => void;
   addSession: (s: Omit<AddedSession, "id">) => string;
   logActivity: (a: ManualActivity) => void;
@@ -132,12 +150,13 @@ export function PlanProvider({ children }: { children: ReactNode }) {
     const findSession = (id: string | null) => { if (!id) return null; for (const w of d.weeks) { const s = w.sessions.find((x) => x.id === id); if (s) return { s, w }; } return null; };
     const st = data.state;
     const changes = Object.keys(st.patches).length + st.added.length + data.activities.filter((a) => a.source === "manual").length;
-    const toActivity = (m: ManualActivity): Activity => ({ id: m.id, date: m.date, start: m.start, sport: m.sport, name: m.name, min: m.min, mi: m.mi, yd: m.yd, pace_s: m.pace_s, mph: m.mph, p100_s: m.p100_s, elev_ft: m.elev_ft, source: "manual", note: m.note, exertion: m.exertion });
+    const toActivity = (m: ManualActivity): Activity => ({ id: m.id, date: m.date, start: m.start, sport: m.sport, name: m.name, min: m.min, mi: m.mi, yd: m.yd, pace_s: m.pace_s, mph: m.mph, p100_s: m.p100_s, hr: m.hr, elev_ft: m.elev_ft, source: "manual", note: m.note, exertion: m.exertion });
     return {
       ready, accounts: ACCOUNTS_ON, athlete, profile: data.profile, race: data.race, hasPlan: data.plan.length > 0, planJson: data.plan, body: data.body,
       weeks: d.weeks, phases: d.phases, activities: d.activities, counted: d.counted, activitiesOn: d.activitiesOn, weekOf, currentWeek, weekByNumber, weekStatus, sessionOn, findSession,
       moveSession: (id, to) => setState((s) => ({ ...s, patches: { ...s.patches, [id]: { ...s.patches[id], date: to.date, ...(to.start ? { start: to.start } : {}) } } })),
       editSession: (id, patch) => setState((s) => ({ ...s, patches: { ...s.patches, [id]: { ...s.patches[id], ...patch } } })),
+      toggleLock: (id) => setState((s) => ({ ...s, patches: { ...s.patches, [id]: { ...s.patches[id], locked: !s.patches[id]?.locked } } })),
       deleteSession: (id) => setState((s) => ({ ...s, patches: { ...s.patches, [id]: { ...s.patches[id], deleted: true } }, added: s.added.filter((a) => a.id !== id) })),
       addSession: (a) => { const id = `add-${Date.now()}`; setState((s) => ({ ...s, added: [...s.added, { ...a, id }] })); return id; },
       logActivity: (m) => { const a = toActivity(m); setData((cur) => ({ ...cur, activities: [...cur.activities.filter((x) => x.id !== a.id), a] })); void be.upsertActivity(a); },
