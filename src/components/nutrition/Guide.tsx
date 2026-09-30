@@ -4,18 +4,21 @@ import { Cubes } from "../Cubes";
 import { SportIcon } from "../SportIcon";
 import { useNutrition } from "@/lib/nutrition/store";
 import { usePlan } from "@/lib/store";
-import { bmrOf, targetsFor } from "@/lib/nutrition/targets";
+import { bmrOf, stagesOf, nextStage, targetsFor } from "@/lib/nutrition/targets";
+import { SUPPLEMENT_MAP } from "@/lib/nutrition/supplements";
 import { NUTRITION } from "@/lib/content/nutrition";
 import type { Session } from "@/lib/data";
-import { addDays, dateLabel, fromYmd, shortDate, today, ymd } from "@/lib/format";
+import { addDays, shortDate, today, ymd } from "@/lib/format";
 import { NutritionSetup } from "./Setup";
+import { WeightChart, ratePerWeek, timelineOf, weekIndexOf, type WPoint } from "./WeightStages";
 
 const fmt = (n: number, d = 0) => n.toLocaleString(undefined, { maximumFractionDigits: d });
 const kgToLb = (kg: number) => kg * 2.20462;
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const mk = (sport: Session["sport"], min: number, intensity: string): Session => ({ id: "x", date: "", dayIndex: 0, min, sport, title: sport, detail: "", text: "", intensity, why: "", status: "planned" });
+const GOAL_LABEL = { maintain: "Maintain weight", lose: "Lose weight", gain: "Gain weight", race_weight: "Reach a target weight" } as const;
 
-/** Guide: weight and where it is heading, energy needs by day type, this week's fuelling, then the reference topics. */
+/** Guide: the nutrition plan on top, then weight and where it is heading, energy needs by day type, this week's fuelling, then the reference topics. */
 export function Guide() {
   const nut = useNutrition();
   const plan = usePlan();
@@ -29,58 +32,63 @@ export function Guide() {
   const current = weights.length ? weights[weights.length - 1].weight_kg : p.weight_kg;
   const proj = nut.projection();
   const raceDate = plan.athlete.hasRace ? plan.athlete.race.date : null;
+  const tNow = ymd(today());
+  const todayTargets = nut.day(tNow).targets;
 
-  // chart: logged weights + projection to race day (or 12 weeks) from the average balance
-  const chart = useMemo(() => {
-    const pts = weights.map((w) => ({ date: w.date, kg: w.weight_kg }));
-    const start = pts.length ? fromYmd(pts[0].date) : today();
-    const end = raceDate ? fromYmd(raceDate) : addDays(today(), 84);
-    const projEnd = current != null && proj ? current + proj.kgPerWeek * ((end.getTime() - today().getTime()) / (7 * 86400000)) : null;
-    const W = 720, H = 200, L = 44, R = 16, T = 14, B = 26;
-    const all = [...pts.map((q) => q.kg), ...(projEnd != null ? [projEnd] : []), ...(p.goal_weight_kg ? [p.goal_weight_kg] : [])];
-    const lo = (all.length ? Math.min(...all) : 70) - 2, hi = (all.length ? Math.max(...all) : 80) + 2;
-    const x = (d: Date) => L + ((d.getTime() - start.getTime()) / Math.max(1, end.getTime() - start.getTime())) * (W - L - R);
-    const y = (kg: number) => T + ((hi - kg) / (hi - lo)) * (H - T - B);
-    return { pts, start, end, projEnd, W, H, L, R, T, B, lo, hi, x, y };
-  }, [weights, current, proj, raceDate, p.goal_weight_kg]);
+  // timeline (planned hours per week), the staged weight path, logged weights, projection
+  const timeline = useMemo(() => timelineOf(plan, raceDate), [plan, raceDate]);
+  const stages = p.goal === "race_weight" ? stagesOf(p, raceDate ?? undefined) : [];
+  const next = p.goal === "race_weight" ? nextStage(p, raceDate ?? undefined) : null;
+  const path: WPoint[] = p.goal === "race_weight" && current != null ? [{ date: tNow, kg: current, label: "Now", kind: "now" }, ...stages.map((s) => ({ date: s.date, kg: s.weight_kg, label: s.label || "Stage", kind: (s.date === raceDate ? "race" : "stage") as WPoint["kind"] }))] : [];
+  const end = raceDate ?? ymd(addDays(today(), 84));
+  const projEnd = current != null && proj ? current + proj.kgPerWeek * ((new Date(end).getTime() - today().getTime()) / (7 * 86400000)) : null;
+  const projLine = current != null && projEnd != null ? { from: { date: tNow, kg: current }, to: { date: end, kg: projEnd } } : null;
+  const needRate = next && current != null ? ratePerWeek({ date: tNow, kg: current }, { date: next.date, kg: next.weight_kg }) : null;
+  const rateW = (kgPerWeek: number) => `${kgPerWeek > 0 ? "+" : ""}${imperial ? `${fmt(kgToLb(kgPerWeek), 2)} lb` : `${fmt(kgPerWeek, 2)} kg`}/week`;
 
   const types: [string, Session[]][] = [["Rest day", []], ["Light (45 min easy)", [mk("run", 45, "Zone 2")]], ["Moderate (2 h)", [mk("bike", 120, "Aerobic")]], ["Long (4 h)", [mk("bike", 240, "Endurance")]]];
   const week = plan.currentWeek();
   const weekSessions = week.sessions.filter((s) => s.sport !== "rest");
+  const age = p.birth_year ? new Date().getFullYear() - p.birth_year : null;
+  const goalText = p.goal === "race_weight" ? (p.goal_weight_kg ? `${showW(p.goal_weight_kg)} by race day` : "target weight not set") : p.goal === "lose" ? "−400 kcal/day" : p.goal === "gain" ? "+300 kcal/day" : "no calorie adjustment";
+  const stageText = stages.filter((s) => s.date !== raceDate).map((s) => `${showW(s.weight_kg)} by W${timeline[weekIndexOf(timeline, s.date)]?.week ?? "?"} (${shortDate(s.date)})`).join(" · ");
 
   return (
     <div className="nu-guide">
+      <section className="card nu-plan" aria-label="Your nutrition plan">
+        <div className="hd"><div><div className="k">Your nutrition plan</div><div className="sub muted small">{p.setup_done ? "What every daily target is built from. Change anything here." : "Not set up yet — targets use default values."}</div></div><button type="button" className="btn small" onClick={() => setEditing((e) => !e)}>{editing ? "Close" : "Edit plan"}</button></div>
+        {editing ? <NutritionSetup edit onDone={() => setEditing(false)} /> : (
+          <div className="grid">
+            <div><span className="k">Body</span><b>{p.weight_kg ? showW(p.weight_kg) : "—"}</b><span className="d">{[p.height_cm ? (imperial ? `${Math.round(p.height_cm / 2.54)} in` : `${p.height_cm} cm`) : null, age ? `${age} y` : null, p.sex === "male" ? "male" : p.sex === "female" ? "female" : null].filter(Boolean).join(" · ") || "height, age, sex not set"}</span></div>
+            <div><span className="k">Goal</span><b>{GOAL_LABEL[p.goal]}</b><span className="d">{goalText}{stageText ? ` · stages: ${stageText}` : ""}</span></div>
+            <div><span className="k">Rest-day calories</span><b>{fmt(todayTargets.base)} kcal</b><span className="d">{p.base_kcal != null ? "your own number" : `resting ${fmt(bmrOf(p))} kcal × 1.4`}{todayTargets.goalAdj ? ` · ${todayTargets.goalAdj > 0 ? "+" : ""}${fmt(todayTargets.goalAdj)} kcal/day for the goal` : ""}</span></div>
+            <div><span className="k">Today</span><b>{fmt(todayTargets.kcal)} kcal</b><span className="d">{fmt(todayTargets.carbs)} g carbs · {fmt(todayTargets.protein)} g protein · {fmt(todayTargets.fat)} g fat · {(todayTargets.fluid_ml / 1000).toFixed(1)} L</span></div>
+            <div><span className="k">Bottle</span><b>{p.bottle_ml >= 1000 ? `${p.bottle_ml / 1000} L` : `${p.bottle_ml} ml`}</b><span className="d">one bottle = one tap on Track</span></div>
+            <div><span className="k">Supplements</span><b>{p.supplements.length ? p.supplements.length : "none"}</b><span className="d">{p.supplements.map((s) => `${SUPPLEMENT_MAP[s.id]?.name ?? s.id} ${s.dose} ${s.time}`).join(" · ") || "add from the Supplements tab"}</span></div>
+          </div>
+        )}
+      </section>
+
       <div className="nu-cols guide">
         <section className="card nu-weight" aria-label="Weight">
-          <div className="hd"><div><div className="k">Body weight</div><div className="v"><b>{current != null ? showW(current) : "—"}</b>{p.goal_weight_kg ? <span className="muted"> · target {showW(p.goal_weight_kg)}</span> : null}</div></div>
-            <form className="logw" onSubmit={(e) => { e.preventDefault(); const v = parseFloat(wIn); if (!v) return; nut.logWeight(ymd(today()), +(imperial ? v / 2.20462 : v).toFixed(1)); setWIn(""); }}><input value={wIn} onChange={(e) => setWIn(e.target.value)} inputMode="decimal" placeholder={imperial ? "lb" : "kg"} aria-label="Today's weight" /><button type="submit" className="btn small">Log today</button></form>
+          <div className="hd"><div><div className="k">Body weight</div><div className="v"><b>{current != null ? showW(current) : "—"}</b>{next ? <span className="muted"> · next {showW(next.weight_kg)} by {shortDate(next.date)}</span> : p.goal_weight_kg ? <span className="muted"> · target {showW(p.goal_weight_kg)}</span> : null}</div></div>
+            <form className="logw" onSubmit={(e) => { e.preventDefault(); const v = parseFloat(wIn); if (!v) return; nut.logWeight(tNow, +(imperial ? v / 2.20462 : v).toFixed(1)); setWIn(""); }}><input value={wIn} onChange={(e) => setWIn(e.target.value)} inputMode="decimal" placeholder={imperial ? "lb" : "kg"} aria-label="Today's weight" /><button type="submit" className="btn small">Log today</button></form>
           </div>
-          <svg className="chart" viewBox={`0 0 ${chart.W} ${chart.H}`} role="img" aria-label="Logged weight and projection">
-            {[chart.lo + 1, (chart.lo + chart.hi) / 2, chart.hi - 1].map((v) => <g key={v}><line x1={chart.L} y1={chart.y(v)} x2={chart.W - chart.R} y2={chart.y(v)} stroke="var(--grid)" /><text x={chart.L - 6} y={chart.y(v) + 4} textAnchor="end">{imperial ? fmt(kgToLb(v)) : fmt(v, 1)}</text></g>)}
-            {p.goal_weight_kg && <line x1={chart.L} y1={chart.y(p.goal_weight_kg)} x2={chart.W - chart.R} y2={chart.y(p.goal_weight_kg)} stroke="var(--run)" strokeDasharray="4 4" />}
-            {chart.pts.length > 1 && <path d={chart.pts.map((q, i) => `${i ? "L" : "M"}${chart.x(fromYmd(q.date))} ${chart.y(q.kg)}`).join("")} fill="none" stroke="var(--accent)" strokeWidth={2} />}
-            {chart.pts.map((q) => <circle key={q.date} cx={chart.x(fromYmd(q.date))} cy={chart.y(q.kg)} r={3.5} fill="var(--accent)" stroke="var(--surface)" strokeWidth={1.5}><title>{`${dateLabel(q.date)} · ${showW(q.kg)}`}</title></circle>)}
-            {current != null && chart.projEnd != null && <line x1={chart.x(today())} y1={chart.y(current)} x2={chart.x(chart.end)} y2={chart.y(chart.projEnd)} stroke="var(--muted-2)" strokeDasharray="3 4" strokeWidth={1.5} />}
-            <text x={chart.L} y={chart.H - 8} textAnchor="start">{shortDate(ymd(chart.start))}</text>
-            <text x={chart.W - chart.R} y={chart.H - 8} textAnchor="end">{raceDate ? `Race ${shortDate(raceDate)}` : shortDate(ymd(chart.end))}</text>
-            {!chart.pts.length && <text x={chart.W / 2} y={chart.H / 2} textAnchor="middle">Log a weight to start the line</text>}
-          </svg>
+          <WeightChart timeline={timeline} path={path} logged={weights.map((w) => ({ date: w.date, kg: w.weight_kg }))} proj={projLine} imperial={imperial} raceDate={raceDate} />
+          <div className="nu-lgd"><span><i className="bar" /> planned hours per week</span>{path.length > 1 && <span><i className="tgt" /> weight targets</span>}<span><i className="dot" /> logged weight</span>{projLine && <span><i className="proj" /> projection</span>}</div>
           <div className="u">
-            {proj ? <>Last 14 logged days: {proj.avgBalance > 0 ? "+" : ""}{fmt(proj.avgBalance)} kcal/day vs target → about {proj.kgPerWeek > 0 ? "+" : ""}{imperial ? `${fmt(kgToLb(proj.kgPerWeek), 1)} lb` : `${fmt(proj.kgPerWeek, 2)} kg`} per week{chart.projEnd != null ? ` → ${showW(chart.projEnd)} by ${raceDate ? "race day" : "12 weeks"}` : ""} if nothing changes. 7,700 kcal ≈ 1 kg.</> : "After three logged days the projection appears here: average calorie balance per day × days to race ÷ 7,700 kcal per kg."}
+            {next && needRate != null ? <>Next target {showW(next.weight_kg)} by {shortDate(next.date)}: {rateW(needRate)} from today's weight. </> : null}
+            {proj ? <>Last 14 logged days: {proj.avgBalance > 0 ? "+" : ""}{fmt(proj.avgBalance)} kcal/day vs target → {rateW(proj.kgPerWeek)}{projEnd != null ? ` → ${showW(projEnd)} by ${raceDate ? "race day" : "12 weeks"}` : ""} if nothing changes. 7,700 kcal ≈ 1 kg.</> : "After three logged days the projection appears here: average calorie balance per day × days to race ÷ 7,700 kcal per kg."}
           </div>
         </section>
 
         <section className="card nu-needs" aria-label="Energy needs">
-          <div className="hd"><div className="k">Your energy needs</div><button type="button" className="linkbtn" onClick={() => setEditing((e) => !e)}>{editing ? "Close" : "Edit body data"}</button></div>
-          {editing ? <NutritionSetup edit onDone={() => setEditing(false)} /> : (
-            <>
-              <table className="tbl small">
-                <thead><tr><th>Day type</th><th className="num">kcal</th><th className="num">Carbs g</th><th className="num">Protein g</th><th className="num">Fat g</th><th className="num">Fluid L</th></tr></thead>
-                <tbody>{types.map(([label, ss]) => { const t = targetsFor(p, ss, raceDate ?? undefined); return <tr key={label}><td>{label}</td><td className="num">{fmt(t.kcal)}</td><td className="num">{fmt(t.carbs)}</td><td className="num">{fmt(t.protein)}</td><td className="num">{fmt(t.fat)}</td><td className="num">{(t.fluid_ml / 1000).toFixed(1)}</td></tr>; })}</tbody>
-              </table>
-              <div className="u">Resting energy {fmt(bmrOf(p))} kcal (Mifflin–St Jeor) × 1.4 for daily life, plus the session's energy (MET × kg × hours){p.goal !== "maintain" ? `, ${p.goal === "gain" ? "plus a surplus to gain" : p.goal === "lose" ? "minus a deficit to lose" : "adjusted to reach the target weight by race day"}` : ""}. Carbohydrate 3.5 g/kg on rest days up to 8 g/kg on long days; protein 1.7 g/kg; fat fills the rest, never under 0.8 g/kg. Fluid 35 ml/kg + 0.5 L per training hour.</div>
-            </>
-          )}
+          <div className="hd"><div className="k">Your energy needs</div></div>
+          <table className="tbl small">
+            <thead><tr><th>Day type</th><th className="num">kcal</th><th className="num">Carbs g</th><th className="num">Protein g</th><th className="num">Fat g</th><th className="num">Fluid L</th></tr></thead>
+            <tbody>{types.map(([label, ss]) => { const t = targetsFor(p, ss, raceDate ?? undefined); return <tr key={label}><td>{label}</td><td className="num">{fmt(t.kcal)}</td><td className="num">{fmt(t.carbs)}</td><td className="num">{fmt(t.protein)}</td><td className="num">{fmt(t.fat)}</td><td className="num">{(t.fluid_ml / 1000).toFixed(1)}</td></tr>; })}</tbody>
+          </table>
+          <div className="u">Resting energy {fmt(bmrOf(p))} kcal (Mifflin–St Jeor) × 1.4 for daily life, plus the session's energy (MET × kg × hours){p.goal !== "maintain" ? `, ${p.goal === "gain" ? "plus a surplus to gain" : p.goal === "lose" ? "minus a deficit to lose" : next ? "adjusted to reach the next weight stage by its date" : "adjusted to reach the target weight by race day"}` : ""}. Carbohydrate 3.5 g/kg on rest days up to 8 g/kg on long days; protein 1.7 g/kg; fat fills the rest, never under 0.8 g/kg. Fluid 35 ml/kg + 0.5 L per training hour.</div>
         </section>
       </div>
 

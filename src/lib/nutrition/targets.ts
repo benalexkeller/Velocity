@@ -51,6 +51,17 @@ export function dayTypeOf(sessions: Session[]): DayTargets["dayType"] {
 }
 const CARBS_G_PER_KG: Record<DayTargets["dayType"], number> = { rest: 3.5, light: 5, moderate: 6, long: 8, race: 10 };
 
+/** All weight stages in date order, with the race-day weight as the last one. */
+export function stagesOf(p: NutritionProfile, raceDate?: string) {
+  const out = [...p.weight_stages].filter((s) => s.date && s.weight_kg > 0);
+  if (p.goal_weight_kg && raceDate && !out.some((s) => s.date === raceDate)) out.push({ date: raceDate, weight_kg: p.goal_weight_kg, label: "Race day" });
+  return out.sort((a, b) => a.date.localeCompare(b.date));
+}
+export function nextStage(p: NutritionProfile, raceDate?: string) {
+  const today = new Date().toISOString().slice(0, 10);
+  return stagesOf(p, raceDate).find((s) => s.date > today) ?? null;
+}
+
 export function targetsFor(p: NutritionProfile, sessions: Session[], raceDate?: string): DayTargets {
   const w = p.weight_kg ?? DEFAULT_WEIGHT;
   const bmr = bmrOf(p);
@@ -63,9 +74,10 @@ export function targetsFor(p: NutritionProfile, sessions: Session[], raceDate?: 
   if (p.base_kcal != null) goalAdj = 0;
   else if (p.goal === "lose") goalAdj = -400;
   else if (p.goal === "gain") goalAdj = 300;
-  else if (p.goal === "race_weight" && p.goal_weight_kg && raceDate) {
-    const days = Math.max(14, (new Date(raceDate).getTime() - Date.now()) / 86400000);
-    goalAdj = Math.max(-500, Math.min(300, Math.round(((p.goal_weight_kg - w) * 7700) / days)));
+  else if (p.goal === "race_weight") {
+    // aim at the next stage on the way (or race day); the deficit/surplus is spread evenly until that date
+    const next = nextStage(p, raceDate);
+    if (next) { const days = Math.max(7, (new Date(next.date).getTime() - Date.now()) / 86400000); goalAdj = Math.max(-500, Math.min(300, Math.round(((next.weight_kg - w) * 7700) / days))); }
   }
   const kcal = Math.max(1200, base + training + goalAdj);
   const dayType = dayTypeOf(sessions);

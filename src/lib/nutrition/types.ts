@@ -31,11 +31,13 @@ export interface SupplementPick { id: string; dose: string; time: string }
 export interface SupplementTaken { date: string; supplement_id: string; taken_at?: string }
 
 export type Goal = "maintain" | "lose" | "gain" | "race_weight";
+/** A weight to reach by a date, e.g. the end of a training phase. The race-day weight is the last stage. */
+export interface WeightStage { date: string; weight_kg: number; label?: string }
 export interface NutritionProfile {
   weight_kg: number | null; height_cm: number | null; birth_year: number | null; sex: "male" | "female" | "other" | null;
-  goal: Goal; goal_weight_kg: number | null; base_kcal: number | null; bottle_ml: number; supplements: SupplementPick[]; setup_done: boolean;
+  goal: Goal; goal_weight_kg: number | null; weight_stages: WeightStage[]; base_kcal: number | null; bottle_ml: number; supplements: SupplementPick[]; setup_done: boolean;
 }
-export const EMPTY_PROFILE: NutritionProfile = { weight_kg: null, height_cm: null, birth_year: null, sex: null, goal: "maintain", goal_weight_kg: null, base_kcal: null, bottle_ml: 750, supplements: [], setup_done: false };
+export const EMPTY_PROFILE: NutritionProfile = { weight_kg: null, height_cm: null, birth_year: null, sex: null, goal: "maintain", goal_weight_kg: null, weight_stages: [], base_kcal: null, bottle_ml: 750, supplements: [], setup_done: false };
 
 export interface NutritionData { profile: NutritionProfile; log: LogEntry[]; foods: Food[]; drinks: Drink[]; weights: WeightEntry[]; taken: SupplementTaken[] }
 export const EMPTY_NUTRITION: NutritionData = { profile: EMPTY_PROFILE, log: [], foods: [], drinks: [], weights: [], taken: [] };

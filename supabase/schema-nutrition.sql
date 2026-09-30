@@ -11,6 +11,7 @@ create table if not exists public.nutrition_profile (
   goal text not null default 'maintain' check (goal in ('maintain','lose','gain','race_weight')),
   goal_weight_kg numeric,
   base_kcal int,                 -- athlete's own rest-day calories; null = formula
+  weight_stages jsonb not null default '[]'::jsonb,   -- [{date, weight_kg, label}] staged targets on the way to race weight
   bottle_ml int not null default 750,
   supplements jsonb not null default '[]'::jsonb,   -- [{id, dose, time}]
   setup_done boolean not null default false,
@@ -18,6 +19,7 @@ create table if not exists public.nutrition_profile (
 );
 
 alter table public.nutrition_profile add column if not exists base_kcal int;
+alter table public.nutrition_profile add column if not exists weight_stages jsonb not null default '[]'::jsonb;
 
 -- ---------- what was eaten ----------
 create table if not exists public.food_log (

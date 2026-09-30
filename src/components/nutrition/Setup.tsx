@@ -3,7 +3,8 @@ import { useState } from "react";
 import { useNutrition } from "@/lib/nutrition/store";
 import { usePlan } from "@/lib/store";
 import { SUPPLEMENTS, GRADE_LABEL } from "@/lib/nutrition/supplements";
-import type { Goal, SupplementPick } from "@/lib/nutrition/types";
+import type { Goal, SupplementPick, WeightStage } from "@/lib/nutrition/types";
+import { StageEditor } from "./WeightStages";
 
 const BOTTLES = [500, 600, 750, 1000];
 const kgToLb = (kg: number) => kg * 2.20462, lbToKg = (lb: number) => lb / 2.20462;
@@ -23,6 +24,8 @@ export function NutritionSetup({ onDone, edit = false }: { onDone: () => void; e
   const [sex, setSex] = useState<"male" | "female" | "">(p.sex === "male" || p.sex === "female" ? p.sex : "");
   const [goal, setGoal] = useState<Goal>(p.goal);
   const [goalW, setGoalW] = useState(p.goal_weight_kg ? String(Math.round(imperial ? kgToLb(p.goal_weight_kg) : p.goal_weight_kg)) : "");
+  const [depth, setDepth] = useState(p.weight_stages.length > 0);
+  const [stages, setStages] = useState<WeightStage[]>(p.weight_stages);
   const [baseK, setBaseK] = useState(p.base_kcal ? String(p.base_kcal) : "");
   const [bottle, setBottle] = useState<number>(p.bottle_ml);
   const [custom, setCustom] = useState(BOTTLES.includes(p.bottle_ml) ? "" : String(p.bottle_ml));
@@ -47,7 +50,7 @@ export function NutritionSetup({ onDone, edit = false }: { onDone: () => void; e
     const bottle_ml = custom ? Math.max(100, parseInt(custom) || 750) : bottle;
     setBusy(true);
     try {
-      await nut.saveProfile({ weight_kg, height_cm, birth_year: by && by > 1900 ? by : null, sex: sex || null, goal, goal_weight_kg: goal === "race_weight" && gw ? +(wUnit === "lb" ? lbToKg(gw) : gw).toFixed(1) : null, base_kcal: parseInt(baseK) >= 800 ? parseInt(baseK) : null, bottle_ml, supplements: picks, setup_done: true });
+      await nut.saveProfile({ weight_kg, height_cm, birth_year: by && by > 1900 ? by : null, sex: sex || null, goal, goal_weight_kg: goal === "race_weight" && gw ? +(wUnit === "lb" ? lbToKg(gw) : gw).toFixed(2) : null, weight_stages: goal === "race_weight" && depth ? stages.filter((s) => s.weight_kg > 0 && s.date) : [], base_kcal: parseInt(baseK) >= 800 ? parseInt(baseK) : null, bottle_ml, supplements: picks, setup_done: true });
       if (!edit) nut.logWeight(new Date().toISOString().slice(0, 10), weight_kg);
       onDone();
     } catch (x) { setErr(x instanceof Error ? x.message : "Could not save."); }
@@ -72,7 +75,13 @@ export function NutritionSetup({ onDone, edit = false }: { onDone: () => void; e
         <div className="days">
           {([["maintain", "Maintain weight"], ["lose", "Lose weight"], ["gain", "Gain weight"], ["race_weight", "Reach a target weight"]] as [Goal, string][]).map(([k, l]) => <button key={k} type="button" className={goal === k ? "on" : ""} onClick={() => setGoal(k)}>{l}</button>)}
         </div>
-        {goal === "race_weight" && <div className="two"><label><b>Target weight ({wUnit})</b><input value={goalW} onChange={(e) => setGoalW(e.target.value)} inputMode="decimal" /></label><span className="hint" style={{ alignSelf: "end" }}>{plan.athlete.hasRace ? `Spread out to reach it by race day (${plan.athlete.race.date}).` : "Set your race under Profile so the date is known."}</span></div>}
+        {goal === "race_weight" && (
+          <>
+            <div className="two"><label><b>Target weight ({wUnit})</b><input value={goalW} onChange={(e) => setGoalW(e.target.value)} inputMode="decimal" /></label><span className="hint" style={{ alignSelf: "end" }}>{plan.athlete.hasRace ? `Spread out to reach it by race day (${plan.athlete.race.date}).` : "Set your race under Profile so the date is known."}</span></div>
+            <label className="chk-row"><input type="checkbox" checked={depth} onChange={(e) => setDepth(e.target.checked)} /><b>In-depth weight plan</b><span className="hint">A target weight per stage of training, on top of your planned hours per week.</span></label>
+            {depth && <StageEditor stages={stages} onChange={setStages} nowKg={parseFloat(weight) > 0 ? +(wUnit === "lb" ? lbToKg(parseFloat(weight)) : parseFloat(weight)).toFixed(2) : null} raceKg={parseFloat(goalW) > 0 ? +(wUnit === "lb" ? lbToKg(parseFloat(goalW)) : parseFloat(goalW)).toFixed(2) : null} imperial={wUnit === "lb"} raceDate={plan.athlete.hasRace ? plan.athlete.race.date : null} />}
+          </>
+        )}
         <div className="two"><label><b>Your own rest-day calories (optional)</b><span className="unit-in"><input value={baseK} onChange={(e) => setBaseK(e.target.value)} inputMode="numeric" placeholder="formula" /><span className="units"><span>kcal</span></span></span></label><span className="hint" style={{ alignSelf: "end" }}>Leave empty and the app computes it from your body data and goal. If you set a number, that is your rest-day target and the energy of each day's training is added on top.</span></div>
       </section>
 
