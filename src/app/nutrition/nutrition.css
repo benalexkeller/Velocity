@@ -1,0 +1,202 @@
+/* Nutrition tab: Track (day / week), Guide, Supplements, the add panel and the set-up pop-up. */
+@import "../account.css";
+
+.nu .tabs { margin-bottom: 0; }
+.nu .k { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.nu .u { font-size: 12px; color: var(--muted); line-height: 1.45; }
+.nu .grow { flex: 1; }
+.nu .small { font-size: 12.5px; }
+.nu .linkbtn { border: 0; background: none; color: var(--accent); font: inherit; font-weight: 600; font-size: 13px; padding: 0; cursor: pointer; }
+.nu .linkbtn.center { display: block; margin: 8px auto 0; }
+.nu-bar { height: 6px; border-radius: 999px; background: var(--track); overflow: hidden; }
+.nu-bar i { display: block; height: 100%; border-radius: 999px; background: var(--accent); transition: width .25s; }
+
+/* day nav */
+.nu-daynav { display: flex; align-items: center; gap: 10px; }
+.nu-daynav .back { width: 34px; height: 34px; border-radius: 50%; background: var(--surface); box-shadow: var(--shadow); border: 0; display: inline-flex; align-items: center; justify-content: center; }
+.nu-daynav .back svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.nu-daynav .lbl { font-size: 15px; }
+.nu-daynav .lbl b { font-weight: 600; }
+
+/* targets row */
+.nu-targets { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr 1.1fr; padding: 18px 22px; gap: 0; }
+.nu-targets > div { padding: 0 18px; border-left: 1px solid var(--line-2); display: grid; gap: 6px; align-content: start; }
+.nu-targets > div:first-child { padding-left: 0; border-left: 0; }
+.nu-targets .v { font-size: 20px; color: var(--muted); letter-spacing: -0.01em; }
+.nu-targets .v b { font-size: 26px; color: var(--ink); font-weight: 600; letter-spacing: -0.02em; }
+.nu-targets .big .v b { font-size: 36px; }
+.nu-targets .big .v { font-size: 24px; }
+
+/* two columns */
+.nu-cols { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(300px, 1fr); gap: 16px; align-items: start; }
+.nu-cols.week { grid-template-columns: minmax(0, 2.4fr) minmax(240px, 1fr); }
+.nu-cols.guide { grid-template-columns: 1fr 1fr; }
+.nu-side { display: grid; gap: 16px; }
+.nu-timeline { padding: 18px 22px 12px; }
+.nu-timeline .hd { display: flex; align-items: baseline; gap: 12px; margin-bottom: 8px; }
+.nu-timeline .hd h2 { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; }
+.nu-timeline .hd .btn { align-self: center; }
+.nu-timeline .hd .btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+/* timeline */
+.nu-tl { position: relative; display: grid; gap: 6px; }
+.nu-tl::before { content: ""; position: absolute; left: 62px; top: 12px; bottom: 12px; width: 2px; background: var(--line-2); }
+.nu-meal { display: grid; grid-template-columns: 50px 24px minmax(0, 1fr); align-items: start; gap: 0; position: relative; }
+.nu-meal .time { font-size: 12.5px; color: var(--muted); padding-top: 12px; }
+.nu-meal .dot, .nu-tl-session .dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--accent); background: var(--surface); margin: 14px 0 0 7px; z-index: 1; }
+.nu-tl-session .dot.on { background: var(--accent); }
+.nu-meal .body { border: 1px solid var(--line-2); border-radius: 10px; padding: 10px 14px; }
+.nu-meal.session .body { background: var(--surface-2); border-color: transparent; }
+.nu-meal .mh { display: flex; align-items: baseline; gap: 12px; margin-bottom: 4px; }
+.nu-meal .mh > b { font-size: 15px; font-weight: 600; }
+.nu-meal .mh .tot { margin-left: auto; display: flex; gap: 14px; font-size: 12px; color: var(--muted); }
+.nu-meal .mh .tot b { color: var(--ink); font-weight: 600; font-size: 13px; }
+.nu-meal .row { display: grid; grid-template-columns: minmax(0, 1fr) 110px 56px 56px 56px 56px 22px; gap: 8px; align-items: center; padding: 5px 0; border-top: 1px solid var(--line-2); font-size: 13px; }
+.nu-meal .row.head { border-top: 0; padding: 0 0 2px; font-size: 10.5px; color: var(--muted); letter-spacing: 0.06em; text-transform: uppercase; order: -1; }
+.nu-meal .row .n small { color: var(--muted); }
+.nu-meal .row .num { text-align: right; font-variant-numeric: tabular-nums; }
+.nu-meal .row .x { border: 0; background: none; color: var(--muted-2); font-size: 16px; line-height: 1; cursor: pointer; padding: 0; text-align: right; }
+.nu-meal .row .x:hover { color: #B42318; }
+.nu-meal .body > .linkbtn { margin-top: 6px; }
+.nu-meal .body { display: flex; flex-direction: column; }
+.nu-tl-session { display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 0; border-radius: 10px; background: var(--accent-soft); text-decoration: none; color: var(--ink); }
+.nu-tl-session .time { width: 50px; flex: 0 0 50px; padding: 0; font-size: 12.5px; color: var(--muted); }
+.nu-tl-session .dot { margin: 0 6px 0 5px; flex: 0 0 auto; }
+.nu-tl-session .sport-icon { color: var(--accent); flex: 0 0 auto; }
+.nu-tl-session b { font-weight: 600; white-space: nowrap; }
+.nu-tl-session .muted { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.nu-tl-session .link { color: var(--accent); font-weight: 600; font-size: 13px; white-space: nowrap; }
+
+/* side cards */
+.nu-side .card { padding: 16px 18px; display: grid; gap: 8px; }
+.nu-side .hd { display: flex; align-items: baseline; justify-content: space-between; }
+.nu-carbgoal .v { font-size: 15px; color: var(--muted); }
+.nu-carbgoal .v b { font-size: 26px; color: var(--ink); font-weight: 600; letter-spacing: -0.02em; }
+.nu-timing { display: grid; gap: 6px; }
+.nu-timing > div { display: grid; grid-template-columns: 110px 90px 1fr 48px; gap: 8px; align-items: center; font-size: 12.5px; }
+.nu-timing > div b { text-align: right; font-weight: 600; }
+.nu-hydration .v { font-size: 14px; color: var(--muted); } .nu-hydration .v b { font-size: 20px; color: var(--ink); font-weight: 600; }
+.nu-bottles { display: flex; gap: 6px; flex-wrap: wrap; }
+.nu-bottles i { width: 16px; height: 26px; border-radius: 4px 4px 6px 6px; border: 1.5px solid var(--accent); background: linear-gradient(to top, var(--accent) 0%, var(--accent) var(--fill, 0%), transparent var(--fill, 0%)); opacity: .9; }
+.nu-bottles i.full { --fill: 100%; } .nu-bottles i.half { --fill: 50%; }
+.nu-hydration .row { display: flex; gap: 6px; flex-wrap: wrap; }
+.nu-supps .row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line-2); font-size: 13px; cursor: pointer; }
+.nu-supps .row input { width: 16px; height: 16px; accent-color: var(--accent); }
+.nu-supps .row.on b { color: var(--muted); }
+
+/* week */
+.nu-weekchart { padding: 18px 20px 12px; }
+.nu-weekchart .lgd { display: flex; gap: 16px; flex-wrap: wrap; font-size: 12px; color: var(--muted); margin-top: 6px; }
+.nu-weekchart .lgd span { display: inline-flex; align-items: center; gap: 6px; }
+.nu-weekchart .lgd i { width: 10px; height: 10px; border-radius: 50%; display: inline-block; }
+.nu-weekchart .lgd i.dash { width: 18px; height: 0; border-top: 2px dashed var(--muted-2); border-radius: 0; }
+.nu-weekside { padding: 18px 20px; display: grid; gap: 6px; align-content: start; }
+.nu-weekside .v { font-size: 14px; color: var(--muted); } .nu-weekside .v b { font-size: 24px; color: var(--ink); font-weight: 600; letter-spacing: -0.02em; }
+.nu-weekside .pct { display: grid; grid-template-columns: 60px 44px 1fr; gap: 10px; align-items: center; font-size: 13px; margin-top: 6px; }
+.nu-weekside .pct b { font-size: 16px; font-weight: 600; }
+.nu-weektable { padding: 6px 12px; }
+.nu-weektable .tbl th.num, .nu-weektable .tbl td.num { text-align: right; font-variant-numeric: tabular-nums; }
+.nu-weektable .tbl th small { display: block; font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--muted-2); }
+.nu-weektable tr.row { cursor: pointer; } .nu-weektable tr.row.sel td { color: var(--accent); font-weight: 600; }
+
+/* add panel */
+.nu-scrim { position: fixed; inset: 0; background: rgba(16,17,20,0.18); z-index: 40; }
+.nu-panel { position: fixed; top: 0; right: 0; bottom: 0; width: min(520px, 100vw); background: var(--surface); box-shadow: -12px 0 40px rgba(16,17,20,0.14); z-index: 41; padding: 22px 24px; overflow: auto; display: grid; gap: 14px; align-content: start; }
+.nu-panel-head { display: flex; align-items: center; justify-content: space-between; }
+.nu-panel-head h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; display: flex; align-items: center; gap: 8px; }
+.nu-panel-head .meal-select { font: inherit; font-size: 20px; font-weight: 600; border: 0; background: var(--surface-2); border-radius: 8px; padding: 2px 8px; color: var(--ink); }
+.nu-panel-head .close { width: 32px; height: 32px; border-radius: 50%; border: 0; background: var(--surface-2); display: inline-flex; align-items: center; justify-content: center; }
+.nu-panel-head .close svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; }
+.nu-modes { align-self: start; }
+.nu-search { display: grid; gap: 10px; }
+.nu-search .search { display: flex; align-items: center; gap: 8px; border: 1.5px solid var(--accent); border-radius: 10px; padding: 8px 12px; }
+.nu-search .search svg { width: 18px; height: 18px; stroke: var(--muted); fill: none; stroke-width: 2; }
+.nu-search .search input { border: 0; outline: 0; font: inherit; font-size: 15px; flex: 1; background: none; }
+.nu-search .search .clear { border: 0; background: var(--surface-2); border-radius: 50%; width: 22px; height: 22px; line-height: 1; color: var(--muted); }
+.nu-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12.5px; }
+.nu-chips .k { color: var(--muted); margin-right: 4px; text-transform: none; letter-spacing: 0; font-size: 12.5px; font-weight: 500; }
+.nu-chips button { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 5px 11px; font: inherit; font-size: 12.5px; color: var(--ink); }
+.nu-results { display: grid; gap: 2px; max-height: 42vh; overflow: auto; }
+.nu-result { display: flex; align-items: center; justify-content: space-between; gap: 10px; text-align: left; border: 0; background: none; padding: 9px 6px; border-bottom: 1px solid var(--line-2); font: inherit; color: var(--ink); cursor: pointer; }
+.nu-result.on, .nu-result:hover { background: var(--surface-2); border-radius: 8px; }
+.nu-result .t { display: grid; } .nu-result .t b { font-weight: 600; font-size: 14px; } .nu-result .t small { color: var(--muted); font-size: 12px; }
+.nu-result .plus { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); color: #fff; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+.nu-result .plus svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2.2; }
+.nu-portion { padding: 14px 16px; display: grid; gap: 10px; border: 1px solid var(--line); box-shadow: none; }
+.nu-portion .hd { display: flex; justify-content: space-between; align-items: start; } .nu-portion .hd b { font-size: 15px; } .nu-portion .hd small { display: block; color: var(--muted); font-size: 12px; }
+.nu-portion .fav { border: 0; background: none; font-size: 20px; color: var(--muted-2); cursor: pointer; } .nu-portion .fav.on { color: #F5A623; }
+.nu-portion .amt { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; }
+.nu-portion .amt label { display: grid; gap: 4px; font-size: 12px; color: var(--muted); }
+.nu-portion .amt input { width: 90px; font: inherit; font-size: 15px; border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
+.nu-portion .nums { display: grid; grid-template-columns: repeat(6, 1fr); gap: 4px; text-align: center; }
+.nu-portion .nums b { display: block; font-size: 14px; font-weight: 600; } .nu-portion .nums span { font-size: 11px; color: var(--muted); }
+.pill-group.small button { padding: 5px 11px; font-size: 12.5px; }
+.nu-manual .nu-macros { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+.nu-manual .nu-macros label { font-size: 11px; }
+.nu .chk-row { display: flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink); }
+.nu .chk-row input { width: auto; }
+.nu-quick label.inline { display: grid; grid-template-columns: 110px 1fr; align-items: center; gap: 10px; }
+.nu-quick-total { display: flex; justify-content: space-between; font-size: 14px; padding: 8px 0; border-top: 1px solid var(--line); }
+.unit-in { display: flex; align-items: stretch; }
+.unit-in input { border-radius: 9px 0 0 9px !important; flex: 1; min-width: 0; width: auto !important; }
+.unit-in .units { display: inline-flex; border: 1px solid var(--line); border-left: 0; border-radius: 0 9px 9px 0; overflow: hidden; }
+.unit-in .units button, .unit-in .units span { border: 0; background: var(--surface-2); font: inherit; font-size: 12px; padding: 0 10px; color: var(--muted); display: inline-flex; align-items: center; flex: 0 0 auto; white-space: nowrap; }
+.unit-in .units button.on { background: var(--accent); color: #fff; }
+.unit-in.small input { padding: 6px 10px; font-size: 13px; }
+
+/* set-up pop-up */
+.nu-modal { position: fixed; inset: 0; background: rgba(16,17,20,0.35); z-index: 50; display: grid; place-items: start center; overflow: auto; padding: 40px 16px; }
+.nu-modal .box { width: 100%; max-width: 760px; padding: 28px 30px; display: grid; gap: 10px; }
+.nu-modal .wordmark { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; }
+.nu-modal h1 { font-size: 22px; font-weight: 600; letter-spacing: -0.01em; }
+.nu-modal .sub { font-size: 13.5px; color: var(--muted); }
+.nu-setup section { display: grid; gap: 8px; padding-top: 6px; border-top: 1px solid var(--line-2); }
+.nu-setup section:first-child { border-top: 0; }
+.nu-setup h3 { font-size: 14px; font-weight: 600; }
+.nu-supp-pick { display: grid; gap: 4px; }
+.nu-supp-pick .row { display: flex; align-items: center; gap: 12px; padding: 6px 8px; border-radius: 8px; }
+.nu-supp-pick .row.on { background: var(--surface-2); }
+.nu-supp-pick .chk { display: flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--ink); min-width: 200px; }
+.nu-supp-pick .chk input { width: 16px; height: 16px; accent-color: var(--accent); }
+.nu-supp-pick .edit { display: flex; gap: 6px; margin-left: auto; }
+.nu-supp-pick .edit input { width: 110px; font-size: 12.5px; padding: 5px 8px; } .nu-supp-pick .edit select { font-size: 12.5px; padding: 5px 8px; width: auto; }
+.grade { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 600; border-radius: 999px; padding: 3px 9px; white-space: nowrap; }
+.grade.gA { background: #ECFDF3; color: #067647; } .grade.gB { background: var(--accent-soft); color: var(--accent); } .grade.gC { background: #FFF6E5; color: #B54708; }
+
+/* guide */
+.nu-guide { display: grid; gap: 16px; }
+.nu-guide .card { padding: 18px 20px; }
+.nu-guide .hd { display: flex; align-items: start; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.nu-weight .v { font-size: 14px; color: var(--muted); } .nu-weight .v b { font-size: 26px; color: var(--ink); font-weight: 600; letter-spacing: -0.02em; }
+.nu-weight .logw { display: flex; gap: 6px; align-items: center; }
+.nu-weight .logw input { width: 80px; font: inherit; font-size: 14px; border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
+.nu-needs .tbl th.num, .nu-needs .tbl td.num, .nu-weekfuel .tbl td.num { text-align: right; }
+.nu-weekfuel .sess { display: inline-flex; align-items: center; gap: 6px; } .nu-weekfuel .sport-icon { color: var(--accent); }
+.nu-guide .u { margin-top: 8px; }
+
+/* supplements */
+.nu-supplements { display: grid; gap: 14px; }
+.nu-supp-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.nu-supp { padding: 18px 20px; display: grid; gap: 10px; align-content: start; }
+.nu-supp .top, .nu-supp-open .top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.nu-supp h3 { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; }
+.nu-supp .kv, .nu-supp-open .kv { display: grid; grid-template-columns: 92px 1fr; gap: 6px 10px; font-size: 13px; line-height: 1.4; }
+.nu-supp .kv > span:nth-child(odd), .nu-supp-open .kv > span:nth-child(odd) { color: var(--muted); }
+.nu-supp .kv > span:nth-child(n+3) { border-top: 1px solid var(--line-2); padding-top: 6px; }
+.nu-supp .acts { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 4px; }
+.nu-supp.none .kv { grid-template-columns: 200px 1fr; }
+.nu-supp-open { padding: 22px 26px; position: relative; display: grid; gap: 12px; }
+.nu-supp-open .close { position: absolute; right: 14px; top: 14px; width: 32px; height: 32px; border-radius: 50%; border: 0; background: var(--surface-2); display: inline-flex; align-items: center; justify-content: center; }
+.nu-supp-open .close svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; }
+.nu-supp-open .top { justify-content: flex-start; padding-right: 40px; }
+.nu-supp-open h2 { font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
+.nu-supp-open .cols { display: grid; grid-template-columns: 1.4fr 1fr; gap: 24px; }
+.nu-supp-open h3 { font-size: 12px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); margin: 12px 0 4px; }
+.nu-supp-open p, .nu-supp-open li { font-size: 14px; line-height: 1.55; color: var(--ink-2); }
+.nu-supp-open ul { padding-left: 18px; display: grid; gap: 4px; }
+.nu-supp-open .studies { padding-left: 18px; display: grid; gap: 8px; }
+.nu-supp-open .studies b { display: block; font-weight: 600; color: var(--ink); font-size: 13px; }
+.nu-supp-open .studies span { font-size: 13px; color: var(--ink-2); }
+
+@media (max-width: 1100px) { .nu-cols, .nu-cols.week, .nu-cols.guide { grid-template-columns: 1fr; } .nu-targets { grid-template-columns: 1fr 1fr 1fr; } .nu-targets > div { border-left: 0; padding: 6px 0; } .nu-supp-grid { grid-template-columns: 1fr 1fr; } .nu-supp-open .cols { grid-template-columns: 1fr; } }
+@media (max-width: 700px) { .nu-targets { grid-template-columns: 1fr 1fr; } .nu-supp-grid { grid-template-columns: 1fr; } .nu-meal .row { grid-template-columns: minmax(0, 1fr) 60px 50px 22px; } .nu-meal .row .num:nth-child(4), .nu-meal .row .num:nth-child(5), .nu-meal .row .num:nth-child(6), .nu-meal .row .a { display: none; } .nu-manual .nu-macros { grid-template-columns: 1fr 1fr; } }

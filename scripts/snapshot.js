@@ -9,7 +9,20 @@ const PAGES = [
   { id: 'plan', label: 'Plan', path: '/plan', after: async (p) => { const ev = await p.$$('.wg-ev'); const pick = ev[2] || ev[ev.length - 1]; if (pick) await pick.click(); await p.waitForTimeout(400); const bars = await p.$$('svg.ramp g > rect[fill="transparent"]'); if (bars[11]) await bars[11].click(); await p.waitForTimeout(400); } },
   { id: 'activities', label: 'Activities', path: '/activities', after: async (p) => { const r = await p.$$('tr.row'); if (r[2]) await r[2].click(); await p.waitForTimeout(300); } },
   { id: 'analysis', label: 'Analysis', path: '/analysis', after: async (p) => { await p.click('.an-pick .plus'); await p.waitForTimeout(200); const opts = await p.$$eval('.an-select option', os => os.map(o => o.value)); if (opts[3]) await p.selectOption('.an-select', opts[3]); await p.waitForTimeout(400); const vg = await p.$$('.ax-volwrap svg > g'); if (vg.length) { await vg[vg.length - 1].hover(); await p.waitForTimeout(250); } } },
-  { id: 'nutrition', label: 'Nutrition', path: '/nutrition', after: async (p) => { const c = await p.$$('.cube'); if (c[0]) await c[0].click(); await p.waitForTimeout(300); } },
+  { id: 'nutrition', label: 'Nutrition', path: '/nutrition', after: async (p) => {
+    // seed a set-up profile and a logged day so the Track tab shows content in the mirror
+    await p.evaluate(() => {
+      const d = new Date(); const ymd = (x) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`;
+      const t = ymd(d); const y = ymd(new Date(d.getTime() - 86400000));
+      const e = (id, date, meal, name, unit, kcal, c, pr, f, fi, na, source = 'builtin') => ({ id, date, meal, name, unit, kcal, carbs_g: c, protein_g: pr, fat_g: f, fibre_g: fi, sodium_mg: na, source });
+      localStorage.setItem('velocity.nutrition.v1', JSON.stringify({
+        profile: { weight_kg: 74.8, height_cm: 178, birth_year: 1994, sex: 'male', goal: 'race_weight', goal_weight_kg: 72.5, bottle_ml: 750, supplements: [{ id: 'caffeine', dose: '200 mg', time: 'pre-session' }, { id: 'vitamin-d', dose: '2,000 IU', time: 'morning' }, { id: 'creatine', dose: '5 g', time: 'morning' }], setup_done: true },
+        log: [e('a1', t, 'breakfast', 'Oats, rolled, dry', '2 × ½ cup', 303, 54, 11, 5, 8, 5), e('a2', t, 'breakfast', 'Banana, raw', '1 × 1 medium', 105, 27, 1, 0, 3, 1), e('a3', t, 'breakfast', 'Greek yogurt, plain, 2%', '1 × 1 cup', 146, 8, 20, 4, 0, 68), e('a4', t, 'lunch', 'Chicken breast, cooked', '1 × 1 breast', 248, 0, 47, 5, 0, 111), e('a5', t, 'lunch', 'Brown rice, cooked', '1 × 1 cup', 240, 50, 5, 2, 3, 8), e('a6', t, 'lunch', 'Mixed salad greens', '1 × 2 cups', 14, 3, 1, 0, 2, 24), e('a7', t, 'snack', 'Energy bar, oat', '1 × 1 bar', 230, 42, 6, 5, 3, 150), e('b1', y, 'breakfast', 'Estimate', undefined, 500, 0, 0, 0, 0, 0, 'quick'), e('b2', y, 'lunch', 'Estimate', undefined, 800, 0, 0, 0, 0, 0, 'quick'), e('b3', y, 'dinner', 'Estimate', undefined, 900, 0, 0, 0, 0, 0, 'quick')],
+        foods: [], drinks: [{ id: 'd1', date: t, ml: 750, at: '07:40' }, { id: 'd2', date: t, ml: 750, at: '12:10' }, { id: 'd3', date: y, ml: 2250, at: '20:00' }], weights: [{ date: y, weight_kg: 74.8 }, { date: t, weight_kg: 74.6 }], taken: [{ date: t, supplement_id: 'caffeine', taken_at: '08:00' }, { date: t, supplement_id: 'vitamin-d', taken_at: '08:00' }],
+      }));
+    });
+    await p.reload({ waitUntil: 'networkidle' }); await p.waitForTimeout(500);
+  } },
   { id: 'calculator', label: 'Calculator', path: '/calculator' },
   { id: 'store', label: 'Store', path: '/store' },
 ];
