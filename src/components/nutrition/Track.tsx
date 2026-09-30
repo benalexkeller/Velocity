@@ -35,7 +35,6 @@ function DayView({ date, setDate, setView }: { date: string; setDate: (d: string
   const t = d.targets;
   const [adding, setAdding] = useState<Meal | null>(null);
   const active = d.sessions.filter((s) => s.sport !== "rest");
-  const dayLabel = active.length ? `Training day: ${active.map((s) => `${s.title} ${s.min} min${s.intensity !== "Aerobic" && s.intensity !== "Zone 2" ? ` ${s.intensity.toLowerCase()}` : ""}`).join(" + ")}` : "Rest day";
   const isToday = date === ymd(today());
   const bottles = d.drinks_ml / nut.profile.bottle_ml;
   const bottleTarget = Math.ceil(t.fluid_ml / nut.profile.bottle_ml);
@@ -58,14 +57,14 @@ function DayView({ date, setDate, setView }: { date: string; setDate: (d: string
     <>
       <div className="nu-daynav">
         <button type="button" className="back" aria-label="Previous day" onClick={() => setDate(ymd(addDays(fromYmd(date), -1)))}><Icon name="back" /></button>
-        <div className="lbl"><b>{isToday ? "Today" : DAYS[(fromYmd(date).getDay() + 6) % 7]} {dateLabel(date)}</b><span className="muted"> · {dayLabel}</span></div>
+        <div className="lbl"><b>{dateLabel(date)}</b></div>
         <button type="button" className="back" aria-label="Next day" onClick={() => setDate(ymd(addDays(fromYmd(date), 1)))}><Icon name="chevron" /></button>
         <Toggle view="day" setView={setView} />
         {!isToday && <button type="button" className="btn ghost small" onClick={() => setDate(ymd(today()))}>Today</button>}
       </div>
 
       <section className="card nu-targets" aria-label="Today's targets">
-        <div className="big"><div className="k">Calories</div><div className="v"><b>{fmt(d.totals.kcal)}</b> / {fmt(t.kcal)} kcal</div><Bar v={d.totals.kcal} t={t.kcal} /><div className="u">{d.totals.kcal <= t.kcal ? `${fmt(t.kcal - d.totals.kcal)} remaining` : `${fmt(d.totals.kcal - t.kcal)} over`}</div></div>
+        <div className="big" title={`${fmt(t.kcal)} kcal = ${nut.profile.base_kcal != null ? `${fmt(t.base)} (your rest-day number)` : `${fmt(t.bmr)} resting × 1.4`}${t.training ? ` + ${fmt(t.training)} training` : ""}${t.goalAdj ? ` ${t.goalAdj > 0 ? "+" : "−"} ${fmt(Math.abs(t.goalAdj))} goal` : ""}`}><div className="k">Calories</div><div className="v"><b>{fmt(d.totals.kcal)}</b> / {fmt(t.kcal)} kcal</div><Bar v={d.totals.kcal} t={t.kcal} /><div className="u">{d.totals.kcal <= t.kcal ? `${fmt(t.kcal - d.totals.kcal)} remaining` : `${fmt(d.totals.kcal - t.kcal)} over`}</div></div>
         <div><div className="k">Carbs</div><div className="v"><b>{fmt(d.totals.carbs)}</b> / {fmt(t.carbs)} g</div><Bar v={d.totals.carbs} t={t.carbs} /><div className="u">{fmt(Math.max(0, t.carbs - d.totals.carbs))} g remaining</div></div>
         <div><div className="k">Protein</div><div className="v"><b>{fmt(d.totals.protein)}</b> / {fmt(t.protein)} g</div><Bar v={d.totals.protein} t={t.protein} color="var(--ink)" /><div className="u">{fmt(Math.max(0, t.protein - d.totals.protein))} g remaining</div></div>
         <div><div className="k">Fat</div><div className="v"><b>{fmt(d.totals.fat)}</b> / {fmt(t.fat)} g</div><Bar v={d.totals.fat} t={t.fat} color="var(--swim)" /><div className="u">{fmt(Math.max(0, t.fat - d.totals.fat))} g remaining</div></div>
@@ -174,7 +173,7 @@ function WeekView({ date, setDate, setView }: { date: string; setDate: (d: strin
     <>
       <div className="nu-daynav">
         <button type="button" className="back" aria-label="Previous week" onClick={() => setDate(ymd(addDays(mon, -7)))}><Icon name="back" /></button>
-        <div className="lbl"><b>{wk && wk.phaseShort !== "No plan" ? `Week ${wk.week} · ` : ""}{dateLabel(ymd(mon))} – {dateLabel(ymd(addDays(mon, 6)))}</b></div>
+        <div className="lbl"><b>{dateLabel(ymd(mon))} – {dateLabel(ymd(addDays(mon, 6)))}</b></div>
         <button type="button" className="back" aria-label="Next week" onClick={() => setDate(ymd(addDays(mon, 7)))}><Icon name="chevron" /></button>
         <Toggle view="week" setView={setView} />
       </div>

@@ -33,9 +33,9 @@ export interface SupplementTaken { date: string; supplement_id: string; taken_at
 export type Goal = "maintain" | "lose" | "gain" | "race_weight";
 export interface NutritionProfile {
   weight_kg: number | null; height_cm: number | null; birth_year: number | null; sex: "male" | "female" | "other" | null;
-  goal: Goal; goal_weight_kg: number | null; bottle_ml: number; supplements: SupplementPick[]; setup_done: boolean;
+  goal: Goal; goal_weight_kg: number | null; base_kcal: number | null; bottle_ml: number; supplements: SupplementPick[]; setup_done: boolean;
 }
-export const EMPTY_PROFILE: NutritionProfile = { weight_kg: null, height_cm: null, birth_year: null, sex: null, goal: "maintain", goal_weight_kg: null, bottle_ml: 750, supplements: [], setup_done: false };
+export const EMPTY_PROFILE: NutritionProfile = { weight_kg: null, height_cm: null, birth_year: null, sex: null, goal: "maintain", goal_weight_kg: null, base_kcal: null, bottle_ml: 750, supplements: [], setup_done: false };
 
 export interface NutritionData { profile: NutritionProfile; log: LogEntry[]; foods: Food[]; drinks: Drink[]; weights: WeightEntry[]; taken: SupplementTaken[] }
 export const EMPTY_NUTRITION: NutritionData = { profile: EMPTY_PROFILE, log: [], foods: [], drinks: [], weights: [], taken: [] };

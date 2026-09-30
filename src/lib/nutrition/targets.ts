@@ -54,12 +54,14 @@ const CARBS_G_PER_KG: Record<DayTargets["dayType"], number> = { rest: 3.5, light
 export function targetsFor(p: NutritionProfile, sessions: Session[], raceDate?: string): DayTargets {
   const w = p.weight_kg ?? DEFAULT_WEIGHT;
   const bmr = bmrOf(p);
-  const base = Math.round(bmr * 1.4);
+  // the athlete can pin their own rest-day calories; then the formula and the goal adjustment step aside
+  const base = p.base_kcal ?? Math.round(bmr * 1.4);
   const training = sessions.reduce((a, s) => a + sessionKcal(s, w), 0);
   const trainMin = sessions.filter((s) => s.sport !== "rest").reduce((a, s) => a + s.min, 0);
-  // goal: steady 400 kcal/day either way; race weight = the deficit needed to get there by race day, capped at 500
+  // goal: steady 400 kcal/day either way; target weight = the deficit needed to get there by race day, capped at 500
   let goalAdj = 0;
-  if (p.goal === "lose") goalAdj = -400;
+  if (p.base_kcal != null) goalAdj = 0;
+  else if (p.goal === "lose") goalAdj = -400;
   else if (p.goal === "gain") goalAdj = 300;
   else if (p.goal === "race_weight" && p.goal_weight_kg && raceDate) {
     const days = Math.max(14, (new Date(raceDate).getTime() - Date.now()) / 86400000);

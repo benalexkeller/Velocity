@@ -15,7 +15,7 @@
 .nu-daynav { display: flex; align-items: center; gap: 10px; }
 .nu-daynav .back { width: 34px; height: 34px; border-radius: 50%; background: var(--surface); box-shadow: var(--shadow); border: 0; display: inline-flex; align-items: center; justify-content: center; }
 .nu-daynav .back svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.nu-daynav .lbl { font-size: 15px; }
+.nu-daynav .lbl { font-size: 15px; width: 200px; text-align: center; white-space: nowrap; }
 .nu-daynav .lbl b { font-weight: 600; }
 
 /* targets row */

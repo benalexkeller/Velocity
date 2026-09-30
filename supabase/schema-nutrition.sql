@@ -10,11 +10,14 @@ create table if not exists public.nutrition_profile (
   sex text check (sex is null or sex in ('male','female','other')),
   goal text not null default 'maintain' check (goal in ('maintain','lose','gain','race_weight')),
   goal_weight_kg numeric,
+  base_kcal int,                 -- athlete's own rest-day calories; null = formula
   bottle_ml int not null default 750,
   supplements jsonb not null default '[]'::jsonb,   -- [{id, dose, time}]
   setup_done boolean not null default false,
   updated_at timestamptz not null default now()
 );
+
+alter table public.nutrition_profile add column if not exists base_kcal int;
 
 -- ---------- what was eaten ----------
 create table if not exists public.food_log (
