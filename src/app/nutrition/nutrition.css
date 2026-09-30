@@ -98,6 +98,29 @@
 .nu-panel-head .meal-select { font: inherit; font-size: 20px; font-weight: 600; border: 0; background: var(--surface-2); border-radius: 8px; padding: 2px 8px; color: var(--ink); }
 .nu-panel-head .close { width: 32px; height: 32px; border-radius: 50%; border: 0; background: var(--surface-2); display: inline-flex; align-items: center; justify-content: center; }
 .nu-panel-head .close svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; }
+.nu-panel-day { display: flex; align-items: center; gap: 10px; margin-top: -4px; }
+
+/* date picker */
+.nu-date { position: relative; }
+.nu-date .pick { display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--line); background: var(--surface); border-radius: 9px; padding: 7px 10px 7px 12px; font: inherit; font-size: 14px; color: var(--ink); cursor: pointer; }
+.nu-date .pick.open { border-color: var(--accent); }
+.nu-date .pick b { font-weight: 600; }
+.nu-date .pick .tag { font-size: 11.5px; font-weight: 600; color: var(--accent); background: var(--accent-soft); border-radius: 999px; padding: 2px 8px; }
+.nu-date .pick svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.nu-date .pick svg:last-child { width: 13px; height: 13px; transform: rotate(90deg); color: var(--muted); }
+.nu-cal { position: absolute; top: calc(100% + 6px); left: 0; z-index: 5; width: 280px; background: var(--surface); border-radius: 12px; box-shadow: 0 8px 30px rgba(16,17,20,0.16), 0 0 0 1px var(--line); padding: 12px; display: grid; gap: 8px; }
+.nu-cal .mh { display: flex; align-items: center; justify-content: space-between; }
+.nu-cal .mh b { font-size: 14px; font-weight: 600; }
+.nu-cal .mh button { width: 28px; height: 28px; border-radius: 50%; border: 0; background: var(--surface-2); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
+.nu-cal .mh button svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.nu-cal .grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.nu-cal .wd { font-size: 11px; color: var(--muted); text-align: center; padding: 4px 0; text-transform: uppercase; letter-spacing: 0.04em; }
+.nu-cal .d { height: 32px; border: 0; border-radius: 8px; background: none; font: inherit; font-size: 13px; color: var(--ink); cursor: pointer; }
+.nu-cal .d:hover { background: var(--surface-2); }
+.nu-cal .d.other { color: var(--muted-2); }
+.nu-cal .d.today { box-shadow: inset 0 0 0 1.5px var(--accent); font-weight: 600; }
+.nu-cal .d.on { background: var(--accent); color: #fff; font-weight: 600; }
+.nu-cal .mf { display: flex; gap: 14px; padding-top: 6px; border-top: 1px solid var(--line-2); }
 .nu-modes { align-self: start; }
 .nu-search { display: grid; gap: 10px; }
 .nu-search .search { display: flex; align-items: center; gap: 8px; border: 1.5px solid var(--accent); border-radius: 10px; padding: 8px 12px; }

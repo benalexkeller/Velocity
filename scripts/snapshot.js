@@ -23,6 +23,7 @@ const PAGES = [
     });
     await p.reload({ waitUntil: 'networkidle' }); await p.waitForTimeout(500);
   } },
+  { id: 'nutrition-log', label: 'Nutrition · Log meal', path: '/nutrition', after: async (p) => { await p.click('.nu-timeline .btn:has-text("Log meal")'); await p.waitForTimeout(300); await p.click('.nu-date .pick'); await p.waitForTimeout(200); } },
   { id: 'nutrition-guide', label: 'Nutrition · Guide', path: '/nutrition', after: async (p) => { await p.click('.tabs button:has-text("Guide")'); await p.waitForTimeout(500); } },
   { id: 'nutrition-setup', label: 'Nutrition · Set-up', path: '/nutrition', after: async (p) => { await p.click('.tabs button:has-text("Guide")'); await p.waitForTimeout(300); await p.click('.nu-plan .btn'); await p.waitForTimeout(400); } },
   { id: 'calculator', label: 'Calculator', path: '/calculator' },

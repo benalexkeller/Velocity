@@ -120,7 +120,7 @@ function DayView({ date, setDate, setView }: { date: string; setDate: (d: string
           </section>
         </div>
       </div>
-      {adding && <AddPanel date={date} meal={adding} onClose={() => setAdding(null)} onMeal={setAdding} />}
+      {adding && <AddPanel date={date} meal={adding} onClose={() => setAdding(null)} onMeal={setAdding} onDate={setDate} />}
       {adding && <div className="nu-scrim" onClick={() => setAdding(null)} />}
     </>
   );

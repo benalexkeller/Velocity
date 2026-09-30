@@ -4,12 +4,13 @@ import { Icon } from "../icons";
 import { useNutrition } from "@/lib/nutrition/store";
 import { searchFoods, usdaAvailable } from "@/lib/nutrition/foods";
 import { MEALS, scaleM, type Food, type Meal, type Serving } from "@/lib/nutrition/types";
+import { DatePicker } from "./DatePicker";
 
 type Mode = "search" | "manual" | "quick";
 const fmt = (n: number, d = 0) => (Number.isFinite(n) ? n.toLocaleString(undefined, { maximumFractionDigits: d }) : "—");
 
 /** The add panel: search a food, type one in by hand, or give rough numbers for the whole day. */
-export function AddPanel({ date, meal, onClose, onMeal }: { date: string; meal: Meal; onClose: () => void; onMeal: (m: Meal) => void }) {
+export function AddPanel({ date, meal, onClose, onMeal, onDate }: { date: string; meal: Meal; onClose: () => void; onMeal: (m: Meal) => void; onDate: (d: string) => void }) {
   const nut = useNutrition();
   const [mode, setMode] = useState<Mode>("search");
   const label = MEALS.find((m) => m.k === meal)?.label ?? "meal";
@@ -20,6 +21,7 @@ export function AddPanel({ date, meal, onClose, onMeal }: { date: string; meal: 
         <h2>{mode === "quick" ? "Whole day, roughly" : <>Add to <select className="meal-select" value={meal} onChange={(e) => onMeal(e.target.value as Meal)} aria-label="Meal">{MEALS.map((m) => <option key={m.k} value={m.k}>{m.label}</option>)}</select></>}</h2>
         <button type="button" className="close" onClick={onClose} aria-label="Close"><Icon name="close" /></button>
       </div>
+      <div className="nu-panel-day"><span className="muted small">Day</span><DatePicker value={date} onChange={onDate} /></div>
       <div className="pill-group nu-modes" role="tablist">
         <button type="button" role="tab" className={mode === "search" ? "on" : ""} onClick={() => setMode("search")}>Search</button>
         <button type="button" role="tab" className={mode === "manual" ? "on" : ""} onClick={() => setMode("manual")}>Type it in</button>
