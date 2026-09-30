@@ -39,14 +39,8 @@
 .nu-timeline .hd .btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; }
 
 /* timeline */
-.nu-tl { position: relative; display: grid; gap: 6px; }
-.nu-tl::before { content: ""; position: absolute; left: 62px; top: 12px; bottom: 12px; width: 2px; background: var(--line-2); }
-.nu-meal { display: grid; grid-template-columns: 50px 24px minmax(0, 1fr); align-items: start; gap: 0; position: relative; }
-.nu-meal .time { font-size: 12.5px; color: var(--muted); padding-top: 12px; }
-.nu-meal .dot, .nu-tl-session .dot { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--accent); background: var(--surface); margin: 14px 0 0 7px; z-index: 1; }
-.nu-tl-session .dot.on { background: var(--accent); }
-.nu-meal .body { border: 1px solid var(--line-2); border-radius: 10px; padding: 10px 14px; }
-.nu-meal.session .body { background: var(--surface-2); border-color: transparent; }
+.nu-tl { display: grid; gap: 8px; }
+.nu-meal .body { border: 1px solid var(--line-2); border-radius: 10px; padding: 10px 14px; display: flex; flex-direction: column; }
 .nu-meal .mh { display: flex; align-items: baseline; gap: 12px; margin-bottom: 4px; }
 .nu-meal .mh > b { font-size: 15px; font-weight: 600; }
 .nu-meal .mh .tot { margin-left: auto; display: flex; gap: 14px; font-size: 12px; color: var(--muted); }
@@ -58,10 +52,7 @@
 .nu-meal .row .x { border: 0; background: none; color: var(--muted-2); font-size: 16px; line-height: 1; cursor: pointer; padding: 0; text-align: right; }
 .nu-meal .row .x:hover { color: #B42318; }
 .nu-meal .body > .linkbtn { margin-top: 6px; }
-.nu-meal .body { display: flex; flex-direction: column; }
-.nu-tl-session { display: flex; align-items: center; gap: 10px; padding: 10px 12px 10px 0; border-radius: 10px; background: var(--accent-soft); text-decoration: none; color: var(--ink); }
-.nu-tl-session .time { width: 50px; flex: 0 0 50px; padding: 0; font-size: 12.5px; color: var(--muted); }
-.nu-tl-session .dot { margin: 0 6px 0 5px; flex: 0 0 auto; }
+.nu-tl-session { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px; background: var(--accent-soft); text-decoration: none; color: var(--ink); }
 .nu-tl-session .sport-icon { color: var(--accent); flex: 0 0 auto; }
 .nu-tl-session b { font-weight: 600; white-space: nowrap; }
 .nu-tl-session .muted { font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
@@ -73,7 +64,7 @@
 .nu-carbgoal .v { font-size: 15px; color: var(--muted); }
 .nu-carbgoal .v b { font-size: 26px; color: var(--ink); font-weight: 600; letter-spacing: -0.02em; }
 .nu-timing { display: grid; gap: 6px; }
-.nu-timing > div { display: grid; grid-template-columns: 110px 90px 1fr 48px; gap: 8px; align-items: center; font-size: 12.5px; }
+.nu-timing > div { display: grid; grid-template-columns: 100px 90px 1fr 48px; gap: 8px; align-items: center; font-size: 12.5px; }
 .nu-timing > div b { text-align: right; font-weight: 600; }
 .nu-hydration .v { font-size: 14px; color: var(--muted); } .nu-hydration .v b { font-size: 20px; color: var(--ink); font-weight: 600; }
 .nu-bottles { display: flex; gap: 6px; flex-wrap: wrap; }

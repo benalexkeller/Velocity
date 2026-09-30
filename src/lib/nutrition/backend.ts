@@ -2,7 +2,7 @@
 // Where the nutrition data lives: this browser (local mode) or the athlete's rows in Supabase.
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabase } from "../supabase/client";
-import { EMPTY_NUTRITION, EMPTY_PROFILE, type Drink, type Food, type LogEntry, type NutritionData, type NutritionProfile, type SupplementTaken, type WeightEntry } from "./types";
+import { EMPTY_NUTRITION, EMPTY_PROFILE, normMeal, type Drink, type Food, type LogEntry, type NutritionData, type NutritionProfile, type SupplementTaken, type WeightEntry } from "./types";
 
 export interface NutritionBackend {
   kind: "local" | "supabase";
@@ -27,7 +27,7 @@ function write(d: NutritionData) { try { localStorage.setItem(KEY, JSON.stringif
 export class LocalNutrition implements NutritionBackend {
   kind = "local" as const;
   private d: NutritionData = { ...EMPTY_NUTRITION };
-  async load() { this.d = read(); return this.d; }
+  async load() { this.d = read(); this.d.log = this.d.log.map((e) => ({ ...e, meal: normMeal(e.meal) })); return this.d; }
   private put(n: Partial<NutritionData>) { this.d = { ...this.d, ...n }; write(this.d); }
   async saveProfile(p: NutritionProfile) { this.put({ profile: p }); }
   async upsertEntry(e: LogEntry) { this.put({ log: [...this.d.log.filter((x) => x.id !== e.id), e] }); }
@@ -65,7 +65,7 @@ export class SupabaseNutrition implements NutritionBackend {
     const pr = p.data as Row | null;
     return {
       profile: pr ? { weight_kg: pr.weight_kg == null ? null : Number(pr.weight_kg), height_cm: pr.height_cm == null ? null : Number(pr.height_cm), birth_year: (pr.birth_year as number) ?? null, sex: (pr.sex as NutritionProfile["sex"]) ?? null, goal: (pr.goal as NutritionProfile["goal"]) ?? "maintain", goal_weight_kg: pr.goal_weight_kg == null ? null : Number(pr.goal_weight_kg), bottle_ml: (pr.bottle_ml as number) ?? 750, supplements: (pr.supplements as NutritionProfile["supplements"]) ?? [], setup_done: !!pr.setup_done } : EMPTY_PROFILE,
-      log: ((log.data as Row[]) ?? []).map((r) => ({ id: String(r.id), date: String(r.date), meal: r.meal as LogEntry["meal"], name: String(r.name), brand: (r.brand as string) ?? undefined, amount: r.amount == null ? undefined : Number(r.amount), unit: (r.unit as string) ?? undefined, kcal: n(r.kcal), carbs_g: n(r.carbs_g), protein_g: n(r.protein_g), fat_g: n(r.fat_g), fibre_g: n(r.fibre_g), sodium_mg: n(r.sodium_mg), source: r.source as LogEntry["source"], food_id: (r.food_id as string) ?? undefined })),
+      log: ((log.data as Row[]) ?? []).map((r) => ({ id: String(r.id), date: String(r.date), meal: normMeal(String(r.meal)), name: String(r.name), brand: (r.brand as string) ?? undefined, amount: r.amount == null ? undefined : Number(r.amount), unit: (r.unit as string) ?? undefined, kcal: n(r.kcal), carbs_g: n(r.carbs_g), protein_g: n(r.protein_g), fat_g: n(r.fat_g), fibre_g: n(r.fibre_g), sodium_mg: n(r.sodium_mg), source: r.source as LogEntry["source"], food_id: (r.food_id as string) ?? undefined })),
       foods: ((foods.data as Row[]) ?? []).map((r) => ({ id: String(r.id), name: String(r.name), brand: (r.brand as string) ?? undefined, per100: r.per100 as Food["per100"], servings: (r.servings as Food["servings"]) ?? [], source: r.source as Food["source"], favourite: !!r.favourite, uses: n(r.uses), last_used: (r.last_used as string) ?? undefined })),
       drinks: ((drinks.data as Row[]) ?? []).map((r) => ({ id: String(r.id), date: String(r.date), ml: n(r.ml), at: (r.at as string) ?? undefined })),
       weights: ((weights.data as Row[]) ?? []).map((r) => ({ date: String(r.date), weight_kg: n(r.weight_kg) })),

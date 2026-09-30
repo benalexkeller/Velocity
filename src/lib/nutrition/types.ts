@@ -1,12 +1,13 @@
 // Nutrition tracker — shapes shared by the store, the backends and the screens.
-export type Meal = "breakfast" | "lunch" | "dinner" | "snack" | "session";
+export type Meal = "breakfast" | "lunch" | "dinner" | "other";
 export const MEALS: { k: Meal; label: string }[] = [
   { k: "breakfast", label: "Breakfast" },
   { k: "lunch", label: "Lunch" },
-  { k: "snack", label: "Snacks" },
   { k: "dinner", label: "Dinner" },
-  { k: "session", label: "In-session fuel" },
+  { k: "other", label: "Other" },
 ];
+/** Older entries used "snack" and "session"; both fold into "other". */
+export const normMeal = (m: string): Meal => (m === "breakfast" || m === "lunch" || m === "dinner" ? m : "other");
 
 /** Per 100 g (or 100 ml for drinks). */
 export interface Macros { kcal: number; carbs: number; protein: number; fat: number; fibre: number; sodium: number }

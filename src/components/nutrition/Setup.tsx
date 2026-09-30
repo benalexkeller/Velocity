@@ -20,7 +20,7 @@ export function NutritionSetup({ onDone, edit = false }: { onDone: () => void; e
   const [hUnit, setHUnit] = useState<"cm" | "in">(imperial ? "in" : "cm");
   const [height, setHeight] = useState(p.height_cm ? String(Math.round(imperial ? cmToIn(p.height_cm) : p.height_cm)) : "");
   const [birth, setBirth] = useState(p.birth_year ? String(p.birth_year) : "");
-  const [sex, setSex] = useState<"male" | "female" | "other" | "">(p.sex ?? "");
+  const [sex, setSex] = useState<"male" | "female" | "">(p.sex === "male" || p.sex === "female" ? p.sex : "");
   const [goal, setGoal] = useState<Goal>(p.goal);
   const [goalW, setGoalW] = useState(p.goal_weight_kg ? String(Math.round(imperial ? kgToLb(p.goal_weight_kg) : p.goal_weight_kg)) : "");
   const [bottle, setBottle] = useState<number>(p.bottle_ml);
@@ -63,15 +63,15 @@ export function NutritionSetup({ onDone, edit = false }: { onDone: () => void; e
           <label><b>Height</b><span className="unit-in"><input value={height} onChange={(e) => setHeight(e.target.value)} inputMode="decimal" placeholder={hUnit === "in" ? "70" : "178"} /><span className="units">{(["cm", "in"] as const).map((u) => <button key={u} type="button" className={hUnit === u ? "on" : ""} onClick={() => { if (u !== hUnit && height) setHeight(String(Math.round(u === "in" ? cmToIn(+height) : inToCm(+height)))); setHUnit(u); }}>{u}</button>)}</span></span></label>
           <label><b>Birth year</b><input value={birth} onChange={(e) => setBirth(e.target.value)} inputMode="numeric" placeholder="1994" /></label>
         </div>
-        <label><b>Sex (for the resting-energy formula)</b><div className="days">{([["male", "Male"], ["female", "Female"], ["other", "Prefer not to say"]] as const).map(([k, l]) => <button key={k} type="button" className={sex === k ? "on" : ""} onClick={() => setSex(k)}>{l}</button>)}</div></label>
+        <label><b>Sex (for the resting-energy formula)</b><div className="days">{([["male", "Male"], ["female", "Female"]] as const).map(([k, l]) => <button key={k} type="button" className={sex === k ? "on" : ""} onClick={() => setSex(k)}>{l}</button>)}</div></label>
       </section>
 
       <section>
         <h3>Target</h3>
         <div className="days">
-          {([["maintain", "Maintain weight"], ["lose", "Lose weight (−400 kcal/day)"], ["gain", "Gain weight (+300 kcal/day)"], ["race_weight", "Reach a race weight"]] as [Goal, string][]).map(([k, l]) => <button key={k} type="button" className={goal === k ? "on" : ""} onClick={() => setGoal(k)}>{l}</button>)}
+          {([["maintain", "Maintain weight"], ["lose", "Lose weight"], ["gain", "Gain weight"], ["race_weight", "Reach a target weight"]] as [Goal, string][]).map(([k, l]) => <button key={k} type="button" className={goal === k ? "on" : ""} onClick={() => setGoal(k)}>{l}</button>)}
         </div>
-        {goal === "race_weight" && <div className="two"><label><b>Race-day weight ({wUnit})</b><input value={goalW} onChange={(e) => setGoalW(e.target.value)} inputMode="decimal" /></label><span className="hint" style={{ alignSelf: "end" }}>{plan.athlete.hasRace ? `Deficit spread to ${plan.athlete.race.date}, capped at 500 kcal/day.` : "Set your race under Profile so the date is known."}</span></div>}
+        {goal === "race_weight" && <div className="two"><label><b>Target weight ({wUnit})</b><input value={goalW} onChange={(e) => setGoalW(e.target.value)} inputMode="decimal" /></label><span className="hint" style={{ alignSelf: "end" }}>{plan.athlete.hasRace ? `Spread out to reach it by race day (${plan.athlete.race.date}).` : "Set your race under Profile so the date is known."}</span></div>}
       </section>
 
       <section>

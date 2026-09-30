@@ -11,7 +11,8 @@ import { addDays, dateLabel, fromYmd, shortDate, today, ymd } from "@/lib/format
 import { AddPanel } from "./AddPanel";
 
 const fmt = (n: number, d = 0) => n.toLocaleString(undefined, { maximumFractionDigits: d });
-const MEAL_TIME: Record<Meal, string> = { breakfast: "07:30", lunch: "12:30", snack: "15:30", dinner: "19:30", session: "" };
+// used only to decide which meal counts as "before" and "after" a session; never shown
+const MEAL_SLOT: Record<Meal, string> = { breakfast: "08:00", lunch: "13:00", dinner: "19:30", other: "99:99" };
 const DAYS = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 export function Track() {
@@ -39,29 +40,18 @@ function DayView({ date, setDate, setView }: { date: string; setDate: (d: string
   const bottles = d.drinks_ml / nut.profile.bottle_ml;
   const bottleTarget = Math.ceil(t.fluid_ml / nut.profile.bottle_ml);
 
-  // timeline: meals at fixed times, sessions at their start, in-session fuel right after the session
-  const items = useMemo(() => {
-    const rows: { time: string; kind: "meal" | "session"; meal?: Meal; session?: (typeof d.sessions)[number] }[] = [];
-    (["breakfast", "lunch", "snack", "dinner"] as Meal[]).forEach((m) => rows.push({ time: MEAL_TIME[m], kind: "meal", meal: m }));
-    active.forEach((s) => rows.push({ time: s.start ?? "06:30", kind: "session", session: s }));
-    rows.sort((a, b) => a.time.localeCompare(b.time));
-    if (active.length) { const last = Math.max(...active.map((s) => rows.findIndex((r) => r.session === s))); rows.splice(last + 1, 0, { time: "", kind: "meal", meal: "session" }); }
-    else rows.push({ time: "", kind: "meal", meal: "session" });
-    return rows;
-  }, [active, d.sessions]);
-
-  // carbohydrate timing: the meal before the first session, in-session fuel, the meal after, the rest
+  // carbohydrate timing: the meal before the first session, the meal after, the rest
   const timing = useMemo(() => {
     if (!active.length) return null;
     const first = active[0], fuel = nut.fuelFor(first);
     const start = first.start ?? "06:30";
-    const meals = (["breakfast", "lunch", "snack", "dinner"] as Meal[]);
-    const before = meals.filter((m) => MEAL_TIME[m] < start).pop();
-    const after = meals.find((m) => MEAL_TIME[m] >= start);
+    const meals = (["breakfast", "lunch", "dinner"] as Meal[]);
+    const before = meals.filter((m) => MEAL_SLOT[m] < start).pop();
+    const after = meals.find((m) => MEAL_SLOT[m] >= start);
     const carbs = (m?: Meal) => (m ? d.entries.filter((e) => e.meal === m).reduce((a, e) => a + e.carbs_g, 0) : 0);
-    const during = carbs("session"), b = carbs(before), a = carbs(after);
-    const other = d.totals.carbs - during - b - a;
-    return { fuel, rows: [["Before session", fuel.before, b, before], ["During session", fuel.during, during, "session"], ["Recovery", fuel.after.carbs, a, after], ["Other meals", Math.max(0, t.carbs - fuel.before - fuel.during - fuel.after.carbs), other, undefined]] as [string, number, number, Meal | undefined][] };
+    const b = carbs(before), a = carbs(after);
+    const other = d.totals.carbs - b - a;
+    return { fuel, rows: [["Before session", fuel.before, b], ["After session", fuel.after.carbs, a], ["Other meals", Math.max(0, t.carbs - fuel.before - fuel.after.carbs), other]] as [string, number, number][] };
   }, [active, d, nut, t.carbs]);
 
   return (
@@ -70,9 +60,8 @@ function DayView({ date, setDate, setView }: { date: string; setDate: (d: string
         <button type="button" className="back" aria-label="Previous day" onClick={() => setDate(ymd(addDays(fromYmd(date), -1)))}><Icon name="back" /></button>
         <div className="lbl"><b>{isToday ? "Today" : DAYS[(fromYmd(date).getDay() + 6) % 7]} {dateLabel(date)}</b><span className="muted"> · {dayLabel}</span></div>
         <button type="button" className="back" aria-label="Next day" onClick={() => setDate(ymd(addDays(fromYmd(date), 1)))}><Icon name="chevron" /></button>
-        {!isToday && <button type="button" className="btn ghost small" onClick={() => setDate(ymd(today()))}>Today</button>}
-        <span className="grow" />
         <Toggle view="day" setView={setView} />
+        {!isToday && <button type="button" className="btn ghost small" onClick={() => setDate(ymd(today()))}>Today</button>}
       </div>
 
       <section className="card nu-targets" aria-label="Today's targets">
@@ -85,16 +74,14 @@ function DayView({ date, setDate, setView }: { date: string; setDate: (d: string
 
       <div className="nu-cols">
         <section className="card nu-timeline" aria-label="Daily timeline">
-          <div className="hd"><h2>Daily timeline</h2><span className="muted small">Meal times are defaults; the session comes from your plan.</span><span className="grow" /><button type="button" className="btn" onClick={() => setAdding("lunch")}><Icon name="plus" />Log meal</button></div>
+          <div className="hd"><h2>Daily timeline</h2><span className="grow" /><button type="button" className="btn" onClick={() => setAdding("lunch")}><Icon name="plus" />Log meal</button></div>
           <div className="nu-tl">
-            {items.map((row, i) => row.kind === "session" && row.session ? (
-              <Link key={`s${i}`} href={`/plan?session=${row.session.id}`} className="nu-tl-session">
-                <span className="time">{row.time}</span><span className="dot on" />
-                <SportIcon sport={row.session.sport} size={20} /><b>{row.session.title} {row.session.intensity !== "Aerobic" ? row.session.intensity.toLowerCase() : ""}</b><span className="muted">{row.session.min} min · {row.session.text}</span><span className="grow" /><span className="link">View workout →</span>
+            {active.map((s) => (
+              <Link key={s.id} href={`/plan?session=${s.id}`} className="nu-tl-session">
+                <SportIcon sport={s.sport} size={20} /><b>{s.title} {s.intensity !== "Aerobic" ? s.intensity.toLowerCase() : ""}</b><span className="muted">{s.min} min · {s.text}</span><span className="grow" /><span className="link">View workout →</span>
               </Link>
-            ) : (
-              <MealCard key={row.meal} meal={row.meal!} time={row.time} entries={nut.entriesFor(date, row.meal!)} onAdd={() => setAdding(row.meal!)} onRemove={nut.removeEntry} />
             ))}
+            {MEALS.map((m) => <MealCard key={m.k} meal={m.k} entries={nut.entriesFor(date, m.k)} onAdd={() => setAdding(m.k)} onRemove={nut.removeEntry} />)}
           </div>
         </section>
 
@@ -108,9 +95,9 @@ function DayView({ date, setDate, setView }: { date: string; setDate: (d: string
               <div className="u">{fmt(d.totals.carbs)} g consumed · {fmt(Math.max(0, t.carbs - d.totals.carbs))} g remaining</div>
               <div className="k" style={{ marginTop: 12 }}>Carbohydrate timing</div>
               <div className="nu-timing">
-                {timing.rows.map(([label, target, got]) => <div key={label}><span>{label}</span><span className="muted">{target ? `${fmt(target)} g target` : "optional"}</span><Bar v={got} t={target || 1} /><b>{fmt(got)} g</b></div>)}
+                {timing.rows.map(([label, target, got]) => <div key={label}><span>{label}</span><span className="muted">{target ? `${fmt(target)} g target` : "no target"}</span><Bar v={got} t={target || 1} /><b>{fmt(got)} g</b></div>)}
               </div>
-              <div className="u" style={{ marginTop: 8 }}>{timing.fuel.perHour ? `During: ${timing.fuel.perHour} g/h. ` : "During: water is enough. "}After: {timing.fuel.after.carbs ? `${timing.fuel.after.carbs} g carbs + ${timing.fuel.after.protein} g protein ${timing.fuel.window}.` : `${timing.fuel.after.protein} g protein at the next meal.`}</div>
+              <div className="u" style={{ marginTop: 8 }}>{timing.fuel.perHour ? `During the session: ${timing.fuel.perHour} g/h, log it under Other. ` : "During the session: water is enough. "}After: {timing.fuel.after.carbs ? `${timing.fuel.after.carbs} g carbs + ${timing.fuel.after.protein} g protein ${timing.fuel.window}.` : `${timing.fuel.after.protein} g protein at the next meal.`}</div>
             </section>
           )}
 
@@ -140,14 +127,13 @@ function DayView({ date, setDate, setView }: { date: string; setDate: (d: string
   );
 }
 
-function MealCard({ meal, time, entries, onAdd, onRemove }: { meal: Meal; time: string; entries: LogEntry[]; onAdd: () => void; onRemove: (id: string) => void }) {
+function MealCard({ meal, entries, onAdd, onRemove }: { meal: Meal; entries: LogEntry[]; onAdd: () => void; onRemove: (id: string) => void }) {
   const label = MEALS.find((m) => m.k === meal)!.label;
   const tot = entries.reduce((a, e) => ({ kcal: a.kcal + e.kcal, c: a.c + e.carbs_g, p: a.p + e.protein_g, f: a.f + e.fat_g }), { kcal: 0, c: 0, p: 0, f: 0 });
   return (
-    <div className={`nu-meal${meal === "session" ? " session" : ""}`}>
-      <span className="time">{time}</span><span className="dot" />
+    <div className="nu-meal">
       <div className="body">
-        <div className="mh"><b>{label}</b>{entries.length > 0 && <span className="tot"><b>{fmt(tot.kcal)} kcal</b><span>{fmt(tot.c)} g carbs</span><span>{fmt(tot.p)} g protein</span><span>{fmt(tot.f)} g fat</span></span>}</div>
+        <div className="mh"><b>{label}</b>{meal === "other" && <span className="muted small">snacks, drinks, fuel during sessions</span>}{entries.length > 0 && <span className="tot"><b>{fmt(tot.kcal)} kcal</b><span>{fmt(tot.c)} g carbs</span><span>{fmt(tot.p)} g protein</span><span>{fmt(tot.f)} g fat</span></span>}</div>
         {entries.map((e) => (
           <div key={e.id} className="row">
             <span className="n">{e.name}{e.brand ? <small> · {e.brand}</small> : null}{e.source === "quick" && <small> · estimate</small>}</span>
@@ -190,7 +176,6 @@ function WeekView({ date, setDate, setView }: { date: string; setDate: (d: strin
         <button type="button" className="back" aria-label="Previous week" onClick={() => setDate(ymd(addDays(mon, -7)))}><Icon name="back" /></button>
         <div className="lbl"><b>{wk && wk.phaseShort !== "No plan" ? `Week ${wk.week} · ` : ""}{dateLabel(ymd(mon))} – {dateLabel(ymd(addDays(mon, 6)))}</b></div>
         <button type="button" className="back" aria-label="Next week" onClick={() => setDate(ymd(addDays(mon, 7)))}><Icon name="chevron" /></button>
-        <span className="grow" />
         <Toggle view="week" setView={setView} />
       </div>
       <div className="nu-cols week">

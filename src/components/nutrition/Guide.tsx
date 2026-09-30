@@ -52,7 +52,7 @@ export function Guide() {
     <div className="nu-guide">
       <div className="nu-cols guide">
         <section className="card nu-weight" aria-label="Weight">
-          <div className="hd"><div><div className="k">Body weight</div><div className="v"><b>{current != null ? showW(current) : "—"}</b>{p.goal_weight_kg ? <span className="muted"> · race weight {showW(p.goal_weight_kg)}</span> : null}</div></div>
+          <div className="hd"><div><div className="k">Body weight</div><div className="v"><b>{current != null ? showW(current) : "—"}</b>{p.goal_weight_kg ? <span className="muted"> · target {showW(p.goal_weight_kg)}</span> : null}</div></div>
             <form className="logw" onSubmit={(e) => { e.preventDefault(); const v = parseFloat(wIn); if (!v) return; nut.logWeight(ymd(today()), +(imperial ? v / 2.20462 : v).toFixed(1)); setWIn(""); }}><input value={wIn} onChange={(e) => setWIn(e.target.value)} inputMode="decimal" placeholder={imperial ? "lb" : "kg"} aria-label="Today's weight" /><button type="submit" className="btn small">Log today</button></form>
           </div>
           <svg className="chart" viewBox={`0 0 ${chart.W} ${chart.H}`} role="img" aria-label="Logged weight and projection">
@@ -78,7 +78,7 @@ export function Guide() {
                 <thead><tr><th>Day type</th><th className="num">kcal</th><th className="num">Carbs g</th><th className="num">Protein g</th><th className="num">Fat g</th><th className="num">Fluid L</th></tr></thead>
                 <tbody>{types.map(([label, ss]) => { const t = targetsFor(p, ss, raceDate ?? undefined); return <tr key={label}><td>{label}</td><td className="num">{fmt(t.kcal)}</td><td className="num">{fmt(t.carbs)}</td><td className="num">{fmt(t.protein)}</td><td className="num">{fmt(t.fat)}</td><td className="num">{(t.fluid_ml / 1000).toFixed(1)}</td></tr>; })}</tbody>
               </table>
-              <div className="u">Resting energy {fmt(bmrOf(p))} kcal (Mifflin–St Jeor) × 1.4 for daily life, plus the session's energy (MET × kg × hours){p.goal !== "maintain" ? `, ${p.goal === "gain" ? "+300" : p.goal === "lose" ? "−400" : "adjusted for the race weight"} kcal for the goal` : ""}. Carbohydrate 3.5 g/kg on rest days up to 8 g/kg on long days; protein 1.7 g/kg; fat fills the rest, never under 0.8 g/kg. Fluid 35 ml/kg + 0.5 L per training hour.</div>
+              <div className="u">Resting energy {fmt(bmrOf(p))} kcal (Mifflin–St Jeor) × 1.4 for daily life, plus the session's energy (MET × kg × hours){p.goal !== "maintain" ? `, ${p.goal === "gain" ? "plus a surplus to gain" : p.goal === "lose" ? "minus a deficit to lose" : "adjusted to reach the target weight by race day"}` : ""}. Carbohydrate 3.5 g/kg on rest days up to 8 g/kg on long days; protein 1.7 g/kg; fat fills the rest, never under 0.8 g/kg. Fluid 35 ml/kg + 0.5 L per training hour.</div>
             </>
           )}
         </section>
@@ -95,7 +95,7 @@ export function Guide() {
       </section>
 
       <div className="section-head" style={{ marginTop: 8 }}><h2>Reference</h2><span className="sub">{NUTRITION.length} topics · the numbers behind the targets</span></div>
-      <Cubes items={NUTRITION} openId={open} onOpen={(id) => { setOpen(id); if (id) window.scrollTo({ top: 0, behavior: "smooth" }); }} columns={4} />
+      <Cubes items={NUTRITION} openId={open} onOpen={(id) => { setOpen(id); if (id) setTimeout(() => document.querySelector(".nu-guide .cube-open")?.scrollIntoView({ block: "start", behavior: "smooth" }), 0); }} columns={4} />
     </div>
   );
 }

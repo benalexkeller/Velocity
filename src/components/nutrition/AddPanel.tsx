@@ -137,13 +137,13 @@ function Manual({ date, meal, onDone }: { date: string; meal: Meal; onDone: () =
 
 function QuickDay({ date, onDone }: { date: string; onDone: () => void }) {
   const nut = useNutrition();
-  const [v, setV] = useState<Record<string, string>>({ breakfast: "", lunch: "", dinner: "", snack: "" });
+  const [v, setV] = useState<Record<string, string>>({ breakfast: "", lunch: "", dinner: "", other: "" });
   const [bottles, setBottles] = useState("");
   const total = useMemo(() => Object.values(v).reduce((a, s) => a + (parseFloat(s) || 0), 0), [v]);
   return (
-    <form className="form nu-quick" onSubmit={(e) => { e.preventDefault(); nut.addQuickDay(date, { breakfast: parseFloat(v.breakfast) || 0, lunch: parseFloat(v.lunch) || 0, dinner: parseFloat(v.dinner) || 0, snack: parseFloat(v.snack) || 0 }, parseFloat(bottles) || 0); onDone(); }}>
+    <form className="form nu-quick" onSubmit={(e) => { e.preventDefault(); nut.addQuickDay(date, { breakfast: parseFloat(v.breakfast) || 0, lunch: parseFloat(v.lunch) || 0, dinner: parseFloat(v.dinner) || 0, other: parseFloat(v.other) || 0 }, parseFloat(bottles) || 0); onDone(); }}>
       <p className="hint">Your best guess in calories per meal, and how many bottles ({nut.profile.bottle_ml} ml) you drank. Saved as estimates without a macro breakdown.</p>
-      {([["breakfast", "Breakfast"], ["lunch", "Lunch"], ["dinner", "Dinner"], ["snack", "Snacks"]] as const).map(([k, l]) => (
+      {([["breakfast", "Breakfast"], ["lunch", "Lunch"], ["dinner", "Dinner"], ["other", "Other (snacks, drinks, fuel)"]] as const).map(([k, l]) => (
         <label key={k} className="inline"><b>{l}</b><span className="unit-in"><input value={v[k]} onChange={(e) => setV({ ...v, [k]: e.target.value })} inputMode="numeric" placeholder="0" /><span className="units"><span>kcal</span></span></span></label>
       ))}
       <label className="inline"><b>Water</b><span className="unit-in"><input value={bottles} onChange={(e) => setBottles(e.target.value)} inputMode="decimal" placeholder="0" /><span className="units"><span>bottles</span></span></span></label>
