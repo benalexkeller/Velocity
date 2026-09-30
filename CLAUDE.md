@@ -34,7 +34,7 @@ with tokens in `src/app/globals.css`, no UI library. `npm run dev` → http://lo
 - Dashboard: today's hero card + next two days, "+ Add manually" bubble, This week, Last activity, phase strip, pace + volume charts.
 - Plan tab = command center: week grid 05:00–21:00 (scrollable 04:00–23:00), Move/Edit/Delete/Log/Add all work, road-to-race ramp chart.
 - Activities: list with frozen header, white detail panel on the right, Exclude from analysis + Delete.
-- New accounts start with an empty plan (no plan builder yet); profile setup collects basics + race.
+- New accounts: profile setup (basics + availability) → `/plan/new` plan builder (5 screens: goal, history, fitness, time, devices/strength; branches by event type) → 30-second build screen → plan. Rule-based generator `src/lib/plan/generate.ts` reads `src/lib/plan/rules.ts` (sourced coaching rules, shown under "How this plan is built"). Spreadsheet import (`importPlan.ts`, template CSV). Answers stored in `plans.intake`; "Plan settings →" rebuilds. Minimum plan length 4 weeks. The race lives in the builder, not the profile.
 
 ## Git
 - Commit as `Claude <noreply@anthropic.com>` is fine; end messages with the Co-Authored-By / Claude-Session trailers when the session provides them.

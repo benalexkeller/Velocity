@@ -118,6 +118,7 @@
 .section-head .sub { color: var(--muted); font-size: 13.5px; }
 .section-head .legend { margin-left: auto; display: flex; gap: 16px; font-size: 12.5px; color: var(--ink-2); }
 .legend i { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
+.section-head .legend .settings { color: var(--accent); font-weight: 600; text-decoration: none; margin-left: 8px; }
 svg.ramp { width: 100%; height: auto; display: block; }
 
 /* plan explained */
@@ -174,3 +175,20 @@ svg.ramp { width: 100%; height: auto; display: block; }
 .wo-list .m { color: var(--muted); font-size: 12px; }
 .mg-s { cursor: pointer; } .mg-s.sel { box-shadow: 0 0 0 2px var(--accent); }
 @media (max-width: 1000px) { .wo-grid { grid-template-columns: repeat(3, 1fr); } }
+
+/* no plan yet */
+.no-plan { display: flex; align-items: center; justify-content: space-between; gap: 20px; padding: 20px 24px; margin-bottom: 14px; flex-wrap: wrap; }
+.no-plan h3 { font-size: 17px; letter-spacing: -0.01em; margin: 4px 0 4px; max-width: 560px; }
+.no-plan p { margin: 0; font-size: 13px; }
+.no-plan .row { display: flex; gap: 8px; }
+.no-plan .btn svg, .plan-head a.btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; }
+.plan-head a.btn { text-decoration: none; }
+
+/* how this plan is built */
+.method { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px 24px; }
+.method li { display: grid; gap: 3px; padding: 10px 0; border-top: 1px solid var(--line-2); font-size: 13px; }
+.method li b { font-weight: 600; color: var(--ink); }
+.method li span { color: var(--muted); font-size: 12.5px; }
+.method li a { color: var(--muted); text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
+.method li a:hover { color: var(--accent); }
+@media (max-width: 900px) { .method { grid-template-columns: 1fr; } }

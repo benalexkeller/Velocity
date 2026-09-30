@@ -4,7 +4,7 @@ import { ATHLETE } from "./config";
 import { DEFAULT_AVAILABILITY, type Availability } from "./data";
 import { addDays, fromYmd, ymd } from "./format";
 
-export type RaceDistance = "140.6" | "70.3" | "marathon" | "half" | "olympic" | "sprint" | "other";
+export type RaceDistance = "140.6" | "70.3" | "olympic" | "sprint" | "marathon" | "half" | "10k" | "5k" | "ultra" | "century" | "gran_fondo" | "swim_ow" | "other";
 export interface Profile {
   id: string; email: string | null; username: string | null; name: string | null; avatar_url: string | null;
   units: "imperial" | "metric"; timezone: string; city: string | null; availability: Availability | null;
@@ -35,6 +35,12 @@ export const DISTANCES: { k: RaceDistance; label: string; short: string; hours: 
   { k: "sprint", label: "Sprint triathlon", short: "Sprint", hours: 1.4, dist: { swimYd: 820, bikeMi: 12.4, runMi: 3.1 }, frac: { swim: 0.15, bike: 0.5, run: 0.3, transitions: 0.05 } },
   { k: "marathon", label: "Marathon", short: "26.2", hours: 4, dist: { swimYd: 0, bikeMi: 0, runMi: 26.2 }, frac: { swim: 0, bike: 0, run: 1, transitions: 0 } },
   { k: "half", label: "Half marathon", short: "13.1", hours: 2, dist: { swimYd: 0, bikeMi: 0, runMi: 13.1 }, frac: { swim: 0, bike: 0, run: 1, transitions: 0 } },
+  { k: "10k", label: "10 km run", short: "10K", hours: 0.9, dist: { swimYd: 0, bikeMi: 0, runMi: 6.2 }, frac: { swim: 0, bike: 0, run: 1, transitions: 0 } },
+  { k: "5k", label: "5 km run", short: "5K", hours: 0.45, dist: { swimYd: 0, bikeMi: 0, runMi: 3.1 }, frac: { swim: 0, bike: 0, run: 1, transitions: 0 } },
+  { k: "ultra", label: "Ultra run (50 km – 100 mi)", short: "Ultra", hours: 8, dist: { swimYd: 0, bikeMi: 0, runMi: 31 }, frac: { swim: 0, bike: 0, run: 1, transitions: 0 } },
+  { k: "century", label: "Century ride (100 mi)", short: "Century", hours: 6, dist: { swimYd: 0, bikeMi: 100, runMi: 0 }, frac: { swim: 0, bike: 1, run: 0, transitions: 0 } },
+  { k: "gran_fondo", label: "Gran fondo / cycling race", short: "Gran fondo", hours: 5, dist: { swimYd: 0, bikeMi: 80, runMi: 0 }, frac: { swim: 0, bike: 1, run: 0, transitions: 0 } },
+  { k: "swim_ow", label: "Open-water swim event", short: "Open water", hours: 1.5, dist: { swimYd: 3800, bikeMi: 0, runMi: 0 }, frac: { swim: 1, bike: 0, run: 0, transitions: 0 } },
   { k: "other", label: "Other event", short: "", hours: 3, dist: { swimYd: 0, bikeMi: 0, runMi: 0 }, frac: { swim: 0, bike: 0.5, run: 0.5, transitions: 0 } },
 ];
 export const distanceInfo = (k: RaceDistance) => DISTANCES.find((d) => d.k === k) ?? DISTANCES[0];
@@ -60,9 +66,20 @@ export const DEFAULT_ATHLETE: Athlete = {
   setupDone: true,
 };
 
-/** Athlete record for a signed-in user. planStart = first plan week, else the sign-up date. */
-export function athleteOf(profile: Profile | null, race: Race | null, planStart: string | null): Athlete {
-  if (!profile) return DEFAULT_ATHLETE;
+/** Athlete record for a signed-in user. planStart = first plan week, else the sign-up date.
+ *  Local mode (no profile): PR's record, with a race or availability saved in this browser laid over it. */
+export function athleteOf(profile: Profile | null, race: Race | null, planStart: string | null, localAvailability?: Availability | null): Athlete {
+  if (!profile) {
+    if (!race && !localAvailability && !planStart) return DEFAULT_ATHLETE;
+    const info = distanceInfo(race?.distance ?? "140.6");
+    const hours = race?.goal_hours ?? info.hours;
+    return {
+      ...DEFAULT_ATHLETE,
+      availability: { ...DEFAULT_AVAILABILITY, ...(localAvailability ?? {}) },
+      ...(race ? { hasRace: true, race: { name: race.name, date: race.date, goal: race.goal || goalLabel(race.goal_hours), distanceLabel: race.distance_label || info.short, distance: race.distance, location: race.location ?? "" }, raceDist: info.dist, raceSplits: race.splits ?? { swim: +(hours * info.frac.swim).toFixed(2), bike: +(hours * info.frac.bike).toFixed(2), run: +(hours * info.frac.run).toFixed(2), transitions: +(hours * info.frac.transitions).toFixed(2) } } : {}),
+      planStart: planStart ?? DEFAULT_ATHLETE.planStart,
+    };
+  }
   const name = profile.name?.trim() || profile.username || profile.email?.split("@")[0] || "Athlete";
   const info = distanceInfo(race?.distance ?? "140.6");
   const hours = race?.goal_hours ?? info.hours;

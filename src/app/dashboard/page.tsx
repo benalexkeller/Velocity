@@ -64,7 +64,7 @@ export default function Dashboard() {
             <div className="top"><span>Today&apos;s session{done ? <span className="donetag">✓ Completed</span> : null}</span><span>{DAYS[(t.getDay() + 6) % 7]} {t.getDate()} {MONTHS[t.getMonth()]}</span></div>
             <div>
               <div className="title">{todayS ? todayS.title : plan.hasPlan ? "Rest" : "No session"}</div>
-              <div className="sub">{todayS ? heroSub(todayS) : plan.hasPlan ? "No plan for today" : "No plan yet · add workouts in Plan"}</div>
+              <div className="sub">{todayS ? heroSub(todayS) : plan.hasPlan ? "No plan for today" : "No plan yet · build one in Plan"}</div>
             </div>
             <div className="stats">
               {todayS && todayS.sport !== "rest" ? (

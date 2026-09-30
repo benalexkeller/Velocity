@@ -28,6 +28,17 @@ const PAGES = [
   { id: 'nutrition-setup', label: 'Nutrition · Set-up', path: '/nutrition', after: async (p) => { await p.click('.tabs button:has-text("Guide")'); await p.waitForTimeout(300); await p.click('.nu-plan .btn'); await p.waitForTimeout(400); } },
   { id: 'calculator', label: 'Calculator', path: '/calculator' },
   { id: 'store', label: 'Store', path: '/store' },
+  // the builder last: building a plan replaces the seed plan in this throwaway browser
+  { id: 'plan-builder', label: 'Plan builder', path: '/plan/new', after: async (p) => {
+    await p.click('.pb-types button:has-text("Full (140.6)")'); await p.fill('.pb-searchin input', 'texas'); await p.waitForTimeout(150); await p.click('.pb-hits li button >> nth=0');
+    await p.fill('.pb-card input[type=date]', '2027-04-24'); await p.click('.form .days button:has-text("Target time")'); await p.fill('input[placeholder="13:00"]', '13:00'); await p.click('.pb-chk input'); await p.waitForTimeout(150);
+  } },
+  { id: 'plan-building', label: 'Plan · building', path: '/plan/new', after: async (p) => {
+    await p.click('.pb-types button:has-text("Full (140.6)")'); await p.fill('.pb-searchin input', 'texas'); await p.waitForTimeout(150); await p.click('.pb-hits li button >> nth=0');
+    await p.fill('.pb-card input[type=date]', '2027-04-24'); await p.click('.form .days button:has-text("Target time")'); await p.fill('input[placeholder="13:00"]', '13:00');
+    for (let i = 0; i < 4; i++) { await p.click('.pb-nav .btn:has-text("Next")'); await p.waitForTimeout(120); }
+    await p.click('.pb-nav .btn:has-text("Build my plan")'); await p.waitForTimeout(16000);
+  } },
 ];
 (async () => {
   const b = await chromium.launch();

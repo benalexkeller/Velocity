@@ -3,9 +3,11 @@
 // working copy in memory, writes every change straight back. Everything the pages read comes from here.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { ACTIVITIES as SEED_ACTIVITIES, PLAN_SEED, SPORT_LABEL, buildWeeks, intensityOf, phasesOf, sportOf, sumH, virtualWeeks, whyOf, type Activity, type Phase, type PlanWeekJson, type Session, type Sport, type Week } from "./data";
+import { ACTIVITIES as SEED_ACTIVITIES, PLAN_SEED, SPORT_LABEL, buildWeeks, intensityOf, isRaceDay, phasesOf, sportOf, sumH, virtualWeeks, whyOf, type Activity, type Phase, type PlanWeekJson, type Session, type Sport, type Week } from "./data";
 import { BODY_SEED, type BodyDay } from "./analysis";
 import { athleteOf, type Athlete, type Profile, type Race } from "./athlete";
+import type { Intake } from "./plan/intake";
+import type { Availability } from "./data";
 import { EMPTY_DATA, makeBackend, readLocal, type AddedSession, type Backend, type PlanStateJson, type SessionPatch, type ThreadMsg, type UserData } from "./backend";
 import { ACCOUNTS_ON } from "./supabase/env";
 import { addDays, fromYmd, today, ymd } from "./format";
@@ -60,7 +62,7 @@ function derive(data: UserData, athlete: Athlete) {
       const status: Session["status"] = acts.length ? "done" : s.sport === "rest" ? (isPast ? "done" : "planned") : isPast ? "missed" : "planned";
       return { ...s, dayIndex, status, actual: actualOf.get(s.id) };
     }).sort((a, b) => a.dayIndex - b.dayIndex || (a.start ?? "").localeCompare(b.start ?? ""));
-    return { ...w, sessions, plannedMin: sessions.reduce((x, s) => x + (s.min || 0), 0) - (w.race ? 780 : 0) };
+    return { ...w, sessions, plannedMin: sessions.reduce((x, s) => x + (s.min || 0), 0) - (w.race ? sessions.filter((s) => isRaceDay(s.text)).reduce((x, s) => x + s.min, 0) : 0) };
   });
   return { activities, counted, weeks, activitiesOn: on, phases: phasesOf(weeks) };
 }
@@ -73,6 +75,11 @@ export interface PlanStore {
   race: Race | null;
   hasPlan: boolean;
   planJson: PlanWeekJson[];
+  intake: Intake | null;
+  /** Save a race + availability + a generated plan in one go (the plan builder). Resets moves/edits/locks. */
+  buildPlan: (intake: Intake, weeks: PlanWeekJson[], race: Race, availability: Availability) => Promise<void>;
+  /** Replace the plan with weeks from a file; keeps the intake, resets moves/edits/locks. */
+  replacePlan: (weeks: PlanWeekJson[]) => Promise<void>;
   body: BodyDay[];
   weeks: Week[];
   phases: Phase[];
@@ -130,7 +137,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
     if (data.profile && !data.profile.setup_done && path !== "/setup") router.replace("/setup");
   }, [ready, data.profile, path, router]);
 
-  const athlete = useMemo(() => athleteOf(data.profile, data.race, data.plan[0]?.start ?? null), [data.profile, data.race, data.plan]);
+  const athlete = useMemo(() => athleteOf(data.profile, data.race, data.plan[0]?.start ?? null, data.availability), [data.profile, data.race, data.plan, data.availability]);
   const d = useMemo(() => derive(data, athlete), [data, athlete]);
 
   // every write: update the working copy first (instant), then the backend
@@ -152,7 +159,21 @@ export function PlanProvider({ children }: { children: ReactNode }) {
     const changes = Object.keys(st.patches).length + st.added.length + data.activities.filter((a) => a.source === "manual").length;
     const toActivity = (m: ManualActivity): Activity => ({ id: m.id, date: m.date, start: m.start, sport: m.sport, name: m.name, min: m.min, mi: m.mi, yd: m.yd, pace_s: m.pace_s, mph: m.mph, p100_s: m.p100_s, hr: m.hr, elev_ft: m.elev_ft, source: "manual", note: m.note, exertion: m.exertion });
     return {
-      ready, accounts: ACCOUNTS_ON, athlete, profile: data.profile, race: data.race, hasPlan: data.plan.length > 0, planJson: data.plan, body: data.body,
+      ready, accounts: ACCOUNTS_ON, athlete, profile: data.profile, race: data.race, hasPlan: data.plan.length > 0, planJson: data.plan, body: data.body, intake: data.intake,
+      buildPlan: async (intake, weeks, race, availability) => {
+        const state: PlanStateJson = { ...data.state, patches: {}, added: [], undone: false };
+        await be.saveRace(race);
+        await be.saveProfile({ availability });
+        await be.savePlan(weeks, intake);
+        await be.saveState(state);
+        setData((cur) => ({ ...cur, race, plan: weeks, intake, state, availability, profile: cur.profile ? { ...cur.profile, availability } : cur.profile }));
+      },
+      replacePlan: async (weeks) => {
+        const state: PlanStateJson = { ...data.state, patches: {}, added: [], undone: false };
+        await be.savePlan(weeks);
+        await be.saveState(state);
+        setData((cur) => ({ ...cur, plan: weeks, state }));
+      },
       weeks: d.weeks, phases: d.phases, activities: d.activities, counted: d.counted, activitiesOn: d.activitiesOn, weekOf, currentWeek, weekByNumber, weekStatus, sessionOn, findSession,
       moveSession: (id, to) => setState((s) => ({ ...s, patches: { ...s.patches, [id]: { ...s.patches[id], date: to.date, ...(to.start ? { start: to.start } : {}) } } })),
       editSession: (id, patch) => setState((s) => ({ ...s, patches: { ...s.patches, [id]: { ...s.patches[id], ...patch } } })),

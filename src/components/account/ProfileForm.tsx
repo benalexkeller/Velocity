@@ -2,18 +2,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { usePlan } from "@/lib/store";
 import { supabase } from "@/lib/supabase/client";
-import { DISTANCES, type Race, type RaceDistance } from "@/lib/athlete";
 import { DEFAULT_AVAILABILITY } from "@/lib/data";
 
 const DAY_LABEL = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], DAY_NUM = [1, 2, 3, 4, 5, 6, 0];
 const USERNAME = /^[a-z0-9_]{3,20}$/;
-const hoursToText = (h: number | null | undefined) => { if (!h) return ""; const H = Math.floor(h), M = Math.round((h - H) * 60); return `${H}:${String(M).padStart(2, "0")}`; };
-const textToHours = (t: string) => { const m = t.trim().match(/^(\d{1,2})(?::(\d{1,2}))?$/); return m ? +m[1] + (+(m[2] ?? 0)) / 60 : null; };
 
-/** Basics + race. Used on first sign-in (/setup) and on the Profile page. */
+/** Basics + availability. Used on first sign-in (/setup) and on the Profile page. The race lives in the plan builder. */
 export function ProfileForm({ mode, onSaved }: { mode: "setup" | "edit"; onSaved?: () => void }) {
   const plan = usePlan();
-  const p = plan.profile, r = plan.race;
+  const p = plan.profile;
   const [name, setName] = useState(p?.name ?? "");
   const [username, setUsername] = useState(p?.username ?? "");
   const [uState, setUState] = useState<"idle" | "checking" | "ok" | "taken" | "bad">("idle");
@@ -23,12 +20,6 @@ export function ProfileForm({ mode, onSaved }: { mode: "setup" | "edit"; onSaved
   const av = { ...DEFAULT_AVAILABILITY, ...(p?.availability ?? {}) };
   const [days, setDays] = useState<number[]>(av.days);
   const [am, setAm] = useState(av.weekday_am), [pm, setPm] = useState(av.weekday_pm), [we, setWe] = useState(av.weekend);
-  const [hasRace, setHasRace] = useState(!!r || mode === "setup");
-  const [raceName, setRaceName] = useState(r?.name ?? "");
-  const [raceDate, setRaceDate] = useState(r?.date ?? "");
-  const [distance, setDistance] = useState<RaceDistance>(r?.distance ?? "140.6");
-  const [goal, setGoal] = useState(hoursToText(r?.goal_hours));
-  const [location, setLocation] = useState(r?.location ?? "");
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -54,12 +45,9 @@ export function ProfileForm({ mode, onSaved }: { mode: "setup" | "edit"; onSaved
     if (!name.trim()) return setErr("Name is required.");
     if (!USERNAME.test(u)) return setErr("Username: 3–20 characters, lowercase letters, numbers or _.");
     if (uState === "taken") return setErr("That username is taken.");
-    if (hasRace && (!raceName.trim() || !raceDate)) return setErr("Race name and date are required (or untick the race).");
     setBusy(true);
     try {
       await plan.saveProfile({ name: name.trim(), username: u, units, timezone, city: city.trim() || null, availability: { days, weekday_am: am, weekday_pm: pm, weekend: we }, setup_done: true });
-      const race: Race | null = hasRace ? { name: raceName.trim(), date: raceDate, distance, distance_label: DISTANCES.find((d) => d.k === distance)?.short ?? null, goal_hours: textToHours(goal), goal: null, splits: null, location: location.trim() || null } : null;
-      await plan.saveRace(race);
       setSaved(true);
       onSaved?.();
     } catch (x) { setErr(x instanceof Error ? x.message : "Could not save."); }
@@ -86,23 +74,10 @@ export function ProfileForm({ mode, onSaved }: { mode: "setup" | "edit"; onSaved
       </div>
       <span className="hint">Session times in the plan calendar come from these.</span>
 
-      <label className="row" style={{ display: "flex", gap: 8, alignItems: "center", fontSize: 13, color: "var(--ink)" }}><input type="checkbox" style={{ width: "auto" }} checked={hasRace} onChange={(e) => setHasRace(e.target.checked)} /> I have a race</label>
-      {hasRace && (
-        <>
-          <div className="two">
-            <label><b>Race</b><input value={raceName} onChange={(e) => setRaceName(e.target.value)} placeholder="e.g. IRONMAN Texas" /></label>
-            <label><b>Date</b><input type="date" value={raceDate} onChange={(e) => setRaceDate(e.target.value)} /></label>
-          </div>
-          <div className="three">
-            <label><b>Distance</b><select value={distance} onChange={(e) => setDistance(e.target.value as RaceDistance)}>{DISTANCES.map((d) => <option key={d.k} value={d.k}>{d.label}</option>)}</select></label>
-            <label><b>Goal time (h:mm)</b><input value={goal} onChange={(e) => setGoal(e.target.value)} placeholder="13:00" inputMode="numeric" /></label>
-            <label><b>Location</b><input value={location} onChange={(e) => setLocation(e.target.value)} placeholder="The Woodlands, TX" /></label>
-          </div>
-        </>
-      )}
+      {mode === "edit" && <span className="hint">Race, goal and the plan itself: Plan → Plan settings.</span>}
       {err && <div className="err">{err}</div>}
       {saved && mode === "edit" && <div className="ok-note">Saved.</div>}
-      <div className="row"><button type="submit" className="btn" disabled={busy}>{busy ? "Saving…" : mode === "setup" ? "Save and open the app" : "Save changes"}</button></div>
+      <div className="row"><button type="submit" className="btn" disabled={busy}>{busy ? "Saving…" : mode === "setup" ? "Save and build my plan" : "Save changes"}</button></div>
     </form>
   );
 }

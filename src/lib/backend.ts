@@ -3,6 +3,8 @@
 //  - LocalBackend: no accounts. PR's seed plan + activities, with every change saved in this browser.
 //  - SupabaseBackend: accounts on. Each user's rows in the database, nothing shared between users.
 import type { SupabaseClient } from "@supabase/supabase-js";
+import type { Intake } from "./plan/intake";
+import type { Availability } from "./data";
 import { ACTIVITIES as SEED_ACTIVITIES, PLAN_SEED, SPORT_LABEL, type Activity, type PlanWeekJson, type Sport } from "./data";
 import { BODY_SEED, type BodyDay } from "./analysis";
 import type { Profile, Race } from "./athlete";
@@ -12,10 +14,10 @@ export interface SessionPatch { date?: string; start?: string; min?: number; int
 export interface AddedSession { id: string; date: string; start?: string; min: number; sport: Sport; intensity: string; text: string }
 export interface ThreadMsg { who: "You" | "Coach" | "action"; at: string; text: string }
 export interface PlanStateJson { patches: Record<string, SessionPatch>; added: AddedSession[]; undone: boolean; calendar: boolean }
-export interface UserData { profile: Profile | null; race: Race | null; plan: PlanWeekJson[]; state: PlanStateJson; activities: Activity[]; body: BodyDay[]; thread: ThreadMsg[] }
+export interface UserData { profile: Profile | null; race: Race | null; plan: PlanWeekJson[]; intake: Intake | null; state: PlanStateJson; activities: Activity[]; body: BodyDay[]; thread: ThreadMsg[]; availability?: Availability | null }
 
 export const EMPTY_STATE: PlanStateJson = { patches: {}, added: [], undone: false, calendar: true };
-export const EMPTY_DATA: UserData = { profile: null, race: null, plan: [], state: EMPTY_STATE, activities: [], body: [], thread: [] };
+export const EMPTY_DATA: UserData = { profile: null, race: null, plan: [], intake: null, state: EMPTY_STATE, activities: [], body: [], thread: [] };
 
 export interface Backend {
   kind: "local" | "supabase";
@@ -27,7 +29,7 @@ export interface Backend {
   appendThread(msgs: ThreadMsg[]): Promise<void>;
   saveProfile(p: Partial<Profile>): Promise<void>;
   saveRace(r: Race | null): Promise<void>;
-  savePlan(weeks: PlanWeekJson[]): Promise<void>;
+  savePlan(weeks: PlanWeekJson[], intake?: Intake | null): Promise<void>;
   saveBody(rows: BodyDay[]): Promise<void>;
   replaceActivities(rows: Activity[]): Promise<void>;
   reset(): Promise<void>;
@@ -38,7 +40,7 @@ export interface Backend {
 // Local (browser) — the format the app has used so far, kept so PR's changes survive
 // ====================================================================================
 const KEY = "velocity.store.v1";
-export interface LocalState extends PlanStateJson { manual: Activity[]; hidden: string[]; excluded: string[]; thread: ThreadMsg[] }
+export interface LocalState extends PlanStateJson { manual: Activity[]; hidden: string[]; excluded: string[]; thread: ThreadMsg[]; plan?: PlanWeekJson[] | null; intake?: Intake | null; race?: Race | null; availability?: Availability | null }
 const EMPTY_LOCAL: LocalState = { ...EMPTY_STATE, manual: [], hidden: [], excluded: [], thread: [] };
 
 export function readLocal(): LocalState {
@@ -69,9 +71,10 @@ export class LocalBackend implements Backend {
     if (demo === "empty") {
       const created = new Date().toISOString();
       const profile: Profile = { id: "demo", email: "new@example.com", username: "newathlete", name: "New Athlete", avatar_url: null, units: "imperial", timezone: "America/Los_Angeles", city: null, availability: null, zones: null, is_admin: false, setup_done: true, created_at: created };
-      return { profile, race: null, plan: [], state: { patches: this.s.patches, added: this.s.added, undone: false, calendar: true }, activities: this.s.manual, body: [], thread: this.s.thread };
+      return { profile: { ...profile, availability: this.s.availability ?? null }, race: this.s.race ?? null, plan: this.s.plan ?? [], intake: this.s.intake ?? null, state: { patches: this.s.patches, added: this.s.added, undone: false, calendar: true }, activities: this.s.manual, body: [], thread: this.s.thread };
     }
-    return { profile: null, race: null, plan: PLAN_SEED, state: { patches: this.s.patches, added: this.s.added, undone: this.s.undone, calendar: this.s.calendar }, activities: localActivities(this.s), body: BODY_SEED, thread: this.s.thread };
+    // a plan built or imported in this browser replaces the seed plan (and its race) until "clear local changes"
+    return { profile: null, race: this.s.race ?? null, plan: this.s.plan ?? PLAN_SEED, intake: this.s.intake ?? null, state: { patches: this.s.patches, added: this.s.added, undone: this.s.undone, calendar: this.s.calendar }, activities: localActivities(this.s), body: BODY_SEED, thread: this.s.thread, availability: this.s.availability ?? null };
   }
   private put(next: Partial<LocalState>) { this.s = { ...this.s, ...next }; writeLocal(this.s); }
   async saveState(state: PlanStateJson) { this.put(state); }
@@ -82,9 +85,9 @@ export class LocalBackend implements Backend {
   }
   async setExcluded(id: string, excluded: boolean) { this.put({ excluded: excluded ? [...new Set([...this.s.excluded, id])] : this.s.excluded.filter((x) => x !== id) }); }
   async appendThread(msgs: ThreadMsg[]) { this.put({ thread: [...this.s.thread, ...msgs] }); }
-  async saveProfile() { /* no accounts in local mode */ }
-  async saveRace() { /* no accounts in local mode */ }
-  async savePlan() { /* the seed plan is the plan in local mode */ }
+  async saveProfile(p: Partial<Profile>) { if (p.availability !== undefined) this.put({ availability: p.availability }); }
+  async saveRace(r: Race | null) { this.put({ race: r }); }
+  async savePlan(weeks: PlanWeekJson[], intake?: Intake | null) { this.put({ plan: weeks, ...(intake !== undefined ? { intake } : {}) }); }
   async saveBody() { /* seed only */ }
   async replaceActivities() { /* seed only */ }
   async reset() { this.s = { ...EMPTY_LOCAL }; writeLocal(this.s); }
@@ -124,7 +127,7 @@ export class SupabaseBackend implements Backend {
     const [profile, race, plan, state, acts, body, thread] = await Promise.all([
       this.sb.from("profiles").select("*").eq("id", uid).maybeSingle(),
       this.sb.from("races").select("*").eq("user_id", uid).maybeSingle(),
-      this.sb.from("plans").select("weeks").eq("user_id", uid).maybeSingle(),
+      this.sb.from("plans").select("weeks, intake").eq("user_id", uid).maybeSingle(),
       this.sb.from("plan_state").select("*").eq("user_id", uid).maybeSingle(),
       this.sb.from("activities").select("*").eq("user_id", uid).order("date").order("start"),
       this.sb.from("body_metrics").select("*").eq("user_id", uid).order("date"),
@@ -136,6 +139,7 @@ export class SupabaseBackend implements Backend {
       profile: (profile.data as Profile | null) ?? null,
       race: (race.data as Race | null) ?? null,
       plan: ((plan.data as { weeks?: PlanWeekJson[] } | null)?.weeks ?? []) as PlanWeekJson[],
+      intake: ((plan.data as { intake?: Intake | null } | null)?.intake ?? null),
       state: st ? { patches: (st.patches as PlanStateJson["patches"]) ?? {}, added: (st.added as AddedSession[]) ?? [], undone: !!st.undone, calendar: st.calendar !== false } : EMPTY_STATE,
       activities: ((acts.data as Row[]) ?? []).map(rowToActivity),
       body: ((body.data as Row[]) ?? []).map((b) => ({ date: String(b.date), rhr: b.rhr as number, hrv: b.hrv as number, sleep_h: b.sleep_h == null ? undefined : Number(b.sleep_h), sleep_score: b.sleep_score as number, stress: b.stress as number, vo2: b.vo2 == null ? undefined : Number(b.vo2) })),
@@ -154,7 +158,14 @@ export class SupabaseBackend implements Backend {
     const { error } = r ? await this.sb.from("races").upsert({ user_id: uid, ...r, updated_at: new Date().toISOString() }) : await this.sb.from("races").delete().eq("user_id", uid);
     this.fail("saveRace", error); if (error) throw error;
   }
-  async savePlan(weeks: PlanWeekJson[]) { const uid = await this.user(); const { error } = await this.sb.from("plans").upsert({ user_id: uid, weeks, updated_at: new Date().toISOString() }); this.fail("savePlan", error); if (error) throw error; }
+  async savePlan(weeks: PlanWeekJson[], intake?: Intake | null) {
+    const uid = await this.user();
+    const row: Row = { user_id: uid, weeks, updated_at: new Date().toISOString() };
+    let { error } = await this.sb.from("plans").upsert(intake !== undefined ? { ...row, intake } : row);
+    // until the `intake` column exists in the database, save the weeks alone rather than nothing
+    if (error && intake !== undefined && /intake/i.test(error.message)) { console.warn("[velocity] plans.intake column missing — run supabase/schema.sql; saving weeks only"); ({ error } = await this.sb.from("plans").upsert(row)); }
+    this.fail("savePlan", error); if (error) throw error;
+  }
   async saveBody(rows: BodyDay[]) { const uid = await this.user(); if (!rows.length) return; const { error } = await this.sb.from("body_metrics").upsert(rows.map((b) => ({ user_id: uid, ...b }))); this.fail("saveBody", error); if (error) throw error; }
   async replaceActivities(rows: Activity[]) {
     const uid = await this.user();

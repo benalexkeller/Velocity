@@ -143,6 +143,10 @@ export function sessionStatus(sport: Sport, date: string, acts: Activity[]): Sta
   return acts.length ? "done" : sport === "rest" ? (isPast ? "done" : "planned") : isPast ? "missed" : "planned";
 }
 
+/** Minutes of the race itself inside a race week (the "Race day" entry), so it is not counted as training. */
+export const isRaceDay = (text: string) => /^race day/i.test(text.replace(/^(AM|PM):\s*/i, ""));
+export const raceDayMin = (days: { text: string; min: number }[]) => days.filter((d) => isRaceDay(d.text)).reduce((s, d) => s + (d.min || 0), 0);
+
 /** Builds the app's week objects from a stored plan; statuses come from the activities given. */
 export function buildWeeks(plan: PlanWeekJson[], acts: Activity[] = [], av: Availability = DEFAULT_AVAILABILITY): Week[] {
   return plan.map((w) => {
@@ -163,7 +167,7 @@ export function buildWeeks(plan: PlanWeekJson[], acts: Activity[] = [], av: Avai
     return {
       week: w.week, start: w.start, phase: w.phase, phaseShort: shortPhase(w.phase), focus: w.focus,
       recovery: w.recovery, race: w.race, sessions,
-      plannedMin: w.days.reduce((s, d) => s + (d.min || 0), 0) - (w.race ? 780 : 0),
+      plannedMin: w.days.reduce((s, d) => s + (d.min || 0), 0) - (w.race ? raceDayMin(w.days) : 0),
     };
   });
 }

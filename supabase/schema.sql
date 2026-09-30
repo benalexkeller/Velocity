@@ -45,8 +45,10 @@ create table if not exists public.races (
 create table if not exists public.plans (
   user_id uuid primary key references public.profiles(id) on delete cascade,
   weeks jsonb not null default '[]'::jsonb,  -- [{week,start,phase,focus,recovery,race,days:[{text,min}]}]
+  intake jsonb,                              -- the plan builder's answers (goal, history, fitness, time, devices, strength)
   updated_at timestamptz not null default now()
 );
+alter table public.plans add column if not exists intake jsonb;
 
 -- ---------- plan state: the athlete's own changes layered over the plan ----------
 create table if not exists public.plan_state (

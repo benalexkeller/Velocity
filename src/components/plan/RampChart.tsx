@@ -43,8 +43,9 @@ export function RampChart({ selected, onPick }: { selected?: number | null; onPi
             {on && <rect x={x0 - 4} y={T - 40} width={x1 - x0 + 8} height={H - B - T + 40} fill="var(--accent-soft)" opacity={0.55} rx={6} />}
             <line x1={x0} y1={T - 20} x2={x1} y2={T - 20} stroke={on ? "var(--accent)" : "var(--line)"} strokeWidth={on ? 2 : 1} />
             <line x1={x0} y1={T - 26} x2={x0} y2={T - 20} stroke={on ? "var(--accent)" : "var(--line)"} />
-            <text x={(x0 + x1) / 2} y={T - 30} textAnchor="middle" className={on ? "accent" : "ink"} fontWeight={600} fontSize="12">{p.short}</text>
-            <text x={(x0 + x1) / 2} y={T - 17 + 12} textAnchor="middle" fontSize="10.5">Weeks {p.from}{p.to !== p.from ? ` – ${p.to}` : ""}</text>
+            {x1 - x0 >= p.short.length * 6.5 && <text x={(x0 + x1) / 2} y={T - 30} textAnchor="middle" className={on ? "accent" : "ink"} fontWeight={600} fontSize="12">{p.short}</text>}
+            {x1 - x0 >= 60 && <text x={(x0 + x1) / 2} y={T - 17 + 12} textAnchor="middle" fontSize="10.5">Weeks {p.from}{p.to !== p.from ? ` – ${p.to}` : ""}</text>}
+            <title>{`${p.name} · weeks ${p.from}${p.to !== p.from ? `–${p.to}` : ""}`}</title>
           </g>
         );
       })}

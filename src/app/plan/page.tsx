@@ -1,5 +1,6 @@
 "use client";
 import { Suspense, useEffect, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import "./plan.css";
 import { Icon } from "@/components/icons";
@@ -13,6 +14,7 @@ import { PlanExplained } from "@/components/plan/PlanExplained";
 import { COACH_THREAD, plannedByDiscipline, plannedLoad, type Sport, type Week } from "@/lib/data";
 import { usePlan } from "@/lib/store";
 import { dateLabel, fromYmd, fmtHours, addDays, ymd } from "@/lib/format";
+import { METHOD } from "@/lib/plan/rules";
 
 const M = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
 const INTENSITIES = ["Zone 2", "Aerobic", "Technique", "Endurance", "Tempo", "Intervals", "Race"];
@@ -135,8 +137,16 @@ function Plan() {
               </div>
             )}
           </span>
+          {!plan.hasPlan && <Link href="/plan/new" className="btn ghost">Build plan</Link>}
           <button className="btn" type="button" onClick={() => setAdding((a) => !a)} aria-expanded={adding}><Icon name="plus" />Add workout</button>
         </div>
+
+        {!plan.hasPlan && (
+          <section className="card no-plan" aria-label="No plan yet">
+            <div><div className="eyebrow">No plan yet</div><h3>Answer five screens of questions and the plan is built for your race, your hours and your days.</h3><p className="muted">Or upload a plan you already have as a spreadsheet. Either way every session can be moved, edited or locked afterwards.</p></div>
+            <div className="row"><Link href="/plan/new" className="btn">Build my plan<Icon name="arrow" /></Link><Link href="/plan/new?import=1" className="btn ghost">Upload a plan</Link></div>
+          </section>
+        )}
 
         {adding && <AddWorkout week={week} onDone={(id) => { setAdding(false); if (id) { setSel(id); const hit = plan.findSession(id); if (hit) setWk(hit.w.week); } }} />}
 
@@ -146,11 +156,12 @@ function Plan() {
         <section className="section">
           <div className="section-head">
             <h2>{plan.hasPlan ? `The road to ${plan.athlete.race.distanceLabel || plan.athlete.race.name}` : "The road to race day"}</h2>
-            <span className="sub">{plan.hasPlan ? `${plan.weeks.length} weeks · ${plan.phases.length} phases · race ${dateLabel(plan.athlete.race.date)} ${plan.athlete.race.date.slice(0, 4)} · click a week` : plan.athlete.hasRace ? `${plan.athlete.race.name} · ${dateLabel(plan.athlete.race.date)} ${plan.athlete.race.date.slice(0, 4)} · no plan yet` : "No race set · add it under Profile"}</span>
+            <span className="sub">{plan.hasPlan ? `${plan.weeks.length} weeks · ${plan.phases.length} phases · race ${dateLabel(plan.athlete.race.date)} ${plan.athlete.race.date.slice(0, 4)} · click a week` : plan.athlete.hasRace ? `${plan.athlete.race.name} · ${dateLabel(plan.athlete.race.date)} ${plan.athlete.race.date.slice(0, 4)} · no plan yet` : "No race set · build a plan to add one"}</span>
             <span className="legend">
               <span><i style={{ background: "var(--swim)" }} />Swim</span>
               <span><i style={{ background: "var(--bike)" }} />Bike</span>
               <span><i style={{ background: "var(--run)" }} />Run</span>
+              {plan.hasPlan && <Link href={plan.intake ? "/plan/new?edit=1" : "/plan/new"} className="settings" title={plan.intake ? "Change the answers and rebuild the plan" : "Build a new plan from a few questions"}>Plan settings →</Link>}
             </span>
           </div>
           <RampChart selected={overview} onPick={(n) => setOverview(n === overview ? null : n)} />
@@ -164,6 +175,18 @@ function Plan() {
           </div>
           <PlanExplained />
         </section>
+
+        {plan.intake && (
+          <section className="section">
+            <div className="section-head">
+              <h2>How this plan is built</h2>
+              <span className="sub">The rules the builder follows and where they come from.</span>
+            </div>
+            <ol className="method">
+              {METHOD.map((m) => <li key={m.url + m.rule.slice(0, 12)}><b>{m.rule}</b><span><a href={m.url} target="_blank" rel="noreferrer">{m.source}</a></span></li>)}
+            </ol>
+          </section>
+        )}
       </div>
 
       <CoachRail thread={COACH_THREAD as never} summary={`Week ${week.week} · ${ws.done} of ${ws.total} sessions · ${fmtHours(ws.actualH)} of ${fmtHours(ws.plannedH)}${plan.changes ? ` · ${plan.changes} local change${plan.changes === 1 ? "" : "s"}` : " · plan unchanged since Sunday"}`} />
