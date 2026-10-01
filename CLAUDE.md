@@ -27,7 +27,7 @@ with tokens in `src/app/globals.css`, no UI library. `npm run dev` → http://lo
 - `src/lib/analysis.ts` — `createAnalysis(activities, weeks, {phases, body, athlete})`; use through `useAnalysis()` in components.
 - `supabase/schema.sql` — the whole database; idempotent, paste into Supabase SQL Editor. RLS: users only see their own rows.
   `admin_emails` decides who is admin (currently benalexkeller@gmail.com).
-- Seed files (`src/lib/data/seed/*.json`) are PR's real plan/activities/body data; never invent data.
+- Seed files (`src/lib/data/seed/*.json`) are PR's real plan/activities/body data; never invent data. `seed/maps.json` = OpenStreetMap vector base maps (via the Garmin MCP's `get_area_map`, thinned by the scratch script) that `RouteMap` draws under routes; routes outside them use CARTO label-free tiles.
 
 ## Product rules already decided
 - No daily readiness/recovery score; load/fatigue/form from work done. Coach proposes changes only in the Sunday review; the athlete decides.
