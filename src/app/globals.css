@@ -269,3 +269,24 @@ svg.chart .accent { fill: var(--accent); }
 .rmap-ctl button svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.8; }
 .rmap-zoom { position: absolute; left: 12px; top: 10px; font-size: 11.5px; font-weight: 600; color: var(--ink-2); background: rgba(255,255,255,0.85); border-radius: 999px; padding: 3px 9px; pointer-events: none; }
 @media (max-width: 700px) { .map-modal { padding: 0; } .map-modal .box { border-radius: 0; height: 100%; } .map-modal .hd .small { display: none; } }
+
+/* ---------- beta feedback ---------- */
+.fb-top { display: inline-flex; align-items: center; gap: 8px; margin-left: 6px; }
+.fb-btn { display: inline-flex; align-items: center; gap: 7px; border: 0; border-radius: 999px; background: #D92D20; color: #fff; font: inherit; font-size: 13px; font-weight: 700; padding: 7px 14px; cursor: pointer; box-shadow: 0 1px 2px rgba(217,45,32,0.3); }
+.fb-btn:hover { background: #B42318; }
+.fb-btn svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 2; }
+.fb-beta { font-size: 10.5px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; color: #B42318; background: #FEF3F2; border: 1px solid #FECDCA; border-radius: 999px; padding: 3px 8px; }
+.fb-red { color: #D92D20 !important; }
+.fb-modal { position: fixed; inset: 0; z-index: 70; background: rgba(16,17,20,0.4); display: grid; place-items: start center; padding: 56px 16px 24px; overflow: auto; }
+.fb-modal .box { width: min(640px, 100%); background: var(--surface); border-radius: 14px; box-shadow: 0 24px 80px rgba(16,17,20,0.3); padding: 22px 24px 20px; display: grid; gap: 14px; }
+.fb-modal .hd { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.fb-modal .hd h2 { font-size: 22px; letter-spacing: -0.02em; font-weight: 600; margin-top: 2px; }
+.fb-modal .close { width: 32px; height: 32px; border-radius: 8px; border: 0; background: var(--surface-2); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; flex: 0 0 auto; }
+.fb-modal .close svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
+.fb-modal textarea { resize: vertical; min-height: 110px; line-height: 1.45; }
+.fb-modal .btn.fb-send { background: #D92D20; border-color: #D92D20; }
+.fb-modal .btn.fb-send:hover { background: #B42318; border-color: #B42318; }
+.fb-done { display: grid; gap: 10px; font-size: 14px; color: var(--ink-2); }
+.fb-done b { font-size: 18px; color: var(--ink); }
+.fb-done .row { display: flex; gap: 8px; margin-top: 4px; }
+@media (max-width: 760px) { .fb-btn { padding: 6px 10px; font-size: 12px; } .fb-btn span { display: none; } .fb-beta { display: none; } }

@@ -6,6 +6,7 @@ import { Icon } from "./icons";
 import { BRAND } from "@/lib/config";
 import { usePlan } from "@/lib/store";
 import { todayLabel } from "@/lib/format";
+import { FeedbackButton } from "./Feedback";
 import "@/app/account.css";
 
 const NAV: { href: string; label: string; icon: Parameters<typeof Icon>[0]["name"] }[] = [
@@ -33,7 +34,7 @@ function AccountMenu() {
         <div className="menu" role="menu">
           <div className="who"><b>{a.name}</b>{a.username ? `@${a.username}` : a.email ?? "local mode"}</div>
           <Link href="/profile" role="menuitem" onClick={() => setOpen(false)}>Profile</Link>
-          {plan.accounts && a.isAdmin && <Link href="/admin" role="menuitem" onClick={() => setOpen(false)}>Admin · users</Link>}
+          {plan.accounts && a.isAdmin && <Link href="/admin" role="menuitem" onClick={() => setOpen(false)}>Admin · users & feedback</Link>}
           {plan.accounts ? <button type="button" role="menuitem" onClick={() => { setOpen(false); void plan.signOut(); }}>Sign out</button> : <div className="who" style={{ border: 0, margin: 0 }}>No account · saved in this browser</div>}
         </div>
       )}
@@ -52,6 +53,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
     <div className="shell">
       <header className="topbar">
         <span className="wordmark">{BRAND.name}</span>
+        <FeedbackButton />
         <span className="greet">
           {greet}, {ATHLETE.firstName}.
         </span>

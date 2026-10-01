@@ -26,6 +26,7 @@ const PAGES = [
   { id: 'nutrition-log', label: 'Nutrition · Log meal', path: '/nutrition', after: async (p) => { await p.click('.nu-timeline .btn:has-text("Log meal")'); await p.waitForTimeout(300); await p.click('.nu-date .pick'); await p.waitForTimeout(200); } },
   { id: 'nutrition-guide', label: 'Nutrition · Guide', path: '/nutrition', after: async (p) => { await p.click('.tabs button:has-text("Guide")'); await p.waitForTimeout(500); } },
   { id: 'nutrition-setup', label: 'Nutrition · Set-up', path: '/nutrition', after: async (p) => { await p.click('.tabs button:has-text("Guide")'); await p.waitForTimeout(300); await p.click('.nu-plan .btn'); await p.waitForTimeout(400); } },
+  { id: 'feedback', label: 'Feedback', path: '/dashboard', after: async (p) => { await p.click('.fb-btn'); await p.waitForTimeout(300); await p.fill('.fb-modal textarea', 'Example: the long ride on Saturday should start later.'); } },
   { id: 'calculator', label: 'Calculator', path: '/calculator' },
   { id: 'store', label: 'Store', path: '/store' },
   // the builder last: building a plan replaces the seed plan in this throwaway browser
@@ -57,6 +58,8 @@ const PAGES = [
     if (!seen.has('inline:' + pg.id)) { seen.add('inline:' + pg.id); css += '\n' + inline; }
     const fontClass = await p.$eval('html', h => h.className);
     let body = await p.$eval('.shell', el => el.outerHTML);
+    const extra = await p.$$eval('body > .fb-modal, body > .map-modal', els => els.map(e => e.outerHTML).join(''));
+    body += extra.replace(/position: ?fixed/g, 'position:absolute');
     body = body.replace(/<script[\s\S]*?<\/script>/g, '');
     sections.push({ ...pg, html: body, fontClass });
   }

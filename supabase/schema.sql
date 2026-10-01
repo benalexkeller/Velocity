@@ -99,6 +99,36 @@ create table if not exists public.coach_messages (
 );
 create index if not exists coach_messages_user on public.coach_messages (user_id, id);
 
+-- ---------- beta feedback: what athletes tell us, with the page they were on ----------
+create table if not exists public.feedback (
+  id bigserial primary key,
+  user_id uuid references public.profiles(id) on delete set null,
+  email text,
+  username text,
+  tab text not null default 'general',     -- general | dashboard | plan | activities | analysis | nutrition | store | calculator | account
+  kind text not null default 'other',      -- bug | confusing | idea | data | other
+  message text not null,
+  page text, ua text, viewport text,
+  status text not null default 'open',     -- open | done
+  created_at timestamptz not null default now()
+);
+alter table public.feedback enable row level security;
+drop policy if exists "insert own feedback" on public.feedback;
+create policy "insert own feedback" on public.feedback for insert with check (auth.uid() = user_id);
+drop policy if exists "read own feedback" on public.feedback;
+create policy "read own feedback" on public.feedback for select using (auth.uid() = user_id);
+create or replace function public.admin_feedback()
+returns setof public.feedback language sql security definer set search_path = public stable as $$
+  select * from public.feedback
+  where exists (select 1 from public.profiles me where me.id = auth.uid() and me.is_admin)
+  order by created_at desc;
+$$;
+create or replace function public.admin_feedback_status(fid bigint, s text)
+returns void language sql security definer set search_path = public as $$
+  update public.feedback set status = s where id = fid
+    and exists (select 1 from public.profiles me where me.id = auth.uid() and me.is_admin);
+$$;
+
 -- ---------- who is admin: any sign-up with one of these emails gets the admin flag ----------
 create table if not exists public.admin_emails (email text primary key);
 insert into public.admin_emails (email) values ('benalexkeller@gmail.com') on conflict do nothing;
