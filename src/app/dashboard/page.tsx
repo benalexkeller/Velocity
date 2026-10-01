@@ -3,7 +3,7 @@ import "./dashboard.css";
 import Link from "next/link";
 import { Icon } from "@/components/icons";
 import { SportIcon } from "@/components/SportIcon";
-import { RouteMap } from "@/components/RouteMap";
+import { MapModal, RouteMap } from "@/components/RouteMap";
 import { Watch } from "@/components/Watch";
 import { CoachBar } from "@/components/CoachBar";
 import { LogActivity } from "@/components/dashboard/LogActivity";
@@ -124,7 +124,7 @@ export default function Dashboard() {
             </div>
           </Link>
 
-          <section className={`card la lastact${mapOpen ? " map-open" : ""}`} aria-label="Last activity">
+          <section className="card la lastact" aria-label="Last activity">
             <div className="head"><span className="eyebrow">Last activity</span><Link href={last ? `/activities?a=${last.id}` : "/activities"}>View all activities →</Link></div>
             {last ? (
               <>
@@ -139,9 +139,10 @@ export default function Dashboard() {
                   </div>
                 </div>
                 <div className="map">
-                  <RouteMap route={last.route} height={mapOpen ? 320 : 140} />
-                  <button className="exp" type="button" onClick={() => setMapOpen((o) => !o)} aria-label={mapOpen ? "Shrink map" : "Expand map"} aria-expanded={mapOpen}><Icon name={mapOpen ? "close" : "expand"} /></button>
+                  <RouteMap route={last.route} height={140} />
+                  {last.route && <button className="exp" type="button" onClick={() => setMapOpen(true)} aria-label="Expand map" title="Whole route, zoom and drag"><Icon name="expand" /></button>}
                   {last.route && plan.athlete.city && <span className="loc">{plan.athlete.city}</span>}
+                  {mapOpen && last.route && <MapModal route={last.route} title={last.name} sub={`${dateLabel(last.date)}${last.start ? ` · ${last.start}` : ""} · ${fmtHMS(last.min)}`} onClose={() => setMapOpen(false)} />}
                 </div>
               </>
             ) : <div className="muted">No activities yet.</div>}

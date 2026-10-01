@@ -4,7 +4,7 @@ import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from 
 import { useSearchParams } from "next/navigation";
 import { Icon } from "@/components/icons";
 import { SportIcon } from "@/components/SportIcon";
-import { RouteMap } from "@/components/RouteMap";
+import { MapModal, RouteMap } from "@/components/RouteMap";
 import { CoachNote } from "@/components/CoachNote";
 import { activityLoad, type Activity } from "@/lib/data";
 import { usePlan } from "@/lib/store";
@@ -161,9 +161,11 @@ function Drawer({ a, onDeleted }: { a: Activity; onDeleted: () => void }) {
   const plan = usePlan();
   const w = when(a), pp = paceOrPower(a);
   const [confirm, setConfirm] = useState(false);
-  useEffect(() => setConfirm(false), [a.id]);
+  const [big, setBig] = useState(false);
+  useEffect(() => { setConfirm(false); setBig(false); }, [a.id]);
   return (
     <aside className="card drawer" aria-label="Activity detail">
+      {big && a.route && <MapModal route={a.route} title={a.name} sub={`${w.l1} · ${distance(a)} · ${fmtHMS(a.min)}`} onClose={() => setBig(false)} />}
       <div className="hd">
         <SportIcon sport={a.sport} size={40} />
         <div><b>{a.name}</b><small>{w.l1}{w.l2 ? ` · ${w.l2}` : ""}</small><small>{subtitle(a)}{a.excluded ? " · excluded from analysis" : ""}</small></div>
@@ -187,7 +189,10 @@ function Drawer({ a, onDeleted }: { a: Activity; onDeleted: () => void }) {
         <div><div className="v"><Effort n={effortLevel(a) || 1} /></div><div className="k">Effort</div></div>
       </div>
       <h4>Route</h4>
-      <RouteMap route={a.route} height={150} />
+      <div className="map">
+        <RouteMap route={a.route} height={150} />
+        {a.route && <button type="button" className="exp" onClick={() => setBig(true)} aria-label="Expand map" title="Whole route, zoom and drag"><Icon name="expand" /></button>}
+      </div>
       {a.coachNote && (<><h4>Coach insight</h4><div className="note"><CoachNote text={a.coachNote} /></div></>)}
       {a.note && (<><h4>Your note</h4><div className="note">{a.note}</div></>)}
       <h4>Details</h4>
