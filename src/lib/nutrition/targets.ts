@@ -34,7 +34,7 @@ export function bmrOf(p: NutritionProfile) {
 export const ffmOf = (p: NutritionProfile) => (p.weight_kg ?? 0) * (p.sex === "female" ? 0.77 : 0.85);
 
 type Group = "easy" | "moderate" | "hard" | "race";
-const groupOf = (s: Session): Group => (s.intensity === "Race" ? "race" : /Tempo|Intervals/.test(s.intensity) ? "hard" : s.intensity === "Endurance" ? "moderate" : "easy");
+const groupOf = (s: Session): Group => (s.intensity === "Race" ? "race" : /Tempo|Threshold|Intervals/.test(s.intensity) ? "hard" : s.intensity === "Endurance" ? "moderate" : "easy");
 
 /** kcal for a session (Ainsworth 2011 METs by sport and intensity; power/HR methods arrive with the Garmin streams). */
 function metOf(s: Session): number {

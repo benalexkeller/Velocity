@@ -10,11 +10,11 @@ import { FuelBlock } from "../nutrition/SessionFuel";
 import { useNutrition } from "@/lib/nutrition/store";
 import { STATUS_LABEL, activityLoad, plannedLoad, type Session, type Sport } from "@/lib/data";
 import { usePlan } from "@/lib/store";
-import { dateLabel, fmtHMS, fmtPace, today, ymd } from "@/lib/format";
+import { dateLabel, fmtDur, fmtHMS, fmtPace, today, ymd } from "@/lib/format";
 import { elev, fmtDist, fmtSpeed, runPace, swimDist, swimPace } from "@/lib/units";
-import { workoutFor, zoneName, type Segment, type Zone } from "@/lib/workout";
+import { hardestStep, workoutFor, zoneName, type Segment, type Zone } from "@/lib/workout";
 
-const INTENSITIES = ["Zone 2", "Aerobic", "Technique", "Endurance", "Tempo", "Intervals", "Race"];
+const INTENSITIES = ["Zone 2", "Aerobic", "Technique", "Endurance", "Tempo", "Threshold", "Intervals", "Race"];
 const SPORTS: Sport[] = ["swim", "bike", "run", "brick", "strength", "hike", "other", "rest"];
 
 // Move: pick a new day and start time. Saves to the local store.
@@ -52,11 +52,14 @@ function EditForm({ s, onDone }: { s: Session; onDone: () => void }) {
   );
 }
 
-function targetOf(s: Session, zones: Record<string, Record<string, string>>) {
-  const sp = s.sport === "brick" ? "bike" : s.sport;
-  const z = zones[sp]?.[s.intensity];
-  if (!z) return null;
-  return { k: sp === "bike" ? (/W$/.test(z) ? "Target power" : "Target speed") : "Target pace", v: z, u: sp === "bike" ? "" : sp === "swim" ? "per 100 yd" : "per mile" };
+// The target in the stats column is the target of the hardest work in the steps, so the two always match.
+function targetOf(s: Session, seg: Segment | undefined, zones: Record<string, Record<string, string>>) {
+  let v = seg?.target, sp = s.sport === "brick" ? "bike" : s.sport;
+  if (seg && /\/mi$/.test(seg.target)) sp = "run"; else if (seg && /\/100 yd$/.test(seg.target)) sp = "swim"; else if (seg && /mph|W$/.test(seg.target)) sp = "bike";
+  if (!v || !/\d/.test(v)) v = zones[sp]?.[s.intensity];
+  if (!v) return null;
+  v = v.replace(/\s*\/(mi|100 yd)$/, "");
+  return { k: sp === "bike" ? (/W$/.test(v) ? "Target power" : "Target speed") : "Target pace", v, u: sp === "bike" ? "" : sp === "swim" ? "per 100 yd" : "per mile" };
 }
 
 // one zone palette for the whole app (tokens in globals.css)
@@ -115,7 +118,7 @@ function IntervalChart({ segments, fuel }: { segments: Segment[]; fuel: Fuel }) 
               return (
                 <g key={i}>
                   <rect x={a0 + 0.5} y={y(q.s.zone)} width={Math.max(1, a1 - a0 - 1)} height={y(0) - y(q.s.zone)} fill={ZONE_FILL[q.s.zone]} rx={2} />
-                  {paceFits && <text x={(a0 + a1) / 2} y={y(0) - 8} textAnchor="middle" fill={q.s.zone >= 3 ? "#fff" : "var(--ink-2)"}>{g.target}</text>}
+                  {paceFits && <text x={(a0 + a1) / 2} y={y(0) - 8} textAnchor="middle" style={{ fill: q.s.zone >= 3 ? "#fff" : "var(--ink-2)" }}>{g.target}</text>}
                 </g>
               );
             })}
@@ -153,12 +156,15 @@ export function SessionPanel({ id, onClose }: { id: string | null; onClose: () =
   const hit = plan.findSession(id);
   if (!hit) return null;
   const { s, w } = hit;
-  const tgt = targetOf(s, plan.athlete.zones);
   const acts = plan.activitiesOn(s.date);
   const wk = workoutFor(s, plan.athlete.zones);
   const fuel = nut.ready && nut.hasWeight && s.sport !== "rest" ? nut.fuelFor(s) : null;
   const status = STATUS_LABEL[s.status];
-  const zoneOfIntensity: Zone = s.intensity === "Tempo" ? 3 : s.intensity === "Intervals" || s.intensity === "Race" ? 4 : 2;
+  // the zone shown in the header is the key work in the steps, so the two never disagree (V-014)
+  const key = hardestStep(s, plan.athlete.zones);
+  const zoneOfIntensity: Zone = key ? key.zone : s.intensity === "Tempo" ? 3 : s.intensity === "Intervals" || s.intensity === "Race" ? 4 : 2;
+  const tgt = targetOf(s, key?.seg, plan.athlete.zones);
+  const raceDay = /^race day/i.test(s.text);
   return (
     <section className={`card session-panel ${s.status}`} aria-label="Session detail">
       <button className="close" type="button" onClick={onClose} aria-label="Close"><Icon name="close" /></button>
@@ -166,7 +172,7 @@ export function SessionPanel({ id, onClose }: { id: string | null; onClose: () =
         <SportIcon sport={s.sport} size={48} />
         <div>
           <div className="eyebrow">{dateLabel(s.date)}{s.start ? ` · ${s.start}` : ""}<span className="sp-wk"> · Week {w.week} · {w.phaseShort}</span></div>
-          <h2>{s.title}{s.sport !== "rest" && <span className="dim"> · {s.intensity}</span>}</h2>
+          <h2>{raceDay ? "Race day" : s.title}{s.sport !== "rest" && !raceDay && <span className="dim"> · {s.intensity}</span>}</h2>
         </div>
         {s.locked && s.status !== "done" && <span className="status locked" title="Locked: drag and Move are off until you unlock it"><Icon name="lock" />Locked</span>}
         <span className={`status ${s.status}`}>{s.status === "done" && "✓ "}{status}{s.status === "partial" && s.actual ? ` · ${Math.round(s.actual.min)} of ${s.min} min` : ""}</span>
@@ -176,7 +182,7 @@ export function SessionPanel({ id, onClose }: { id: string | null; onClose: () =
         <div className="sp-left">
           {s.sport !== "rest" ? (
             <>
-              <div className="stat"><div className="k">Duration</div><div className="v">{s.min} min</div></div>
+              <div className="stat"><div className="k">Duration</div><div className="v">{s.min >= 120 ? fmtDur(s.min) : `${s.min} min`}</div></div>
               <div className="stat"><div className="k">Zone</div><div className="v">{zoneName(zoneOfIntensity).split(" · ")[0]}<small> · {zoneName(zoneOfIntensity).split(" · ")[1]}</small></div></div>
               {tgt && <div className="stat"><div className="k">{tgt.k}</div><div className="v">{tgt.v}</div><div className="u">{tgt.u}{plan.athlete.zonesSource === "intake" ? `${tgt.u ? " · " : ""}from your answers` : plan.athlete.zonesSource === "default" ? `${tgt.u ? " · " : ""}default zones` : ""}</div></div>}
               <div className="stat"><div className="k">Planned load</div><div className="v">{plannedLoad(s)}</div></div>

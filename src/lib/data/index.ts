@@ -77,7 +77,8 @@ export const SPORT_LABEL: Record<Sport, string> = { swim: "Swim", bike: "Bike", 
 export function intensityOf(text: string) {
   const t = text.toLowerCase();
   if (/race sim|race day/.test(t)) return "Race";
-  if (/\btempo\b|threshold|lthr/.test(t)) return "Tempo";
+  if (/threshold|lthr/.test(t)) return "Threshold";
+  if (/\btempo\b/.test(t)) return "Tempo";
   if (/interval|hill reps|pickups/.test(t)) return "Intervals";
   if (/drill|technique/.test(t)) return "Technique";
   if (/\bez\b|easy|z2|recovery/.test(t)) return "Zone 2";
@@ -173,7 +174,7 @@ export function buildWeeks(plan: PlanWeekJson[], acts: Activity[] = [], av: Avai
         id: `w${w.week}-${i}`, date, dayIndex: i,
         start: timeFor(d.text, i, sport, av),
         min: d.min, sport,
-        title: SPORT_LABEL[sport],
+        title: isRaceDay(d.text) ? "Race day" : SPORT_LABEL[sport],
         detail: sport === "rest" ? "No session" : `${intensity} · ${d.min} min`,
         text: cleanText(d.text), intensity, why: whyOf(d.text, sport), status: sessionStatus(sport, d.min, date, activitiesOn(date, acts)),
       };
@@ -274,7 +275,7 @@ export const sumH = (o: { swim: number; bike: number; run: number; other: number
 // ---------- load model (earned, from work done) ----------
 // Load = minutes × intensity², with intensity = average HR ÷ threshold HR (TSS-like). The planned
 // factor is the square of each zone's HR midpoint over threshold, so planned and actual sit on one scale.
-const INTENSITY_FACTOR: Record<string, number> = { "Zone 2": 0.76, Aerobic: 0.76, Technique: 0.65, Endurance: 0.78, Tempo: 0.85, Intervals: 0.94, Race: 0.85 };
+const INTENSITY_FACTOR: Record<string, number> = { "Zone 2": 0.76, Aerobic: 0.76, Technique: 0.65, Endurance: 0.78, Tempo: 0.85, Threshold: 0.85, Intervals: 0.94, Race: 0.85 };
 export const plannedFactor = (intensity: string) => INTENSITY_FACTOR[intensity] ?? 0.76;
 export function plannedLoad(s: Session) { return s.sport === "rest" ? 0 : Math.round(s.min * plannedFactor(s.intensity)); }
 /** Intensity of an activity: HR ÷ LTHR when there is a heart rate, else from the athlete's 1–10 effort, else a sport default. */

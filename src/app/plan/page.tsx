@@ -21,7 +21,7 @@ import { dateFull, dateLabel, fromYmd, fmtHours, addDays, ymd } from "@/lib/form
 import { METHOD } from "@/lib/plan/rules";
 
 const M = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-const INTENSITIES = ["Zone 2", "Aerobic", "Technique", "Endurance", "Tempo", "Intervals", "Race"];
+const INTENSITIES = ["Zone 2", "Aerobic", "Technique", "Endurance", "Tempo", "Threshold", "Intervals", "Race"];
 const SPORTS: Sport[] = ["swim", "bike", "run", "brick", "strength", "hike", "other"];
 
 export default function PlanPage() {

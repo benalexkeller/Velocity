@@ -59,6 +59,7 @@ export function Builder({ edit, importFirst = false }: { edit: boolean; importFi
     }
     if (s === 3) {
       if (!intake.time.days.length) return "Pick at least one training day.";
+      if (eventType(intake.goal.type).kind === "tri" && intake.time.days.length < 3) return "A triathlon plan needs at least 3 training days.";
       if (!intake.time.max_hours || intake.time.max_hours < 2) return "Hours per week: at least 2.";
     }
     return null;

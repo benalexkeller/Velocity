@@ -33,6 +33,17 @@ export function targetFor(sport: Sport, z: Zone, zonesAll: Zones = ATHLETE.zones
 
 const swimSecPer100 = (zones: Zones = ATHLETE.zones) => { const m = (zones.swim?.["Aerobic"] ?? "2:00 – 2:10").match(/(\d+):(\d+)/); return m ? +m[1] * 60 + +m[2] : 125; };
 
+/** Effort zone from the words of a set (V-014): strides, threshold and hard / VO2 intervals Z4, all-out Z5, tempo and race pace or effort Z3. */
+function zoneOfWords(x: string): Zone {
+  if (/stride/.test(x)) return 4;
+  if (/threshold|ftp|lthr/.test(x)) return 4;
+  if (/\bhard\b|vo2/.test(x)) return 4;
+  if (/max effort|sprint/.test(x)) return 5;
+  if (/tempo|sweet ?spot|race (pace|effort)|@ ?im\b|im (run )?effort|pickup/.test(x)) return 3;
+  return 2;
+}
+const hmToMin = (h: string, m: string) => +h * 60 + +m;
+
 function parsePart(text: string, sport: Sport, totalMin: number, part?: "AM" | "PM", zones: Zones = ATHLETE.zones): Segment[] {
   const t = text.toLowerCase();
   const seg = (label: string, min: number, zone: Zone, kind: Segment["kind"]): Segment => ({ label, min: Math.max(1, Math.round(min)), zone, target: kind === "strength" ? "bodyweight / light load" : kind === "drill" ? "technique focus" : targetFor(sport, zone, zones), kind, part });
@@ -55,15 +66,33 @@ function parsePart(text: string, sport: Sport, totalMin: number, part?: "AM" | "
     out.push(seg("Cool-down", cd, 1, "cooldown"));
     return out;
   }
+  // race-specific long sessions: "last 20 min at race pace", "middle 1:00 at race pace", "20min continuous @ IM effort"
+  const lastRP = t.match(/last\s*(\d+)\s*min\s*at\s*race\s*(pace|effort)/);
+  const midRP = t.match(/middle\s*(\d+):(\d+)\s*at\s*race\s*(pace|effort)/);
+  const block = t.match(/(\d+)\s*min\s*(?:continuous\s*)?@\s*(?:im|race|70\.3)/);
+  if (lastRP || midRP || block) {
+    const rp = lastRP ? +lastRP[1] : midRP ? hmToMin(midRP[1], midRP[2]) : +block![1];
+    const easy = Math.max(0, totalMin - wu - cd - rp);
+    const label = block ? `${rp} min at race effort` : `${rp} min at race pace`;
+    out.push(seg("Warm-up", wu, 1, "warmup"));
+    if (lastRP) { out.push(seg(sport === "run" ? "Easy run" : "Easy", easy, 2, "main")); out.push(seg(label, rp, 3, "interval")); }
+    else { out.push(seg(sport === "run" ? "Easy run" : "Easy", Math.round(easy / 2), 2, "main")); out.push(seg(label, rp, 3, "interval")); out.push(seg(sport === "run" ? "Easy run" : "Easy", easy - Math.round(easy / 2), 2, "main")); }
+    out.push(seg("Cool-down", cd, 1, "cooldown"));
+    return out.filter((x) => x.min > 0);
+  }
   if (iv) {
     const reps = +iv[1], n = +iv[2], unit = iv[3] ?? (sport === "swim" ? "yd" : "min"), desc = (iv[4] ?? "").trim();
     const isTime = /^s|sec|min/.test(unit);
     const repMin = isTime ? (unit.startsWith("s") ? n / 60 : n) : sport === "swim" ? (n / 100) * (swimSecPer100(zones) / 60) : n;
-    const hard = /stride|pickup|tempo|fast|hard/.test(desc);
-    const zone: Zone = /stride/.test(desc) ? 4 : /tempo|pickup|hard/.test(desc) ? 3 : /fast cadence/.test(desc) ? 2 : /drill/.test(desc) ? 2 : 2;
-    const recMin = hard ? (unit.startsWith("s") ? 1 : Math.max(1, Math.round(repMin / 2))) : sport === "swim" ? 0.33 : 1;
+    const after = t.slice((iv.index ?? 0) + iv[0].length - (iv[4] ?? "").length);
+    const zone: Zone = /drill/.test(desc) ? 2 : zoneOfWords(desc || after);
+    const hard = zone >= 3;
+    // the recovery written in the session ("3min easy", "30s rest") wins over the computed one
+    const recW = after.match(/(\d+)\s*(s\b|sec|min)\s*(?:easy|recovery|rest|jog)/);
+    const recMin = recW ? (recW[2].startsWith("s") ? +recW[1] / 60 : +recW[1]) : hard ? (unit.startsWith("s") ? 1 : Math.max(1, Math.round(repMin / 2))) : sport === "swim" ? 0.33 : 1;
     const setMin = reps * (repMin + recMin);
-    const label = isTime ? `${reps} × ${n}${unit.startsWith("s") ? " s" : " min"} ${desc || (zone >= 3 ? "tempo" : "steady")}` : `${reps} × ${n} ${sport === "swim" ? "yd" : unit} ${desc || "steady"}`;
+    const what = desc.replace(/^at\s+/, "").replace(/\s+$/, "") || (zone >= 4 ? "hard" : zone === 3 ? "tempo" : "steady");
+    const label = isTime ? `${reps} × ${n}${unit.startsWith("s") ? " s" : " min"} ${what}` : `${reps} × ${n} ${sport === "swim" ? "yd" : unit} ${what}`;
     const mainMin = Math.max(0, totalMin - wu - cd - setMin);
     out.push(seg("Warm-up", wu, sport === "swim" ? 2 : 1, "warmup"));
     if (mainMin > 3 && /ez|easy|steady/.test(t) && !/drill/.test(desc)) out.push(seg(sport === "run" ? "Easy run" : sport === "bike" ? "Easy ride" : "Easy swim", mainMin, 2, "main"));
@@ -92,6 +121,12 @@ function parsePart(text: string, sport: Sport, totalMin: number, part?: "AM" | "
     out.push(seg("Cool-down", cd, 1, "cooldown"));
     return out;
   }
+  if (/at race (effort|pace)/.test(t)) {
+    out.push(seg("Warm-up", wu, 1, "warmup"));
+    out.push(seg("Race effort", totalMin - wu - cd, 3, "main"));
+    out.push(seg("Cool-down", cd, 1, "cooldown"));
+    return out;
+  }
   // default: easy / long / steady
   out.push(seg("Warm-up", wu, 1, "warmup"));
   out.push(seg(tempoSteady ? "Steady" : sport === "run" ? "Easy run" : sport === "bike" ? "Easy ride" : sport === "swim" ? "Easy swim" : "Easy", totalMin - wu - cd, 2, "main"));
@@ -105,7 +140,24 @@ export function workoutFor(s: Session, zones: Zones = ATHLETE.zones): Workout {
   const segments: Segment[] = [];
   const steps: string[] = [];
   if (s.sport === "rest") return { segments, steps: ["No session. Optional 10 min mobility."], sport: s.sport };
-  if (parts.length === 2) {
+  const offBike = text.match(/\+\s*run\s*(\d+):(\d+)\s*off the bike/i);
+  if (/^race day/i.test(text)) {
+    // race day (V-012): each leg at race effort; T1/T2 between the legs of a triathlon
+    const legs = [...text.matchAll(/\b(swim|bike|run)\s+(\d+):(\d+)/gi)].map((m) => ({ sport: m[1].toLowerCase() as Sport, min: hmToMin(m[2], m[3]) }));
+    if (legs.length) {
+      legs.forEach((l, k) => {
+        if (k > 0) segments.push({ label: `T${k}`, min: Math.max(1, Math.round((s.min - legs.reduce((a, x) => a + x.min, 0)) / Math.max(1, legs.length - 1))), zone: 1, target: "transition", kind: "recovery" });
+        segments.push({ label: `${l.sport[0].toUpperCase()}${l.sport.slice(1)} leg`, min: l.min, zone: 3, target: targetFor(l.sport, 3, zones), kind: "main" });
+      });
+    } else segments.push({ label: "Race", min: s.min, zone: 3, target: targetFor(s.sport, 3, zones), kind: "main" });
+  } else if (offBike) {
+    const runMin = hmToMin(offBike[1], offBike[2]);
+    const sim = /race (effort|pace)|race sim/i.test(text);
+    segments.push(...parsePart(text.slice(0, offBike.index), "bike", Math.max(10, s.min - runMin), undefined, zones));
+    const cd = segments.pop(); // the cool-down comes after the run
+    segments.push({ label: "Run off the bike", min: runMin, zone: sim ? 3 : 2, target: targetFor("run", sim ? 3 : 2, zones), kind: "main" });
+    if (cd) segments.push({ ...cd, label: "Cool-down (walk / spin)" });
+  } else if (parts.length === 2) {
     const [am, pm] = parts;
     const amMin = (() => { const m = am.match(/(\d+):(\d+)/); return m ? +m[1] * 60 + +m[2] : Math.round(s.min * 0.7); })();
     const pmMin = Math.max(5, s.min - amMin);
@@ -133,6 +185,20 @@ export function workoutFor(s: Session, zones: Zones = ATHLETE.zones): Workout {
     }
   }
   return { segments, steps, sport: s.sport, note: /fuel|eat|drink/i.test(text) ? text.match(/[—-]\s*([^—]*(?:fuel|eat|drink)[^—]*)$/i)?.[1]?.trim() : undefined };
+}
+
+/** The key work of a session and its target: the hardest zone with at least 8 minutes in it (so strides do not
+ *  turn an easy run into a Z4 session), else the zone with the most time. The panel header, its stats and the
+ *  dashboard hero all read this, so they match the steps. */
+export function hardestStep(s: Session, zones: Zones = ATHLETE.zones) {
+  const w = workoutFor(s, zones);
+  const work = w.segments.filter((x) => x.kind === "main" || x.kind === "interval" || x.kind === "test");
+  if (!work.length) return null;
+  const by = new Map<Zone, number>();
+  for (const x of work) by.set(x.zone, (by.get(x.zone) ?? 0) + x.min);
+  const zs = [...by.keys()].sort((a, b) => b - a);
+  const zone = zs.find((z) => (by.get(z) ?? 0) >= 8) ?? zs.reduce((a, b) => ((by.get(b) ?? 0) > (by.get(a) ?? 0) ? b : a));
+  return { zone, seg: work.find((x) => x.zone === zone)!, workout: w };
 }
 
 function guessSport(t: string): Sport {

@@ -14,6 +14,7 @@ import { useEffect, useState } from "react";
 import { PaceChart, VolumeChart } from "@/components/dashboard/Charts";
 import { weekLoad, type Session } from "@/lib/data";
 import { usePlan } from "@/lib/store";
+import { hardestStep } from "@/lib/workout";
 import { DAYS, MONTHS, addDays, dateLabel, fmtDur, fmtHMS, fromYmd, shortDate, today, ymd } from "@/lib/format";
 import { fmtDist, fmtSpeed, runPace, swimDist, swimPace } from "@/lib/units";
 import { fmtPace } from "@/lib/format";
@@ -23,14 +24,18 @@ function heroSub(s: Session) {
   const t = s.text.toLowerCase();
   if (/drill|technique/.test(t)) return "Technique";
   if (/long ride|long run/.test(t)) return "Long endurance";
-  if (/tempo|threshold/.test(t)) return "Tempo";
+  if (/threshold|lthr/.test(t)) return "Threshold";
+  if (/tempo/.test(t)) return "Tempo";
   if (/strides/.test(t)) return "Aerobic + strides";
   return "Aerobic endurance";
 }
+// the hero shows the target of the session's key work (same as the Plan panel)
 function target(s: Session, z: Record<string, Record<string, string>>) {
-  if (s.sport === "run") return { k: "Target pace", v: z.run[s.intensity] ?? z.run["Zone 2"], u: `per ${runPace(0).u.replace("/", "")}` };
-  if (s.sport === "bike" || s.sport === "brick") return { k: "Target speed", v: z.bike[s.intensity] ?? z.bike["Zone 2"], u: "" };
-  if (s.sport === "swim") return { k: "Target pace", v: z.swim[s.intensity] ?? z.swim["Aerobic"], u: `per 100 ${swimDist(0).u}` };
+  const key = hardestStep(s, z);
+  const t = key && /\d/.test(key.seg.target) ? key.seg.target.replace(/\s*\/(mi|100 yd)$/, "") : null;
+  if (s.sport === "run") return { k: "Target pace", v: t ?? z.run[s.intensity] ?? z.run["Zone 2"], u: `per ${runPace(0).u.replace("/", "")}` };
+  if (s.sport === "bike" || s.sport === "brick") return { k: "Target speed", v: t ?? z.bike[s.intensity] ?? z.bike["Zone 2"], u: "" };
+  if (s.sport === "swim") return { k: "Target pace", v: t ?? z.swim[s.intensity] ?? z.swim["Aerobic"], u: `per 100 ${swimDist(0).u}` };
   return null;
 }
 

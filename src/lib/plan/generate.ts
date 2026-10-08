@@ -63,7 +63,10 @@ function layout(kind: Kind, days: number[], longWeekend: boolean): Slot[] {
   }
   // quality sessions: spaced out among what is left, never next to each other when avoidable
   const free = () => avail.filter((d) => !used.has(d));
-  const pick = (pref: number[]) => { const f = free(); return pref.find((d) => f.includes(d)) ?? f[0]; };
+  const longDays = slots.map((s) => s.day);
+  const nextToLong = (d: number) => longDays.some((l) => Math.abs(l - d) === 1 || Math.abs(l - d) === 6);
+  // quality days: away from the long sessions and from each other when the week allows it
+  const pick = (pref: number[]) => { const f = free(); return pref.find((d) => f.includes(d) && !nextToLong(d)) ?? pref.find((d) => f.includes(d)) ?? f[0]; };
   if (kind === "tri") {
     const q1 = pick([1, 2, 0, 3, 4]); if (q1 != null) take(q1, "q1", "bike");
     const q2 = pick([3, 2, 1, 4, 0].filter((d) => Math.abs(d - (q1 ?? -9)) > 1)); if (q2 != null) take(q2, "q2", "run");
@@ -95,6 +98,21 @@ function phaseOf(N: number): { phases: Phase[]; names: string[]; recovery: boole
   });
   const recovery = phases.map((p, i) => (p === "base" || p === "build") && i > 0 && (i + 1) % RULES.recoveryEvery === 0 && phases[i + 1] !== "peak");
   return { phases, names, recovery };
+}
+
+/** Race day (V-012): the legs with their planned times, so the session has a sport and a race-effort target. */
+function raceDayText(intake: Intake, raceHours: number, imperial: boolean) {
+  const et = eventType(intake.goal.type), info = distanceInfo(intake.goal.type);
+  const name = intake.goal.event || et.label;
+  const sp = intake.goal.splits;
+  if (et.kind === "tri") {
+    const legs = sp ?? { swim: raceHours * 0.12, bike: raceHours * 0.52, run: raceHours * 0.33, transitions: raceHours * 0.03 };
+    const d = info.dist;
+    const dist = (mi: number) => (imperial ? `${mi} mi` : `${(mi * 1.609).toFixed(0)} km`);
+    return `Race day — ${name} · Swim ${hm(legs.swim)} (${imperial ? `${d.swimYd.toLocaleString()} yd` : `${Math.round(d.swimYd * 0.9144).toLocaleString()} m`}) · Bike ${hm(legs.bike)} (${dist(d.bikeMi)}) · Run ${hm(legs.run)} (${dist(d.runMi)})`;
+  }
+  const leg = et.kind === "run" ? "Run" : et.kind === "bike" ? "Bike" : et.kind === "swim" ? "Swim" : "Session";
+  return `Race day — ${name} · ${leg} ${hm(raceHours)} at race effort`;
 }
 
 export function planStart(t: Date = today()) {
@@ -164,6 +182,7 @@ export function generatePlan(intakeIn: Partial<Intake>, t: Date = today(), imper
     // how far into the plan: long sessions grow from ~50 % of their cap to 100 % by the end of build
     const prog = p === "base" || p === "build" ? 0.5 + 0.5 * (B <= 1 ? 1 : i / (B - 1)) : p === "peak" ? 1 : p === "taper" ? 0.55 : 0.3;
     const isRaceWeek = p === "race";
+    const peakNo = phases.slice(0, i).filter((x) => x === "peak").length; // 0, 1, … within the peak block
     const raceDate = intake.goal.date;
     const disciplineH = { swim: H * sh.swim, bike: H * sh.bike, run: H * sh.run, other: kind === "other" ? H : 0 };
     const count = (s: Slot["sport"]) => slots.filter((x) => x.sport === s).length;
@@ -171,6 +190,10 @@ export function generatePlan(intakeIn: Partial<Intake>, t: Date = today(), imper
     const strengthDays = new Set<number>();
     if (intake.strength) { const easy = slots.filter((s) => s.role === "easy" || s.role === "q1").map((s) => s.day); easy.slice(0, 2).forEach((d) => strengthDays.add(d)); }
     const isRec = recovery[i];
+    // triathlon with few days (V-010): two swims a week, as AM swims on the quality days when there is no free day for them
+    const swimSlots = slots.filter((x) => x.sport === "swim").length;
+    const doubleDays = kind === "tri" && swimSlots < 2 ? slots.filter((x) => x.role === "q1" || x.role === "q2" || x.role === "long2").map((x) => x.day).slice(0, 2 - swimSlots) : [];
+    let swimNo = 0;
 
     for (const s of slots) {
       const date = ymd(addDays(wkStart, s.day));
@@ -192,11 +215,14 @@ export function generatePlan(intakeIn: Partial<Intake>, t: Date = today(), imper
         if (s.sport === "bike") {
           const brick = race && (p === "build" || p === "peak") && !isRec;
           const runOff = p === "peak" ? Math.min(0.75, 0.15 * h + 0.25) : 0.33;
-          text = p === "peak" && !isRec ? `Race sim: Long ride ${hm(h)} at race effort + Run ${hm(runOff)} off the bike` : brick ? `Brick: Long ride ${hm(h)} EZ + Run ${hm(runOff)} off the bike` : `Long ride ${hm(h)} EZ`;
+          const sim = p === "peak" && !isRec && peakNo % 2 === 0;
+          text = sim ? `Race sim: Long ride ${hm(h)} at race effort + Run ${hm(runOff)} off the bike` : brick ? `Brick: Long ride ${hm(h)} EZ + Run ${hm(runOff)} off the bike` : `Long ride ${hm(h)} EZ`;
           longest.ride = Math.max(longest.ride, h); // the ride alone, before the run off the bike is added
-          if (brick || (p === "peak" && !isRec)) h += runOff;
+          if (brick || sim) h += runOff;
         } else if (s.sport === "run") {
-          text = p === "build" && !isRec ? `Long run ${hm(h)} EZ with the last 20 min at race pace` : p === "peak" && !isRec ? `Long run ${hm(h)} — middle ${hm(Math.max(0.33, h * 0.4))} at race pace` : `Long run ${hm(h)} EZ`;
+          // the day after a race-effort ride the long run stays easy; race-pace work on the long run every other week
+          const afterSim = race && p === "peak" && !isRec && peakNo % 2 === 0;
+          text = p === "build" && !isRec && i % 2 === 1 ? `Long run ${hm(h)} EZ with the last 20 min at race pace` : p === "peak" && !isRec && !afterSim ? `Long run ${hm(h)} — middle ${hm(Math.max(0.33, h * 0.4))} at race pace` : `Long run ${hm(h)} EZ`;
           longest.run = Math.max(longest.run, h);
         } else if (s.sport === "swim") { text = `Long swim ${hm(h)} steady${p === "peak" ? " — open water if possible" : ""}`; longest.swim = Math.max(longest.swim, h); }
         else text = `Long session ${hm(h)} EZ`;
@@ -206,7 +232,7 @@ export function generatePlan(intakeIn: Partial<Intake>, t: Date = today(), imper
         if (p === "taper") h = Math.min(h, 0.75);
         const sp = s.sport === "bike" ? "Bike" : s.sport === "run" ? "Run" : s.sport === "swim" ? "Swim" : "Session";
         if (p === "base" || isRec) text = s.sport === "run" ? `Run ${hm(h)} EZ + 6x20s strides` : s.sport === "bike" ? `Bike ${hm(h)} EZ + 3x1min fast cadence` : s.sport === "swim" ? `Swim ${hm(h)} — drills + 6x100 smooth` : `Session ${hm(h)} EZ`;
-        else if (p === "build") text = s.role === "q1" ? `${sp} ${hm(h)} tempo — 3x${s.sport === "bike" ? "10" : "8"}min at threshold` : `${sp} ${hm(h)} intervals — 5x${s.sport === "bike" ? "4" : "3"}min hard, 3min easy`;
+        else if (p === "build") text = s.role === "q1" ? `${sp} ${hm(h)} — 3x${s.sport === "bike" ? "10" : "8"}min at threshold, 3min easy` : `${sp} ${hm(h)} intervals — 5x${s.sport === "bike" ? "4" : "3"}min hard, 3min easy`;
         else if (p === "peak") text = `${sp} ${hm(h)} — ${s.sport === "bike" ? "3x15min at race effort" : s.sport === "run" ? "4x8min at race pace" : "8x100 at race pace"}`;
         else if (p === "taper") text = `${sp} ${hm(h)} with 3x3min at race effort`;
         else text = `${sp} ${hm(h)} EZ + 3x1min at race effort`;
@@ -214,9 +240,18 @@ export function generatePlan(intakeIn: Partial<Intake>, t: Date = today(), imper
         h = otherH();
         if (isRaceWeek) h = Math.min(h, 0.4);
         if (p === "taper") h = Math.min(h, 0.75);
-        text = s.sport === "swim" ? (p === "base" ? `Swim ${hm(h)} — technique + 4x100 smooth` : `Swim ${hm(h)} — 10x100 at threshold pace`) : s.sport === "bike" ? `Bike ${hm(h)} EZ` : s.sport === "run" ? `Run ${hm(h)} EZ` : `Session ${hm(h)} EZ`;
+        // swims (V-072): the hard days are the two quality sessions; standalone swims are steady sets or technique
+        if (s.sport === "swim") swimNo++;
+        text = s.sport === "swim" ? (p === "base" || isRec || p === "taper" || isRaceWeek || swimNo > 1 ? `Swim ${hm(h)} — technique + 4x100 smooth` : `Swim ${hm(h)} — 5x200 steady, 30s rest`) : s.sport === "bike" ? `Bike ${hm(h)} EZ` : s.sport === "run" ? `Run ${hm(h)} EZ` : `Session ${hm(h)} EZ`;
       }
       let min = mins(h);
+      if (doubleDays.includes(s.day) && !isRaceWeek) {
+        const sw = cap(disciplineH.swim / 2, 0.5, 1);
+        const hardDay = s.role === "q1" || s.role === "q2";
+        const swimText = p === "base" || isRec || p === "taper" || !hardDay ? `Swim ${hm(sw)} — technique + 4x100 smooth` : `Swim ${hm(sw)} — 8x100 at threshold pace, 20s rest`;
+        text = `AM: ${swimText}. PM: ${text}`;
+        min += mins(sw);
+      }
       if (strengthDays.has(s.day) && !isRaceWeek && p !== "taper") { text += " + Strength 0:20 (squats, lunges, hinges, planks)"; min += 20; }
       week[s.day] = { text, min };
     }
@@ -224,10 +259,19 @@ export function generatePlan(intakeIn: Partial<Intake>, t: Date = today(), imper
     if (isRaceWeek) {
       for (let d = 0; d < 7; d++) {
         const date = ymd(addDays(wkStart, d));
-        if (date === raceDate) week[d] = { text: `Race day — ${intake.goal.event || et.label}`, min: mins(raceHours) };
+        if (date === raceDate) week[d] = { text: raceDayText(intake, raceHours, imperial), min: mins(raceHours) };
         else if (date > raceDate) week[d] = { text: "Rest", min: 0 };
         else if (date === ymd(addDays(fromYmd(raceDate), -1))) week[d] = { text: kind === "tri" || kind === "bike" ? "Rest — bike check, bag check, early night" : "Rest — gear check, early night", min: 0 };
       }
+    }
+    // never more than the athlete's maximum, nor far above this week's target (session minimums can add up):
+    // drop easy sessions first, latest in the week first
+    const limit = isRaceWeek ? Infinity : Math.min(maxH, Math.max(H * 1.15, H + 0.5)) * 60;
+    const total = () => Object.values(week).reduce((a, x) => a + x.min, 0);
+    for (const s of [...slots].reverse()) {
+      if (total() <= limit) break;
+      if (s.role !== "easy" || !week[s.day] || (kind === "tri" && s.sport === "swim" && swimSlots <= 2)) continue;
+      week[s.day] = { text: "Rest", min: 0 };
     }
     for (let d = 0; d < 7; d++) {
       const date = ymd(addDays(wkStart, d));

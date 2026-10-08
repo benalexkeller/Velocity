@@ -30,7 +30,7 @@ function factsOf(p: Phase) {
   };
   const hours = p.weeks.map((w) => w.plannedMin / 60);
   const lo = Math.min(...hours), hi = Math.max(...hours);
-  const hard = all.filter((s) => s.intensity === "Tempo" || s.intensity === "Intervals" || s.intensity === "Race" || QUALITY.test(s.text)).length / p.weeks.length;
+  const hard = all.filter((s) => s.intensity === "Tempo" || s.intensity === "Threshold" || s.intensity === "Intervals" || s.intensity === "Race" || QUALITY.test(s.text)).length / p.weeks.length;
   const bricks = all.filter((s) => /brick|off the bike/i.test(s.text)).length;
   return {
     dates: `${short(first.start)} – ${short(ymd(addDays(fromYmd(last.start), 6)))}`,
