@@ -1,9 +1,6 @@
 /* ---------- Plan page ---------- */
 .plan { padding-right: 18px; min-width: 0; }
 .plan-head { display: flex; align-items: center; gap: 14px; padding: 8px 0 10px; flex-wrap: wrap; }
-.plan-head .back { width: 36px; height: 36px; border-radius: 50%; background: var(--surface); box-shadow: var(--shadow); border: 0; display: inline-flex; align-items: center; justify-content: center; }
-.plan-head .back svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.plan-head h1 { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; width: 150px; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .plan-head .range { font-size: 16px; color: var(--muted); white-space: nowrap; margin-left: -2px; }
 .plan-head .grow { flex: 1; }
 .plan-head .btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; }

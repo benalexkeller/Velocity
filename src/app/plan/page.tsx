@@ -9,10 +9,12 @@ import { CoachRail } from "@/components/CoachRail";
 import { WeekGrid, weekRange } from "@/components/plan/WeekGrid";
 import { SessionPanel } from "@/components/plan/SessionPanel";
 import { MonthGrid } from "@/components/plan/MonthGrid";
+import { PeriodStepper } from "@/components/PeriodStepper";
 import { RampChart } from "@/components/plan/RampChart";
 import { PlanExplained } from "@/components/plan/PlanExplained";
 import { COACH_THREAD, plannedByDiscipline, plannedLoad, type Sport, type Week } from "@/lib/data";
 import { usePlan } from "@/lib/store";
+import { NutritionProvider } from "@/lib/nutrition/store";
 import { dateLabel, fromYmd, fmtHours, addDays, ymd } from "@/lib/format";
 import { METHOD } from "@/lib/plan/rules";
 
@@ -21,7 +23,7 @@ const INTENSITIES = ["Zone 2", "Aerobic", "Technique", "Endurance", "Tempo", "In
 const SPORTS: Sport[] = ["swim", "bike", "run", "brick", "strength", "hike", "other"];
 
 export default function PlanPage() {
-  return <Suspense fallback={null}><Plan /></Suspense>;
+  return <Suspense fallback={null}><NutritionProvider><Plan /></NutritionProvider></Suspense>;
 }
 
 // "+ Add session": creates a session in the local plan.
@@ -114,13 +116,11 @@ function Plan() {
     <main className="main with-coach">
       <div className="plan">
         <div className="plan-head">
-          <button className="back" type="button" aria-label="Previous week" onClick={() => (view === "week" ? setWk(Math.max(1, wk - 1)) : setMo(({ y, m }) => (m === 0 ? { y: y - 1, m: 11 } : { y, m: m - 1 })))}>
-            <Icon name="back" />
-          </button>
-          <h1>{view === "week" ? `Week ${week.week}` : M[mo.m]}</h1>
-          <button className="back" type="button" aria-label="Next week" onClick={() => (view === "week" ? setWk(Math.min(plan.weeks.length, wk + 1)) : setMo(({ y, m }) => (m === 11 ? { y: y + 1, m: 0 } : { y, m: m + 1 })))}>
-            <Icon name="chevron" />
-          </button>
+          <PeriodStepper big width={view === "week" ? 118 : 150} label={view === "week" ? `Week ${week.week}` : M[mo.m]}
+            prevLabel={view === "week" ? "Previous week" : "Previous month"} nextLabel={view === "week" ? "Next week" : "Next month"}
+            prevDisabled={view === "week" && wk <= 1} nextDisabled={view === "week" && wk >= plan.weeks.length}
+            onPrev={() => (view === "week" ? setWk(Math.max(1, wk - 1)) : setMo(({ y, m }) => (m === 0 ? { y: y - 1, m: 11 } : { y, m: m - 1 })))}
+            onNext={() => (view === "week" ? setWk(Math.min(plan.weeks.length, wk + 1)) : setMo(({ y, m }) => (m === 11 ? { y: y + 1, m: 0 } : { y, m: m + 1 })))} />
           <span className="range">{view === "week" ? weekRange(week) : mo.y}</span>
           {wk !== cur.week && view === "week" && <button type="button" className="btn ghost small" onClick={() => setWk(cur.week)}>Today</button>}
           <span className="grow" />

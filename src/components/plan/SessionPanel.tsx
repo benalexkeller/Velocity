@@ -6,6 +6,7 @@ import { Icon } from "../icons";
 import { SportIcon } from "../SportIcon";
 import { RouteMap } from "../RouteMap";
 import { LogActivity } from "../dashboard/LogActivity";
+import { FuelBlock } from "../nutrition/SessionFuel";
 import { STATUS_LABEL, activityLoad, plannedLoad, type Session, type Sport } from "@/lib/data";
 import { usePlan } from "@/lib/store";
 import { dateLabel, fmtHMS, fmtPace, today, ymd } from "@/lib/format";
@@ -136,6 +137,7 @@ export function SessionPanel({ id, onClose }: { id: string | null; onClose: () =
           <p className="txt">{s.text}</p>
           <ol className="steps">{wk.steps.map((st, i) => <li key={i}>{st}</li>)}</ol>
           {wk.note && <p className="why">{wk.note}</p>}
+          <FuelBlock s={s} />
           {acts.length > 0 && (
             <div className="sp-acts">
               <div className="eyebrow muted">Logged that day</div>

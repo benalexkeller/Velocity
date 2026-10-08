@@ -1,7 +1,8 @@
 "use client";
 import "../account.css";
-import { useState } from "react";
+import { Fragment, useState } from "react";
 import Link from "next/link";
+import { ConnectWearable, WEARABLES, useWearables } from "@/components/ConnectWearable";
 import { usePlan } from "@/lib/store";
 import { ProfileForm } from "@/components/account/ProfileForm";
 import { dateLabel } from "@/lib/format";
@@ -34,14 +35,24 @@ export default function ProfilePage() {
         </section>
         <section className="card">
           <h2>Connections</h2>
-          <div className="kv">
-            <span>Garmin</span><span>Manual import for now</span>
-            <span>Whoop</span><span>Not connected</span>
-            <span>Google Calendar</span><span>{plan.calendar ? "Sync on (connection not built yet)" : "Sync off"}</span>
-          </div>
+          <ProfileConnections />
         </section>
         {plan.accounts && a.isAdmin && <Link href="/admin" className="link">Admin · user list →</Link>}
       </div>
     </main>
+  );
+}
+
+function ProfileConnections() {
+  const { picked } = useWearables();
+  return (
+    <>
+      <div className="kv">
+        {WEARABLES.filter((w) => picked.includes(w.k)).map((w) => <Fragment key={w.k}><span>{w.name}</span><span>Picked · connects when live</span></Fragment>)}
+        {!picked.length && <><span>Wearable</span><span>None picked</span></>}
+        <span>Google Calendar</span><span>Not available yet</span>
+      </div>
+      <div style={{ marginTop: 12 }}><ConnectWearable variant="ghost" /></div>
+    </>
   );
 }

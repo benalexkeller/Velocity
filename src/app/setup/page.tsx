@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { BRAND } from "@/lib/config";
 import { usePlan } from "@/lib/store";
 import { ProfileForm } from "@/components/account/ProfileForm";
+import { ConnectWearable } from "@/components/ConnectWearable";
 
 // First sign-in: the profile and race, then the app. PR's account can pull in the seed data here.
 export default function SetupPage() {
@@ -26,6 +27,11 @@ export default function SetupPage() {
             <div className="row"><button type="button" className="btn ghost" disabled={importing || imported} onClick={async () => { setImporting(true); try { await plan.importSeed(); setImported(true); } finally { setImporting(false); } }}>{imported ? "Imported ✓" : importing ? "Importing…" : "Import my data"}</button></div>
           </div>
         )}
+        <div className="form setup-wearable" style={{ padding: 14, border: "1px solid var(--line)", borderRadius: 12, marginBottom: 8 }}>
+          <b style={{ fontSize: 14 }}>Your watch</b>
+          <span className="hint">Optional. Pick the device you train with; it connects here when its integration opens and imports your history. Skip it and log sessions by hand.</span>
+          <div className="row"><ConnectWearable /></div>
+        </div>
         <ProfileForm mode="setup" onSaved={() => { router.replace(imported ? "/dashboard" : "/plan/new"); router.refresh(); }} />
       </section>
     </main>

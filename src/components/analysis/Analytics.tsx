@@ -408,19 +408,19 @@ export function Quality({ onPick }: { onPick: (id: string) => void }) {
   const rows = an.trainingQuality(6);
   return (
     <section className="card ax-panel" aria-label="Training quality">
-      <div className="ax-head"><div><h2>Training quality</h2><p>Recent sessions and execution</p></div><Link href="/activities" className="link">View all activities →</Link></div>
+      <div className="ax-head"><div><h2>Recent activities vs plan</h2><p>Completed = same sport, at least 70 % of the planned time</p></div><Link href="/activities" className="link">View all activities →</Link></div>
       <table className="tbl small ax-quality">
-        <thead><tr><th>Date</th><th>Session</th><th>Planned</th><th>Actual</th><th>Load</th><th>Execution</th><th>Facts</th></tr></thead>
+        <thead><tr><th>Date</th><th>Activity</th><th className="num">Planned</th><th className="num">Done</th><th className="num">Load</th><th>Status</th><th>Facts</th></tr></thead>
         <tbody>
           {rows.map((r) => (
             <tr key={r.a.id} className="row" onClick={() => onPick(r.a.id)}>
               <td className="nowrap">{dateLabel(r.a.date)}</td>
               <td><span className="sess"><SportIcon sport={r.a.sport} size={18} />{r.a.name}</span></td>
-              <td>{r.planned ? `${r.planned.min} min` : "—"}</td>
-              <td>{fmtHMS(r.a.min)}</td>
-              <td>{r.load}</td>
-              <td><span className="exec"><b>{r.execution}%</b><i className={r.level}><span style={{ width: `${r.execution}%` }} /></i></span></td>
-              <td className="facts"><i className={`dot ${r.level}`} /><CoachNote text={r.insight} /></td>
+              <td className="num">{r.planned ? `${r.planned.min} min` : "—"}</td>
+              <td className="num">{fmtHMS(r.a.min)}</td>
+              <td className="num">{r.load}</td>
+              <td><span className={`qstatus ${r.level}`}>{r.status}</span></td>
+              <td className="facts"><CoachNote text={r.insight} /></td>
             </tr>
           ))}
         </tbody>

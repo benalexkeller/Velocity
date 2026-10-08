@@ -218,7 +218,9 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
     const onDay = week?.sessions.filter((s) => s.date === a.date) ?? [];
     const restDay = onDay.length > 0 && onDay.every((s) => s.sport === "rest");
     // a rest day is not a planned session: nothing to compare duration or pace against
-    const planned = onDay.find((s) => s.sport === a.sport || (s.sport === "brick" && (a.sport === "bike" || a.sport === "run"))) ?? onDay.find((s) => s.sport !== "rest") ?? null;
+    // the session this activity was paired with (same sport only); another sport never stands in for the plan
+    const planned = onDay.find((s) => s.actual?.id === a.id) ?? onDay.find((s) => s.sport === a.sport || (s.sport === "brick" && (a.sport === "bike" || a.sport === "run"))) ?? null;
+    const otherPlanned = planned ? null : onDay.find((s) => s.sport !== "rest") ?? null;
     const sp = a.sport === "swim" || a.sport === "bike" || a.sport === "run" ? a.sport : null;
     const zone = planned && sp ? ATHLETE.zones[sp]?.[planned.intensity] : undefined;
     const range = parseRange(zone);
@@ -234,7 +236,7 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
     const ef = pace != null && a.hr ? (sp === "bike" ? pace / a.hr : (1 / pace) * 3600 / a.hr) : null; // speed per bpm
     const sameType = sp ? ACTIVITIES.filter((x) => x.sport === sp && x.id !== a.id && x.hr && paceOf(x, sp) != null && fromYmd(x.date) >= addDays(fromYmd(a.date), -28) && fromYmd(x.date) <= fromYmd(a.date)) : [];
     const efAvg = sameType.length ? sameType.reduce((s, x) => { const p = paceOf(x, sp as "run") as number; return s + (sp === "bike" ? p / (x.hr as number) : ((1 / p) * 3600) / (x.hr as number)); }, 0) / sameType.length : null;
-    return { planned, restDay, zone, range, pace, verdict, load, durDelta, fitnessEffect: load / 42, fatigueEffect: load / 7, ef, efAvg, efN: sameType.length, sport: sp as Sport | null };
+    return { planned, otherPlanned, restDay, zone, range, pace, verdict, load, durDelta, fitnessEffect: load / 42, fatigueEffect: load / 7, ef, efAvg, efN: sameType.length, sport: sp as Sport | null };
   }
 
   // =====================================================================
@@ -318,17 +320,17 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
   }
 
   /** Recent sessions with planned vs actual and an execution score. */
+  /** Recent activities against the plan, in words: Completed (same sport, ≥ 70 % of the planned time), Partial, Unplanned. */
   function trainingQuality(n = 6) {
     return [...ACTIVITIES].reverse().slice(0, n).map((a) => {
       const r = analyzeActivity(a);
-      const durScore = r.planned ? Math.min(1, a.min / Math.max(1, r.planned.min)) : 1;
-      const paceScore = r.verdict === "in range" ? 1 : r.verdict ? 0.8 : 1;
-      const execution = Math.round(durScore * paceScore * 100);
+      const status: "Completed" | "Partial" | "Unplanned" = r.planned ? (a.min >= 0.7 * r.planned.min ? "Completed" : "Partial") : "Unplanned";
       const facts: string[] = [];
-      if (r.planned) facts.push(`${a.min} of ${r.planned.min} min planned`); else facts.push(r.restDay ? "rest day in the plan" : "no session planned that day");
+      if (r.planned) facts.push(`${Math.round(a.min)} of ${r.planned.min} min planned`);
+      else if (r.otherPlanned) facts.push(`plan was ${r.otherPlanned.title.toLowerCase()} ${r.otherPlanned.min} min`);
+      else facts.push(r.restDay ? "rest day in the plan" : "no session planned that day");
       if (r.verdict && r.verdict !== "in range") facts.push(r.verdict); else if (r.verdict) facts.push("pace in range");
-      if (r.planned && r.planned.sport !== a.sport && r.planned.sport !== "brick") facts.push(`plan was ${r.planned.title.toLowerCase()}`);
-      return { a, planned: r.planned, load: r.load, execution, level: execution >= 90 ? "good" : execution >= 75 ? "ok" : "low", insight: facts.join(" · ") };
+      return { a, planned: r.planned, load: r.load, status, level: status === "Completed" ? "good" : status === "Partial" ? "ok" : "none", insight: facts.join(" · ") };
     });
   }
 

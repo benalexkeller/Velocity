@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type InputHTMLAttributes } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "../icons";
+import { ConnectWearable } from "../ConnectWearable";
 import { usePlan } from "@/lib/store";
 import { DISTANCES, distanceInfo, type Race, type RaceDistance } from "@/lib/athlete";
 import type { Availability } from "@/lib/data";
@@ -272,8 +273,9 @@ function DevicesStep({ intake, set, setIntake, edit, hasPlan }: { intake: Intake
   void set;
   return (
     <>
-      <div className="pb-q"><h2>Which devices do you have?</h2><span className="hint">Garmin syncs activities, heart rate, VO2max. Connecting happens under Profile once the integrations are live; this only records what to expect.</span></div>
+      <div className="pb-q"><h2>Which devices do you have?</h2><span className="hint">Connections are not live yet; this records what you use so it can connect when they open. Garmin brings activities, heart rate and VO2max.</span></div>
       <div className="days">{DEVICES.map((d) => <button key={d.k} type="button" className={intake.devices.includes(d.k) ? "on" : ""} onClick={() => toggle(d.k)}>{d.label}</button>)}</div>
+      <div style={{ marginTop: 10 }}><ConnectWearable variant="ghost" onPick={(k, on) => setIntake((cur) => ({ ...cur, devices: on ? [...cur.devices.filter((x) => x !== "none" && x !== k), k] : cur.devices.filter((x) => x !== k) }))} /></div>
       <div className="pb-q small"><h2>Strength training?</h2><span className="hint">Two short sessions a week (20 min) added to easy days. Off in the taper and race week.</span></div>
       <div className="days">{[[true, "Yes"], [false, "No"]].map(([v, l]) => <button key={String(v)} type="button" className={intake.strength === v ? "on" : ""} onClick={() => setIntake((cur) => ({ ...cur, strength: v as boolean }))}>{l as string}</button>)}</div>
       <div className="pb-recap">

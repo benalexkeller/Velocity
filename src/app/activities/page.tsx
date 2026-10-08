@@ -8,6 +8,7 @@ import { MapModal, RouteMap } from "@/components/RouteMap";
 import { CoachNote } from "@/components/CoachNote";
 import { activityLoad, type Activity } from "@/lib/data";
 import { hrZone } from "@/lib/athlete";
+import { ConnectWearable } from "@/components/ConnectWearable";
 import { usePlan } from "@/lib/store";
 import { DAYS, MONTHS, addDays, fmtHMS, fmtPace, fromYmd, today } from "@/lib/format";
 import { elev, fmtDist, fmtSpeed, runPace, swimDist, swimPace } from "@/lib/units";
@@ -97,6 +98,7 @@ function Activities() {
             <span className="grow" />
             <label className="search"><Icon name="search" /><input id="act-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search activities…" aria-label="Search activities" /></label>
             <span style={{ position: "relative" }}>
+              <ConnectWearable variant="ghost" />
               <button className={`iconbtn${source !== "all" || gpsOnly ? " on" : ""}`} type="button" aria-label="Filters" aria-expanded={filters} onClick={() => setFilters((f) => !f)}><Icon name="filter" /></button>
               {filters && (
                 <div className="menu filters" role="dialog" aria-label="Filters">

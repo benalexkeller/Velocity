@@ -13,7 +13,7 @@ const ok = (name, cond, detail = '') => out.push(`${cond ? 'PASS' : 'FAIL'} ${na
   // Seed athlete: the dashboard still renders and shows the compliance wording
   await p.goto(base + '/dashboard', { waitUntil: 'networkidle' });
   const tw = await p.textContent('.card.tw');
-  ok('V-088 dashboard says "Completed sessions"', /Completed sessions/.test(tw || ''), (tw || '').slice(0, 80));
+  ok('V-088 dashboard compliance as done · 28 days', /% done · 28 days/.test(tw || ''), (tw || '').slice(0, 80));
   // Activities detail: load and effort still present for a Garmin activity
   await p.goto(base + '/activities', { waitUntil: 'networkidle' });
   const rows = await p.$$('tr.row'); await rows[0].click(); await p.waitForTimeout(300);

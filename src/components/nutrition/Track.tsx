@@ -9,6 +9,7 @@ import { MEALS, type LogEntry, type Meal } from "@/lib/nutrition/types";
 import { SUPPLEMENT_MAP } from "@/lib/nutrition/supplements";
 import { addDays, dateLabel, fromYmd, shortDate, today, ymd } from "@/lib/format";
 import { AddPanel } from "./AddPanel";
+import { PeriodStepper } from "../PeriodStepper";
 import { niceTicks, useWidth } from "@/lib/ticks";
 
 const fmt = (n: number, d = 0) => n.toLocaleString(undefined, { maximumFractionDigits: d });
@@ -60,9 +61,7 @@ function DayView({ date, setDate, setView }: { date: string; setDate: (d: string
   return (
     <>
       <div className="nu-daynav">
-        <button type="button" className="back" aria-label="Previous day" onClick={() => setDate(ymd(addDays(fromYmd(date), -1)))}><Icon name="back" /></button>
-        <div className="lbl"><b>{dateLabel(date)}</b></div>
-        <button type="button" className="back" aria-label="Next day" onClick={() => setDate(ymd(addDays(fromYmd(date), 1)))}><Icon name="chevron" /></button>
+        <PeriodStepper width={112} label={dateLabel(date)} prevLabel="Previous day" nextLabel="Next day" onPrev={() => setDate(ymd(addDays(fromYmd(date), -1)))} onNext={() => setDate(ymd(addDays(fromYmd(date), 1)))} />
         <Toggle view="day" setView={setView} />
         {!isToday && <button type="button" className="btn ghost small" onClick={() => setDate(ymd(today()))}>Today</button>}
       </div>
@@ -189,9 +188,7 @@ function WeekView({ date, setDate, setView }: { date: string; setDate: (d: strin
   return (
     <>
       <div className="nu-daynav">
-        <button type="button" className="back" aria-label="Previous week" onClick={() => setDate(ymd(addDays(mon, -7)))}><Icon name="back" /></button>
-        <div className="lbl"><b>{dateLabel(ymd(mon))} – {dateLabel(ymd(addDays(mon, 6)))}</b></div>
-        <button type="button" className="back" aria-label="Next week" onClick={() => setDate(ymd(addDays(mon, 7)))}><Icon name="chevron" /></button>
+        <PeriodStepper width={190} label={`${dateLabel(ymd(mon))} – ${dateLabel(ymd(addDays(mon, 6)))}`} prevLabel="Previous week" nextLabel="Next week" onPrev={() => setDate(ymd(addDays(mon, -7)))} onNext={() => setDate(ymd(addDays(mon, 7)))} />
         <Toggle view="week" setView={setView} />
       </div>
       <div className="nu-cols week">

@@ -28,7 +28,9 @@
 .hero .garmin { position: absolute; left: 50%; margin-left: -58px; bottom: calc(100% + 10px); width: 116px; filter: drop-shadow(0 0 18px rgba(255,255,255,0.22)) drop-shadow(0 14px 20px rgba(0,0,0,0.5)); animation: hover 4s ease-in-out infinite; }
 @keyframes hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
 .hero .stat.gm .v { display: inline-flex; align-items: center; gap: 9px; font-size: 28px; height: 34px; }
-.hero .stat.gm .garmin-date { font-size: 20px; font-weight: 600; }
+.hero .stat.gm .garmin-date { font-size: 20px; font-weight: 600; white-space: nowrap; }
+.hero .stat.gm .cw-btn { position: absolute; top: -2px; right: 0; height: 26px; padding: 0 10px; font-size: 12px; }
+.hero .stat.gm .cw-btn svg { width: 14px; height: 14px; }
 
 /* + log */
 .logcard { position: relative; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; gap: 10px; padding: 18px 12px; }
@@ -96,12 +98,13 @@
 /* this week */
 .tw { padding: 16px 20px 18px; }
 .tw .head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
-.tw .head small { color: var(--muted); font-size: 13px; }
+.tw .head small { color: var(--muted); font-size: 13px; text-align: right; }
 .tw .cols { display: grid; grid-template-columns: repeat(3, 1fr); }
 .tw .col { padding: 0 14px 0 0; margin-right: 14px; border-right: 1px solid var(--line-2); }
 .tw .col:last-child { border-right: 0; margin-right: 0; }
 .tw .k { font-size: 13px; color: var(--ink-2); }
-.tw .v { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; margin: 2px 0 10px; }
+.tw .v { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; margin: 2px 0 10px; white-space: nowrap; }
+.tw .v .dim { font-size: 20px; }
 .tw .v .dim { color: var(--muted-2); font-weight: 500; }
 
 /* last activity */

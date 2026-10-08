@@ -183,3 +183,7 @@
 .ax-vtip > div:not(.d):not(.tot):not(.sub) i { width: 8px; height: 8px; border-radius: 2px; display: inline-block; }
 .ax-vtip > div:not(.d):not(.tot):not(.sub) b { font-weight: 600; }
 .ax-vtip .n { color: var(--muted); font-size: 12px; white-space: nowrap; }
+
+.qstatus { display: inline-block; font-size: 13px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); white-space: nowrap; }
+.qstatus.good { background: var(--ok-soft); color: var(--ok); }
+.qstatus.ok { background: var(--warn-soft); color: var(--warn); }

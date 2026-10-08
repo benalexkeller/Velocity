@@ -35,6 +35,7 @@ export const Icons = {
   check: () => P("M5 12l4.5 4.5L19 7"),
   lock: () => P("M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4"),
   unlock: () => P("M6 11h12v10H6zM8 11V7a4 4 0 0 1 7.5-2"),
+  watch: () => P("M9 3h6l.8 3.4M9 3l-.8 3.4M9 21h6l.8-3.4M9 21l-.8-3.4M12 9.5V12l1.6 1", <circle cx="12" cy="12" r="5.6" />),
 };
 
 export type IconName = keyof typeof Icons;
