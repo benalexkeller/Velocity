@@ -1,0 +1,21 @@
+// Unit check of the nutrition engine: race day, load days, long day, rest day, deficit guardrails.
+import { targetsFor, sessionFuel } from "../src/lib/nutrition/targets";
+const mk = (sport: any, min: number, intensity: string, date: string, text = "", start = "06:30") => ({ id: Math.random().toString(), date, dayIndex: 0, start, min, sport, title: sport, detail: "", text, intensity, why: "", status: "planned" } as any);
+const p: any = { weight_kg: 75, height_cm: 178, birth_year: 1994, sex: "male", goal: "maintain", goal_weight_kg: null, weight_stages: [], base_kcal: null, bottle_ml: 750, supplements: [], setup_done: true };
+const race = "2027-04-24";
+const row = (label: string, t: any) => console.log(label.padEnd(26), t ? `${t.dayType.padEnd(9)} kcal ${String(t.kcal).padStart(6)}  C ${String(t.carbs).padStart(4)} (${t.carbsPerKg} g/kg)  P ${t.protein}  F ${String(t.fat).padStart(3)}  fluid ${(t.fluid_ml/1000).toFixed(1)} L (during ${(t.fluidDuring_ml/1000).toFixed(1)})  Na during ${t.sodiumDuring_mg}  goal ${t.goalAdj} ${t.goalNote}` : "null");
+row("rest day", targetsFor(p, [], { date: "2027-02-01", raceDate: race, raceDistance: "140.6", phase: "Base 2" }));
+row("2 h Z2 ride", targetsFor(p, [mk("bike", 120, "Zone 2", "2027-02-02")], { date: "2027-02-02", raceDate: race, raceDistance: "140.6", phase: "Base 2" }));
+row("4 h Z2 ride", targetsFor(p, [mk("bike", 240, "Endurance", "2027-02-03")], { date: "2027-02-03", raceDate: race, raceDistance: "140.6", phase: "Build 1" }));
+row("5:15 race sim", targetsFor(p, [mk("brick", 315, "Race", "2027-03-27", "Race simulation")], { date: "2027-03-27", raceDate: race, raceDistance: "140.6", phase: "Peak" }));
+row("race −2 (light swim)", targetsFor(p, [mk("swim", 25, "Aerobic", "2027-04-22")], { date: "2027-04-22", raceDate: race, raceDistance: "140.6", phase: "Race week" }));
+row("race −1 (rest)", targetsFor(p, [], { date: "2027-04-23", raceDate: race, raceDistance: "140.6", phase: "Race week" }));
+row("RACE DAY 13 h", targetsFor(p, [mk("other", 780, "Race", race, "Race day — IRONMAN Texas")], { date: race, raceDate: race, raceDistance: "140.6", phase: "Race week" }));
+const lose: any = { ...p, goal: "lose", weight_kg: 55, sex: "female", height_cm: 165 };
+row("55 kg F lose, rest", targetsFor(lose, [], { date: "2027-02-01", raceDate: race, raceDistance: "70.3", phase: "Base 2" }));
+row("55 kg F lose, 3 h ride", targetsFor(lose, [mk("bike", 180, "Zone 2", "2027-02-02")], { date: "2027-02-02", raceDate: race, raceDistance: "70.3", phase: "Base 2" }));
+row("no weight", targetsFor({ ...p, weight_kg: null }, [], {}));
+const f = (s: any) => { const x = sessionFuel(s, 75, 20); return `before ${x.before} g by ${x.beforeAt} · during ${x.perHour} g/h (${x.during} g) ${x.fluidLh} L/h Na ${x.naMgH} · after ${x.after.carbs} C + ${x.after.protein} P ${x.window}`; };
+console.log("55-min swim 06:30:", f(mk("swim", 55, "Aerobic", "2027-02-02")));
+console.log("4 h ride 08:00:   ", f(mk("bike", 240, "Zone 2", "2027-02-02", "", "08:00")));
+console.log("90-min tempo run 18:00:", f(mk("run", 90, "Tempo", "2027-02-02", "", "18:00")));

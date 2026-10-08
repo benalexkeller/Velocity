@@ -22,6 +22,8 @@
 .nu-targets { display: grid; grid-template-columns: 1.5fr 1fr 1fr 1fr 1.1fr; padding: 18px 22px; gap: 0; }
 .nu-targets > div { padding: 0 18px; border-left: 1px solid var(--line-2); display: grid; gap: 6px; align-content: start; }
 .nu-targets > div:first-child { padding-left: 0; border-left: 0; }
+.nu-targets.empty { grid-template-columns: 1fr; }
+.nu-targets.empty .v { font-size: 15px; }
 .nu-targets .v { font-size: 20px; color: var(--muted); letter-spacing: -0.01em; }
 .nu-targets .v b { font-size: 26px; color: var(--ink); font-weight: 600; letter-spacing: -0.02em; }
 .nu-targets .big .v b { font-size: 36px; }
