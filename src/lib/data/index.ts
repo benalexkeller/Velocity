@@ -313,8 +313,6 @@ export function weekStatus(w: Week, acts: Activity[] = ACTIVITIES) {
   return { done, total: sessions.length, actualH: sumH(actualByDiscipline(w, acts)), plannedH: w.plannedMin / 60, load: weekLoad(w, acts) };
 }
 
-// ---------- coach transcript (seed) ----------
-
 // Sunday review: facts only — last week's numbers, this week's plan.
 export function sundayReview() {
   const cur = currentWeek();

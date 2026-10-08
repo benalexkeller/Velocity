@@ -5,7 +5,7 @@ import { useMemo, useState } from "react";
 import { usePlan, type PlanStore } from "@/lib/store";
 import type { WeightStage } from "@/lib/nutrition/types";
 import { addDays, fromYmd, shortDate, today, ymd } from "@/lib/format";
-import { niceTicks, useWidth } from "@/lib/ticks";
+import { useWidth } from "@/lib/ticks";
 
 const DAY = 86400000;
 const fmt = (n: number, d = 0) => n.toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: d });

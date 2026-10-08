@@ -10,7 +10,7 @@ import { activityLoad, type Activity } from "@/lib/data";
 import { hrZone } from "@/lib/athlete";
 import { ConnectWearable } from "@/components/ConnectWearable";
 import { usePlan } from "@/lib/store";
-import { DAYS, MONTHS, addDays, dateFull, fmtHMS, fmtPace, fromYmd, today } from "@/lib/format";
+import { addDays, dateFull, fmtHMS, fmtPace, fromYmd, today } from "@/lib/format";
 import { elev, fmtDist, fmtSpeed, runPace, swimDist, swimPace } from "@/lib/units";
 
 type Tab = "all" | "swim" | "bike" | "run";
@@ -23,7 +23,6 @@ function groupLabel(date: string) {
   return { key: `${d.getFullYear()}-${d.getMonth()}`, label: `${["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][d.getMonth()]} ${d.getFullYear()}`, sub: "" };
 }
 function when(a: Activity) {
-  const d = fromYmd(a.date);
   return { l1: dateFull(a.date), l2: a.start ?? "" };
 }
 function subtitle(a: Activity) {

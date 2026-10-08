@@ -1,5 +1,5 @@
 "use client";
-import { niceTicks, useWidth } from "@/lib/ticks";
+import { useWidth } from "@/lib/ticks";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Icon } from "../icons";

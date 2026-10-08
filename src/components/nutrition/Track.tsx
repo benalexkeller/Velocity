@@ -10,7 +10,7 @@ import { SUPPLEMENT_MAP } from "@/lib/nutrition/supplements";
 import { addDays, dateLabel, fromYmd, shortDate, today, ymd } from "@/lib/format";
 import { AddPanel } from "./AddPanel";
 import { PeriodStepper } from "../PeriodStepper";
-import { niceTicks, useWidth } from "@/lib/ticks";
+import { useWidth } from "@/lib/ticks";
 
 const fmt = (n: number, d = 0) => n.toLocaleString(undefined, { maximumFractionDigits: d });
 /** Which logged meal is "before" and which is "after" a session, from its start time (entries carry no clock time yet). */

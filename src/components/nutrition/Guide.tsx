@@ -10,7 +10,7 @@ import { NUTRITION } from "@/lib/content/nutrition";
 import type { Session } from "@/lib/data";
 import { addDays, shortDate, today, ymd } from "@/lib/format";
 import { NutritionSetup } from "./Setup";
-import { WeightChart, ratePerWeek, timelineOf, weekIndexOf, type WPoint } from "./WeightStages";
+import { WeightChart, ratePerWeek, timelineOf, type WPoint } from "./WeightStages";
 
 const fmt = (n: number, d = 0) => n.toLocaleString(undefined, { maximumFractionDigits: d });
 const kgToLb = (kg: number) => kg * 2.20462;

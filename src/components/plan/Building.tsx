@@ -7,7 +7,7 @@ import { dateLabel } from "@/lib/format";
 import { eventType, type Intake } from "@/lib/plan/intake";
 import { generatePlan, type PlanSummary } from "@/lib/plan/generate";
 import { availabilityFromIntake, raceFromIntake } from "./Builder";
-import { niceTicks, useWidth } from "@/lib/ticks";
+import { useWidth } from "@/lib/ticks";
 
 const TOTAL = 32; // seconds on screen, minimum
 const DAY = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];

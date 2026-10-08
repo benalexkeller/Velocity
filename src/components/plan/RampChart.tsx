@@ -1,7 +1,7 @@
 "use client";
 import { plannedByDiscipline, sumH, type Week } from "@/lib/data";
 import { usePlan } from "@/lib/store";
-import { niceTicks, useWidth } from "@/lib/ticks";
+import { useWidth } from "@/lib/ticks";
 
 /** Weekly hours: planned hours per week stacked by discipline; the last bar is race day. Phase brackets select a phase. */
 export function RampChart({ selected, phase, onPick, onPhase }: { selected?: number | null; phase?: string | null; onPick?: (week: number) => void; onPhase?: (short: string) => void }) {
