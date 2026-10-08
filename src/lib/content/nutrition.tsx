@@ -25,7 +25,7 @@ export const NUTRITION: Cube[] = [
     ),
   },
   {
-    id: "hydration", tag: "During training", title: "Fluid and sodium", summary: "Typical loss 0.5–1.5 L/h. Sodium 300–1000 mg per litre lost. Measure, don't guess.",
+    id: "hydration", tag: "During training", title: "Fluid and sodium", summary: "Typical loss 0.5–1.5 L/h. Sodium 300–1000 mg per litre lost. Measure sweat rate before setting a fluid target.",
     render: () => (
       <>
         <p>Sweat rate varies 3× between athletes and 2× between cool and hot days. The only reliable way to know yours is to weigh before and after a session (the Calculator page has a sweat-rate tool).</p>

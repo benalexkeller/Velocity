@@ -58,7 +58,7 @@ export function Building({ intake, edit, onOpen }: { intake: Intake; edit: boole
 
   return (
     <div className="pb pb-building" aria-live="polite">
-      <div className="pb-head"><div><div className="eyebrow muted">{edit ? "Rebuilding" : "Building"}</div><h1>{ready ? "Your plan is ready" : `${intake.goal.event || et.label} · ${N} weeks`}</h1></div></div>
+      <div className="pb-head"><div><div className="eyebrow muted">{edit ? "Rebuilding" : "Building"}</div><h1>{ready ? `Plan built · ${N} weeks` : `${intake.goal.event || et.label} · ${N} weeks`}</h1></div></div>
       <section className="card pb-card pb-build">
         <div className="pb-build-left">
           <ol className="pb-log">{steps.map((s) => <li key={s.at} className={t >= s.at ? "on" : ""}><span className="ck">{t >= s.at ? "✓" : ""}</span>{s.text}</li>)}

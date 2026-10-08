@@ -314,13 +314,7 @@ export function weekStatus(w: Week, acts: Activity[] = ACTIVITIES) {
 }
 
 // ---------- coach transcript (seed) ----------
-export const COACH_THREAD = [
-  { who: "You", at: "07:12", text: "Can we move tomorrow's ride from 7:30 to after work? Mornings are packed this week." },
-  { who: "Coach", at: "07:13", text: "Done. Tomorrow's bike is now 18:00 – 18:55 (55 min, tempo). I kept it a day away from Saturday's long ride so your legs are fresh for it. Weekly volume is unchanged." },
-  { who: "action", at: "", text: "Plan updated" },
-  { who: "You", at: "07:15", text: "Also — I got a calf cramp at mile 3 of the run yesterday. Why?" },
-  { who: "Coach", at: "07:16", text: "Most likely two things stacked up: you ran it at 8:24/mi with your heart rate at 170 on what was meant to be an easy day, and it was 19:16 after a full day on your feet with nothing to drink logged since lunch. Cramps at mile 3 are usually pace plus dehydration, not fitness. Keep easy runs easy (10:15+), drink 500 ml in the two hours before an evening run, and add 30 seconds of calf raises to your strength day. If it happens twice more, we look at electrolytes." },
-];
+
 // Sunday review: facts only — last week's numbers, this week's plan.
 export function sundayReview() {
   const cur = currentWeek();
