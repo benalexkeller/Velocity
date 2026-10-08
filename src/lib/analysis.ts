@@ -3,7 +3,7 @@
 // `createAnalysis(activities, weeks)` builds the whole toolkit for a given data set, so the pages
 // can run it over the live plan store (seed + everything logged on this device) — see useAnalysis().
 import bodySeed from "./data/seed/body.json";
-import { ACTIVITIES as SEED_ACTIVITIES, WEEKS as SEED_WEEKS, PHASES as SEED_PHASES, activityLoad as activityLoadIn, activitiesOn as activitiesOnIn, actualByDiscipline as actualByDisciplineIn, plannedByDiscipline, currentWeek as currentWeekIn, rollingCompliance as rollingComplianceIn, STATUS_CREDIT, weekStatus as weekStatusIn, type Activity, type Phase, type Session, type Sport, type Week } from "./data";
+import { ACTIVITIES as SEED_ACTIVITIES, WEEKS as SEED_WEEKS, PHASES as SEED_PHASES, activityLoad as activityLoadIn, activitiesOn as activitiesOnIn, actualByDiscipline as actualByDisciplineIn, plannedByDiscipline, plannedLoad as plannedLoadOf, currentWeek as currentWeekIn, rollingCompliance as rollingComplianceIn, STATUS_CREDIT, weekStatus as weekStatusIn, type Activity, type Phase, type Session, type Sport, type Week } from "./data";
 import { DEFAULT_ATHLETE, DEFAULT_LTHR, hrZone, type Athlete } from "./athlete";
 import { addDays, fromYmd, today, ymd } from "./format";
 
@@ -247,26 +247,41 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
   const between = (a: Activity, from: Date, to: Date) => { const d = fromYmd(a.date); return d > from && d <= to; };
 
   /** Top KPI tiles. Deltas compare with the previous period of the same length. */
+  // KPI row (V-080/081): this week vs plan, week load, fitness, form, 28-day compliance, run efficiency.
+  // Deltas are in points or units, and only when the earlier window has data.
   function kpis() {
     const t = today();
-    const avgLoad = (endOffset: number) => { let s = 0; for (let i = 0; i < 7; i++) s += dayLoad(addDays(t, -endOffset - i)); return s / 7; };
-    const load7 = avgLoad(0), load7prev = avgLoad(7);
     const last = LOAD_SERIES[LOAD_SERIES.length - 1], wkAgo = LOAD_SERIES[Math.max(0, LOAD_SERIES.length - 8)];
     const cur = currentWeek(), prev = cur.week > 1 ? WEEKS[cur.week - 2] : null;
-    const volNow = weekStatus(cur).actualH, volPrev = prev ? weekStatus(prev).actualH : null;
-    const comp12 = complianceFor(WEEKS.slice(Math.max(0, cur.week - 12), cur.week).flatMap((w) => w.sessions));
-    const compPrev = cur.week > 12 ? complianceFor(WEEKS.slice(Math.max(0, cur.week - 24), cur.week - 12).flatMap((w) => w.sessions)) : { pct: null };
+    const ws = weekStatus(cur);
+    const planned = (w: Week) => w.sessions.reduce((x, s) => x + plannedLoadOf(s), 0);
+    const actual = (w: Week) => { let x = 0; for (let i = 0; i < 7; i++) for (const a of activitiesOn(ymd(addDays(fromYmd(w.start), i)))) x += activityLoad(a); return x; };
     const spark = (k: "fitness" | "fatigue" | "form") => LOAD_SERIES.slice(-28).map((p) => p[k]);
-    const loadBars = Array.from({ length: 14 }, (_, i) => dayLoad(addDays(t, -13 + i)));
-    const volBars = WEEKS.slice(Math.max(0, cur.week - 12), cur.week).map((w) => weekStatus(w).actualH);
-    const compBars = WEEKS.slice(Math.max(0, cur.week - 12), cur.week).map((w) => complianceFor(w.sessions).pct ?? 0);
+    const recent = WEEKS.slice(Math.max(0, cur.week - 8), cur.week);
+    const daysWithLoad = (from: number, to: number) => { let n = 0; for (let i = from; i < to; i++) if (dayLoad(addDays(t, -i)) > 0) n++; return n; };
+    const baseline = daysWithLoad(7, 49) >= 3; // the 7-days-ago value means something only with earlier training
+    const form = last.form;
+    const formWord = form <= -30 ? "very fatigued" : form < -10 ? "fatigued" : form <= 5 ? "neutral" : form <= 25 ? "fresh" : last.fitness < wkAgo.fitness ? "detraining" : "very fresh";
+    const comp = rollingCompliance(28);
+    // run efficiency: metres per minute per heartbeat on steady runs ≥ 20 min (threshold and above left out), duration-weighted
+    const ef = (fromDay: number, toDay: number) => {
+      let w = 0, x = 0;
+      for (const a of ACTIVITIES) {
+        if (a.sport !== "run" || !a.hr || !a.pace_s || a.min < 20) continue;
+        const d = fromYmd(a.date), age = (t.getTime() - d.getTime()) / 864e5;
+        if (age < fromDay || age >= toDay || hrZone("run", a.hr, LTHR) > 3) continue;
+        x += ((1609.34 / (a.pace_s / 60)) / a.hr) * a.min; w += a.min;
+      }
+      return w ? x / w : null;
+    };
+    const efNow = ef(0, 28), efPrev = ef(28, 56);
     return {
-      load: { v: load7, d: pctDelta(load7, load7prev), bars: loadBars },
-      fitness: { v: last.fitness, d: pctDelta(last.fitness, wkAgo.fitness), spark: spark("fitness") },
-      fatigue: { v: last.fatigue, d: pctDelta(last.fatigue, wkAgo.fatigue), spark: spark("fatigue") },
-      form: { v: last.form, dAbs: last.form - wkAgo.form, spark: spark("form") },
-      volume: { v: volNow, d: pctDelta(volNow, volPrev), bars: volBars },
-      consistency: { v: comp12.pct, dAbs: comp12.pct != null && compPrev.pct != null ? comp12.pct - compPrev.pct : null, bars: compBars },
+      week: { done: ws.done, total: ws.total, h: ws.actualH, plannedH: ws.plannedH, bars: recent.map((w) => weekStatus(w).actualH) },
+      load: { v: Math.round(actual(cur)), planned: Math.round(planned(cur)), last: prev ? Math.round(actual(prev)) : null, bars: recent.map((w) => actual(w)) },
+      fitness: { v: last.fitness, d: baseline ? last.fitness - wkAgo.fitness : null, spark: spark("fitness") },
+      form: { v: form, word: formWord, fatigue: last.fatigue, fitness: last.fitness, spark: spark("form") },
+      compliance: { v: comp.pct, done: comp.done, planned: comp.planned },
+      ef: { v: efNow, d: efNow != null && efPrev != null ? efNow - efPrev : null },
     };
   }
 

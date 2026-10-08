@@ -17,7 +17,7 @@
 
 /* 1. KPI tiles */
 .ax-kpis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
-.kpi { padding: 14px 16px 12px; display: grid; gap: 4px; }
+.kpi { padding: 14px 16px 12px; display: grid; gap: 4px; align-content: start; }
 .kpi .k { font-size: 13px; color: var(--ink-2); font-weight: 600; }
 .kpi .row { display: flex; align-items: baseline; gap: 10px; }
 .kpi .v { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; }
