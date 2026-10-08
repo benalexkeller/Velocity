@@ -20,7 +20,6 @@ export default function CalculatorPage() {
       <div className="page" style={{ display: "grid", gap: 16, paddingTop: 10 }}>
         <div className="page-head">
           <div>
-            <div className="eyebrow muted">Tools · {CALCULATORS.length} calculators</div>
             <h1>Calculator</h1>
           </div>
         </div>

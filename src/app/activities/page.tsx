@@ -92,7 +92,6 @@ function Activities() {
           <div className="acts-sticky" ref={stickyRef}>
           <div className="acts-head">
             <div>
-              <div className="eyebrow muted">Activity archive</div>
               <h1>Activities</h1>
             </div>
             <span className="grow" />
@@ -110,7 +109,7 @@ function Activities() {
             </span>
           </div>
           <div className="tabs" role="tablist">
-            {(["all", "swim", "bike", "run"] as Tab[]).map((k) => <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>{k}</button>)}
+            {(["all", "swim", "bike", "run"] as Tab[]).map((k) => <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>{k[0].toUpperCase() + k.slice(1)}</button>)}
           </div>
           </div>
           <table className="tbl acts-tbl" style={{ ["--acts-top" as string]: `${stickyH}px` }}>

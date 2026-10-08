@@ -142,7 +142,7 @@ export function PaceCorridor({ range, onPick }: { range: Range; onPick: (id: str
         <div className="pill-group">{(["swim", "bike", "run"] as Sp[]).map((k) => <button key={k} type="button" className={sp === k ? "on" : ""} onClick={() => setSp(k)}>{k[0].toUpperCase() + k.slice(1)}</button>)}</div>
       </div>
       <div>
-        <div className="muted" style={{ fontSize: 11, marginBottom: 2 }}>{UNIT[sp]} · faster is higher · band = coach target for that date</div>
+        <div className="muted" style={{ fontSize: 12, marginBottom: 2 }}>{UNIT[sp]} · faster is higher · band = coach target for that date</div>
         <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${sp} pace with target corridor`}>
           {Array.from({ length: ticks + 1 }, (_, k) => lo + ((hi - lo) * k) / ticks).map((v, k) => <g key={k}><line x1={L} y1={y(v)} x2={W - R} y2={y(v)} stroke="var(--grid)" /><text x={L - 8} y={y(v) + 4} textAnchor="end">{fmtV(sp, v)}</text></g>)}
           <path d={band} fill="var(--accent-soft)" />

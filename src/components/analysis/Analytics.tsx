@@ -8,6 +8,7 @@ import { METRICS, type Metric } from "@/lib/analysis";
 import { useAnalysis } from "@/lib/useAnalysis";
 import { addDays, dateLabel, fmtHMS, fmtHours, fmtPace, fromYmd, shortDate, today } from "@/lib/format";
 import { fmtDist, runPace, swimDist, swimPace } from "@/lib/units";
+import { niceTicks, useWidth } from "@/lib/ticks";
 
 type Sp = "swim" | "bike" | "run";
 export type Range = 4 | 12 | 99;
@@ -79,7 +80,7 @@ export function Overview({ range }: { range: Range }) {
   const pts = LOAD_SERIES.slice(-days);
   const [hover, setHover] = useState<number | null>(null);
   const i = hover ?? pts.length - 1;
-  const W = 760, H = 230, L = 40, R = 16, T = 12, B = 28;
+  const [svgRef, W] = useWidth<SVGSVGElement>(760); const H = 230, L = 40, R = 16, T = 12, B = 28;
   const top = Math.max(10, Math.ceil((Math.max(...pts.map((p) => Math.max(p.fitness, p.fatigue))) * 1.3) / 10) * 10);
   const bottom = Math.min(0, Math.floor((Math.min(...pts.map((p) => p.form)) * 1.2) / 10) * 10);
   const y = (v: number) => T + ((top - v) / (top - bottom)) * (H - T - B);
@@ -94,27 +95,27 @@ export function Overview({ range }: { range: Range }) {
     <section className="card ax-panel" aria-label="Performance overview">
       <div className="ax-head">
         <div><h2>Performance overview</h2><p>Fitness, fatigue and form over the last {range === 99 ? `${Math.round(pts.length / 7)} weeks` : `${range} weeks`}</p></div>
-        <span className="lgd"><span><i style={{ background: "var(--accent)" }} />Fitness</span><span><i style={{ background: "var(--ink)" }} />Fatigue</span><span><i style={{ background: "var(--swim)" }} />Form</span></span>
+        <span className="lgd"><span><i style={{ background: "var(--accent)" }} />Fitness</span><span><i style={{ background: "var(--ink)" }} />Fatigue</span><span><i style={{ background: "var(--muted)" }} />Form</span></span>
       </div>
       <div className="ax-overview">
-        <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Fitness, fatigue and form" onMouseLeave={() => setHover(null)} onMouseMove={(e) => { const r = (e.currentTarget as SVGSVGElement).getBoundingClientRect(); const px = ((e.clientX - r.left) / r.width) * W; const j = Math.round(((px - L) / (W - L - R)) * (pts.length - 1)); setHover(Math.max(0, Math.min(pts.length - 1, j))); }}>
+        <svg ref={svgRef} className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Fitness, fatigue and form" onMouseLeave={() => setHover(null)} onMouseMove={(e) => { const r = (e.currentTarget as SVGSVGElement).getBoundingClientRect(); const px = ((e.clientX - r.left) / r.width) * W; const j = Math.round(((px - L) / (W - L - R)) * (pts.length - 1)); setHover(Math.max(0, Math.min(pts.length - 1, j))); }}>
           {ticks.map((v) => <g key={v}><line x1={L} y1={y(v)} x2={W - R} y2={y(v)} stroke={v === 0 ? "var(--line)" : "var(--grid)"} /><text x={L - 6} y={y(v) + 4} textAnchor="end">{v}</text></g>)}
           <path d={area} fill="var(--accent-soft)" opacity={0.7} />
-          <path d={line("form")} fill="none" stroke="var(--swim)" strokeWidth={1.6} />
+          <path d={line("form")} fill="none" stroke="var(--muted)" strokeWidth={1.6} strokeDasharray="4 3" />
           <path d={line("fatigue")} fill="none" stroke="var(--ink)" strokeWidth={1.6} />
           <path d={line("fitness")} fill="none" stroke="var(--accent)" strokeWidth={2.2} />
           {pts.map((q, j) => j % every === 0 || j === pts.length - 1 ? <circle key={q.date} cx={x(j)} cy={y(q.fitness)} r={3} fill="var(--accent)" stroke="var(--surface)" strokeWidth={1.5} /> : null)}
           <line x1={x(i)} y1={T} x2={x(i)} y2={H - B} stroke="var(--muted-2)" strokeDasharray="3 3" />
           <circle cx={x(i)} cy={y(p.fitness)} r={5} fill="var(--accent)" stroke="var(--surface)" strokeWidth={2} />
           <circle cx={x(i)} cy={y(p.fatigue)} r={4} fill="var(--ink)" stroke="var(--surface)" strokeWidth={2} />
-          <circle cx={x(i)} cy={y(p.form)} r={4} fill="var(--swim)" stroke="var(--surface)" strokeWidth={2} />
+          <circle cx={x(i)} cy={y(p.form)} r={4} fill="var(--muted)" stroke="var(--surface)" strokeWidth={2} />
           {pts.map((q, j) => (j === pts.length - 1 || (j % every === 0 && j <= pts.length - 1 - every)) ? <text key={"l" + q.date} x={x(j)} y={H - 8} textAnchor={j === pts.length - 1 ? "end" : j === 0 ? "start" : "middle"}>{shortDate(q.date)}</text> : null)}
         </svg>
         <div className="ax-tip">
           <div className="d">{dateLabel(p.date)}</div>
           <div><span><i style={{ background: "var(--accent)" }} />Fitness</span><b>{p.fitness.toFixed(0)}</b></div>
           <div><span><i style={{ background: "var(--ink)" }} />Fatigue</span><b>{p.fatigue.toFixed(0)}</b></div>
-          <div><span><i style={{ background: "var(--swim)" }} />Form</span><b>{sign(p.form)}</b></div>
+          <div><span><i style={{ background: "var(--muted)" }} />Form</span><b>{sign(p.form)}</b></div>
           <div><span><i style={{ background: "var(--track)" }} />Day load</span><b>{p.load}</b></div>
         </div>
       </div>
@@ -145,12 +146,13 @@ export function Volume({ range }: { range: Range }) {
     return { w, g, planned, hours, count, activities: acts.length, hoursTotal: acts.reduce((t, a) => t + a.min, 0) / 60, plannedH: w.plannedMin / 60, plannedSessions };
   };
   const rows = weeks.map(per);
-  const W = 760, H = 220, L = 34, R = 10, T = 14, B = 26;
+  const [svgRef, W] = useWidth<SVGSVGElement>(760); const H = 230, L = 34, R = 10, T = 26, B = 26;
   const max = Math.max(1, ...rows.map((r) => Math.max(r.g.swim + r.g.bike + r.g.run + r.g.other, r.planned ?? 0)));
-  const nice = mode === "hours" ? Math.ceil(max / 2) * 2 : Math.ceil(max / 50) * 50 || 50;
+  const nt = niceTicks(0, max, 4, mode === "hours" ? "hours" : "number");
+  const nice = nt.hi || 1;
   const y = (v: number) => H - B - (v / nice) * (H - T - B);
   const gw = (W - L - R) / Math.max(1, rows.length), bw = Math.min(40, gw * 0.55);
-  const ticks = mode === "hours" ? [0, nice / 2, nice] : [0, nice / 2, nice];
+  const ticks = nt.ticks;
   const unit = mode === "hours" ? "h" : mode === "load" ? "load" : "mi";
   return (
     <section className="card ax-panel" aria-label="Training volume">
@@ -162,7 +164,8 @@ export function Volume({ range }: { range: Range }) {
         </div>
       </div>
       <div className="ax-volwrap" onMouseLeave={() => setHov(null)}>
-        <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Weekly volume">
+        <svg ref={svgRef} className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Weekly volume">
+          <text x={L - 6} y={T - 12} textAnchor="end">{unit}</text>
           {ticks.map((v) => <g key={v}><line x1={L} y1={y(v)} x2={W - R} y2={y(v)} stroke="var(--grid)" /><text x={L - 6} y={y(v) + 4} textAnchor="end">{mode === "hours" ? v : Math.round(v)}</text></g>)}
           {rows.map((r, i) => {
             const cx = L + i * gw + gw / 2;
@@ -202,7 +205,7 @@ export function Volume({ range }: { range: Range }) {
 export function LoadDistribution({ range }: { range: Range }) {
   const an = useAnalysis();
   const z = an.zoneDistribution(range === 99 ? 400 : range * 7);
-  const colors = ["#DCE6FB", "var(--swim)", "var(--accent)", "var(--run)", "#0E2E8A"];
+  const colors = ["var(--z1)", "var(--z2)", "var(--z3)", "var(--z4)", "var(--z5)"];
   const r = 52, c = 2 * Math.PI * r;
   let off = 0;
   const easyDelta = z.prevEasy != null ? z.easy - z.prevEasy : null;
@@ -214,13 +217,13 @@ export function LoadDistribution({ range }: { range: Range }) {
           <svg viewBox="0 0 140 140" className="donut" role="img" aria-label="Load by zone">
             {z.zones.map((zz, i) => { const len = (zz.pct / 100) * c; const el = <circle key={zz.z} cx="70" cy="70" r={r} fill="none" stroke={colors[i]} strokeWidth="18" strokeDasharray={`${len} ${c - len}`} strokeDashoffset={-off} transform="rotate(-90 70 70)" />; off += len; return el; })}
             <text x="70" y="66" textAnchor="middle" className="ink" fontSize="24" fontWeight="600">{z.total}</text>
-            <text x="70" y="84" textAnchor="middle" fontSize="10">load · {range === 99 ? "all" : `${range} wk`}</text>
+            <text x="70" y="84" textAnchor="middle">load · {range === 99 ? "all" : `${range} wk`}</text>
           </svg>
           <table className="zones"><thead><tr><th>Zone<Info {...KPI_INFO.zones} /></th><th>Share</th><th>Load</th></tr></thead><tbody>{z.zones.map((zz, i) => <tr key={zz.z}><td><i style={{ background: colors[i] }} />Zone {zz.z}</td><td>{zz.pct}%</td><td className="muted">{zz.load}</td></tr>)}</tbody></table>
         </div>
         <div className="intensity">
           <div className="k">Intensity distribution<Info {...KPI_INFO.intensity} /></div>
-          <div className="ibar"><i style={{ width: `${z.easy}%`, background: "var(--swim)" }} /><i style={{ width: `${z.moderate}%`, background: "var(--accent)" }} /><i style={{ width: `${z.hard}%`, background: "var(--run)" }} /></div>
+          <div className="ibar"><i style={{ width: `${z.easy}%`, background: "var(--z2)" }} /><i style={{ width: `${z.moderate}%`, background: "var(--accent)" }} /><i style={{ width: `${z.hard}%`, background: "var(--run)" }} /></div>
           <div className="ilbl"><div><b>{z.easy}%</b><span>Easy (Z1–Z2)</span></div><div><b>{z.moderate}%</b><span>Moderate (Z3)</span></div><div><b>{z.hard}%</b><span>Hard (Z4–Z5)</span></div></div>
         </div>
         <div className={`note ${easyDelta != null && easyDelta >= 0 ? "ok" : ""}`}>
@@ -238,30 +241,30 @@ function SportCard({ sp }: { sp: Sp }) {
   const p = an.sportPerformance(sp);
   const fmtRow = (kind: string, v: number | null) => v == null ? "—" : kind === "pace" ? `${fmtV(sp, v)} ${unitOf(sp)}` : kind === "speed" ? `${v.toFixed(1)} mph` : kind === "hr" ? `${v.toFixed(0)} bpm` : sp === "swim" ? `${swimDist(v).v.toLocaleString()} ${swimDist(0).u}` : fmtDist(v);
   const good = (kind: string) => (kind === "pace" || kind === "hr" ? "down" : "up");
-  const W = 240, H = 92, L = 42, R = 8, T = 8, B = 18;
+  const [svgRef, W] = useWidth<SVGSVGElement>(240); const H = 92, L = 42, R = 8, T = 8, B = 18;
   const pts = p.trend;
   const v = pts.map((q) => q.v).filter((q): q is number => q != null);
   const lo = v.length ? Math.min(...v) : 0, hi = v.length ? Math.max(...v) : 1;
-  const pad = (hi - lo) * 0.35 || (sp === "bike" ? 1 : 15);
-  const ylo = lo - pad, yhi = hi + pad;
+  const nt = niceTicks(lo, hi, 2, sp === "bike" ? "number" : "pace");
+  const ylo = nt.lo, yhi = nt.hi;
   const inv = sp !== "bike";
   const y = (n: number) => (inv ? T + ((n - ylo) / (yhi - ylo)) * (H - T - B) : H - B - ((n - ylo) / (yhi - ylo)) * (H - T - B));
   const x = (i: number) => L + (pts.length < 2 ? 0 : (i / (pts.length - 1)) * (W - L - R));
   let d = "", started = false;
   pts.forEach((q, i) => { if (q.v == null) { started = false; return; } d += `${started ? "L" : "M"}${x(i)} ${y(q.v)}`; started = true; });
-  const guides = [ylo + (yhi - ylo) * 0.15, (ylo + yhi) / 2, yhi - (yhi - ylo) * 0.15];
+  const guides = nt.ticks;
   return (
     <div className="sport">
       <div className="sh"><SportIcon sport={sp} size={22} /><b>{sp[0].toUpperCase() + sp.slice(1)}</b><span className="muted">{p.sessions} sessions · 4 wk</span></div>
       <table><tbody>{p.rows.map((r) => <tr key={r.k}><td>{r.k}</td><td><b>{fmtRow(r.kind, r.cur)}</b></td><td><Delta v={r.cur != null && r.prev ? ((r.cur - r.prev) / r.prev) * 100 : null} good={good(r.kind)} /></td></tr>)}</tbody></table>
       <div className="k">{sp === "bike" ? "Speed" : "Pace"} · weekly average · {unitOf(sp)}{inv ? " · faster is higher" : ""}</div>
-      <svg className="chart mini" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${sp} weekly ${sp === "bike" ? "speed" : "pace"} trend`}>
-        {v.length ? guides.map((g, i) => <g key={i}><line x1={L} y1={y(g)} x2={W - R} y2={y(g)} stroke="var(--grid)" /><text x={L - 5} y={y(g) + 3} textAnchor="end" fontSize="9">{fmtV(sp, g)}</text></g>) : null}
+      <svg ref={svgRef} className="chart mini" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${sp} weekly ${sp === "bike" ? "speed" : "pace"} trend`}>
+        {v.length ? guides.map((g, i) => <g key={i}><line x1={L} y1={y(g)} x2={W - R} y2={y(g)} stroke="var(--grid)" /><text x={L - 5} y={y(g) + 3} textAnchor="end">{fmtV(sp, g)}</text></g>) : null}
         <line x1={L} y1={H - B} x2={W - R} y2={H - B} stroke="var(--line)" />
         <path d={d} fill="none" stroke="var(--accent)" strokeWidth={1.6} />
         {pts.map((q, i) => q.v != null ? <circle key={i} cx={x(i)} cy={y(q.v)} r={2.4} fill="var(--accent)" stroke="var(--surface)" strokeWidth={1} /> : null)}
-        {pts.map((q, i) => (i === 0 || i === pts.length - 1 || i % 3 === 0) && pts.length > 1 ? <text key={"w" + i} x={x(i)} y={H - 5} textAnchor={i === 0 ? "start" : i === pts.length - 1 ? "end" : "middle"} fontSize="9">W{q.week}</text> : null)}
-        {!v.length && <text x={W / 2} y={H / 2} textAnchor="middle" fontSize="10">No {sp} sessions yet</text>}
+        {pts.map((q, i) => (i === 0 || i === pts.length - 1 || i % 3 === 0) && pts.length > 1 ? <text key={"w" + i} x={x(i)} y={H - 5} textAnchor={i === 0 ? "start" : i === pts.length - 1 ? "end" : "middle"}>W{q.week}</text> : null)}
+        {!v.length && <text x={W / 2} y={H / 2} textAnchor="middle">No {sp} sessions yet</text>}
       </svg>
     </div>
   );
@@ -281,7 +284,7 @@ export function Progress({ range, onPick }: { range: Range; onPick: (id: string)
   const [sp, setSp] = useState<Sp | "all">("run");
   const [m, setM] = useState<Metric>("pace");
   const days = range === 99 ? 400 : range * 7;
-  const W = 760, H = 220, L = 46, R = 12, T = 14, B = 26;
+  const [svgRef, W] = useWidth<SVGSVGElement>(760); const H = 220, L = 46, R = 12, T = 14, B = 26;
   const COLORS: Record<Sp, string> = { swim: "var(--swim)", bike: "var(--bike)", run: "var(--run)" };
   const sports: Sp[] = sp === "all" ? ["swim", "bike", "run"] : [sp];
   // in "all" mode the sports have different units for pace and distance, so each is plotted as % of its first session
@@ -291,8 +294,10 @@ export function Progress({ range, onPick }: { range: Range; onPick: (id: string)
   const all = series.flatMap((s) => s.plot);
   const inv = m === "pace" && sp !== "bike" && !normalise ? true : normalise && m === "pace";
   const vals = all.map((q) => q.y);
-  let lo = vals.length ? Math.min(...vals) : 0, hi = vals.length ? Math.max(...vals) : 1;
-  const pad = (hi - lo) * 0.2 || 1; lo -= pad; hi += pad;
+  const rawLo = vals.length ? Math.min(...vals) : 0, rawHi = vals.length ? Math.max(...vals) : 1;
+  const floorZero = !(m === "pace" || m === "hr" || normalise);
+  const nt = niceTicks(floorZero ? 0 : rawLo, rawHi, 4, normalise ? "percent" : m === "pace" && sp !== "bike" ? "pace" : m === "duration" ? "number" : "number");
+  const lo = nt.lo, hi = nt.hi;
   const start = all.length ? fromYmd(all.reduce((a, q) => (q.date < a ? q.date : a), all[0].date)) : addDays(today(), -days), end = today();
   const x = (dt: string) => L + ((fromYmd(dt).getTime() - start.getTime()) / Math.max(1, end.getTime() - start.getTime())) * (W - L - R);
   const y = (n: number) => (inv ? T + ((n - lo) / (hi - lo)) * (H - T - B) : H - B - ((n - lo) / (hi - lo)) * (H - T - B));
@@ -300,7 +305,6 @@ export function Progress({ range, onPick }: { range: Range; onPick: (id: string)
   const fmtAxis = (n: number) => normalise ? `${n.toFixed(0)}%` : sp === "all" ? (m === "duration" ? fmtHMS(n) : n.toFixed(0)) : fmtFor(sp as Sp, n);
   const unitFor = (k: Sp) => m === "pace" ? unitOf(k) : m === "hr" ? "bpm" : m === "distance" ? (k === "swim" ? "yd" : "mi") : m === "duration" ? "" : "load";
   const goodDir = m === "pace" ? (sp === "bike" ? "up" : "down") : m === "hr" ? "down" : "up";
-  const ticks = 4;
   const single = sp !== "all" ? series[0] : null;
   return (
     <section className="card ax-panel" aria-label="Progress over time">
@@ -313,8 +317,8 @@ export function Progress({ range, onPick }: { range: Range; onPick: (id: string)
       </div>
       <div className="tabs ax-tabs">{METRICS.map((t) => <button key={t.k} type="button" className={m === t.k ? "on" : ""} onClick={() => setM(t.k)}>{t.label}</button>)}</div>
       <div className="ax-progress">
-        <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${sp} ${m} over time`}>
-          {Array.from({ length: ticks + 1 }, (_, k) => lo + ((hi - lo) * k) / ticks).map((t, k) => <g key={k}><line x1={L} y1={y(t)} x2={W - R} y2={y(t)} stroke="var(--grid)" /><text x={L - 6} y={y(t) + 4} textAnchor="end">{fmtAxis(t)}</text></g>)}
+        <svg ref={svgRef} className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${sp} ${m} over time`}>
+          {nt.ticks.map((t, k) => <g key={k}><line x1={L} y1={y(t)} x2={W - R} y2={y(t)} stroke="var(--grid)" /><text x={L - 6} y={y(t) + 4} textAnchor="end">{fmtAxis(t)}</text></g>)}
           {normalise && <line x1={L} y1={y(100)} x2={W - R} y2={y(100)} stroke="var(--muted-2)" strokeDasharray="4 4" />}
           {series.map((s) => (
             <g key={s.k}>

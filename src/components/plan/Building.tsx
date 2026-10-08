@@ -7,6 +7,7 @@ import { dateLabel } from "@/lib/format";
 import { eventType, type Intake } from "@/lib/plan/intake";
 import { generatePlan, type PlanSummary } from "@/lib/plan/generate";
 import { availabilityFromIntake, raceFromIntake } from "./Builder";
+import { niceTicks, useWidth } from "@/lib/ticks";
 
 const TOTAL = 32; // seconds on screen, minimum
 const DAY = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -91,7 +92,7 @@ const hm = (h: number) => { const m = Math.round(h * 60 / 5) * 5; return `${Math
 
 /** Weekly hours drawn in one bar at a time, phase brackets on top, race flag at the end. */
 function RampBuild({ summary, shown }: { summary: PlanSummary; shown: number }) {
-  const W = 760, H = 340, L = 40, R = 16, T = 54, B = 34;
+  const [svgRef, W] = useWidth<SVGSVGElement>(760); const H = 340, L = 40, R = 16, T = 54, B = 34;
   const N = summary.weeks;
   const maxH = Math.max(1, ...summary.hours);
   const x = (i: number) => L + (i / N) * (W - L - R);
@@ -99,8 +100,8 @@ function RampBuild({ summary, shown }: { summary: PlanSummary; shown: number }) 
   const y = (h: number) => T + (1 - h / maxH) * (H - T - B);
   const ticks = [maxH, maxH / 2];
   return (
-    <svg className="chart pb-ramp" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Weekly hours being laid out">
-      {summary.phases.filter((p) => p.from <= shown).map((p) => { const label = p.name.split(" — ")[0]; const x0 = x(p.from - 1) + 2, x1 = x(p.to) - 2; return <g key={p.name} className="ph"><line x1={x0} y1={T - 22} x2={x(Math.min(p.to, shown)) - 2} y2={T - 22} stroke="var(--line)" strokeWidth={2} />{x1 - x0 >= label.length * 6.5 && <text x={(x0 + x1) / 2} y={T - 28} textAnchor="middle" fontSize={10.5} fontWeight={600} fill="var(--ink-2)">{label}</text>}</g>; })}
+    <svg ref={svgRef} className="chart pb-ramp" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Weekly hours being laid out">
+      {summary.phases.filter((p) => p.from <= shown).map((p) => { const label = p.name.split(" — ")[0]; const x0 = x(p.from - 1) + 2, x1 = x(p.to) - 2; return <g key={p.name} className="ph"><line x1={x0} y1={T - 22} x2={x(Math.min(p.to, shown)) - 2} y2={T - 22} stroke="var(--line)" strokeWidth={2} />{x1 - x0 >= label.length * 6.5 && <text x={(x0 + x1) / 2} y={T - 28} textAnchor="middle" fontWeight={600} fill="var(--ink-2)">{label}</text>}</g>; })}
       {ticks.map((h) => <g key={h}><line x1={L} y1={y(h)} x2={W - R} y2={y(h)} stroke="var(--grid)" /><text x={L - 6} y={y(h) + 4} textAnchor="end">{h.toFixed(0)} h</text></g>)}
       <line x1={L} y1={y(0)} x2={W - R} y2={y(0)} stroke="var(--line)" />
       {summary.hours.map((h, i) => {
@@ -109,9 +110,9 @@ function RampBuild({ summary, shown }: { summary: PlanSummary; shown: number }) 
         const fill = last ? "var(--accent)" : i + 1 >= summary.phases.find((p) => p.name.startsWith("Taper"))!.from ? "var(--swim)" : "var(--bike)";
         return <rect key={i} className="bar" x={x(i) + 1} y={y(h)} width={Math.max(1, bw - 2)} height={y(0) - y(h)} rx={2} fill={fill} opacity={i === shown - 1 ? 1 : 0.85}><title>{`Week ${i + 1} · ${h.toFixed(1)} h`}</title></rect>;
       })}
-      {shown >= N && <g><line x1={x(N - 0.5)} y1={y(0) + 4} x2={x(N - 0.5)} y2={T - 6} stroke="var(--accent)" strokeDasharray="3 3" /><text x={x(N - 0.5) - 6} y={y(0) - 6} textAnchor="end" fontSize={10.5} fontWeight={700} fill="var(--accent)">RACE</text></g>}
+      {shown >= N && <g><line x1={x(N - 0.5)} y1={y(0) + 4} x2={x(N - 0.5)} y2={T - 6} stroke="var(--accent)" strokeDasharray="3 3" /><text x={x(N - 0.5) - 6} y={y(0) - 6} textAnchor="end" fontWeight={700} fill="var(--accent)">RACE</text></g>}
       {Array.from({ length: N }, (_, i) => i).filter((i) => i % Math.max(1, Math.ceil(N / 10)) === 0).map((i) => <text key={i} x={x(i) + bw / 2} y={H - 10} textAnchor="middle">W{i + 1}</text>)}
-      {shown > 0 && shown <= N && <text x={x(shown - 1) + bw / 2} y={y(summary.hours[shown - 1]) - 6} textAnchor="middle" fontSize={11} fontWeight={600} fill="var(--ink)">{summary.hours[shown - 1].toFixed(1)}</text>}
+      {shown > 0 && shown <= N && <text x={x(shown - 1) + bw / 2} y={y(summary.hours[shown - 1]) - 6} textAnchor="middle" fontWeight={600} fill="var(--ink)">{summary.hours[shown - 1].toFixed(1)}</text>}
     </svg>
   );
 }

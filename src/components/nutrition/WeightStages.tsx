@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { usePlan, type PlanStore } from "@/lib/store";
 import type { WeightStage } from "@/lib/nutrition/types";
 import { addDays, fromYmd, shortDate, today, ymd } from "@/lib/format";
+import { niceTicks, useWidth } from "@/lib/ticks";
 
 const DAY = 86400000;
 const fmt = (n: number, d = 0) => n.toLocaleString(undefined, { maximumFractionDigits: d, minimumFractionDigits: d });
@@ -48,7 +49,7 @@ export function WeightChart({ timeline, path, logged = [], proj = null, imperial
   imperial: boolean; raceDate: string | null; height?: number;
 }) {
   const showW = (kg: number) => (imperial ? `${fmt(kgToLb(kg), 1)} lb` : `${fmt(kg, 1)} kg`);
-  const W = 720, H = height, L = 36, R = 54, T = 36, B = 22;
+  const [svgRef, W] = useWidth<SVGSVGElement>(720); const H = height, L = 36, R = 54, T = 36, B = 22;
   const plotW = W - L - R, plotH = H - T - B;
   const sorted = [...path].sort((a, b) => a.date.localeCompare(b.date));
   const tNow = ymd(today());
@@ -68,20 +69,20 @@ export function WeightChart({ timeline, path, logged = [], proj = null, imperial
   const step = Math.max(1, Math.ceil(timeline.length / 8));
   const stroke = (p: WPoint) => (p.kind === "stage" ? "var(--surface)" : "var(--accent)");
   return (
-    <svg className="chart nu-wchart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Planned training hours per week with the weight path">
-      {bands.map((b) => <g key={b.phase + b.from}><line x1={x(b.from) + 2} y1={15} x2={x(b.to) - 2} y2={15} stroke="var(--line)" strokeWidth={2}><title>{b.phase}</title></line>{x(b.to) - x(b.from) >= b.phase.length * 6.2 + 4 && <text x={(x(b.from) + x(b.to)) / 2} y={10} textAnchor="middle" fontSize={10.5}>{b.phase}</text>}</g>)}
+    <svg ref={svgRef} className="chart nu-wchart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Planned training hours per week with the weight path">
+      {bands.map((b) => <g key={b.phase + b.from}><line x1={x(b.from) + 2} y1={15} x2={x(b.to) - 2} y2={15} stroke="var(--line)" strokeWidth={2}><title>{b.phase}</title></line>{x(b.to) - x(b.from) >= b.phase.length * 6.2 + 4 && <text x={(x(b.from) + x(b.to)) / 2} y={10} textAnchor="middle">{b.phase}</text>}</g>)}
       {timeline.map((w) => { const x0 = x(ms(w.start)), x1 = x(ms(w.start) + 7 * DAY); return <rect key={w.start} x={x0 + 1} y={yH(w.hours)} width={Math.max(1, x1 - x0 - 2)} height={H - B - yH(w.hours)} rx={2} fill={w.race ? "var(--accent-soft)" : "var(--track)"}><title>{`Week ${w.week} · ${shortDate(w.start)} · ${fmt(w.hours, 1)} h planned`}</title></rect>; })}
       {timeline.map((w, i) => (i % step === 0 ? <text key={"t" + w.start} x={(x(ms(w.start)) + x(ms(w.start) + 7 * DAY)) / 2} y={H - 6} textAnchor="middle">W{w.week}</text> : null))}
       {[maxH, maxH / 2].map((h) => <text key={h} x={L - 4} y={yH(h) + 4} textAnchor="end">{fmt(h, 0)} h</text>)}
       {kgs.length > 0 && [hi - 1.5, (hi + lo) / 2, lo + 1.5].map((v) => <text key={v} x={W - R + 6} y={yW(v) + 4} textAnchor="start">{imperial ? fmt(kgToLb(v), 0) : fmt(v, 1)}</text>)}
       <line x1={x(ms(tNow))} y1={T - 4} x2={x(ms(tNow))} y2={H - B} stroke="var(--muted-2)" strokeDasharray="2 3" />
-      <text x={x(ms(tNow)) + 4} y={T - 7} textAnchor="start" fontSize={10.5}>Today</text>
-      {raceDate && <><line x1={x(ms(raceDate))} y1={T - 4} x2={x(ms(raceDate))} y2={H - B} stroke="var(--accent)" strokeDasharray="2 3" /><text x={x(ms(raceDate)) - 4} y={T - 7} textAnchor="end" fontSize={10.5} fill="var(--accent)">Race</text></>}
+      <text x={x(ms(tNow)) + 4} y={T - 7} textAnchor="start">Today</text>
+      {raceDate && <><line x1={x(ms(raceDate))} y1={T - 4} x2={x(ms(raceDate))} y2={H - B} stroke="var(--accent)" strokeDasharray="2 3" /><text x={x(ms(raceDate)) - 4} y={T - 7} textAnchor="end" fill="var(--accent)">Race</text></>}
       {sorted.length > 1 && <path d={sorted.map((p, i) => `${i ? "L" : "M"}${x(ms(p.date))} ${yW(p.kg)}`).join("")} fill="none" stroke="var(--accent)" strokeWidth={2} strokeDasharray="5 4" />}
       {logged.length > 1 && <path d={logged.map((l, i) => `${i ? "L" : "M"}${x(ms(l.date))} ${yW(l.kg)}`).join("")} fill="none" stroke="var(--run)" strokeWidth={2} />}
       {logged.map((l) => <circle key={l.date} cx={x(ms(l.date))} cy={yW(l.kg)} r={3} fill="var(--run)"><title>{`${shortDate(l.date)} · ${showW(l.kg)} logged`}</title></circle>)}
       {proj && <line x1={x(ms(proj.from.date))} y1={yW(proj.from.kg)} x2={x(ms(proj.to.date))} y2={yW(proj.to.kg)} stroke="var(--muted-2)" strokeDasharray="3 4" strokeWidth={1.5} />}
-      {sorted.map((p) => <g key={p.kind + p.date}><circle cx={x(ms(p.date))} cy={yW(p.kg)} r={p.kind === "stage" ? 5 : 4.5} fill={stroke(p)} stroke="var(--accent)" strokeWidth={2}><title>{`${p.label || "Stage"} · ${shortDate(p.date)} · ${showW(p.kg)}`}</title></circle><text x={x(ms(p.date))} y={yW(p.kg) - 10} textAnchor={x(ms(p.date)) > W - R - 34 ? "end" : x(ms(p.date)) < L + 34 ? "start" : "middle"} fontSize={11} fontWeight={600} fill="var(--ink)">{showW(p.kg)}</text></g>)}
+      {sorted.map((p) => <g key={p.kind + p.date}><circle cx={x(ms(p.date))} cy={yW(p.kg)} r={p.kind === "stage" ? 5 : 4.5} fill={stroke(p)} stroke="var(--accent)" strokeWidth={2}><title>{`${p.label || "Stage"} · ${shortDate(p.date)} · ${showW(p.kg)}`}</title></circle><text x={x(ms(p.date))} y={yW(p.kg) - 10} textAnchor={x(ms(p.date)) > W - R - 34 ? "end" : x(ms(p.date)) < L + 34 ? "start" : "middle"} fontWeight={600} fill="var(--ink)">{showW(p.kg)}</text></g>)}
       {!timeline.length && !sorted.length && <text x={W / 2} y={H / 2} textAnchor="middle">No plan and no target yet</text>}
     </svg>
   );

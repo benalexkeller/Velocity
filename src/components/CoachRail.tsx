@@ -35,7 +35,7 @@ export function CoachRail({ thread, placeholder = "Ask your coach or log how it 
           )}
         </span>
       </div>
-      {summary && <div className="muted" style={{ fontSize: 12.5, marginBottom: 12 }}>{summary}</div>}
+      {summary && <div className="muted" style={{ fontSize: 13, marginBottom: 12 }}>{summary}</div>}
       <div className="msgs">
         {msgs.map((m, i) =>
           m.who === "action" ? (

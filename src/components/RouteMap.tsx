@@ -145,7 +145,7 @@ export function RouteMap({ route, height = 120, stroke = "var(--accent)", bg = "
       </div>
     )}
     {interactive && <span className="rmap-zoom">{view.k === 1 ? "whole route" : `${view.k.toFixed(1)}×`}</span>}
-    {credit && <span style={{ position: "absolute", left: 6, bottom: 3, fontSize: 9, color: "#8A909B", background: "rgba(255,255,255,0.7)", borderRadius: 4, padding: "0 4px", pointerEvents: "none" }}>© OpenStreetMap{tiles.length ? " © CARTO" : ""}</span>}
+    {credit && <span style={{ position: "absolute", left: 6, bottom: 3, fontSize: 12, color: "#8A909B", background: "rgba(255,255,255,0.7)", borderRadius: 4, padding: "0 4px", pointerEvents: "none" }}>© OpenStreetMap{tiles.length ? " © CARTO" : ""}</span>}
     </div>
   );
 }

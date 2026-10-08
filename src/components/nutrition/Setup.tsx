@@ -1,4 +1,5 @@
 "use client";
+import { ymd } from "@/lib/format";
 import { useState } from "react";
 import { useNutrition } from "@/lib/nutrition/store";
 import { usePlan } from "@/lib/store";
@@ -51,7 +52,7 @@ export function NutritionSetup({ onDone, edit = false }: { onDone: () => void; e
     setBusy(true);
     try {
       await nut.saveProfile({ weight_kg, height_cm, birth_year: by && by > 1900 ? by : null, sex: sex || null, goal, goal_weight_kg: goal === "race_weight" && gw ? +(wUnit === "lb" ? lbToKg(gw) : gw).toFixed(2) : null, weight_stages: goal === "race_weight" && depth ? stages.filter((s) => s.weight_kg > 0 && s.date) : [], base_kcal: parseInt(baseK) >= 800 ? parseInt(baseK) : null, bottle_ml, supplements: picks, setup_done: true });
-      if (!edit) nut.logWeight(new Date().toISOString().slice(0, 10), weight_kg);
+      if (!edit) nut.logWeight(ymd(new Date()), weight_kg);
       onDone();
     } catch (x) { setErr(x instanceof Error ? x.message : "Could not save."); }
     setBusy(false);

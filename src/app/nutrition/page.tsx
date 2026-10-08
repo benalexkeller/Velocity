@@ -23,7 +23,6 @@ function Nutrition() {
       <div className="page nu" style={{ display: "grid", gap: 14, paddingTop: 10 }}>
         <div className="page-head">
           <div>
-            <div className="eyebrow muted">Fuel</div>
             <h1>Nutrition</h1>
           </div>
         </div>

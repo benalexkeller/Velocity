@@ -1,4 +1,5 @@
 "use client";
+import { niceTicks, useWidth } from "@/lib/ticks";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Icon } from "../icons";
@@ -56,19 +57,20 @@ function targetOf(s: Session, zones: Record<string, Record<string, string>>) {
   return { k: sp === "bike" ? (/W$/.test(z) ? "Target power" : "Target speed") : "Target pace", v: z, u: sp === "bike" ? "" : sp === "swim" ? "per 100 yd" : "per mile" };
 }
 
-const ZONE_FILL: Record<Zone, string> = { 1: "#DCE6FB", 2: "#A5C7FD", 3: "#2459FE", 4: "#0E2E8A", 5: "#101114" };
+// one zone palette for the whole app (tokens in globals.css)
+export const ZONE_FILL: Record<Zone, string> = { 1: "var(--z1)", 2: "var(--z2)", 3: "var(--z3)", 4: "var(--z4)", 5: "var(--z5)" };
 
 // Interval chart: time on the x axis, zone (effort) on the y axis; each block is one segment with its target pace.
 function IntervalChart({ segments }: { segments: Segment[] }) {
   const total = segments.reduce((s, x) => s + x.min, 0) || 1;
-  const W = 900, H = 170, L = 34, R = 10, T = 26, B = 28;
+  const [svgRef, W] = useWidth<SVGSVGElement>(900); const H = 170, L = 34, R = 10, T = 26, B = 28;
   const x = (m: number) => L + (m / total) * (W - L - R);
   const y = (z: number) => T + ((5 - z) / 5) * (H - T - B);
   let acc = 0;
   const tick = total <= 60 ? 10 : total <= 120 ? 15 : 30;
   const ticks: number[] = []; for (let m = 0; m <= total; m += tick) ticks.push(m);
   return (
-    <svg className="chart sp-chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Session structure: time and target effort">
+    <svg ref={svgRef} className="chart sp-chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Session structure: time and target effort">
       {[1, 2, 3, 4, 5].map((z) => <g key={z}><line x1={L} y1={y(z)} x2={W - R} y2={y(z)} stroke="var(--grid)" /><text x={L - 6} y={y(z) + 4} textAnchor="end">Z{z}</text></g>)}
       {segments.map((s, i) => {
         const x0 = x(acc), x1 = x(acc + s.min); acc += s.min;
@@ -76,8 +78,8 @@ function IntervalChart({ segments }: { segments: Segment[] }) {
         const el = (
           <g key={i}>
             <rect x={x0 + 0.5} y={y(s.zone)} width={Math.max(1, x1 - x0 - 1)} height={y(0) - y(s.zone)} fill={ZONE_FILL[s.zone]} rx={2} />
-            {wide && <text x={(x0 + x1) / 2} y={y(s.zone) - 8} textAnchor="middle" className="ink" fontSize="11" fontWeight="600">{s.kind === "recovery" ? "recover" : s.label.replace(/^Rep \d+$/, "rep")}</text>}
-            {wide && s.kind !== "recovery" && <text x={(x0 + x1) / 2} y={y(0) - 8} textAnchor="middle" fontSize="10.5" fill={s.zone >= 4 ? "#fff" : s.zone === 3 ? "#fff" : "var(--ink-2)"}>{s.target.replace(/ ?\/(mi|100 yd)$/, "")}</text>}
+            {wide && <text x={(x0 + x1) / 2} y={y(s.zone) - 8} textAnchor="middle" className="ink" fontWeight="600">{s.kind === "recovery" ? "recover" : s.label.replace(/^Rep \d+$/, "rep")}</text>}
+            {wide && s.kind !== "recovery" && <text x={(x0 + x1) / 2} y={y(0) - 8} textAnchor="middle" fill={s.zone >= 4 ? "#fff" : s.zone === 3 ? "#fff" : "var(--ink-2)"}>{s.target.replace(/ ?\/(mi|100 yd)$/, "")}</text>}
           </g>
         );
         return el;

@@ -9,6 +9,7 @@ import { MEALS, type LogEntry, type Meal } from "@/lib/nutrition/types";
 import { SUPPLEMENT_MAP } from "@/lib/nutrition/supplements";
 import { addDays, dateLabel, fromYmd, shortDate, today, ymd } from "@/lib/format";
 import { AddPanel } from "./AddPanel";
+import { niceTicks, useWidth } from "@/lib/ticks";
 
 const fmt = (n: number, d = 0) => n.toLocaleString(undefined, { maximumFractionDigits: d });
 /** Which logged meal is "before" and which is "after" a session, from its start time (entries carry no clock time yet). */
@@ -74,8 +75,8 @@ function DayView({ date, setDate, setView }: { date: string; setDate: (d: string
       <section className="card nu-targets" aria-label="Today's targets">
         <div className="big" title={`${fmt(t.kcal)} kcal = ${nut.profile.base_kcal != null ? `${fmt(t.base)} (your rest-day number)` : `${fmt(t.bmr)} resting × 1.4`}${t.training ? ` + ${fmt(t.training)} training (${d.basis === "done" ? "from what you logged" : d.basis === "mixed" ? "logged + still planned" : "planned"})` : ""}${t.goalAdj ? ` ${t.goalAdj > 0 ? "+" : "−"} ${fmt(Math.abs(t.goalAdj))} goal` : ""}${t.goalNote ? ` · ${t.goalNote}` : ""}`}><div className="k">Calories</div><div className="v"><b>{fmt(d.totals.kcal)}</b> / {fmt(t.kcal)} kcal</div><Bar v={d.totals.kcal} t={t.kcal} /><div className="u">{d.totals.kcal <= t.kcal ? `${fmt(t.kcal - d.totals.kcal)} remaining` : `${fmt(d.totals.kcal - t.kcal)} over`}</div></div>
         <div><div className="k">Carbs</div><div className="v"><b>{d.estimateOnly ? "—" : fmt(d.totals.carbs)}</b> / {fmt(t.carbs)} g</div><Bar v={d.estimateOnly ? 0 : d.totals.carbs} t={t.carbs} /><div className="u">{d.estimateOnly ? "estimate, no breakdown" : `${fmt(Math.max(0, t.carbs - d.totals.carbs))} g remaining`}</div></div>
-        <div><div className="k">Protein</div><div className="v"><b>{d.estimateOnly ? "—" : fmt(d.totals.protein)}</b> / {fmt(t.protein)} g</div><Bar v={d.estimateOnly ? 0 : d.totals.protein} t={t.protein} color="var(--ink)" /><div className="u">{d.estimateOnly ? "estimate, no breakdown" : `${fmt(Math.max(0, t.protein - d.totals.protein))} g remaining`}</div></div>
-        <div><div className="k">Fat</div><div className="v"><b>{d.estimateOnly ? "—" : fmt(d.totals.fat)}</b> / {fmt(t.fat)} g</div><Bar v={d.estimateOnly ? 0 : d.totals.fat} t={t.fat} color="var(--muted)" /><div className="u">{d.estimateOnly ? "estimate, no breakdown" : `${fmt(Math.max(0, t.fat - d.totals.fat))} g remaining`}</div></div>
+        <div><div className="k">Protein</div><div className="v"><b>{d.estimateOnly ? "—" : fmt(d.totals.protein)}</b> / {fmt(t.protein)} g</div><Bar v={d.estimateOnly ? 0 : d.totals.protein} t={t.protein} color="var(--protein)" /><div className="u">{d.estimateOnly ? "estimate, no breakdown" : `${fmt(Math.max(0, t.protein - d.totals.protein))} g remaining`}</div></div>
+        <div><div className="k">Fat</div><div className="v"><b>{d.estimateOnly ? "—" : fmt(d.totals.fat)}</b> / {fmt(t.fat)} g</div><Bar v={d.estimateOnly ? 0 : d.totals.fat} t={t.fat} color="var(--fat)" /><div className="u">{d.estimateOnly ? "estimate, no breakdown" : `${fmt(Math.max(0, t.fat - d.totals.fat))} g remaining`}</div></div>
         <div><div className="k">Hydration</div><div className="v"><b>{(d.drinks_ml / 1000).toFixed(1)}</b> / {(t.fluid_ml / 1000).toFixed(1)} L</div><Bar v={d.drinks_ml} t={t.fluid_ml} /><div className="u">{fmt(bottles, 1)} of {bottleTarget} bottles</div></div>
       </section>
       )}
@@ -178,7 +179,7 @@ function WeekView({ date, setDate, setView }: { date: string; setDate: (d: strin
   const macroTot = macroK.c + macroK.p + macroK.f || 1;
   const macroDays = logged.filter((x) => !x.estimateOnly).length;
   const onTarget = logged.filter((x) => x.targets && Math.abs(x.totals.kcal - tk(x)) <= tk(x) * 0.1).length;
-  const W = 760, H = 260, L = 44, R = 12, T = 30, B = 40;
+  const [svgRef, W] = useWidth<SVGSVGElement>(760); const H = 260, L = 44, R = 12, T = 30, B = 40;
   const max = Math.max(1000, ...days.map((x) => Math.max(x.totals.kcal, tk(x)))) * 1.08;
   const y = (v: number) => H - B - (v / max) * (H - T - B);
   const gw = (W - L - R) / 7, bw = gw * 0.5;
@@ -195,29 +196,29 @@ function WeekView({ date, setDate, setView }: { date: string; setDate: (d: strin
       </div>
       <div className="nu-cols week">
         <section className="card nu-weekchart" aria-label="Week intake vs target">
-          <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Calories per day by macronutrient with the daily target">
+          <svg ref={svgRef} className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Calories per day by macronutrient with the daily target">
             {ticks.map((v) => <g key={v}><line x1={L} y1={y(v)} x2={W - R} y2={y(v)} stroke="var(--grid)" /><text x={L - 6} y={y(v) + 4} textAnchor="end">{fmt(v)}</text></g>)}
             {days.map((x, i) => {
               const cx = L + i * gw + gw / 2;
               const c = x.totals.carbs * 4, p = x.totals.protein * 4, f = x.totals.fat * 9, other = Math.max(0, x.totals.kcal - c - p - f);
-              const segs: [number, string][] = [[c, "var(--accent)"], [p, "#0E2E8A"], [f, "#A5C7FD"], [other, "var(--track)"]];
+              const segs: [number, string][] = [[c, "var(--carb)"], [p, "var(--protein)"], [f, "var(--fat)"], [other, "var(--track)"]];
               let acc = 0;
               return (
                 <g key={x.date} onClick={() => { setDate(x.date); setView("day"); }} style={{ cursor: "pointer" }}>
-                  <text x={cx} y={T - 12} textAnchor="middle" fontSize="10" fill="var(--muted)">{sessionName(x)}</text>
+                  <text x={cx} y={T - 12} textAnchor="middle" fill="var(--muted)">{sessionName(x)}</text>
                   {x.targets && <rect x={cx - bw / 2 - 4} y={y(tk(x))} width={bw + 8} height={Math.max(0, y(0) - y(tk(x)))} fill="none" stroke="var(--muted-2)" strokeDasharray="4 3" rx={3} />}
                   {segs.map(([v, col], k) => { const el = v > 0 ? <rect key={k} x={cx - bw / 2} y={y(acc + v)} width={bw} height={Math.max(0, y(0) - y(v))} fill={col} rx={k === 3 ? 2 : 0} /> : null; acc += v; return el; })}
                   <text x={cx} y={H - 22} textAnchor="middle" fontWeight={x.date === ymd(today()) ? 600 : undefined}>{DAYS[i]}</text>
-                  <text x={cx} y={H - 8} textAnchor="middle" fontSize="10" fill="var(--muted)">{shortDate(x.date)}</text>
+                  <text x={cx} y={H - 8} textAnchor="middle" fill="var(--muted)">{shortDate(x.date)}</text>
                 </g>
               );
             })}
           </svg>
-          <div className="lgd"><span><i style={{ background: "var(--accent)" }} />Carbohydrate (kcal)</span><span><i style={{ background: "#0E2E8A" }} />Protein (kcal)</span><span><i style={{ background: "#A5C7FD" }} />Fat (kcal)</span><span><i style={{ background: "var(--track)" }} />Estimate, no breakdown</span><span><i className="dash" />Target (kcal)</span></div>
+          <div className="lgd"><span><i style={{ background: "var(--accent)" }} />Carbohydrate (kcal)</span><span><i style={{ background: "var(--protein)" }} />Protein (kcal)</span><span><i style={{ background: "var(--fat)" }} />Fat (kcal)</span><span><i style={{ background: "var(--track)" }} />Estimate, no breakdown</span><span><i className="dash" />Target (kcal)</span></div>
         </section>
         <section className="card nu-weekside" aria-label="Week summary">
           <div className="k">Average</div><div className="v"><b>{fmt(avg)} kcal</b> · target {fmt(avgT)}</div><div className="u">{logged.length} of 7 days logged</div>
-          {[["Carbs", macroK.c, "var(--accent)"], ["Protein", macroK.p, "#0E2E8A"], ["Fat", macroK.f, "#A5C7FD"]].map(([k, v, col]) => <div key={k as string} className="pct"><span>{k}</span><b>{macroDays ? `${Math.round(((v as number) / macroTot) * 100)}%` : "—"}</b><Bar v={v as number} t={macroTot} color={col as string} /></div>)}
+          {[["Carbs", macroK.c, "var(--carb)"], ["Protein", macroK.p, "var(--protein)"], ["Fat", macroK.f, "var(--fat)"]].map(([k, v, col]) => <div key={k as string} className="pct"><span>{k}</span><b>{macroDays ? `${Math.round(((v as number) / macroTot) * 100)}%` : "—"}</b><Bar v={v as number} t={macroTot} color={col as string} /></div>)}
           <div className="k" style={{ marginTop: 14 }}>Days on target</div><div className="v"><b>{onTarget} of {logged.length}</b></div><div className="u">within ±10% of the day's calorie target</div>
         </section>
       </div>

@@ -6,6 +6,7 @@ import { usePlan } from "@/lib/store";
 import { fmtPace, fromYmd, shortDate, today, addDays, fmtHours } from "@/lib/format";
 import { paceEligible } from "@/lib/analysis";
 import { runPace, swimPace } from "@/lib/units";
+import { niceTicks, useWidth } from "@/lib/ticks";
 
 type Sp = "swim" | "bike" | "run";
 function paceOf(a: Activity, sp: Sp): number | null {
@@ -22,13 +23,11 @@ export function PaceChart() {
   const since = addDays(today(), -56);
   const pts = plan.counted.filter((a) => a.sport === sp && fromYmd(a.date) >= since && paceEligible(a, sp)).map((a) => ({ date: a.date, v: paceOf(a, sp), min: a.min })).filter((p): p is { date: string; v: number; min: number } => p.v != null);
   const inv = sp !== "bike"; // pace: faster (lower seconds) plotted higher, like the mock
-  const W = 420, H = 190, L = 44, R = 10, T = 12, B = 26;
-  let lo = pts.length ? Math.min(...pts.map((p) => p.v)) : 0, hi = pts.length ? Math.max(...pts.map((p) => p.v)) : 1;
-  const pad = (hi - lo) * 0.25 || (sp === "bike" ? 2 : 30);
-  lo -= pad; hi += pad;
+  const [svgRef, W] = useWidth<SVGSVGElement>(420); const H = 190, L = 44, R = 10, T = 12, B = 26;
+  const nt = niceTicks(pts.length ? Math.min(...pts.map((p) => p.v)) : 0, pts.length ? Math.max(...pts.map((p) => p.v)) : 1, 4, sp === "bike" ? "number" : "pace");
+  const lo = nt.lo, hi = nt.hi;
   const x = (i: number) => L + (pts.length < 2 ? (W - L - R) / 2 : (i / (pts.length - 1)) * (W - L - R));
   const y = (v: number) => (inv ? T + ((v - lo) / (hi - lo)) * (H - T - B) : H - B - ((v - lo) / (hi - lo)) * (H - T - B));
-  const ticks = 4;
   const fmt = (v: number) => (sp === "bike" ? v.toFixed(1) : fmtPace(v));
   const wk = plan.currentWeek();
   const thisWeek = pts.filter((p) => fromYmd(p.date) >= fromYmd(wk.start));
@@ -46,9 +45,9 @@ export function PaceChart() {
         </div>
       </div>
       <div>
-        <div className="muted" style={{ fontSize: 11, marginBottom: 2 }}>{UNIT[sp]}</div>
-        <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${sp} pace over the last eight weeks`}>
-          {pts.length > 0 && Array.from({ length: ticks + 1 }, (_, k) => lo + ((hi - lo) * k) / ticks).map((v, k) => (
+        <div className="muted" style={{ fontSize: 12, marginBottom: 2 }}>{UNIT[sp]}</div>
+        <svg ref={svgRef} className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${sp} pace over the last eight weeks`}>
+          {pts.length > 0 && nt.ticks.map((v, k) => (
             <g key={k}>
               <line x1={L} y1={y(v)} x2={W - R} y2={y(v)} stroke="var(--grid)" />
               <text x={L - 8} y={y(v) + 4} textAnchor="end">{fmt(v)}</text>
@@ -76,7 +75,7 @@ export function VolumeChart() {
   const wk = plan.currentWeek();
   const a = actualByDiscipline(wk, plan.counted), p = plannedByDiscipline(wk);
   const rows = [["Swim", a.swim, p.swim], ["Bike", a.bike, p.bike], ["Run", a.run, p.run]] as const;
-  const W = 420, H = 190, L = 34, R = 10, T = 12, B = 26;
+  const [svgRef, W] = useWidth<SVGSVGElement>(420); const H = 190, L = 34, R = 10, T = 12, B = 26;
   const max = Math.max(2, Math.ceil(Math.max(...rows.flatMap((r) => [r[1], r[2]])) / 2) * 2);
   const y = (h: number) => H - B - (h / max) * (H - T - B);
   const gw = (W - L - R) / 3, bw = 40;
@@ -88,8 +87,8 @@ export function VolumeChart() {
         <span className="lgd"><span><i style={{ background: "var(--accent)" }} />Actual</span><span><i className="hollow" />Planned</span></span>
       </div>
       <div>
-        <div className="muted" style={{ fontSize: 11, marginBottom: 2 }}>Hours</div>
-        <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="This week's hours by discipline, actual versus planned">
+        <div className="muted" style={{ fontSize: 12, marginBottom: 2 }}>Hours</div>
+        <svg ref={svgRef} className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="This week's hours by discipline, actual versus planned">
           {Array.from({ length: max / 2 + 1 }, (_, k) => k * 2).map((h) => (
             <g key={h}><line x1={L} y1={y(h)} x2={W - R} y2={y(h)} stroke="var(--grid)" /><text x={L - 8} y={y(h) + 4} textAnchor="end">{h}</text></g>
           ))}

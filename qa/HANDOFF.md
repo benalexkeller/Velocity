@@ -52,21 +52,25 @@ Rules that still apply (from `CLAUDE.md` and the owner):
 - 2026-10-08 — Slice 1 (First 15 items 1–3) done and verified by `qa/verify1.js` (17 checks): V-001 V-002 V-003 V-004 V-005 V-006 V-007 V-036 V-056 V-057 V-133. Semantic colour tokens (`--ok/--warn/--danger`, `--z1…--z5`) added to `globals.css` for later slices. Next: item 4 (zones from intake, V-015) → item 5 (LTHR load, V-019/020/089) → item 6 (session status, V-016/088).
 - 2026-10-08 — Slice 2 (First 15 items 4–6) done and verified by `qa/verify2.js` (8 checks): V-015 zones derived from the builder's answers (`src/lib/plan/zones.ts`, saved to `profile.zones` with `meta.lthr/ftp` at build time; panel says "from your answers"); V-019/020 load = min × (HR ÷ LTHR)² with `athlete.lthr` (seed athlete keeps 155), RPE and sport defaults, one `hrZone()` in `lib/athlete.ts` used by Analysis and Activities; V-089 planned load uses one formula (`plannedLoad`) on Analysis too; V-016 session status by paired same-sport activity (`statusOf` in `lib/data/index.ts`: done ≥ 70 %, partial, substituted, missed) — compliance counts partial/substituted as 0.5, today's open session not counted (V-088 naming "Completed sessions" on dashboard + Analysis tile).
 
-## What is left (in order) — for the next session, any model
+## What is left — for the next session, any model
 
-Done so far: First 15 items **1–6** (11 P0s closed: V-001…007, 015, 016, 019, 020, 036 + P1/P2 036, 056, 057, 088, 089, 133). Branch `deslop` passes `tsc` and `next build`; both verify scripts pass against the local build.
+**Done (as of 2026-10-08, Opus 5.5 session):** all of First 15 (REPORT.md §5) — 30 of 36 P0s closed, plus the P1s/P2s bundled with them. Commits on `deslop`:
+- `29f54f5` items 1–3 · `3a89d37` items 4–6 (Fable session)
+- `61263de` items 7–9: home-made scores deleted, gated race projection (Riegel), VO2max trend replaces the health ring, Fitness seeded 42 days back, `app/error.tsx`, minimum-duration pace filter, calculator uses own data, seed coach thread only on the owner's seed, weather removed, Garmin "Imported <date>", watch shows the last activity, zone donut removed (session-average HR ≠ time in zone)
+- `aa3cfea` items 10–11: nutrition engine rewritten to NUT §C–§J (carb bands by effective training hours, 10 g/kg on race −2/−1, race-day plan, fat 0.8–1.2 g/kg, deficit caps by day/phase + energy-availability floor, in-session fluid ≤ 0.8 L/h and sodium, before/after rules by clock and gap); targets follow logged activities; Before/During/After/Rest timing rows; estimate days show "—"; no targets without a weight. `qa/nutri-unit.ts` prints the worked examples.
+- `8deca64` item 12: every screen shows scheduled hours; +10 % over the last loading week; build screen states when the days cannot hold the maximum; longest ride excludes run-off; "Your plan explained" only on the seed. `qa/ramp-check.ts`.
+- `5bc5b04` item 13: phone pass — 0 of 53 phone states overflow (`qa/phone.js`), bottom tab bar.
+- next commit: items 14–15: 8-step type scale (34 → 8 rendered sizes), status colours as tokens, `--muted-2` readable, page eyebrows removed, sentence-case tabs; `lib/ticks.ts` (`niceTicks`, `useWidth`) — charts draw at their real width so axis text is 12 px everywhere, round ticks, zero floor, one zone/macro palette, Form grey dashed, swim colour readable.
 
-Next, exactly as REPORT.md §5 describes them (row numbers = §3 of REPORT.md):
-7. Delete the race capability score, health score and "On track" verdict; gate the projection; race legs from `athlete.raceDist` (V-022, 023, 024, 025, 143). Files: `lib/analysis.ts` (raceScore, healthScore, raceReadiness), `components/analysis/Analytics.tsx:374–430`, `Panels.tsx:50`.
-8. Analysis crash + cold start (V-029, 021, 027): `lib/analysis.ts:80–94` start 42 days before min(planStart, first activity), seed the EWMA, `LOAD_SERIES.at(-1) ?? …`; add `src/app/error.tsx`; minimum-duration filter in `weightedAvgPace`.
-9. Seed out of other accounts (V-035 calculators `SEED_ANALYSIS` → `useAnalysis()`, V-054 coach thread only on the seed, V-047 delete weather, V-050 "Garmin · imported <date>", V-051 real numbers on the watch).
-10. Nutrition `targetsFor` (V-030 fat cap 1.2 g/kg, V-031 carb-load days + race-day detection) in `lib/nutrition/targets.ts`.
-11. Nutrition reads what was done (V-032), real meal slots (V-033), estimate days "—" (V-034), During row (V-091), no targets without a weight (V-104).
-12. Plan hours tell the truth (V-008, 009, 011, 013) in `lib/plan/generate.ts`; re-run `qa/harness/C3/gen.ts` after.
-13. Phone CSS pass (V-106, 107, 152, 153) — acceptance: `scrollWidth === 390` on every state in `qa/shots.js` output `_log.txt`.
-14. Type ramp + colour tokens (V-110–113, 116) — `--ok/--warn/--danger/--z1…5` already exist in `globals.css :root`; the ramp and the 125 hex literals are still to do.
-15. Charts: `lib/ticks.ts niceTicks`, container-measured width, zero floor, shared `ZONE_FILL` (V-124, 125, 126, 028).
-Then the remaining work packages WP6–WP11 (REPORT.md §6).
+Checks (run against `npx next start -p 3111` from a folder with playwright): `verify1.js` 17/17, `verify2.js` 8/8, `verify3.js` 15/15, `verify4.js` 8/8, `phone.js` 0 overflow.
+
+**Next, in order** (REPORT.md §6 work packages; rows in §3):
+1. **WP6 Analysis content and order** — V-026 Training-quality status words instead of %, V-080/081 KPI tiles (report's six), V-086 recovery baselines, V-087 section order (KPI → flags → Sunday facts → week in review → F/F/F → volume → long sessions → aerobic progress → body → thresholds → projection → activity analysis), V-090 "Analysis needs data" empty state. Note: the Training-quality table still shows "100 %" for a rest-day run and bike-for-swim (V-026) — most visible remaining wrong number.
+2. **WP7 Plan generator** — V-010 swims for ≤ 4-day tri plans, V-014 step parser (threshold/race pace/run off the bike), V-012 race-day session, V-072 no back-to-back hard days, V-065 missed-session proposals, progression templates. Known from ramp-check: session minimums push a 2 h/week marathoner to 3.4 h in week 2; a gran fondo plan can schedule 10.6 h against a 10 h maximum — both need a cap pass.
+3. **WP8 nutrition remainder** — V-049 fuel line on the dashboard hero and the Plan session panel (use `nut.fuelFor` / `sessionFuel`), gut-training status and sweat tests in set-up (NUT §I, §K), race-day page (§H). The "During" row has no logged value because PR folded in-session food into "Other" (his 2026-09-30 decision); ask him before adding a separate meal.
+4. **WP4 remainder** — V-108 week grid as a list on phones, V-118/119/159 control heights, card padding and gap scale; line-height tokens.
+5. **WP9 copy** — V-039 developer vocabulary, V-040 feel-good lines ("The road to 140.6", "Taper — Freshen up"), V-042 session/activity glossary, V-044 one date format, V-046 one icon set.
+6. **WP10/WP11** — V-037 hydration (#418) via a `useNow()` hook, keyboard access to week grid / activities, focus rings, lint.
 
 Known follow-ups from slices 1–2: the seed athlete's load numbers moved slightly (RPE path and sport defaults changed; HR path unchanged at LTHR 155); `eslint` still reports the pre-existing `set-state-in-effect` pattern (41 → ~44 errors, none new in kind); metric athletes still see imperial pace strings in zones (zones are stored imperial; metric display is roadmap item 4).
 

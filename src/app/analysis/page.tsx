@@ -4,7 +4,7 @@ import { useState } from "react";
 import { CoachBar } from "@/components/CoachBar";
 import { ActivityAnalyzer, ActivityPanel } from "@/components/analysis/Panels";
 import { KpiRow, Observations, Overview, Progress, Quality, RaceReadiness, Recovery, SportRow, Volume, type Range } from "@/components/analysis/Analytics";
-import { addDays, dateLabel, today } from "@/lib/format";
+import { addDays, dateLabel, today, ymd } from "@/lib/format";
 import { usePlan } from "@/lib/store";
 
 export default function AnalysisPage() {
@@ -18,14 +18,13 @@ export default function AnalysisPage() {
       <div className="ax">
         <div className="page-head ax-top">
           <div>
-            <div className="eyebrow muted">Performance{ATHLETE.hasRace ? ` · ${ATHLETE.race.name}` : ""}</div>
             <h1>Analysis</h1>
           </div>
           <span className="grow" />
           <div className="pill-group" role="group" aria-label="Time range">
             {([4, 12, 99] as Range[]).map((r) => <button key={r} type="button" className={range === r ? "on" : ""} onClick={() => setRange(r)}>{r === 99 ? "All" : `Last ${r} weeks`}</button>)}
           </div>
-          <span className="badge muted">{range === 99 ? `Since ${dateLabel(ATHLETE.planStart)}` : `${dateLabel(from.toISOString().slice(0, 10))} – ${dateLabel(today().toISOString().slice(0, 10))}`}</span>
+          <span className="badge muted">{range === 99 ? `Since ${dateLabel(ATHLETE.planStart)}` : `${dateLabel(ymd(from))} – ${dateLabel(ymd(today()))}`}</span>
           <ActivityAnalyzer selectedId={sel} onSelect={setSel} />
         </div>
 

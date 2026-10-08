@@ -20,7 +20,7 @@ export default function ProfilePage() {
             <span className="avatar">{a.avatarUrl ? <img src={a.avatarUrl} alt="" /> : initials}</span>
             <div><b>{a.name}</b><small>{a.username ? `@${a.username} · ` : ""}{a.email ?? "no email"}{a.isAdmin ? " · admin" : ""}</small></div>
           </div>
-          {plan.accounts ? <ProfileForm mode="edit" /> : <p className="muted" style={{ fontSize: 13.5 }}>Accounts are off in this copy. Profile editing works once Supabase is connected.</p>}
+          {plan.accounts ? <ProfileForm mode="edit" /> : <p className="muted" style={{ fontSize: 14 }}>Accounts are off in this copy. Profile editing works once Supabase is connected.</p>}
         </section>
         <section className="card">
           <h2>Plan</h2>

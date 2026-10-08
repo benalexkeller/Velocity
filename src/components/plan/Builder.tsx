@@ -73,7 +73,6 @@ export function Builder({ edit, importFirst = false }: { edit: boolean; importFi
     <div className="pb">
       <div className="pb-head">
         <div>
-          <div className="eyebrow muted">{edit ? "Plan settings" : "Your plan"}</div>
           <h1>{edit ? "Change the answers, rebuild the plan" : "Build your plan"}</h1>
         </div>
         <ol className="pb-steps" aria-label="Steps">{STEPS.map((s, i) => <li key={s} className={i === step ? "on" : i < step ? "done" : ""}><button type="button" onClick={() => { if (i < step) { setErr(null); setStep(i); } }}><span className="n">{i < step ? "✓" : i + 1}</span>{s}</button></li>)}</ol>
