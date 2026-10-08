@@ -168,13 +168,15 @@ function Plan() {
           {overview && <WeekOverview week={plan.weekByNumber(overview)} onClose={() => setOverview(null)} onOpenWeek={() => { setWk(overview); setView("week"); window.scrollTo({ top: 0, behavior: "smooth" }); }} />}
         </section>
 
-        <section className="section">
-          <div className="section-head">
-            <h2>Your plan explained</h2>
-            <span className="sub">Each phase: what changes and the milestones to hit.</span>
-          </div>
-          <PlanExplained />
-        </section>
+        {plan.seed && (
+          <section className="section">
+            <div className="section-head">
+              <h2>Your plan explained</h2>
+              <span className="sub">Each phase: what changes and the milestones to hit.</span>
+            </div>
+            <PlanExplained />
+          </section>
+        )}
 
         {plan.intake && (
           <section className="section">

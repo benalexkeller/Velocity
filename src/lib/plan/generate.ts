@@ -7,7 +7,8 @@ import { addDays, fromYmd, today, ymd } from "../format";
 import { EMPTY_INTAKE, MIN_WEEKS, eventType, paceToSec, type Intake, type Kind } from "./intake";
 import { RULES } from "./rules";
 
-export interface PlanSummary { weeks: number; start: string; raceWeek: number; phases: { name: string; from: number; to: number }[]; peakHours: number; sessions: number; longest: { ride: number; run: number; swim: number }; hours: number[] }
+/** hours = what each week schedules; peakHours = the largest of those; targetPeak = what the ramp aimed for; startHours = the athlete's current week. */
+export interface PlanSummary { weeks: number; start: string; raceWeek: number; phases: { name: string; from: number; to: number }[]; peakHours: number; targetPeak: number; startHours: number; sessions: number; longest: { ride: number; run: number; swim: number }; hours: number[] }
 
 type Phase = "base" | "build" | "peak" | "taper" | "race";
 const hm = (h: number) => { const m = Math.round(h * 60 / 5) * 5; return `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}`; };
@@ -128,19 +129,25 @@ export function generatePlan(intakeIn: Partial<Intake>, t: Date = today(), imper
   const blackout = (date: string) => intake.time.blackouts.some((b) => b.from && b.to && date >= b.from && date <= b.to);
   const todayS = ymd(t);
 
-  // weekly hours: ramp from now to the maximum through base + build, at most +10 %/week, recovery weeks lighter
-  const hours: number[] = [];
-  let ref = startH;
+  // weekly hour targets: ramp from now towards the maximum through base + build, at most +10 % over the last
+  // loading week (recovery weeks do not compound); the peak is whatever the ramp reached, never a jump
+  const target: number[] = [];
+  let lastLoading = startH;
   for (let i = 0; i < N; i++) {
     const p = phases[i];
     if (p === "base" || p === "build") {
       const lin = B <= 1 ? maxH : startH + (maxH - startH) * (i / (B - 1));
-      ref = i === 0 ? startH : Math.min(lin, ref * (1 + RULES.weeklyRamp) + 0.3);
-      hours.push(recovery[i] ? ref * RULES.recoveryFactor : ref);
-    } else if (p === "peak") hours.push(maxH);
-    else if (p === "taper") { const tapers = phases.filter((x) => x === "taper").length; const j = i - phases.indexOf("taper"); hours.push(maxH * (tapers === 2 ? RULES.taperTwoWeeks[j] : RULES.taperOneWeek)); }
-    else hours.push(maxH * RULES.raceWeekFactor);
+      const ref = i === 0 ? startH : Math.min(lin, lastLoading * (1 + RULES.weeklyRamp));
+      if (!recovery[i]) lastLoading = ref;
+      target.push(recovery[i] ? ref * RULES.recoveryFactor : ref);
+    } else if (p === "peak") target.push(Math.min(maxH, lastLoading * (1 + RULES.weeklyRamp)));
+    else {
+      const peakH = Math.max(...target, startH);
+      if (p === "taper") { const tapers = phases.filter((x) => x === "taper").length; const j = i - phases.indexOf("taper"); target.push(peakH * (tapers === 2 ? RULES.taperTwoWeeks[j] : RULES.taperOneWeek)); }
+      else target.push(peakH * RULES.raceWeekFactor);
+    }
   }
+  const hours: number[] = []; // what each week actually schedules (filled below); this is what every screen shows
 
   const weeks: PlanWeekJson[] = [];
   let sessions = 0;
@@ -151,7 +158,7 @@ export function generatePlan(intakeIn: Partial<Intake>, t: Date = today(), imper
   const allowed = (sport: "bike" | "run" | "swim" | "other", want: number) => { const recent = history[sport].slice(-RULES.sessionWindowWeeks); const prev = recent.length ? Math.max(...recent) : 0; return prev > 0 ? Math.min(want, prev * (1 + RULES.sessionStep)) : want; };
   for (let i = 0; i < N; i++) {
     const p = phases[i];
-    const H = hours[i];
+    const H = target[i];
     const wkStart = addDays(start, i * 7);
     const days7: { text: string; min: number }[] = Array.from({ length: 7 }, () => ({ text: "Rest", min: 0 }));
     // how far into the plan: long sessions grow from ~50 % of their cap to 100 % by the end of build
@@ -186,8 +193,8 @@ export function generatePlan(intakeIn: Partial<Intake>, t: Date = today(), imper
           const brick = race && (p === "build" || p === "peak") && !isRec;
           const runOff = p === "peak" ? Math.min(0.75, 0.15 * h + 0.25) : 0.33;
           text = p === "peak" && !isRec ? `Race sim: Long ride ${hm(h)} at race effort + Run ${hm(runOff)} off the bike` : brick ? `Brick: Long ride ${hm(h)} EZ + Run ${hm(runOff)} off the bike` : `Long ride ${hm(h)} EZ`;
+          longest.ride = Math.max(longest.ride, h); // the ride alone, before the run off the bike is added
           if (brick || (p === "peak" && !isRec)) h += runOff;
-          longest.ride = Math.max(longest.ride, h);
         } else if (s.sport === "run") {
           text = p === "build" && !isRec ? `Long run ${hm(h)} EZ with the last 20 min at race pace` : p === "peak" && !isRec ? `Long run ${hm(h)} — middle ${hm(Math.max(0.33, h * 0.4))} at race pace` : `Long run ${hm(h)} EZ`;
           longest.run = Math.max(longest.run, h);
@@ -233,14 +240,17 @@ export function generatePlan(intakeIn: Partial<Intake>, t: Date = today(), imper
       if (m > 0) history[sp].push(m); else if (history[sp].length) history[sp].push(history[sp][history[sp].length - 1]);
     }
     sessions += days7.filter((d) => d.min > 0 && !/^Race day/.test(d.text)).length;
+    const scheduledH = days7.reduce((a, d) => a + (/^Race day/.test(d.text) ? 0 : d.min), 0) / 60;
+    hours.push(+scheduledH.toFixed(2));
+    for (const d of days7) { const m = d.text.match(/(?:Long )?[Ss]wim (\d+):(\d+)/); if (m && !/^Race day/.test(d.text)) longest.swim = Math.max(longest.swim, +m[1] + +m[2] / 60); }
     const long1 = slots.find((s) => s.role === "long1"), long2 = slots.find((s) => s.role === "long2");
     const dayName = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-    const focus = isRaceWeek ? `Race ${raceDate} · ${hm(raceHours)} planned · short openers, then rest` : `${names[i].split(" — ")[0]}${isRec ? " · recovery week" : ""} · ${H.toFixed(1)} h${long1 ? ` · long ${long1.sport === "bike" ? "ride" : long1.sport === "run" ? "run" : long1.sport === "swim" ? "swim" : "session"} ${dayName[long1.day]}` : ""}${long2 ? ` · long run ${dayName[long2.day]}` : ""}`;
+    const focus = isRaceWeek ? `Race ${raceDate} · ${hm(raceHours)} planned · short openers, then rest` : `${names[i].split(" — ")[0]}${isRec ? " · recovery week" : ""} · ${scheduledH.toFixed(1)} h${long1 ? ` · long ${long1.sport === "bike" ? "ride" : long1.sport === "run" ? "run" : long1.sport === "swim" ? "swim" : "session"} ${dayName[long1.day]}` : ""}${long2 ? ` · long run ${dayName[long2.day]}` : ""}`;
     weeks.push({ week: i + 1, start: ymd(wkStart), phase: names[i], focus, recovery: isRec, race: isRaceWeek, days: days7 });
   }
 
   const phaseList: PlanSummary["phases"] = [];
   names.forEach((n, i) => { const last = phaseList[phaseList.length - 1]; if (last && last.name === n) last.to = i + 1; else phaseList.push({ name: n, from: i + 1, to: i + 1 }); });
-  const summary: PlanSummary = { weeks: N, start: ymd(start), raceWeek: N, phases: phaseList, peakHours: Math.max(...hours), sessions, longest, hours };
+  const summary: PlanSummary = { weeks: N, start: ymd(start), raceWeek: N, phases: phaseList, peakHours: Math.max(...hours), targetPeak: Math.max(...target), startHours: startH, sessions, longest, hours };
   return { weeks, summary };
 }

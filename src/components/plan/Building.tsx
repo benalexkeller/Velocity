@@ -46,7 +46,7 @@ export function Building({ intake, edit, onOpen }: { intake: Intake; edit: boole
     { at: 0.4, text: "Reading your answers" },
     { at: 2.5, text: `${N} weeks to race week · plan starts ${dateLabel(summary.start)}` },
     { at: 5.5, text: `Phases: ${phaseText}` },
-    { at: 9.5, text: `Hours: ${fmtH(summary.hours[0])} now → ${fmtH(summary.peakHours)} at the peak · at most +10 % a week · every 4th week lighter` },
+    { at: 9.5, text: `Hours: ${fmtH(summary.startHours)} a week now → ${fmtH(summary.peakHours)} in the biggest week · at most +10 % a week · every 4th week lighter${summary.peakHours < summary.targetPeak * 0.9 ? ` · your days fit ${fmtH(summary.peakHours)}, not ${fmtH(summary.targetPeak)}: add a day to train more` : ""}` },
     { at: 14, text: kind === "tri" ? `Long ride ${rideDay ?? "—"} · long run ${runDay ?? "—"} · brick sessions from the build phase` : kind === "run" ? `Long run ${runDay ?? "—"} · one tempo and one interval session a week from the build phase` : kind === "bike" ? `Long ride ${rideDay ?? "—"} · tempo and intervals from the build phase` : kind === "swim" ? `Long swim ${swimDay ?? "—"} · threshold sets from the build phase` : `Long session ${sessDay ?? "—"} · quality mid-week from the build phase` },
     { at: 19, text: `${summary.sessions} sessions placed on your ${intake.time.days.length} days${intake.strength ? " · strength twice a week" : ""}` },
     { at: 23.5, text: blackouts ? `${blackouts} blackout period${blackouts === 1 ? "" : "s"} turned into rest days` : `Race week: short openers, rest the day before, ${intake.goal.event || et.label} on ${dateLabel(intake.goal.date)}` },
