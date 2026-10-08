@@ -33,7 +33,7 @@ mkdir -p ../qa && cd ../qa && npm init -y && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 
 cp ../velocity/qa/shots.js . && node shots.js   # launch uses executablePath /opt/pw-browsers/chromium in the cloud workspace
 ```
 
-Pushing: the cloud workspace cannot push to this repo (git proxy refuses; checked again 8 Oct). Push from the owner's Mac: `git bundle create velocity.bundle --all` → send the file → `device_commit_files` into `/Users/benjaminkeller/garmin-mcp/` → in `device_bash`: `git clone velocity.bundle`/`git fetch`, then `git push https://<TOKEN>@github.com/benalexkeller/Velocity deslop` with a classic PAT (scope `repo`) from the owner. Vercel then builds a preview URL for the branch automatically.
+Pushing: the cloud workspace cannot push to this repo (git proxy refuses; checked again 8 Oct). The owner's token is saved on his Mac at `$HOME/.vptoken` (device_bash home, outside his folders); push with `git push "https://$(cat $HOME/.vptoken)@github.com/benalexkeller/Velocity" HEAD:deslop` from `$HOME/vpush` after fetching the new bundle, and mask `ghp_` in output. Push from the owner's Mac: `git bundle create velocity.bundle --all` → send the file → `device_commit_files` into `/Users/benjaminkeller/garmin-mcp/` → in `device_bash`: `git clone velocity.bundle`/`git fetch`, then `git push https://<TOKEN>@github.com/benalexkeller/Velocity deslop` with a classic PAT (scope `repo`) from the owner. Vercel then builds a preview URL for the branch automatically.
 
 ## The work, in order (details in REPORT.md §5 and §6)
 
@@ -62,9 +62,9 @@ Rules that still apply (from `CLAUDE.md` and the owner):
 - `5bc5b04` item 13: phone pass — 0 of 53 phone states overflow (`qa/phone.js`), bottom tab bar.
 - next commit: items 14–15: 8-step type scale (34 → 8 rendered sizes), status colours as tokens, `--muted-2` readable, page eyebrows removed, sentence-case tabs; `lib/ticks.ts` (`niceTicks`, `useWidth`) — charts draw at their real width so axis text is 12 px everywhere, round ticks, zero floor, one zone/macro palette, Form grey dashed, swim colour readable.
 
-- `2f83676` items 14–15 (above). **Pushed and live on the `deslop` preview up to here.**
+- `2f83676` items 14–15 (above).
 
-**Done after that (Opus 5.5, 8 Oct 2026, local commits — push them, see "Pushing" below):**
+**Done after that (Opus 5.5, 8 Oct 2026; pushed to `deslop`, Vercel preview built from `ef39b02`):**
 - `168089d` flush period steppers (`PeriodStepper`), "Connect wearable" button + sheet everywhere incl. setup and builder (`ConnectWearable.tsx`, devices are recorded, nothing connects yet), session fuel line on the dashboard hero and Plan panel (V-049), status words on Analysis (V-026).
 - `17ba10b` owner's requests: ~60 filler/descriptor sentences cut or shortened app-wide; This week card on one line; Nutrition method paragraph behind "How targets are calculated"; interval chart rebuilt (repeats grouped, labels only where they fit, fuel lane before/feeds/after, ticks by width); activity Exclude/Delete moved into a ⋮ menu. `qa/wrapcheck.js` flags wrapped labels and lists muted sentences.
 - `8d4ce21` coach panel: only today's messages (messages carry `day`), close button on Plan (remembered in `velocity.coach.v1`), the coach bar on every page opens the same panel on the right (`CoachDock.tsx`), example thread gone. `qa/verify6.js` 17 checks.
