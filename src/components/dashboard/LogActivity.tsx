@@ -37,9 +37,7 @@ function Wheel({ value, max, label, onChange }: { value: number; max: number; la
   return (
     <div className="wh" ref={ref}>
       <button type="button" tabIndex={-1} onClick={() => onChange(clamp(value - 1))} aria-label={`${label} down`}><Icon name="chevron" /></button>
-      <span className="ghost">{value > 0 ? pad(value - 1) : ""}</span>
       <input value={txt ?? pad(value)} onFocus={(e) => { setTxt(""); e.target.select(); }} onMouseUp={(e) => e.preventDefault()} onChange={(e) => { const t = e.target.value.replace(/\D/g, "").slice(-2); setTxt(t); onChange(t === "" ? 0 : clamp(parseInt(t))); }} onBlur={() => setTxt(null)} onKeyDown={(e) => { if (e.key === "ArrowUp") { e.preventDefault(); onChange(clamp(value + 1)); setTxt(null); } if (e.key === "ArrowDown") { e.preventDefault(); onChange(clamp(value - 1)); setTxt(null); } }} inputMode="numeric" aria-label={label} />
-      <span className="ghost">{value < max ? pad(value + 1) : ""}</span>
       <button type="button" tabIndex={-1} onClick={() => onChange(clamp(value + 1))} aria-label={`${label} up`}><Icon name="chevron" /></button>
       <small>{label}</small>
     </div>
@@ -168,8 +166,14 @@ export function LogActivity({ open, onClose, onSaved, initial, inline }: { open:
         <div className="lf-grid">
           <label>Day<input type="date" value={date} max={todayStr} onChange={(e) => setDate(e.target.value)} aria-invalid={!!errs.date} />{err("date")}</label>
           <label>Start time<input type="time" step={900} value={time} onChange={(e) => setTime(e.target.value)} /></label>
-          <label>Heart rate (bpm)<input value={hr} onChange={(e) => setHr(e.target.value)} placeholder="145" inputMode="numeric" aria-invalid={!!errs.hr} />{err("hr")}</label>
-          <div className="lf-dur" aria-label="Duration">
+          <label>Avg. heart rate (bpm)<input value={hr} onChange={(e) => setHr(e.target.value)} placeholder="145" inputMode="numeric" aria-invalid={!!errs.hr} />{err("hr")}</label>
+          {(timed || sport === "hike") ? <label>Distance<span className="lf-unit-in"><input value={dist} onChange={(e) => { setDist(e.target.value); touch("dist"); }} placeholder={sport === "swim" ? (metric ? "1500" : "1640") : metric ? "10" : "6.2"} inputMode="decimal" aria-invalid={!!errs.dist} />{units}</span>{err("dist")}</label> : <span />}
+          {timed ? <label>{paceLabel}<input value={pace} onChange={(e) => { setPace(e.target.value); touch("pace"); }} placeholder={sport === "bike" ? (metric ? "28" : "17.5") : sport === "swim" ? (metric ? "2:00" : "1:50") : metric ? "5:55" : "9:30"} inputMode="decimal" aria-invalid={!!errs.pace} />{err("pace")}</label> : <span />}
+          {(sport === "bike" || sport === "run" || sport === "hike") ? <label>Elevation gain ({elevUnit})<input value={elev} onChange={(e) => setElev(e.target.value)} placeholder="0" inputMode="numeric" aria-invalid={!!errs.elev} />{err("elev")}</label> : <span />}
+        </div>
+      </div>
+      <div className="lf-right">
+        <div className="lf-dur" aria-label="Duration">
             <span className="k">Duration</span>
             <div className="wheels">
               <Wheel value={dh} max={23} label="h" onChange={(v) => setDurPart(v, dm, ds)} />
@@ -178,12 +182,6 @@ export function LogActivity({ open, onClose, onSaved, initial, inline }: { open:
             </div>
             {sec > 0 && err("dur")}
           </div>
-          {(timed || sport === "hike") ? <label>Distance<span className="lf-unit-in"><input value={dist} onChange={(e) => { setDist(e.target.value); touch("dist"); }} placeholder={sport === "swim" ? (metric ? "1500" : "1640") : metric ? "10" : "6.2"} inputMode="decimal" aria-invalid={!!errs.dist} />{units}</span>{err("dist")}</label> : <span />}
-          {timed ? <label>{paceLabel}<input value={pace} onChange={(e) => { setPace(e.target.value); touch("pace"); }} placeholder={sport === "bike" ? (metric ? "28" : "17.5") : sport === "swim" ? (metric ? "2:00" : "1:50") : metric ? "5:55" : "9:30"} inputMode="decimal" aria-invalid={!!errs.pace} />{err("pace")}</label> : <span />}
-          {(sport === "bike" || sport === "run" || sport === "hike") ? <label>Elevation gain ({elevUnit})<input value={elev} onChange={(e) => setElev(e.target.value)} placeholder="0" inputMode="numeric" aria-invalid={!!errs.elev} />{err("elev")}</label> : <span />}
-        </div>
-      </div>
-      <div className="lf-right">
         <div>
           <div className="k">How hard · 1–10</div>
           <div className="lf-row effort">{Array.from({ length: 10 }, (_, i) => i + 1).map((n) => <button key={n} type="button" className={n <= effort ? "on" : ""} onClick={() => setEffort(n === effort ? 0 : n)} aria-label={`Effort ${n}`}>{n}</button>)}</div>

@@ -8,7 +8,7 @@
 .dash-charts { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; }
 
 /* hero */
-.hero { position: relative; display: grid; color: #fff; cursor: pointer; background: var(--hero); color: #fff; border-radius: var(--radius); padding: 22px 28px 24px; display: grid; gap: 12px; grid-template-rows: auto 1fr auto; min-height: 350px; }
+.hero { container: hero / inline-size; position: relative; display: grid; color: #fff; cursor: pointer; background: var(--hero); color: #fff; border-radius: var(--radius); padding: 22px 28px 24px; display: grid; gap: 12px; grid-template-rows: auto 1fr auto; min-height: 350px; }
 .hero.done { background: var(--hero-done); }
 .hero .top { display: flex; justify-content: space-between; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; opacity: 0.9; }
 .hero .title { font-size: 56px; font-weight: 600; letter-spacing: -0.03em; line-height: 0.95; }
@@ -24,12 +24,15 @@
 .hero .donetag { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; letter-spacing: 0.08em; background: rgba(255,255,255,0.16); border-radius: 999px; padding: 2px 9px; margin-left: 12px; vertical-align: 1px; }
 
 /* Garmin: watch hovering on the right of the hero; status lives in the stats row */
-.hero .stat.gm { position: relative; margin-left: auto; margin-right: 0; padding-right: 0; border-right: 0; }
+.hero .stat.gm { position: relative; margin-right: 0; padding-right: 0; border-right: 0; } /* right after the session stats, no gap */
 .hero .garmin { position: absolute; left: 50%; margin-left: -58px; bottom: calc(100% + 10px); width: 116px; filter: drop-shadow(0 0 18px rgba(255,255,255,0.22)) drop-shadow(0 14px 20px rgba(0,0,0,0.5)); animation: hover 4s ease-in-out infinite; }
 @keyframes hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
 .hero .stat.gm .v { display: inline-flex; align-items: center; gap: 9px; font-size: 28px; height: 34px; }
 .hero .stat.gm .garmin-date { font-size: 20px; font-weight: 600; white-space: nowrap; }
-.hero .stat.gm .cw-btn { position: absolute; top: -2px; right: 0; height: 26px; padding: 0 10px; font-size: 12px; }
+.hero .stat.gm .k { display: flex; align-items: center; gap: 7px; height: 21px; opacity: 1; }
+.hero .stat.gm .cw-btn { margin-left: 6px; height: 24px; padding: 0 9px; font-size: 12px; }
+.hero .gm-dot { width: 8px; height: 8px; border-radius: 50%; background: rgba(255,255,255,0.35); flex: 0 0 auto; }
+.hero .gm-dot.on { background: #34d27b; box-shadow: 0 0 0 3px rgba(52,210,123,0.2); } /* bright green: readable on the black hero */
 .hero .stat.gm .cw-btn svg { width: 14px; height: 14px; }
 
 /* + log */
@@ -48,7 +51,7 @@
 .logform .close { position: absolute; top: 12px; right: 12px; width: 28px; height: 28px; border-radius: 8px; background: var(--surface-2); border: 0; display: inline-flex; align-items: center; justify-content: center; }
 .logform .close svg { width: 13px; height: 13px; stroke: currentColor; fill: none; stroke-width: 2; }
 .lf-left, .lf-right { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; align-content: start; min-width: 0; }
-.lf-right { padding-right: 34px; }
+.lf-right > :first-child { padding-right: 34px; } /* room for the close button on the top row only */
 .lf-top { display: flex; align-items: center; gap: 10px; }
 .lf-top .sport-icon { color: var(--accent); flex: 0 0 auto; }
 .lf-name { flex: 1; border: 0; border-bottom: 1px solid var(--line); font: inherit; font-size: 20px; font-weight: 600; letter-spacing: -0.02em; padding: 2px 0 5px; outline: none; background: transparent; color: var(--ink); min-width: 0; }
@@ -59,7 +62,7 @@
 .lf-row button .sport-icon { width: 15px; height: 15px; }
 .lf-row button.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 .lf-row.effort { gap: 4px; flex-wrap: nowrap; } .lf-row.effort button { width: 27px; height: 28px; padding: 0; justify-content: center; border-radius: 7px; font-size: 12px; }
-.lf-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 10px; }
+.lf-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 10px; align-items: end; }
 .lf-grid label { display: grid; gap: 3px; font-size: 12px; color: var(--muted); }
 .lf-grid input { font: inherit; font-size: 14px; color: var(--ink); border: 1px solid var(--line); border-radius: 9px; padding: 7px 10px; background: var(--surface); outline: none; width: 100%; min-width: 0; }
 .lf-grid input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
@@ -67,7 +70,7 @@
 .lf-err { font-size: 12px; color: var(--danger); line-height: 16px; }
 .lf-right .k { font-size: 12px; color: var(--muted); margin-bottom: 5px; }
 /* duration: three scroll wheels (hours · minutes · seconds) */
-.lf-dur { grid-column: 1 / -1; display: grid; gap: 3px; }
+.lf-dur { display: grid; gap: 3px; }
 .lf-dur .k { font-size: 12px; color: var(--muted); }
 .lf-dur .wheels { display: flex; gap: 6px; align-items: flex-start; }
 .wh { display: grid; justify-items: center; width: 56px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); padding: 0 0 2px; user-select: none; }
@@ -93,6 +96,7 @@
 .lf-actions .btn:disabled { opacity: 0.5; cursor: default; }
 .toast { position: sticky; bottom: 76px; z-index: 7; justify-self: center; background: var(--ink); color: #fff; border-radius: 999px; padding: 10px 18px; font-size: 14px; font-weight: 600; box-shadow: 0 12px 32px rgba(16,17,20,0.2); }
 .toast .muted { color: rgba(255,255,255,0.7); font-weight: 400; }
+@media (max-width: 1400px) { .lf-row.sports button .sport-icon { display: none !important; } .lf-grid { gap: 8px 8px; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr) minmax(0, 1fr); } .lf-grid input { padding: 7px 8px; font-size: 13px; } }
 @media (max-width: 800px) { .logform { position: fixed; inset: 60px 12px auto 12px; width: auto; grid-template-columns: 1fr; animation: none; overflow: auto; max-height: calc(100vh - 80px); } .lf-grid { grid-template-columns: 1fr 1fr; } }
 
 /* this week */
@@ -186,3 +190,6 @@ a.next:hover .date, a.next:hover .d, a.tw:hover .k { color: var(--muted); }
   .review { flex-wrap: wrap; } .review .by { margin-left: 0; }
 }
 .hero .stat.gm .v .dim { font-size: 20px; opacity: 0.7; }
+
+/* a narrow hero (laptop widths with the right column beside it): the wearable stat moves to its own line, the watch picture goes */
+@container hero (max-width: 700px) { .hero .stats { flex-wrap: wrap; row-gap: 14px; } .hero .garmin { display: none; } .hero .stat:has(+ .stat.gm) { border-right: 0; } }

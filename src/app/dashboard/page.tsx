@@ -93,7 +93,7 @@ function Dashboard() {
                   <div className="stat"><div className="k">Next session</div><div className="v">{next[0].s ? `${next[0].s.title} ${next[0].s.min} min` : "—"}</div><div className="u">{next[0].s ? `${DAYS[(addDays(t, 1).getDay() + 6) % 7]}${next[0].s.start ? ` · ${next[0].s.start}` : ""}` : ""}</div></div>
                 </>
               )}
-              <div className="stat gm">{garmin && <div className="garmin" aria-hidden="true"><Watch width={116} time={last ? fmtHMS(last.min) : ""} dist={last?.mi ? `${last.mi.toFixed(1)} mi` : last?.yd ? `${last.yd.toLocaleString()} yd` : ""} hr={last?.hr} /></div>}<div className="k">{garmin ? "Garmin" : "Wearable"}</div><div className="v">{garmin ? <span className="garmin-date">Imported {shortDate(lastGarmin!.date)}</span> : <span className="dim">Not connected</span>}</div><ConnectWearable variant="dark" label="Connect" /></div>
+              <div className="stat gm">{garmin && <div className="garmin" aria-hidden="true"><Watch width={116} time={last ? fmtHMS(last.min) : ""} dist={last?.mi ? `${last.mi.toFixed(1)} mi` : last?.yd ? `${last.yd.toLocaleString()} yd` : ""} hr={last?.hr} /></div>}<div className="k"><i className={`gm-dot${garmin ? " on" : ""}`} aria-label={garmin ? "connected" : "not connected"} />{garmin ? "Garmin" : "Wearable"}<ConnectWearable variant="dark" label="Connect" /></div><div className="v">{garmin ? <span className="garmin-date">Imported {shortDate(lastGarmin!.date)}</span> : <span className="dim">Not connected</span>}</div></div>
             </div>
             {todayS && todayS.sport !== "rest" && <FuelLine s={todayS} />}
           </Link>

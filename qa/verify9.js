@@ -35,6 +35,18 @@ const ok = (name, cond, detail = '') => out.push(`${cond ? 'PASS' : 'FAIL'} ${na
   ok('labels, numbers, bars and "remaining" lines sit at the same height in every column', same((c) => c.k.top) && same((c) => c.b.top) && same((c) => c.bar) && same((c) => c.u.top), JSON.stringify(cols.map((c) => [c.k.top, c.b.top, c.bar, c.u.top])));
   ok('calories uses the same font sizes as the other columns', same((c) => c.b.fs) && same((c) => c.v.fs) && same((c) => c.u.fs), JSON.stringify(cols.map((c) => [c.b.fs, c.v.fs, c.u.fs])));
   ok('calories column stays the widest', cols[0].w > Math.max(...cols.slice(1).map((c) => c.w)), cols.map((c) => c.w).join(' '));
+  // dashboard hero: wearable stat right after the session stats, with a status dot; the log form is no taller than the hero
+  for (const w of [1440, 1280]) {
+    const q = await (await b.newContext({ viewport: { width: w, height: 900 } })).newPage();
+    await q.goto(base + '/dashboard', { waitUntil: 'networkidle' });
+    const g = await q.evaluate(() => { const st = [...document.querySelectorAll('.hero .stat')]; const gm = document.querySelector('.hero .stat.gm'); const prev = st[st.indexOf(gm) - 1]; const a = prev.getBoundingClientRect(), c = gm.getBoundingClientRect(), h = document.querySelector('.hero').getBoundingClientRect(); return { gap: Math.round(c.left - a.right), sameRow: Math.abs(c.top - a.top) < 4, inside: c.right <= h.right - 20, dot: !!gm.querySelector('.gm-dot.on') }; });
+    ok(`${w}: wearable stat sits next to the session stats (or on its own line when narrow), inside the card`, g.inside && (!g.sameRow || g.gap <= 40), JSON.stringify(g));
+    ok(`${w}: green dot when Garmin data is imported`, g.dot);
+    await q.click('button.plus'); await q.waitForTimeout(500);
+    const hh = await q.evaluate(() => [document.querySelector('.hero').getBoundingClientRect().height, document.querySelector('.logform').getBoundingClientRect().height].map(Math.round));
+    ok(`${w}: log form is the hero's height`, hh[1] <= hh[0], hh.join(' vs '));
+    ok(`${w}: heart-rate field says "Avg. heart rate (bpm)"`, /Avg\. heart rate \(bpm\)/.test(await q.textContent('.logform')));
+  }
   ok('no page errors', errors.length === 0, errors.join(' | '));
   console.log(out.join('\n'));
   await b.close();
