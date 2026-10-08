@@ -1,5 +1,5 @@
 "use client";
-import { ymd } from "@/lib/format";
+import { dateFull, ymd } from "@/lib/format";
 import { useState } from "react";
 import { useNutrition } from "@/lib/nutrition/store";
 import { usePlan } from "@/lib/store";
@@ -77,7 +77,7 @@ export function NutritionSetup({ onDone, edit = false }: { onDone: () => void; e
         </div>
         {goal === "race_weight" && (
           <>
-            <div className="two"><label><b>Target weight ({wUnit})</b><input value={goalW} onChange={(e) => setGoalW(e.target.value)} inputMode="decimal" /></label><span className="hint" style={{ alignSelf: "end" }}>{plan.athlete.hasRace ? `By race day, ${plan.athlete.race.date}` : "Set a race date first (Plan → Plan settings)."}</span></div>
+            <div className="two"><label><b>Target weight ({wUnit})</b><input value={goalW} onChange={(e) => setGoalW(e.target.value)} inputMode="decimal" /></label><span className="hint" style={{ alignSelf: "end" }}>{plan.athlete.hasRace ? `By race day, ${dateFull(plan.athlete.race.date)}` : "Set a race date first (Plan → Plan settings)."}</span></div>
             <label className="chk-row"><input type="checkbox" checked={depth} onChange={(e) => setDepth(e.target.checked)} /><b>In-depth weight plan</b><span className="hint">One target weight per training phase.</span></label>
             {depth && <StageEditor stages={stages} onChange={setStages} nowKg={parseFloat(weight) > 0 ? +(wUnit === "lb" ? lbToKg(parseFloat(weight)) : parseFloat(weight)).toFixed(2) : null} raceKg={parseFloat(goalW) > 0 ? +(wUnit === "lb" ? lbToKg(parseFloat(goalW)) : parseFloat(goalW)).toFixed(2) : null} imperial={wUnit === "lb"} raceDate={plan.athlete.hasRace ? plan.athlete.race.date : null} />}
           </>

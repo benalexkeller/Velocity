@@ -4,7 +4,8 @@ import { Icon } from "../icons";
 import { SportIcon } from "../SportIcon";
 import { SPORT_LABEL, STATUS_LABEL, type Session, type Week } from "@/lib/data";
 import { usePlan } from "@/lib/store";
-import { DAYS, addDays, fromYmd, hoursToClock, today, ymd } from "@/lib/format";
+import { useNow } from "@/lib/useNow";
+import { DAYS, addDays, fromYmd, hoursToClock, rangeLabel, today, ymd } from "@/lib/format";
 
 const H0 = 4, H1 = 23, ROW = 20; // the grid covers 04:00–23:00; the box shows 16 hours and scrolls for the rest
 const VIEW0 = 5, VIEW_H = 16; // opens at 05:00 showing 05:00–21:00, like before
@@ -20,7 +21,7 @@ export function WeekGrid({ week, selectedId, onPick }: { week: Week; selectedId?
   const plan = usePlan();
   const start = fromYmd(week.start);
   const t = today();
-  const nowD = new Date();
+  const nowD = useNow();
   const nowH = nowD.getHours() + nowD.getMinutes() / 60;
   const height = (H1 - H0) * ROW;
   const y = (h: number) => (h - H0) * ROW;
@@ -191,12 +192,7 @@ function Block({ s, y, selected, drag, onDown, onMove, onUp, onLock, onPick }: {
   );
 }
 
-export function weekTitle(w: Week) {
-  const s = fromYmd(w.start), e = addDays(s, 6);
-  const M = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-  const same = s.getMonth() === e.getMonth();
-  return `Week ${w.week} · ${M[s.getMonth()]} ${s.getDate()} – ${same ? "" : M[e.getMonth()] + " "}${e.getDate()}`;
-}
-/** Date range of a week without the week number, e.g. "Oct 5 – 11". */
-export function weekRange(w: Week) { return weekTitle(w).replace(/^Week \d+ · /, ""); }
+export function weekTitle(w: Week) { return `Week ${w.week} · ${weekRange(w)}`; }
+/** Date range of a week without the week number, e.g. "5 – 11 Oct". */
+export function weekRange(w: Week) { return rangeLabel(w.start, ymd(addDays(fromYmd(w.start), 6))); }
 export const isoToday = () => ymd(today());

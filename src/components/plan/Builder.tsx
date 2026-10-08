@@ -7,7 +7,7 @@ import { ConnectWearable } from "../ConnectWearable";
 import { usePlan } from "@/lib/store";
 import { DISTANCES, distanceInfo, type Race, type RaceDistance } from "@/lib/athlete";
 import type { Availability } from "@/lib/data";
-import { dateLabel, ymd, addDays, today } from "@/lib/format";
+import { dateFull, dateLabel, ymd, addDays, today } from "@/lib/format";
 import { DEVICES, EMPTY_INTAKE, EVENT_TYPES, MIN_WEEKS, eventType, hoursToText, textToHours, type Intake, type Kind, type PastRace } from "@/lib/plan/intake";
 import { searchEvents, usualMonth, type CatalogEvent } from "@/lib/plan/events";
 import { generatePlan, weeksUntil, planStart } from "@/lib/plan/generate";
@@ -281,7 +281,7 @@ function DevicesStep({ intake, set, setIntake, edit, hasPlan }: { intake: Intake
       <div className="pb-recap">
         <span className="k">Summary</span>
         <ul>
-          <li><b>{intake.goal.event || intake.goal.custom_label || et.label}</b> · {et.label} · {intake.goal.date ? dateLabel(intake.goal.date) + " " + intake.goal.date.slice(0, 4) : "no date"} · {weeks} weeks</li>
+          <li><b>{intake.goal.event || intake.goal.custom_label || et.label}</b> · {et.label} · {intake.goal.date ? dateFull(intake.goal.date) : "no date"} · {weeks} weeks</li>
           <li>Goal: {intake.goal.kind === "finish" ? "finish" : intake.goal.kind === "time" ? `${hoursToText(intake.goal.target_hours)}` : "podium / qualify"}{intake.goal.splits ? ` (swim ${hoursToText(intake.goal.splits.swim)} · bike ${hoursToText(intake.goal.splits.bike)} · run ${hoursToText(intake.goal.splits.run)})` : ""}</li>
           <li>Now: {intake.history.sessions_per_week} sessions · {(intake.history.hours.swim + intake.history.hours.bike + intake.history.hours.run + intake.history.hours.strength).toFixed(1)} h per week · up to {intake.time.max_hours} h at the peak</li>
           <li>{intake.time.days.length} days · {TOD.find((o) => o.k === intake.time.time_of_day)?.label} on weekdays · long sessions {intake.time.long_weekend ? "on the weekend" : "on a weekday"} · {intake.time.blackouts.filter((b) => b.from && b.to).length} blackout period{intake.time.blackouts.filter((b) => b.from && b.to).length === 1 ? "" : "s"}</li>

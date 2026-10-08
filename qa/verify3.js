@@ -42,7 +42,7 @@ const ok = (name, cond, detail = '') => out.push(`${cond ? 'PASS' : 'FAIL'} ${na
   await p.goto(base + '/analysis', { waitUntil: 'networkidle' });
   const an2 = await p.textContent('main');
   ok('V-029 Analysis renders for a new athlete', /Analysis/.test(an2) && !/could not load/.test(an2));
-  ok('V-024 no race → "No race set", no Ironman legs', /No race set/.test(an2) && !/2\.4 mi/.test(an2));
+  ok('V-024/V-090 new athlete: "Analysis needs data" card, no Ironman legs', /Analysis needs data/.test(an2) && !/2\.4 mi/.test(an2));
   await p.goto(base + '/calculator', { waitUntil: 'networkidle' });
   const btn = await p.$('button:has-text("No activities in the last 4 weeks")');
   ok('V-035 calculator button disabled with no activities', !!btn && await btn.isDisabled());

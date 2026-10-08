@@ -51,7 +51,7 @@ export function Guide() {
   const weekSessions = week.sessions.filter((s) => s.sport !== "rest");
   const age = p.birth_year ? new Date().getFullYear() - p.birth_year : null;
   const goalText = p.goal === "race_weight" ? (p.goal_weight_kg ? `${showW(p.goal_weight_kg)} by race day` : "target weight not set") : p.goal === "lose" ? "−400 kcal/day" : p.goal === "gain" ? "+300 kcal/day" : "no calorie adjustment";
-  const stageText = stages.filter((s) => s.date !== raceDate).map((s) => `${showW(s.weight_kg)} by W${timeline[weekIndexOf(timeline, s.date)]?.week ?? "?"} (${shortDate(s.date)})`).join(" · ");
+  const stageText = stages.filter((s) => s.date !== raceDate).map((s) => `${showW(s.weight_kg)} by ${shortDate(s.date)}`).join(" · ");
 
   return (
     <div className="nu-guide">

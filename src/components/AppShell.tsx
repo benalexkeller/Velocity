@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { Icon } from "./icons";
 import { BRAND } from "@/lib/config";
 import { usePlan } from "@/lib/store";
+import { useNow } from "@/lib/useNow";
 import { todayLabel } from "@/lib/format";
 import { FeedbackButton } from "./Feedback";
 import { CoachDockProvider } from "./CoachDock";
@@ -47,7 +48,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const path = usePathname();
   const plan = usePlan();
   const ATHLETE = plan.athlete;
-  const hour = new Date().getHours();
+  const hour = useNow().getHours();
   const greet = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
   if (path === "/login" || path.startsWith("/auth") || path === "/setup") return <>{children}</>;
   return (

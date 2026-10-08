@@ -187,3 +187,9 @@
 .qstatus { display: inline-block; font-size: 13px; font-weight: 600; padding: 2px 8px; border-radius: 999px; background: var(--surface-2); color: var(--ink-2); white-space: nowrap; }
 .qstatus.good { background: var(--ok-soft); color: var(--ok); }
 .qstatus.ok { background: var(--warn-soft); color: var(--warn); }
+
+.ax-empty dl { margin: 6px 0 0; display: grid; }
+.ax-empty dl > div { display: grid; grid-template-columns: 140px minmax(0, 1fr); gap: 12px; padding: 10px 0; border-top: 1px solid var(--line-2); font-size: 14px; }
+.ax-empty dt { color: var(--muted); }
+.ax-empty dd { margin: 0; }
+.ax-empty a { color: var(--accent); font-weight: 600; }

@@ -10,21 +10,21 @@ import { activityLoad, type Activity } from "@/lib/data";
 import { hrZone } from "@/lib/athlete";
 import { ConnectWearable } from "@/components/ConnectWearable";
 import { usePlan } from "@/lib/store";
-import { DAYS, MONTHS, addDays, fmtHMS, fmtPace, fromYmd, today } from "@/lib/format";
+import { DAYS, MONTHS, addDays, dateFull, fmtHMS, fmtPace, fromYmd, today } from "@/lib/format";
 import { elev, fmtDist, fmtSpeed, runPace, swimDist, swimPace } from "@/lib/units";
 
 type Tab = "all" | "swim" | "bike" | "run";
 
 function groupLabel(date: string) {
   const d = fromYmd(date), t = today();
-  if (d.getTime() === t.getTime()) return { key: "today", label: "Today", sub: `${DAYS[(t.getDay() + 6) % 7]}, ${MONTHS[t.getMonth()]} ${t.getDate()}, ${t.getFullYear()}` };
+  if (d.getTime() === t.getTime()) return { key: "today", label: "Today", sub: dateFull(date) };
   const monday = addDays(t, -((t.getDay() + 6) % 7));
-  if (d >= monday) return { key: "week", label: "This Week", sub: "" };
+  if (d >= monday) return { key: "week", label: "This week", sub: "" };
   return { key: `${d.getFullYear()}-${d.getMonth()}`, label: `${["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][d.getMonth()]} ${d.getFullYear()}`, sub: "" };
 }
 function when(a: Activity) {
   const d = fromYmd(a.date);
-  return { l1: `${DAYS[(d.getDay() + 6) % 7]}, ${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`, l2: a.start ?? "" };
+  return { l1: dateFull(a.date), l2: a.start ?? "" };
 }
 function subtitle(a: Activity) {
   if (a.sport === "swim") return "Pool session";

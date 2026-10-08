@@ -17,7 +17,7 @@ import { PhaseDetail } from "@/components/plan/PlanExplained";
 import { plannedByDiscipline, plannedLoad, type Sport, type Week } from "@/lib/data";
 import { usePlan } from "@/lib/store";
 import { NutritionProvider } from "@/lib/nutrition/store";
-import { dateLabel, fromYmd, fmtHours, addDays, ymd } from "@/lib/format";
+import { dateFull, dateLabel, fromYmd, fmtHours, addDays, ymd } from "@/lib/format";
 import { METHOD } from "@/lib/plan/rules";
 
 const M = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -160,7 +160,7 @@ function Plan() {
         <section className="section">
           <div className="section-head">
             <h2>Weekly hours</h2>
-            <span className="sub">{plan.hasPlan ? `${plan.weeks.length} weeks · ${plan.phases.length} phases · race ${dateLabel(plan.athlete.race.date)} ${plan.athlete.race.date.slice(0, 4)}` : plan.athlete.hasRace ? `${plan.athlete.race.name} · ${dateLabel(plan.athlete.race.date)} ${plan.athlete.race.date.slice(0, 4)} · no plan yet` : "No race set · build a plan to add one"}</span>
+            <span className="sub">{plan.hasPlan ? `${plan.weeks.length} weeks · ${plan.phases.length} phases · race ${dateFull(plan.athlete.race.date)}` : plan.athlete.hasRace ? `${plan.athlete.race.name} · ${dateLabel(plan.athlete.race.date)} ${plan.athlete.race.date.slice(0, 4)} · no plan yet` : "No race set · build a plan to add one"}</span>
             <span className="legend">
               <span><i style={{ background: "var(--swim)" }} />Swim</span>
               <span><i style={{ background: "var(--bike)" }} />Bike</span>

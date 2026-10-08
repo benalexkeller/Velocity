@@ -5,7 +5,7 @@ import Link from "next/link";
 import { ConnectWearable, WEARABLES, useWearables } from "@/components/ConnectWearable";
 import { usePlan } from "@/lib/store";
 import { ProfileForm } from "@/components/account/ProfileForm";
-import { dateLabel } from "@/lib/format";
+import { dateFull, dateLabel } from "@/lib/format";
 
 export default function ProfilePage() {
   const plan = usePlan();
@@ -27,7 +27,7 @@ export default function ProfilePage() {
           <h2>Plan</h2>
           <div className="kv">
             <span>Weeks</span><span>{plan.hasPlan ? `${plan.planJson.length} · starts ${dateLabel(plan.planJson[0].start)}` : "No plan yet"}</span>
-            <span>Race</span><span>{a.hasRace ? `${a.race.name} · ${dateLabel(a.race.date)} ${a.race.date.slice(0, 4)}${a.race.goal ? ` · ${a.race.goal}` : ""}` : "Not set"}</span>
+            <span>Race</span><span>{a.hasRace ? `${a.race.name} · ${dateFull(a.race.date)}${a.race.goal ? ` · ${a.race.goal}` : ""}` : "Not set"}</span>
             <span>Activities</span><span>{plan.activities.length}</span>
             <span>Local changes</span><span>{plan.changes}</span>
           </div>

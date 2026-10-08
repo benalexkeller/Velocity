@@ -11,7 +11,7 @@ import { deriveZones } from "./plan/zones";
 import type { Availability } from "./data";
 import { EMPTY_DATA, makeBackend, readLocal, type AddedSession, type Backend, type PlanStateJson, type SessionPatch, type ThreadMsg, type UserData } from "./backend";
 import { ACCOUNTS_ON } from "./supabase/env";
-import { addDays, fromYmd, today, ymd } from "./format";
+import { addDays, dateFull, fromYmd, today, ymd } from "./format";
 
 export type { AddedSession, SessionPatch, ThreadMsg } from "./backend";
 export interface ManualActivity { id: string; name: string; sport: Sport; date: string; start: string; min: number; mi?: number; yd?: number; pace_s?: number; mph?: number; p100_s?: number; hr?: number; elev_ft?: number; exertion?: number; feel?: string; note?: string; source: "manual" }
@@ -217,7 +217,9 @@ export function PlanProvider({ children }: { children: ReactNode }) {
     };
   }, [d, data, ready, athlete, be, setState, reload, router]);
 
-  return <Ctx.Provider value={store}>{ACCOUNTS_ON && !ready ? <div className="app-loading" aria-busy="true" /> : children}</Ctx.Provider>;
+  // Nothing date- or data-dependent is rendered until the data is loaded in the browser: the prerendered HTML
+  // carries the build day's clock, so rendering it would flash wrong dates and break hydration (V-037).
+  return <Ctx.Provider value={store}>{!ready ? <div className="app-loading" aria-busy="true" /> : children}</Ctx.Provider>;
 }
 
 export function usePlan(): PlanStore {
@@ -242,6 +244,6 @@ function coachReply(text: string, d: ReturnType<typeof derive>, athlete: Athlete
   if (/tomorrow/.test(q)) return tom ? `Tomorrow: ${say(tom)}` : "Nothing planned tomorrow.";
   if (/this week|week/.test(q)) return `Week ${wk.week}${wk.phaseShort !== "No plan" ? ` (${wk.phaseShort})` : ""}: ${done} of ${total} sessions done, ${(wk.plannedMin / 60).toFixed(1)} h planned.${wk.focus ? ` Focus: ${wk.focus}.` : ""}`;
   if (/move|swap|change|reschedule/.test(q)) return "Open the session in the Plan calendar and use Move or Edit.";
-  if (/race|goal/.test(q)) return athlete.hasRace ? `Race: ${athlete.race.name}, ${athlete.race.date}${athlete.race.goal ? `, goal ${athlete.race.goal}` : ""}. Projection: Analysis tab.` : "No race set. Plan → Plan settings.";
+  if (/race|goal/.test(q)) return athlete.hasRace ? `Race: ${athlete.race.name}, ${dateFull(athlete.race.date)}${athlete.race.goal ? `, goal ${athlete.race.goal}` : ""}. Projection: Analysis tab.` : "No race set. Plan → Plan settings.";
   return "Not answered: the coach service is not connected yet. Answered now: today, tomorrow, this week, moving a session, the race.";
 }
