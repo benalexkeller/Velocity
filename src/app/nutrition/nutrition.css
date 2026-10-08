@@ -26,8 +26,6 @@
 .nu-targets.empty .v { font-size: 16px; }
 .nu-targets .v { font-size: 20px; color: var(--muted); letter-spacing: -0.01em; }
 .nu-targets .v b { font-size: 28px; color: var(--ink); font-weight: 600; letter-spacing: -0.02em; }
-.nu-targets .big .v b { font-size: 40px; }
-.nu-targets .big .v { font-size: 28px; }
 
 /* two columns */
 .nu-cols { display: grid; grid-template-columns: minmax(0, 1.7fr) minmax(300px, 1fr); gap: 16px; align-items: start; }

@@ -38,8 +38,10 @@ const ok = (name, cond, detail = '') => out.push(`${cond ? 'PASS' : 'FAIL'} ${na
   ok('active nav link has aria-current', /Activities/.test(cur || ''), String(cur));
   // lock icon never covers text
   await p.goto(base + '/plan', { waitUntil: 'networkidle' });
-  const lk = await p.$eval('.wg-ev.run:not(.done)', (e) => { const l = e.querySelector('.lk').getBoundingClientRect(); const t = e.querySelector('.txt b').getBoundingClientRect(); return { lkL: l.left, txtR: t.right }; });
-  ok('lock icon sits clear of the block text', lk.txtR <= lk.lkL + 0.5, JSON.stringify(lk));
+  await p.hover('.wg-ev.run:not(.done)'); await p.click('.wg-ev.run:not(.done) .lk'); await p.waitForTimeout(200); await p.mouse.move(5, 5);
+  const lk = await p.$eval('.wg-ev.run.locked', (e) => { const l = e.querySelector('.lk').getBoundingClientRect(); const t = e.querySelector('.txt b').getBoundingClientRect(); return { lkL: l.left, txtR: t.right }; });
+  ok('lock icon on a locked block sits clear of the block text', lk.txtR <= lk.lkL + 0.5, JSON.stringify(lk));
+  await p.click('.wg-ev.run.locked .lk', { force: true }); await p.waitForTimeout(150);
   ok('no page errors', errors.length === 0, errors.join(' | '));
   console.log(out.join('\n'));
   await b.close();

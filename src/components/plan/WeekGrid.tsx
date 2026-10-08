@@ -7,7 +7,7 @@ import { usePlan } from "@/lib/store";
 import { useNow } from "@/lib/useNow";
 import { DAYS, addDays, fromYmd, hoursToClock, rangeLabel, today, ymd } from "@/lib/format";
 
-const H0 = 4, H1 = 23, ROW = 20; // the grid covers 04:00–23:00; the box shows 16 hours and scrolls for the rest
+const H0 = 0, H1 = 24, ROW = 20; // the grid covers the whole day, 00:00–24:00; the box shows 16 hours and scrolls for the rest
 const VIEW0 = 5, VIEW_H = 16; // opens at 05:00 showing 05:00–21:00, like before
 const HOURS_COL = 52; // width of the hour labels column (matches plan.css)
 const SNAP = 0.25; // drag snaps to 15 minutes
@@ -95,8 +95,8 @@ export function WeekGrid({ week, selectedId, onPick }: { week: Week; selectedId?
       <div className="wg-scroll" ref={box} style={{ height: VIEW_H * ROW }}>
       <div className="wg-body" style={{ height }} ref={body}>
         <div className="wg-hours">
-          {Array.from({ length: Math.floor((H1 - H0 - 1) / 2) + 1 }, (_, k) => H0 + 1 + k * 2).map((h) => (
-            <span key={h} style={{ top: y(h) }}>{String(h).padStart(2, "0")}:00</span>
+          {Array.from({ length: (H1 - H0) / 2 + 1 }, (_, k) => H0 + k * 2).map((h) => (
+            <span key={h} className={h === H0 ? "first" : h === H1 ? "last" : undefined} style={{ top: y(h) }}>{String(h).padStart(2, "0")}:00</span>
           ))}
         </div>
         {DAYS.map((_, i) => {

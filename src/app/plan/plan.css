@@ -18,7 +18,8 @@
 .wg-body { display: grid; grid-template-columns: 52px repeat(7, 1fr); position: relative; }
 .wg-hours { position: relative; }
 .wg-hours span { position: absolute; right: 8px; transform: translateY(-50%); font-size: 12px; color: var(--muted); }
-.wg-col { position: relative; border-left: 1px solid var(--line-2); background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 19px, var(--line-2) 19px, var(--line-2) 20px, transparent 20px, transparent 40px); }
+.wg-hours span.first { transform: none; } .wg-hours span.last { transform: translateY(-100%); }
+.wg-col { position: relative; border-left: 1px solid var(--line-2); background-image: repeating-linear-gradient(to bottom, var(--line-2) 0, var(--line-2) 1px, transparent 1px, transparent 40px); } /* a line at every labelled (even) hour */
 .wg-col.today { background-color: var(--accent-soft); }
 .wg-now { position: absolute; left: 0; right: 0; height: 0; border-top: 2px solid var(--accent); z-index: 2; }
 .wg-now span b { font-weight: inherit; }
@@ -52,10 +53,11 @@
 .wg.dragging .wg-ev:not(.drag) { pointer-events: none; }
 .wg-col.target { background-color: var(--surface-2); } .wg-col.today.target { background-color: var(--accent-soft); }
 .wg-day.target b { text-decoration: underline; text-underline-offset: 3px; }
-.wg-ev:not(.done):not(.rest) { padding-right: 22px; }
+.wg-ev.locked:not(.done) { padding-right: 24px; } /* room for the lock icon; unlocked blocks show it only on hover, on its own background */
 .wg-ev .lk { position: absolute; top: 3px; right: 3px; width: 18px; height: 18px; border-radius: 5px; border: 0; background: transparent; color: inherit; display: inline-flex; align-items: center; justify-content: center; opacity: 0; cursor: pointer; padding: 0; }
 .wg-ev .lk svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .wg-ev:hover .lk, .wg-ev.locked .lk { opacity: 0.85; }
+.wg-ev:not(.locked):hover .lk { opacity: 1; background: var(--surface); box-shadow: 0 0 0 1px var(--line); }
 .wg-ev.locked .lk { background: rgba(16,17,20,0.08); }
 .wg-ev.done .lk { display: none; }
 

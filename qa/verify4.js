@@ -33,7 +33,7 @@ const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0
   await p.click('button[aria-label="Previous day"]'); await p.waitForTimeout(300);
   const yday = await p.textContent('.nu-targets');
   ok('V-034 estimate-only day shows "—" for macros', /estimate, no breakdown/.test(yday), yday.replace(/\s+/g, ' ').slice(0, 160));
-  const yTitle = await p.getAttribute('.nu-targets .big', 'title');
+  const yTitle = await p.getAttribute('.nu-targets .kcal', 'title');
   ok('V-032 missed session adds no training energy', !/training/.test(yTitle || ''), yTitle);
   await p.click('button:has-text("Week")'); await p.waitForTimeout(400);
   const wk = await p.textContent('.nu-weektable');
