@@ -110,7 +110,7 @@
 .la .head a { color: var(--accent); font-weight: 600; font-size: 13px; }
 .la .name { display: block; color: var(--ink);  font-size: 20px; font-weight: 600; letter-spacing: -0.01em; }
 .la .date { color: var(--muted); font-size: 13px; margin-top: -4px; }
-.la .stats { display: grid; grid-template-columns: repeat(3, 1fr); margin: 6px 0 8px; }
+.la .stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); margin: 6px 0 8px; }
 .la .stats div { border-right: 1px solid var(--line-2); padding-right: 12px; margin-right: 12px; }
 .la .stats div:last-child { border-right: 0; }
 .la .stats .k { font-size: 12.5px; color: var(--muted); }
@@ -166,7 +166,11 @@ a.next:hover .date, a.next:hover .d, a.tw:hover .k { color: var(--muted); }
 
 /* coach bar */
 @media (max-width: 1250px) {
-  .dash-top { grid-template-columns: 1fr; }
+  .dash-top { grid-template-columns: minmax(0, 1fr); }
+  .la .stats div { padding-right: 8px; margin-right: 8px; }
+  .la .stats div:last-child { padding-right: 0; margin-right: 0; }
+  .la .stats .v { font-size: 16px; }
+  .hero .stat { border-right: 0 !important; padding-right: 0 !important; margin-right: 0 !important; }
   .dash-right { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 800px) {

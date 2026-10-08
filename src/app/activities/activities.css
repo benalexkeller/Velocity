@@ -39,7 +39,8 @@
   .acts { grid-template-columns: 1fr; }
   .drawer { position: relative; top: 0; max-height: none; }
   .search { width: 100%; }
-  .tbl .hide-sm { display: none; }
+  .tbl .hide-sm, .tbl .thumb, .tbl td:has(> .thumb), .tbl th.th-map { display: none; }
+  .tbl .when { white-space: normal; }
 }
 
 /* filters popover */

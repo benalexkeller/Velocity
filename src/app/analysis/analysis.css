@@ -137,7 +137,8 @@
   .ax-recovery { grid-template-columns: 1fr; }
 }
 @media (max-width: 800px) {
-  .ax-kpis, .ax-sports, .ax-obs, .ax-dist, .ax-race, .ax-recovery .tiles { grid-template-columns: 1fr; }
+  .ax-sports, .ax-obs, .ax-dist { grid-template-columns: 1fr; }
+  .ax-kpis, .ax-race, .ax-recovery .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ax-overview, .ax-progress { grid-template-columns: 1fr; } .ax-current { border-left: 0; padding-left: 0; }
 }
 

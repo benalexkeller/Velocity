@@ -9,14 +9,14 @@ import { todayLabel } from "@/lib/format";
 import { FeedbackButton } from "./Feedback";
 import "@/app/account.css";
 
-const NAV: { href: string; label: string; icon: Parameters<typeof Icon>[0]["name"] }[] = [
-  { href: "/dashboard", label: "Dashboard", icon: "home" },
+const NAV: { href: string; label: string; short?: string; icon: Parameters<typeof Icon>[0]["name"] }[] = [
+  { href: "/dashboard", label: "Dashboard", short: "Home", icon: "home" },
   { href: "/plan", label: "Plan", icon: "calendar" },
   { href: "/activities", label: "Activities", icon: "bars" },
   { href: "/analysis", label: "Analysis", icon: "trend" },
   { href: "/nutrition", label: "Nutrition", icon: "fork" },
   { href: "/store", label: "Store", icon: "store" },
-  { href: "/calculator", label: "Calculator", icon: "calc" },
+  { href: "/calculator", label: "Calculator", short: "Tools", icon: "calc" },
 ];
 
 // Avatar button top right: profile, admin (if admin), sign out.
@@ -66,7 +66,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         {NAV.map((n) => (
           <Link key={n.href} href={n.href} className={path === n.href ? "active" : ""}>
             <Icon name={n.icon} />
-            <span>{n.label}</span>
+            <span className="lbl">{n.label}</span>{n.short && <span className="lbl-short">{n.short}</span>}
           </Link>
         ))}
       </nav>

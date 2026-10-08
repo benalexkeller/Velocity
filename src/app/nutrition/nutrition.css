@@ -12,10 +12,10 @@
 .nu-bar i { display: block; height: 100%; border-radius: 999px; background: var(--accent); transition: width .25s; }
 
 /* day nav */
-.nu-daynav { display: flex; align-items: center; gap: 10px; }
+.nu-daynav { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
 .nu-daynav .back { width: 34px; height: 34px; border-radius: 50%; background: var(--surface); box-shadow: var(--shadow); border: 0; display: inline-flex; align-items: center; justify-content: center; }
 .nu-daynav .back svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
-.nu-daynav .lbl { font-size: 15px; width: 200px; text-align: center; white-space: nowrap; }
+.nu-daynav .lbl { font-size: 15px; width: 200px; max-width: calc(100% - 100px); text-align: center; white-space: nowrap; }
 .nu-daynav .lbl b { font-weight: 600; }
 
 /* targets row */
@@ -94,7 +94,7 @@
 
 /* add panel */
 .nu-scrim { position: fixed; inset: 0; background: rgba(16,17,20,0.18); z-index: 40; }
-.nu-panel { position: fixed; top: 0; right: 0; bottom: 0; width: min(520px, 100vw); background: var(--surface); box-shadow: -12px 0 40px rgba(16,17,20,0.14); z-index: 41; padding: 22px 24px; overflow: auto; display: grid; gap: 14px; align-content: start; }
+.nu-panel { position: fixed; top: 0; right: 0; bottom: 0; width: min(520px, 100vw); max-width: 100vw; box-sizing: border-box; background: var(--surface); box-shadow: -12px 0 40px rgba(16,17,20,0.14); z-index: 41; padding: 22px 24px; overflow: auto; display: grid; gap: 14px; align-content: start; }
 .nu-panel-head { display: flex; align-items: center; justify-content: space-between; }
 .nu-panel-head h2 { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; display: flex; align-items: center; gap: 8px; }
 .nu-panel-head .meal-select { font: inherit; font-size: 20px; font-weight: 600; border: 0; background: var(--surface-2); border-radius: 8px; padding: 2px 8px; color: var(--ink); }

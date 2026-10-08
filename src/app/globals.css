@@ -91,6 +91,7 @@ h1, h2, h3, h4 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
 }
 .nav a svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
 .nav a.active { color: var(--accent); border-left-color: var(--accent); }
+.nav a .lbl-short { display: none; }
 
 .main { padding: 8px 24px 40px 12px; min-width: 0; }
 .main.with-coach { display: grid; grid-template-columns: minmax(0, 1fr) var(--coach-w); gap: 0; }
@@ -212,12 +213,28 @@ svg.chart .accent { fill: var(--accent); }
   .coach .msgs { max-height: 360px; }
 }
 @media (max-width: 760px) {
-  .page-head h1, .acts-head h1 { font-size: 32px; }
-  .shell { grid-template-columns: 1fr; grid-template-rows: auto auto 1fr; }
-  .nav { flex-direction: row; overflow: auto; padding: 0 8px 8px; gap: 0; position: static; max-height: none; }
-  .nav a { flex-direction: row; align-items: center; padding: 8px 12px; border-left: 0; border-bottom: 2px solid transparent; }
-  .nav a.active { border-bottom-color: var(--accent); }
-  .main { padding: 8px 16px 32px; }
+  .page-head h1, .acts-head h1 { font-size: 28px; }
+  /* minmax(0, 1fr): the page column never grows past the screen because of wide content */
+  .shell { grid-template-columns: minmax(0, 1fr); grid-template-rows: auto 1fr; }
+  /* navigation becomes a bottom tab bar: every section reachable with one thumb tap */
+  .nav { position: fixed; left: 0; right: 0; bottom: 0; top: auto; z-index: 40; flex-direction: row; justify-content: space-around; gap: 0; padding: 2px 2px calc(2px + env(safe-area-inset-bottom)); max-height: none; overflow: hidden; background: var(--surface); border-top: 1px solid var(--line); }
+  .nav a { flex: 1 1 0; min-width: 0; flex-direction: column; align-items: center; gap: 2px; padding: 6px 2px; border-left: 0; border-top: 2px solid transparent; font-size: 11px; }
+  .nav a span { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .nav a:has(.lbl-short) .lbl { display: none; } .nav a .lbl-short { display: inline; }
+  .nav a svg { width: 20px; height: 20px; }
+  .nav a.active { border-top-color: var(--accent); }
+  .main { padding: 8px 16px 96px; overflow-x: clip; }
+  .main > *, .card, .ax > * { min-width: 0; }
+  .coachbar-wrap { bottom: 72px; }
+  /* tab rows scroll sideways instead of widening the page */
+  .tabs, .pill-group { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; max-width: 100%; }
+  .tabs::-webkit-scrollbar, .pill-group::-webkit-scrollbar { display: none; }
+  .tabs button, .pill-group button { white-space: nowrap; flex: 0 0 auto; }
+  /* wide tables scroll inside their card */
+  .tbl { display: block; overflow-x: auto; max-width: 100%; }
+  .tbl.small th, .tbl.small td { padding: 8px 6px; }
+  .page-head { flex-wrap: wrap; row-gap: 8px; }
+  .page-head > * { min-width: 0; max-width: 100%; }
   .topbar { padding: 0 16px; gap: 10px; }
   .topbar .greet { font-size: 15px; white-space: nowrap; }
   .topbar .crumb, .topbar .meta { display: none; }

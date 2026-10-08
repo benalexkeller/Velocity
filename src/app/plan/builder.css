@@ -44,6 +44,14 @@
 .pb-hours { display: grid; gap: 8px; }
 .pb-hours .k, .pb-sport .k, .pb-recap .k { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
 .pb-hours .grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 10px; }
+@media (max-width: 760px) {
+  .pb-steps { overflow-x: auto; scrollbar-width: none; max-width: 100%; }
+  .pb-steps li:not(.on) .lbl { display: none; }
+  .pb-race, .pb-bo, .pb-splits { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important; }
+  .pb-race input, .pb-race select, .pb input, .pb select { min-width: 0; max-width: 100%; }
+  .pb-card { padding: 16px; min-width: 0; }
+  .pb-head { min-width: 0; }
+}
 .pb-sport { display: grid; gap: 8px; padding-top: 10px; border-top: 1px solid var(--line-2); }
 .pb-stepper { display: inline-flex; align-items: center; gap: 0; }
 .pb-stepper button { width: 36px; height: 38px; border: 1px solid var(--line); background: var(--surface-2); font: inherit; font-size: 18px; color: var(--ink-2); cursor: pointer; }
@@ -61,8 +69,8 @@
 .pb-nav .btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 .pb .linkbtn { border: 0; background: none; color: var(--accent); font: inherit; font-weight: 600; font-size: 13px; padding: 0; cursor: pointer; }
 
-.pb .unit-in { display: flex; align-items: stretch; }
-.pb .unit-in input { border-radius: 9px 0 0 9px !important; flex: 1; min-width: 0; width: auto !important; }
+.pb .unit-in { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: stretch; min-width: 0; }
+.pb .unit-in input { border-radius: 9px 0 0 9px !important; min-width: 0; width: 100% !important; }
 .pb .unit-in .units { display: inline-flex; border: 1px solid var(--line); border-left: 0; border-radius: 0 9px 9px 0; overflow: hidden; }
 .pb .unit-in .units span { background: var(--surface-2); font-size: 12px; padding: 0 10px; color: var(--muted); display: inline-flex; align-items: center; }
 
@@ -102,6 +110,6 @@
   .pb-splits { grid-template-columns: 1fr 1fr; }
   .pb-race { grid-template-columns: 1fr 1fr; } .pb-race .x { grid-column: 2; justify-self: end; }
   .pb-bo { grid-template-columns: 1fr 1fr; }
-  .pb-hours .grid { grid-template-columns: 1fr 1fr; }
+  .pb-hours .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .pb-head h1 { font-size: 28px; }
 }
