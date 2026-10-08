@@ -24,7 +24,7 @@ const click = async (p, sel, ms = 350) => { const el = await p.$(sel); if (!el) 
 const STATES = [
   { id: 'dashboard', path: '/dashboard' },
   { id: 'dashboard-log-open', path: '/dashboard', after: async (p) => { await click(p, 'button.plus'); } },
-  { id: 'dashboard-coach-reply', path: '/dashboard', after: async (p) => { await p.fill('input[placeholder="Ask your coach anything…"]', 'What is on this week?'); await p.keyboard.press('Enter'); await p.waitForTimeout(800); } },
+  { id: 'dashboard-coach-reply', path: '/dashboard', after: async (p) => { await click(p, '.coachbar'); await p.waitForTimeout(200); await p.fill('#coach-input', 'What is on this week?'); await p.keyboard.press('Enter'); await p.waitForTimeout(800); } },
   { id: 'plan-week', path: '/plan' },
   { id: 'plan-session-open', path: '/plan', after: async (p) => { const ev = await p.$$('.wg-ev'); if (ev[2]) await ev[2].click(); await p.waitForTimeout(500); } },
   { id: 'plan-session-move', path: '/plan', after: async (p) => { const ev = await p.$$('.wg-ev'); if (ev[2]) await ev[2].click(); await p.waitForTimeout(400); await click(p, 'button:has-text("Move")'); } },

@@ -127,7 +127,13 @@ h1, h2, h3, h4 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
 
 /* ---------- Coach rail ---------- */
 .coach { display: flex; flex-direction: column; border-left: 1px solid var(--line); padding: 8px 18px 14px 18px; position: fixed; top: 56px; right: 0; bottom: 0; width: var(--coach-w); background: var(--bg); overflow: hidden; z-index: 5; }
-.coach .head { display: flex; align-items: center; justify-content: space-between; padding: 10px 6px 14px 0; }
+.coach .head { display: flex; align-items: center; justify-content: space-between; padding: 10px 0 14px 0; }
+.coach-tools { display: inline-flex; align-items: center; gap: 2px; }
+.coach-ic { width: 30px; height: 30px; border: 0; background: none; border-radius: 8px; color: var(--muted); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; padding: 0; }
+.coach-ic:hover, .coach-ic[aria-expanded="true"] { background: var(--surface-2); color: var(--ink); }
+.coach-ic svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+.coach-ic[aria-label="Coach options"] svg { width: 18px; height: 18px; stroke-width: 2.8; }
+.coach.drawer { z-index: 45; box-shadow: -16px 0 40px rgba(16,17,20,0.10); }
 .coach .msgs { flex: 1; overflow: auto; display: flex; flex-direction: column; gap: 14px; padding-right: 6px; }
 .msg { max-width: 92%; border-radius: 14px; padding: 12px 14px; font-size: 14px; line-height: 1.45; }
 .msg .who { display: block; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
@@ -145,19 +151,15 @@ h1, h2, h3, h4 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
 
 /* coach bar: stays pinned to the bottom of the screen while the page scrolls */
 .coachbar-wrap { position: sticky; bottom: 12px; z-index: 6; display: grid; gap: 8px; }
-.coachbar-reply { position: relative; padding: 12px 40px 12px 14px; display: grid; gap: 8px; box-shadow: 0 1px 2px rgba(16,17,20,0.04), 0 0 0 1px var(--line), 0 12px 32px rgba(16,17,20,0.10); }
-.coachbar-reply .close { position: absolute; top: 8px; right: 8px; width: 26px; height: 26px; border-radius: 7px; background: var(--surface-2); border: 0; display: inline-flex; align-items: center; justify-content: center; }
-.coachbar-reply .close svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 2; }
-.coachbar-reply .msg { max-width: 100%; }
 .coach .menu { position: absolute; right: 0; top: 28px; z-index: 20; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 32px rgba(16,17,20,0.12); padding: 6px; min-width: 240px; display: grid; gap: 4px; }
 .coach .menu button { border: 0; background: none; text-align: left; padding: 8px 10px; border-radius: 8px; font-size: 13px; color: var(--ink); }
 .coach .menu button:hover { background: var(--surface-2); }
 .coach .menu .small { font-size: 12px; padding: 4px 10px 6px; }
-.coachbar { position: relative; z-index: 6; display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 18px; box-shadow: 0 1px 2px rgba(16,17,20,0.04), 0 0 0 1px var(--line), 0 12px 32px rgba(16,17,20,0.10); }
+.coachbar { position: relative; z-index: 6; width: 100%; border: 0; font: inherit; text-align: left; cursor: pointer; display: flex; align-items: center; gap: 12px; padding: 10px 12px 10px 18px; box-shadow: 0 1px 2px rgba(16,17,20,0.04), 0 0 0 1px var(--line), 0 12px 32px rgba(16,17,20,0.10); }
 .coachbar .spark { width: 22px; height: 22px; color: var(--accent); }
 .coachbar .spark svg { stroke: currentColor; fill: none; stroke-width: 1.6; }
-.coachbar input { flex: 1; border: 0; font: inherit; font-size: 16px; background: transparent; outline: none; color: var(--ink); }
-.coachbar input::placeholder { color: var(--muted-2); }
+.coachbar .ph { flex: 1; font-size: 16px; color: var(--muted-2); }
+.coachbar:hover .ph { color: var(--muted); }
 
 /* ---------- Shared page pieces ---------- */
 .page-head { display: flex; align-items: flex-end; gap: 14px; margin: 4px 0 14px; flex-wrap: wrap; }
@@ -213,8 +215,7 @@ svg.chart .accent { fill: var(--accent); }
 
 @media (max-width: 1100px) {
   .main.with-coach { grid-template-columns: 1fr; }
-  .coach { position: static; width: auto; height: auto; border-left: 0; border-top: 1px solid var(--line); padding-left: 0; }
-  .coach .msgs { max-height: 360px; }
+  .coach { width: min(100%, 380px); z-index: 45; box-shadow: -12px 0 32px rgba(16,17,20,0.08); padding: 8px 16px 14px; }
 }
 @media (max-width: 760px) {
   .page-head h1, .acts-head h1 { font-size: 28px; }
@@ -230,6 +231,7 @@ svg.chart .accent { fill: var(--accent); }
   .main { padding: 8px 16px 96px; overflow-x: clip; }
   .main > *, .card, .ax > * { min-width: 0; }
   .coachbar-wrap { bottom: 72px; }
+  .coach { top: 0; width: 100%; z-index: 60; border-left: 0; padding-bottom: calc(14px + env(safe-area-inset-bottom)); }
   /* tab rows scroll sideways instead of widening the page */
   .tabs, .pill-group { overflow-x: auto; flex-wrap: nowrap; scrollbar-width: none; max-width: 100%; }
   .tabs::-webkit-scrollbar, .pill-group::-webkit-scrollbar { display: none; }

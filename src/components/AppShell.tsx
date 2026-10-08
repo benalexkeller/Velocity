@@ -7,6 +7,7 @@ import { BRAND } from "@/lib/config";
 import { usePlan } from "@/lib/store";
 import { todayLabel } from "@/lib/format";
 import { FeedbackButton } from "./Feedback";
+import { CoachDockProvider } from "./CoachDock";
 import "@/app/account.css";
 
 const NAV: { href: string; label: string; short?: string; icon: Parameters<typeof Icon>[0]["name"] }[] = [
@@ -70,7 +71,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           </Link>
         ))}
       </nav>
-      {children}
+      <CoachDockProvider>{children}</CoachDockProvider>
     </div>
   );
 }

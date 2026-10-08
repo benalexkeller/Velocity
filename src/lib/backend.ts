@@ -10,10 +10,12 @@ import { BODY_SEED, type BodyDay } from "./analysis";
 import type { Profile, Race } from "./athlete";
 import { ATHLETE } from "./config";
 import { supabase } from "./supabase/client";
+import { ymd as localYmd } from "./format";
 
 export interface SessionPatch { date?: string; start?: string; min?: number; intensity?: string; text?: string; sport?: Sport; deleted?: boolean; locked?: boolean }
 export interface AddedSession { id: string; date: string; start?: string; min: number; sport: Sport; intensity: string; text: string }
-export interface ThreadMsg { who: "You" | "Coach" | "action"; at: string; text: string }
+/** `day` (YYYY-MM-DD, local) decides which messages the coach panel shows: only today's. */
+export interface ThreadMsg { who: "You" | "Coach" | "action"; at: string; text: string; day?: string }
 export interface PlanStateJson { patches: Record<string, SessionPatch>; added: AddedSession[]; undone: boolean; calendar: boolean }
 export interface UserData { profile: Profile | null; race: Race | null; plan: PlanWeekJson[]; intake: Intake | null; state: PlanStateJson; activities: Activity[]; body: BodyDay[]; thread: ThreadMsg[]; availability?: Availability | null }
 
@@ -137,7 +139,7 @@ export class SupabaseBackend implements Backend {
       this.sb.from("plan_state").select("*").eq("user_id", uid).maybeSingle(),
       this.sb.from("activities").select("*").eq("user_id", uid).order("date").order("start"),
       this.sb.from("body_metrics").select("*").eq("user_id", uid).order("date"),
-      this.sb.from("coach_messages").select("who, at, text").eq("user_id", uid).order("id"),
+      this.sb.from("coach_messages").select("who, at, text, created_at").eq("user_id", uid).order("id"),
     ]);
     void this.sb.rpc("touch_profile");
     const st = state.data as Row | null;
@@ -149,7 +151,7 @@ export class SupabaseBackend implements Backend {
       state: st ? { patches: (st.patches as PlanStateJson["patches"]) ?? {}, added: (st.added as AddedSession[]) ?? [], undone: !!st.undone, calendar: st.calendar !== false } : EMPTY_STATE,
       activities: ((acts.data as Row[]) ?? []).map(rowToActivity),
       body: ((body.data as Row[]) ?? []).map((b) => ({ date: String(b.date), rhr: b.rhr as number, hrv: b.hrv as number, sleep_h: b.sleep_h == null ? undefined : Number(b.sleep_h), sleep_score: b.sleep_score as number, stress: b.stress as number, vo2: b.vo2 == null ? undefined : Number(b.vo2) })),
-      thread: ((thread.data as Row[]) ?? []).map((m) => ({ who: m.who as ThreadMsg["who"], at: String(m.at ?? ""), text: String(m.text) })),
+      thread: ((thread.data as Row[]) ?? []).map((m) => ({ who: m.who as ThreadMsg["who"], at: String(m.at ?? ""), text: String(m.text), day: m.created_at ? localYmd(new Date(String(m.created_at))) : undefined })),
     };
   }
   private fail(where: string, error: { message: string } | null) { if (error) console.error(`[velocity] ${where}: ${error.message}`); }
@@ -157,7 +159,7 @@ export class SupabaseBackend implements Backend {
   async upsertActivity(a: Activity) { const uid = await this.user(); const { error } = await this.sb.from("activities").upsert(activityToRow(uid, a)); this.fail("upsertActivity", error); }
   async deleteActivity(id: string) { const uid = await this.user(); const { error } = await this.sb.from("activities").delete().eq("user_id", uid).eq("id", id); this.fail("deleteActivity", error); }
   async setExcluded(id: string, excluded: boolean) { const uid = await this.user(); const { error } = await this.sb.from("activities").update({ excluded }).eq("user_id", uid).eq("id", id); this.fail("setExcluded", error); }
-  async appendThread(msgs: ThreadMsg[]) { const uid = await this.user(); const { error } = await this.sb.from("coach_messages").insert(msgs.map((m) => ({ user_id: uid, ...m }))); this.fail("appendThread", error); }
+  async appendThread(msgs: ThreadMsg[]) { const uid = await this.user(); const { error } = await this.sb.from("coach_messages").insert(msgs.map(({ day: _day, ...m }) => ({ user_id: uid, ...m }))); this.fail("appendThread", error); }
   async saveProfile(p: Partial<Profile>) { const uid = await this.user(); const { data: u } = await this.sb.auth.getUser(); const { error } = await this.sb.from("profiles").upsert({ id: uid, email: u.user?.email ?? null, ...p }); this.fail("saveProfile", error); if (error) throw error; }
   async saveRace(r: Race | null) {
     const uid = await this.user();

@@ -38,7 +38,7 @@ const ok = (name, cond, detail = '') => out.push(`${cond ? 'PASS' : 'FAIL'} ${na
   await p.evaluate(() => { localStorage.clear(); localStorage.setItem('velocity.demo', 'empty'); });
   await p.goto(base + '/plan', { waitUntil: 'networkidle' });
   const rail = await p.textContent('aside.coach').catch(() => '');
-  ok('V-054 new athlete has no example coach thread', !/calf cramp|7:30/.test(rail || '') && /No messages yet/.test(rail || ''), (rail || '').slice(0, 80));
+  ok('V-054 new athlete has no example coach thread', !/calf cramp|7:30/.test(rail || '') && /Ask about today/.test(rail || ''), (rail || '').slice(0, 80));
   await p.goto(base + '/analysis', { waitUntil: 'networkidle' });
   const an2 = await p.textContent('main');
   ok('V-029 Analysis renders for a new athlete', /Analysis/.test(an2) && !/could not load/.test(an2));

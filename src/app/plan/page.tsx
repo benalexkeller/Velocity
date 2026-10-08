@@ -6,13 +6,15 @@ import "./plan.css";
 import { Icon } from "@/components/icons";
 import { SportIcon } from "@/components/SportIcon";
 import { CoachRail } from "@/components/CoachRail";
+import { CoachBar } from "@/components/CoachBar";
+import { useCoachDock } from "@/components/CoachDock";
 import { WeekGrid, weekRange } from "@/components/plan/WeekGrid";
 import { SessionPanel } from "@/components/plan/SessionPanel";
 import { MonthGrid } from "@/components/plan/MonthGrid";
 import { PeriodStepper } from "@/components/PeriodStepper";
 import { RampChart } from "@/components/plan/RampChart";
 import { PlanExplained } from "@/components/plan/PlanExplained";
-import { COACH_THREAD, plannedByDiscipline, plannedLoad, type Sport, type Week } from "@/lib/data";
+import { plannedByDiscipline, plannedLoad, type Sport, type Week } from "@/lib/data";
 import { usePlan } from "@/lib/store";
 import { NutritionProvider } from "@/lib/nutrition/store";
 import { dateLabel, fromYmd, fmtHours, addDays, ymd } from "@/lib/format";
@@ -107,13 +109,13 @@ function Plan() {
   useEffect(() => { if (fromUrl) { setSel(fromUrl); const hit = plan.findSession(fromUrl); if (hit) setWk(hit.w.week); } }, [fromUrl, plan]);
   useEffect(() => { if (plan.ready && !fromUrl) setWk(plan.currentWeek().week); }, [plan.ready]); // eslint-disable-line react-hooks/exhaustive-deps
   const week = plan.weekByNumber(wk);
-  const ws = plan.weekStatus(week);
+  const dock = useCoachDock();
   const monthDate = fromYmd(week.start);
   const [mo, setMo] = useState({ y: monthDate.getFullYear(), m: monthDate.getMonth() });
   const pick = (id: string) => { setSel(id); const hit = plan.findSession(id); if (hit) setWk(hit.w.week); };
 
   return (
-    <main className="main with-coach">
+    <main className={dock.docked && dock.open ? "main with-coach" : "main"}>
       <div className="plan">
         <div className="plan-head">
           <PeriodStepper big width={view === "week" ? 118 : 150} label={view === "week" ? `Week ${week.week}` : M[mo.m]}
@@ -187,9 +189,10 @@ function Plan() {
             </ol>
           </section>
         )}
+        <CoachBar id="plan-coach" />
       </div>
 
-      <CoachRail thread={(plan.seed ? COACH_THREAD : []) as never} summary={`Week ${week.week} · ${ws.done} of ${ws.total} sessions · ${fmtHours(ws.actualH)} of ${fmtHours(ws.plannedH)}`} />
+      {dock.docked && dock.open && <CoachRail onClose={() => dock.setOpen(false)} />}
     </main>
   );
 }

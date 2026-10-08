@@ -191,7 +191,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
       logActivity: (m) => { const a = toActivity(m); setData((cur) => ({ ...cur, activities: [...cur.activities.filter((x) => x.id !== a.id), a] })); void be.upsertActivity(a); },
       deleteActivity: (id) => { setData((cur) => ({ ...cur, activities: cur.activities.filter((x) => x.id !== id) })); void be.deleteActivity(id); },
       toggleExcluded: (id) => { const cur = data.activities.find((a) => a.id === id); if (!cur) return; const excluded = !cur.excluded; setData((c) => ({ ...c, activities: c.activities.map((a) => (a.id === id ? { ...a, excluded: excluded || undefined } : a)) })); void be.setExcluded(id, excluded); },
-      post: (text) => { const msgs: ThreadMsg[] = [{ who: "You", at: nowHM(), text }, { who: "Coach", at: nowHM(), text: coachReply(text, d, athlete) }]; setData((cur) => ({ ...cur, thread: [...cur.thread, ...msgs] })); void be.appendThread(msgs); },
+      post: (text) => { const day = ymd(today()); const msgs: ThreadMsg[] = [{ who: "You", at: nowHM(), text, day }, { who: "Coach", at: nowHM(), text: coachReply(text, d, athlete), day }]; setData((cur) => ({ ...cur, thread: [...cur.thread, ...msgs] })); void be.appendThread(msgs); },
       thread: data.thread, undone: st.undone,
       undoPlanUpdate: () => setState((s) => ({ ...s, undone: !s.undone })),
       calendar: st.calendar, toggleCalendar: () => setState((s) => ({ ...s, calendar: !s.calendar })),
