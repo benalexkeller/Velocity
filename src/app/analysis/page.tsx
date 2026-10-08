@@ -52,14 +52,14 @@ export default function AnalysisPage() {
         <ActivityPanel id={sel} onClose={() => setSel(null)} />
         {empty ? <NeedsData /> : (
           <>
-            {/* what a coach reads first: this week, the Sunday facts, planned vs done; then trends */}
+            {/* this week and the Sunday facts first, then trends, then each recent activity against the plan */}
             <KpiRow />
             <Observations />
-            <Quality onPick={pick} />
             <Overview range={range} />
             <Volume range={range} />
             <SportRow />
             <Progress range={range} onPick={pick} />
+            <Quality onPick={pick} />
             <Recovery />
             <RaceReadiness />
           </>

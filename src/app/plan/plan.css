@@ -143,12 +143,45 @@ svg.ramp { width: 100%; height: auto; display: block; }
 .phd-head .linkbtn { margin-left: auto; font-size: 13px; }
 @media (max-width: 600px) { .phd-head { display: grid; grid-template-columns: 1fr auto; row-gap: 2px; } .phd-head .muted { grid-column: 1 / -1; grid-row: 2; } .phd-head .linkbtn { grid-column: 2; grid-row: 1; } }
 .phd-purpose { margin: -4px 0 0; font-size: 14px; color: var(--ink-2); }
-.phd-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0; margin: 2px 0 0; border-top: 1px solid var(--line-2); }
-.phd-stats > div { padding: 10px 12px 0 0; }
-.phd-stats dt { font-size: 12px; color: var(--muted); }
-.phd-stats dd { margin: 2px 0 0; font-size: 16px; font-weight: 600; white-space: nowrap; }
-.phd-ms { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
-.phd-ms li { font-size: 13px; color: var(--ink-2); background: var(--surface-2); border-radius: 8px; padding: 4px 9px; }
+/* week rows: one per week of the phase; a row opens into its seven days */
+.phw-head, .phw-row { display: grid; grid-template-columns: minmax(118px, 1.1fr) 82px 86px 86px 86px minmax(0, 2.6fr) 128px; column-gap: 12px; align-items: baseline; }
+.phw-head { padding: 0 10px 6px; border-bottom: 1px solid var(--line-2); font-size: 12px; color: var(--muted); }
+.phw-list { list-style: none; margin: 0; padding: 0; }
+.phw { border-bottom: 1px solid var(--line-2); }
+.phw-row { width: 100%; border: 0; background: none; font: inherit; color: var(--ink); text-align: left; padding: 10px; border-radius: 8px; cursor: pointer; }
+.phw-row:hover { background: var(--surface-2); }
+.phw.now .phw-row { background: var(--accent-soft); }
+.phw-row b { font-weight: 600; font-size: 14px; }
+.phw-row i { font-style: normal; color: var(--muted); font-size: 13px; }
+.phw-row .c-wk small { display: block; font-size: 12px; color: var(--muted); }
+.phw-row .c-h, .phw-row .c-l { white-space: nowrap; }
+.phw-d { margin-left: 5px; font-size: 12px; font-weight: 500; }
+.phw-d.up { color: var(--ink-2); } .phw-d.down { color: var(--muted); }
+.phw-row .c-q { display: flex; flex-wrap: wrap; gap: 4px 6px; font-size: 13px; color: var(--ink-2); min-width: 0; }
+.phw-row .c-q > span { background: var(--surface-2); border-radius: 6px; padding: 1px 7px; white-space: nowrap; }
+.phw.now .phw-row .c-q > span { background: var(--surface); }
+.phw-tag { font-style: normal; font-size: 12px; font-weight: 600; border-radius: 6px; padding: 1px 7px; background: var(--strength-soft); color: var(--ink-2); white-space: nowrap; }
+.phw-tag.now { background: var(--accent); color: #fff; }
+.phw-row .c-st { display: flex; align-items: center; justify-content: flex-end; gap: 8px; font-size: 13px; color: var(--muted); white-space: nowrap; }
+.phw-row .c-st svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; transition: transform .15s; }
+.phw.open .phw-row .c-st svg { transform: rotate(90deg); }
+.phw-row .c-note { grid-column: 1 / -1; margin-top: 4px; font-size: 13px; color: var(--ink-2); }
+.phw-days { padding: 2px 10px 12px 10px; }
+.phw-days ol { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 2px; }
+.phw-days li { display: grid; grid-template-columns: 56px 20px minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 6px 8px; border-radius: 6px; font-size: 13px; }
+.phw-days li:nth-child(odd) { background: var(--surface-2); }
+.phw-days li .d { color: var(--muted); white-space: nowrap; }
+.phw-days li .sport-icon { color: var(--accent); }
+.phw-days li.rest .t { grid-column: 2 / -1; color: var(--muted); }
+.phw-days li .m { color: var(--ink-2); white-space: nowrap; font-weight: 600; }
+@media (max-width: 900px) {
+  .phw-head { display: none; }
+  .phw-row { grid-template-columns: minmax(0, 1fr) auto auto; row-gap: 6px; }
+  .phw-row .c-l { display: none; }
+  .phw-row .c-q { grid-column: 1 / -1; grid-row: 2; }
+  .phw-row .c-note { grid-row: 3; }
+  .phw-days li { grid-template-columns: 48px 18px minmax(0, 1fr); } .phw-days li .m { grid-column: 3; }
+}
 
 @media (max-width: 900px) {
   .wg-head, .wg-body { grid-template-columns: 40px repeat(7, 1fr); }

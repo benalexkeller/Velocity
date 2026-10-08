@@ -75,7 +75,7 @@ Rules that still apply (from `CLAUDE.md` and the owner):
 - `4c02203` WP7: V-010 swim doubles for 3–4-day tri plans (+ builder refuses tri < 3 days), V-012 race day with legs/sport/targets, V-014 step parser (threshold/hard Z4, tempo/race pace Z3, written recoveries, race-pace finishes, run off the bike), header/target/hero from the key work (`hardestStep`), "Threshold" intensity, V-072 hard-day spacing, hour cap. `qa/gen-check.ts` 24 checks (`npx tsx`).
 - `4b6f963` V-039 developer vocabulary out · `33d36ba` V-040 last feel-good lines out · `bf3d541` lint.
 
-Checks (run against `npx next start -p 3111` from a folder with playwright): verify1 17/17 · verify2 8/8 · verify3 15/15 · verify4 8/8 · verify5 14/14 · verify6 17/17 · verify7 12/12 · verify8 11/11 · `phone.js` 0 overflow · `hydra.js` 0 hydration errors (try `node hydra.js America/Los_Angeles`) · `gen-check.ts` 24/24.
+Checks (run against `npx next start -p 3111` from a folder with playwright): verify1 17/17 · verify2 8/8 · verify3 15/15 · verify4 8/8 · verify5 14/14 · verify6 17/17 · verify7 13/13 · verify8 11/11 · `phone.js` 0 overflow · `hydra.js` 0 hydration errors (try `node hydra.js America/Los_Angeles`) · `gen-check.ts` 24/24.
 
 Server tip: never `pkill -f "next start"` in the same shell command that starts the server (the pattern matches the command itself and kills the shell). Stop and start in separate calls; start with `(setsid nohup npx next start -p 3111 > server.log 2>&1 < /dev/null &)`.
 
