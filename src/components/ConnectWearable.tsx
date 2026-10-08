@@ -43,7 +43,7 @@ export function ConnectWearableSheet({ onClose, onPick }: { onClose: () => void;
     <div className="cw-scrim" onClick={(e) => { e.stopPropagation(); e.preventDefault(); onClose(); }}>
       <section className="card cw-sheet" role="dialog" aria-modal="true" aria-label="Connect a wearable" onClick={(e) => { e.stopPropagation(); }}>
         <div className="cw-head">
-          <div><h2>Connect a wearable</h2><p className="muted">Direct connections are not live yet. Pick the devices you use: each one signs in here when its connection opens, and your history imports then. Until then, log sessions by hand.</p></div>
+          <div><h2>Connect a wearable</h2><p className="muted">Not live yet. Pick the devices you use; each connects here when it opens.</p></div>
           <button type="button" className="cw-close" aria-label="Close" onClick={onClose}><Icon name="close" /></button>
         </div>
         <ul className="cw-list">
@@ -52,8 +52,7 @@ export function ConnectWearableSheet({ onClose, onPick }: { onClose: () => void;
             return (
               <li key={w.k} className={on ? "on" : ""}>
                 <div><b>{w.name}</b><span className="muted">{w.brings}</span></div>
-                <span className="cw-state">{on ? "Picked · connects when live" : "Not live yet"}</span>
-                <button type="button" className={`btn small${on ? " ghost" : ""}`} aria-pressed={on} onClick={() => { toggle(w.k); onPick?.(w.k, !on); }}>{on ? "Remove" : "I use this"}</button>
+                <button type="button" className={`btn small${on ? " ghost" : ""}`} aria-pressed={on} onClick={() => { toggle(w.k); onPick?.(w.k, !on); }}>{on ? "✓ Picked" : "I use this"}</button>
               </li>
             );
           })}

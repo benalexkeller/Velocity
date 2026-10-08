@@ -138,7 +138,7 @@ export function StageEditor({ stages, onChange, nowKg, raceKg, imperial, raceDat
         );
       })}
       {raceDate && <div className="row fixed"><span className="who">Race day</span><input type="range" min={0} max={Math.max(0, n - 1)} value={Math.min(n - 1, raceIdx)} disabled aria-hidden /><span className="when">{shortDate(raceDate)}</span><span className="w">{racePt ? showW(racePt.kg) : "set the target weight above"}</span><span className="rate">{racePt ? rateText(lastPt, racePt) : ""}</span><span /></div>}
-      <div className="acts"><button type="button" className="add" onClick={add}>+ Add a stage</button><span className="hint">Drag a slider to pick the week, type the weight you want to be at by then. Calories aim at the next stage, not race day.</span></div>
+      <div className="acts"><button type="button" className="add" onClick={add}>+ Add a stage</button><span className="hint">Calories aim at the next stage.</span></div>
       <WeightChart timeline={tl} path={path} imperial={imperial} raceDate={raceDate} height={210} />
     </div>
   );

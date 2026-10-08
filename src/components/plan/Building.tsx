@@ -76,7 +76,6 @@ export function Building({ intake, edit, onOpen }: { intake: Intake; edit: boole
                 {summary.longest.swim > 0 && <div><span className="k">Longest swim</span><b>{hm(summary.longest.swim)}</b></div>}
               </div>
               <button type="button" className="btn" onClick={onOpen}>Open the plan</button>
-              <span className="hint">Every session can be moved, edited, locked or deleted in the Plan tab. Answers can be changed under Plan settings.</span>
             </div>
           )}
         </div>

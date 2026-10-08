@@ -12,7 +12,7 @@ const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0
   // V-104: skip set-up without a weight → no invented targets
   const skip = await p.$('button:has-text("Skip, use defaults")'); if (skip) { await skip.click(); await p.waitForTimeout(400); }
   const t0 = await p.textContent('main');
-  ok('V-104 no targets without a weight', /Add your weight to get calorie/.test(t0) && !/\/ 3,0\d\d kcal/.test(t0));
+  ok('V-104 no targets without a weight', /Add your weight to get targets/.test(t0) && !/\/ 3,0\d\d kcal/.test(t0));
   // seed a profile with weight + a whole-day estimate yesterday
   const t = new Date(), y = new Date(t.getTime() - 86400000);
   await p.evaluate(({ td, yd }) => {

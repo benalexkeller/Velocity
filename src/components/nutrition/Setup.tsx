@@ -62,13 +62,12 @@ export function NutritionSetup({ onDone, edit = false }: { onDone: () => void; e
     <form className="form nu-setup" onSubmit={submit}>
       <section>
         <h3>About you</h3>
-        <p className="hint">Calories and carbohydrate targets are computed from these and from each day's training.</p>
         <div className="three">
           <label><b>Body weight</b><span className="unit-in"><input value={weight} onChange={(e) => setWeight(e.target.value)} inputMode="decimal" required placeholder={wUnit === "lb" ? "165" : "75"} /><span className="units">{(["kg", "lb"] as const).map((u) => <button key={u} type="button" className={wUnit === u ? "on" : ""} onClick={() => { if (u !== wUnit && weight) setWeight(String(Math.round(u === "lb" ? kgToLb(+weight) : lbToKg(+weight)))); setWUnit(u); }}>{u}</button>)}</span></span></label>
           <label><b>Height</b><span className="unit-in"><input value={height} onChange={(e) => setHeight(e.target.value)} inputMode="decimal" placeholder={hUnit === "in" ? "70" : "178"} /><span className="units">{(["cm", "in"] as const).map((u) => <button key={u} type="button" className={hUnit === u ? "on" : ""} onClick={() => { if (u !== hUnit && height) setHeight(String(Math.round(u === "in" ? cmToIn(+height) : inToCm(+height)))); setHUnit(u); }}>{u}</button>)}</span></span></label>
           <label><b>Birth year</b><input value={birth} onChange={(e) => setBirth(e.target.value)} inputMode="numeric" placeholder="1994" /></label>
         </div>
-        <label><b>Sex (for the resting-energy formula)</b><div className="days">{([["male", "Male"], ["female", "Female"]] as const).map(([k, l]) => <button key={k} type="button" className={sex === k ? "on" : ""} onClick={() => setSex(k)}>{l}</button>)}</div></label>
+        <label><b>Sex</b><div className="days">{([["male", "Male"], ["female", "Female"]] as const).map(([k, l]) => <button key={k} type="button" className={sex === k ? "on" : ""} onClick={() => setSex(k)}>{l}</button>)}</div></label>
       </section>
 
       <section>
@@ -78,17 +77,16 @@ export function NutritionSetup({ onDone, edit = false }: { onDone: () => void; e
         </div>
         {goal === "race_weight" && (
           <>
-            <div className="two"><label><b>Target weight ({wUnit})</b><input value={goalW} onChange={(e) => setGoalW(e.target.value)} inputMode="decimal" /></label><span className="hint" style={{ alignSelf: "end" }}>{plan.athlete.hasRace ? `Spread out to reach it by race day (${plan.athlete.race.date}).` : "Set your race under Profile so the date is known."}</span></div>
-            <label className="chk-row"><input type="checkbox" checked={depth} onChange={(e) => setDepth(e.target.checked)} /><b>In-depth weight plan</b><span className="hint">A target weight per stage of training, on top of your planned hours per week.</span></label>
+            <div className="two"><label><b>Target weight ({wUnit})</b><input value={goalW} onChange={(e) => setGoalW(e.target.value)} inputMode="decimal" /></label><span className="hint" style={{ alignSelf: "end" }}>{plan.athlete.hasRace ? `By race day, ${plan.athlete.race.date}` : "Set a race date first (Plan → Plan settings)."}</span></div>
+            <label className="chk-row"><input type="checkbox" checked={depth} onChange={(e) => setDepth(e.target.checked)} /><b>In-depth weight plan</b><span className="hint">One target weight per training phase.</span></label>
             {depth && <StageEditor stages={stages} onChange={setStages} nowKg={parseFloat(weight) > 0 ? +(wUnit === "lb" ? lbToKg(parseFloat(weight)) : parseFloat(weight)).toFixed(2) : null} raceKg={parseFloat(goalW) > 0 ? +(wUnit === "lb" ? lbToKg(parseFloat(goalW)) : parseFloat(goalW)).toFixed(2) : null} imperial={wUnit === "lb"} raceDate={plan.athlete.hasRace ? plan.athlete.race.date : null} />}
           </>
         )}
-        <div className="two"><label><b>Your own rest-day calories (optional)</b><span className="unit-in"><input value={baseK} onChange={(e) => setBaseK(e.target.value)} inputMode="numeric" placeholder="formula" /><span className="units"><span>kcal</span></span></span></label><span className="hint" style={{ alignSelf: "end" }}>Leave empty and the app computes it from your body data and goal. If you set a number, that is your rest-day target and the energy of each day's training is added on top.</span></div>
+        <div className="two"><label><b>Your own rest-day calories (optional)</b><span className="unit-in"><input value={baseK} onChange={(e) => setBaseK(e.target.value)} inputMode="numeric" placeholder="formula" /><span className="units"><span>kcal</span></span></span></label><span className="hint" style={{ alignSelf: "end" }}>Empty: calculated. Training is added on top either way.</span></div>
       </section>
 
       <section>
         <h3>Your bottle</h3>
-        <p className="hint">Drinks are counted in bottles. Pick the one you actually use.</p>
         <div className="days">
           {BOTTLES.map((ml) => <button key={ml} type="button" className={!custom && bottle === ml ? "on" : ""} onClick={() => { setBottle(ml); setCustom(""); }}>{ml >= 1000 ? `${ml / 1000} L` : `${ml} ml`}</button>)}
           <span className="unit-in small"><input value={custom} onChange={(e) => setCustom(e.target.value)} inputMode="numeric" placeholder="other" style={{ width: 90 }} /><span className="units"><span>ml</span></span></span>
@@ -97,7 +95,7 @@ export function NutritionSetup({ onDone, edit = false }: { onDone: () => void; e
 
       <section>
         <h3>Supplements you take</h3>
-        <p className="hint">Optional. Picked ones show as a daily checklist. Grades: A strong evidence · B some · C limited.</p>
+        <p className="hint">Grades: A strong evidence · B some · C limited.</p>
         <div className="nu-supp-pick">
           {SUPPLEMENTS.map((s) => {
             const on = picks.find((x) => x.id === s.id);

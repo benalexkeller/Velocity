@@ -12,7 +12,7 @@ import "@/app/account.css";
 const NAV: { href: string; label: string; short?: string; icon: Parameters<typeof Icon>[0]["name"] }[] = [
   { href: "/dashboard", label: "Dashboard", short: "Home", icon: "home" },
   { href: "/plan", label: "Plan", icon: "calendar" },
-  { href: "/activities", label: "Activities", icon: "bars" },
+  { href: "/activities", label: "Activities", short: "Activity", icon: "bars" },
   { href: "/analysis", label: "Analysis", icon: "trend" },
   { href: "/nutrition", label: "Nutrition", icon: "fork" },
   { href: "/store", label: "Store", icon: "store" },

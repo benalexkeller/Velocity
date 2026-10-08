@@ -32,6 +32,7 @@ export const Icons = {
   expand: () => P("M14 4h6v6M20 4l-7 7M10 20H4v-6M4 20l7-7"),
   note: () => P("M6 3h12v18H6zM9 8h6M9 12h6M9 16h4"),
   more: () => P("M5 12h.01M12 12h.01M19 12h.01"),
+  kebab: () => P("M12 5h.01M12 12h.01M12 19h.01"),
   check: () => P("M5 12l4.5 4.5L19 7"),
   lock: () => P("M6 11h12v10H6zM8 11V7a4 4 0 0 1 8 0v4"),
   unlock: () => P("M6 11h12v10H6zM8 11V7a4 4 0 0 1 7.5-2"),

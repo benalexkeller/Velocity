@@ -338,6 +338,7 @@ svg.chart .accent { fill: var(--accent); }
 @media (max-width: 760px) { .stepper.big .stepper-label { font-size: 20px; line-height: 26px; } .stepper.big { height: 44px; } }
 
 /* ---------- Connect wearable ---------- */
+.cw-btn { white-space: nowrap; }
 .cw-btn svg { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .btn.on-dark { background: rgba(255,255,255,0.12); color: #fff; box-shadow: none; }
 .btn.on-dark:hover { background: rgba(255,255,255,0.2); }
@@ -349,12 +350,10 @@ svg.chart .accent { fill: var(--accent); }
 .cw-close { width: 32px; height: 32px; border-radius: 50%; border: 0; background: var(--surface-2); display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
 .cw-close svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
 .cw-list { list-style: none; margin: 0; padding: 0; display: grid; }
-.cw-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto auto; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line-2); }
+.cw-list li { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 12px 0; border-top: 1px solid var(--line-2); }
 .cw-list li > div { display: grid; gap: 2px; min-width: 0; }
 .cw-list li .muted { font-size: 13px; }
-.cw-state { font-size: 13px; color: var(--muted); white-space: nowrap; }
-.cw-list li.on .cw-state { color: var(--ink); }
-@media (max-width: 560px) { .cw-list li { grid-template-columns: minmax(0, 1fr) auto; } .cw-state { grid-column: 1; } }
+.cw-list li .btn { min-width: 96px; justify-content: center; }
 
 /* ---------- Session fuel (dashboard hero line, plan session panel block) ---------- */
 .fuel-line { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.14); font-size: 13px; line-height: 18px; color: rgba(255,255,255,0.82); }

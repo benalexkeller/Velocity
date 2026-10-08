@@ -105,7 +105,7 @@ export function WeekGrid({ week, selectedId, onPick }: { week: Week; selectedId?
               {sessions.map((s) => <Block key={s.id} s={s} y={y} selected={s.id === selectedId} drag={drag?.id === s.id ? drag : null} onDown={onDown(s)} onMove={onMove(s)} onUp={onUp(s)} onLock={() => plan.toggleLock(s.id)} />)}
               {isT && nowH >= H0 && nowH <= H1 && (
                 <div className="wg-now" style={{ top: y(nowH) }}>
-                  <span>NOW {hoursToClock(nowH)}</span>
+                  <span><b className="now-w">NOW </b>{hoursToClock(nowH)}</span>
                 </div>
               )}
             </div>

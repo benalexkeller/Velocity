@@ -116,7 +116,7 @@ function Activities() {
           </div>
           <table className="tbl acts-tbl" style={{ ["--acts-top" as string]: `${stickyH}px` }}>
             <thead>
-              <tr><th>Date</th><th>Activity</th><th>Distance</th><th>Time</th><th className="hide-sm">Pace / speed</th><th className="hide-sm">Elevation</th><th className="hide-sm">Effort</th><th /><th /></tr>
+              <tr><th>Date</th><th>Activity</th><th>Distance</th><th>Time</th><th className="hide-sm">Pace / speed</th><th className="hide-sm col-elev">Elevation</th><th className="hide-sm">Effort</th><th /><th /></tr>
             </thead>
             <tbody>
               {list.map((a) => {
@@ -132,7 +132,7 @@ function Activities() {
                       <td className="num">{distance(a)}</td>
                       <td className="num">{fmtHMS(a.min)}</td>
                       <td className="num hide-sm">{pp.v}<small>{pp.u}</small></td>
-                      <td className="num hide-sm">{a.elev_ft ? `${elev(a.elev_ft).v.toLocaleString()} ${elev(0).u}` : "—"}</td>
+                      <td className="num hide-sm col-elev">{a.elev_ft ? `${elev(a.elev_ft).v.toLocaleString()} ${elev(0).u}` : "—"}</td>
                       <td className="hide-sm">{effortLevel(a, plan.athlete.lthr) ? <Effort n={effortLevel(a, plan.athlete.lthr)} /> : "—"}</td>
                       <td>{a.route ? <div className="thumb"><RouteMap route={a.route} height={36} bg="var(--surface-2)" pad={0.1} /></div> : null}</td>
                       <td><span className="chev"><Icon name="chevron" /></span></td>
@@ -163,24 +163,30 @@ function Drawer({ a, onDeleted }: { a: Activity; onDeleted: () => void }) {
   const plan = usePlan();
   const w = when(a), pp = paceOrPower(a);
   const [confirm, setConfirm] = useState(false);
+  const [menu, setMenu] = useState(false);
   const [big, setBig] = useState(false);
-  useEffect(() => { setConfirm(false); setBig(false); }, [a.id]);
+  useEffect(() => { setConfirm(false); setBig(false); setMenu(false); }, [a.id]);
   return (
     <aside className="card drawer" aria-label="Activity detail">
       {big && a.route && <MapModal route={a.route} title={a.name} sub={`${w.l1} · ${distance(a)} · ${fmtHMS(a.min)}`} onClose={() => setBig(false)} />}
       <div className="hd">
         <SportIcon sport={a.sport} size={40} />
         <div><b>{a.name}</b><small>{w.l1}{w.l2 ? ` · ${w.l2}` : ""}</small><small>{subtitle(a)}{a.excluded ? " · excluded from analysis" : ""}</small></div>
+        <span className="act-more">
+          <button type="button" className="iconbtn more" aria-label="More options" aria-haspopup="menu" aria-expanded={menu} onClick={() => { setMenu((m) => !m); setConfirm(false); }}><Icon name="kebab" /></button>
+          {menu && (
+            <div className="menu" role="menu" onKeyDown={(e) => { if (e.key === "Escape") setMenu(false); }}>
+              <button type="button" role="menuitem" onClick={() => { plan.toggleExcluded(a.id); setMenu(false); }}>{a.excluded ? "Include in analysis" : "Exclude from analysis"}</button>
+              {confirm ? (
+                <div className="confirm"><span>Delete this activity? This cannot be undone.</span><div><button type="button" className="btn danger small" onClick={() => { plan.deleteActivity(a.id); setMenu(false); onDeleted(); }}>Delete</button><button type="button" className="btn ghost small" onClick={() => setConfirm(false)}>Cancel</button></div></div>
+              ) : (
+                <button type="button" role="menuitem" className="danger" onClick={() => setConfirm(true)}>Delete activity</button>
+              )}
+            </div>
+          )}
+        </span>
       </div>
-      <div className="actions">
-        <button type="button" className={`btn ghost small${a.excluded ? " on" : ""}`} onClick={() => plan.toggleExcluded(a.id)} aria-pressed={!!a.excluded}>{a.excluded ? "Include in analysis" : "Exclude from analysis"}</button>
-        {confirm ? (
-          <span className="confirm"><span>Delete this activity?</span><button type="button" className="btn danger small" onClick={() => { plan.deleteActivity(a.id); onDeleted(); }}>Delete</button><button type="button" className="btn ghost small" onClick={() => setConfirm(false)}>Cancel</button></span>
-        ) : (
-          <button type="button" className="btn ghost small" onClick={() => setConfirm(true)}>Delete</button>
-        )}
-      </div>
-      {a.excluded && <div className="note">Not counted in analysis, weekly volume, load or session status. It stays in this list.</div>}
+      {a.excluded && <div className="note">Excluded from analysis, volume, load and session status.</div>}
       <div className="grid">
         <div><div className="v">{distance(a)}</div><div className="k">Distance</div></div>
         <div><div className="v">{fmtHMS(a.min)}</div><div className="k">Time</div></div>

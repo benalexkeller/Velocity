@@ -232,7 +232,7 @@ function coachReply(text: string, d: ReturnType<typeof derive>, athlete: Athlete
   const q = text.toLowerCase();
   const t = today();
   const wk = d.weeks.find((w) => { const s = fromYmd(w.start); return t >= s && t <= addDays(s, 6); }) ?? d.weeks[0];
-  if (!wk) return "No plan yet. Add workouts in the Plan tab; the coach service that builds plans isn't connected yet.";
+  if (!wk) return "No plan yet. Build one under Plan.";
   const done = wk.sessions.filter((s) => s.sport !== "rest" && s.status === "done").length, total = wk.sessions.filter((s) => s.sport !== "rest").length;
   const todayS = wk.sessions.find((s) => s.date === ymd(t));
   const tomorrow = ymd(addDays(t, 1));
@@ -241,7 +241,7 @@ function coachReply(text: string, d: ReturnType<typeof derive>, athlete: Athlete
   if (/today/.test(q)) return todayS ? `Today: ${say(todayS)}` : "Nothing planned today.";
   if (/tomorrow/.test(q)) return tom ? `Tomorrow: ${say(tom)}` : "Nothing planned tomorrow.";
   if (/this week|week/.test(q)) return `Week ${wk.week}${wk.phaseShort !== "No plan" ? ` (${wk.phaseShort})` : ""}: ${done} of ${total} sessions done, ${(wk.plannedMin / 60).toFixed(1)} h planned.${wk.focus ? ` Focus: ${wk.focus}.` : ""}`;
-  if (/move|swap|change|reschedule/.test(q)) return "To move or edit a session, open it in the Plan calendar and use Move or Edit. The coach's own plan changes come with the Sunday review once the coach service is connected.";
-  if (/race|goal/.test(q)) return athlete.hasRace ? `Race: ${athlete.race.name}, ${athlete.race.date}${athlete.race.goal ? `, goal ${athlete.race.goal}` : ""}. Projection and readiness are on the Analysis tab.` : "No race set yet. Add it under Profile.";
-  return "The coach service isn't connected yet, so this message is saved but not answered. Questions about today, tomorrow, this week, moving sessions, or the race get a data answer now.";
+  if (/move|swap|change|reschedule/.test(q)) return "Open the session in the Plan calendar and use Move or Edit.";
+  if (/race|goal/.test(q)) return athlete.hasRace ? `Race: ${athlete.race.name}, ${athlete.race.date}${athlete.race.goal ? `, goal ${athlete.race.goal}` : ""}. Projection: Analysis tab.` : "No race set. Plan → Plan settings.";
+  return "Not answered: the coach service is not connected yet. Answered now: today, tomorrow, this week, moving a session, the race.";
 }

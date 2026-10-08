@@ -30,7 +30,6 @@ export function CoachRail({ thread, placeholder = "Ask your coach or log how it 
           {menu && (
             <div className="menu" role="menu">
               {!plan.accounts && <button type="button" role="menuitem" onClick={() => { plan.reset(); setMenu(false); }}>Clear changes saved on this device ({plan.changes})</button>}
-              <div className="muted small">Coach replies: limited to today, tomorrow, this week, moving a session and the race. Weekly review: not yet available.</div>
             </div>
           )}
         </span>

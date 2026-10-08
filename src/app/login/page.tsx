@@ -29,7 +29,7 @@ function Login() {
 
   if (!ACCOUNTS_ON) {
     return (
-      <main className="auth"><section className="card box"><span className="wordmark">{BRAND.name}</span><h1>Accounts are off</h1><p className="sub">This copy runs in local mode: everything is saved in this browser. Set the two Supabase values in Vercel to turn accounts on.</p><button type="button" className="btn" onClick={() => router.push("/dashboard")}>Open the app</button></section></main>
+      <main className="auth"><section className="card box"><span className="wordmark">{BRAND.name}</span><h1>Accounts are off</h1><p className="sub">Local mode: everything is saved in this browser.</p><button type="button" className="btn" onClick={() => router.push("/dashboard")}>Open the app</button></section></main>
     );
   }
 
@@ -63,7 +63,7 @@ function Login() {
       <section className="card box">
         <span className="wordmark">{BRAND.name}</span>
         <h1>{mode === "in" ? "Sign in" : "Create your account"}</h1>
-        <p className="sub">{mode === "in" ? "Your plan, activities and analysis." : "Free during testing. Your data is yours; no one else can see it."}</p>
+        {mode === "up" && <p className="sub">Free during testing. Only you can see your data.</p>}
         <button type="button" className="btn google" onClick={google}><GoogleMark />Continue with Google</button>
         <div className="or">or with email</div>
         <form className="form" onSubmit={submit}>

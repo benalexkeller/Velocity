@@ -68,7 +68,7 @@ export function KpiRow() {
       <div className="card kpi"><div className="k">Fatigue<Info {...KPI_INFO.fatigue} /></div><div className="row"><div className="v">{k.fatigue.v.toFixed(0)}</div><Delta v={k.fatigue.d} good="down" /></div><div className="u">7-day load</div><Spark pts={k.fatigue.spark} color="var(--ink)" /></div>
       <div className="card kpi"><div className="k">Form<Info {...KPI_INFO.form} /></div><div className="row"><div className="v">{sign(k.form.v)}</div><Delta v={k.form.dAbs} suffix="" /></div><div className="u">fitness − fatigue</div><Spark pts={k.form.spark} color="var(--swim)" /></div>
       <div className="card kpi"><div className="k">Weekly volume<Info {...KPI_INFO.volume} /></div><div className="row"><div className="v">{k.volume.v.toFixed(1)}<small> h</small></div><Delta v={k.volume.d} /></div><div className="u">This week</div><Bars pts={k.volume.bars} /></div>
-      <div className="card kpi"><div className="k">Completed sessions<Info {...KPI_INFO.consistency} /></div><div className="row"><div className="v">{k.consistency.v ?? "—"}{k.consistency.v != null && <small>%</small>}</div><Delta v={k.consistency.dAbs} suffix=" pts" /></div><div className="u">12 weeks · done ÷ planned</div><Bars pts={k.consistency.bars} /></div>
+      <div className="card kpi"><div className="k">Sessions done<Info {...KPI_INFO.consistency} /></div><div className="row"><div className="v">{k.consistency.v ?? "—"}{k.consistency.v != null && <small>%</small>}</div><Delta v={k.consistency.dAbs} suffix=" pts" /></div><div className="u">12 weeks · done ÷ planned</div><Bars pts={k.consistency.bars} /></div>
     </div>
   );
 }
@@ -94,7 +94,7 @@ export function Overview({ range }: { range: Range }) {
   return (
     <section className="card ax-panel" aria-label="Performance overview">
       <div className="ax-head">
-        <div><h2>Performance overview</h2><p>Fitness, fatigue and form over the last {range === 99 ? `${Math.round(pts.length / 7)} weeks` : `${range} weeks`}</p></div>
+        <div><h2>Performance overview</h2></div>
         <span className="lgd"><span><i style={{ background: "var(--accent)" }} />Fitness</span><span><i style={{ background: "var(--ink)" }} />Fatigue</span><span><i style={{ background: "var(--muted)" }} />Form</span></span>
       </div>
       <div className="ax-overview">
@@ -157,7 +157,7 @@ export function Volume({ range }: { range: Range }) {
   return (
     <section className="card ax-panel" aria-label="Training volume">
       <div className="ax-head">
-        <div><h2>Training volume</h2><p>Weekly volume by sport · planned vs completed</p></div>
+        <div><h2>Training volume</h2></div>
         <div className="ax-tools">
           <div className="pill-group">{(["hours", "distance", "load"] as const).map((m) => <button key={m} type="button" className={mode === m ? "on" : ""} onClick={() => setMode(m)}>{m === "hours" ? "Hours" : m === "distance" ? "Distance" : "Load"}</button>)}</div>
           <span className="lgd"><span><i style={{ background: "var(--swim)" }} />Swim</span><span><i style={{ background: "var(--bike)" }} />Bike</span><span><i style={{ background: "var(--run)" }} />Run</span><span><i style={{ background: "var(--strength-soft)", border: "1px solid var(--line)" }} />Other</span><span><i className="dash" />Planned</span></span>
@@ -196,7 +196,7 @@ export function Volume({ range }: { range: Range }) {
           );
         })()}
       </div>
-      <div className="ax-foot muted">Bars: completed {unit} per week. Dashed outline: the plan. Hover a week for hours and activities. {mode === "distance" ? "Swim yards converted to miles." : ""}</div>
+      {mode === "distance" && <div className="ax-foot muted">Swim yards shown as miles.</div>}
     </section>
   );
 }
@@ -211,7 +211,7 @@ export function LoadDistribution({ range }: { range: Range }) {
   const easyDelta = z.prevEasy != null ? z.easy - z.prevEasy : null;
   return (
     <section className="card ax-panel" aria-label="Load distribution">
-      <div className="ax-head"><div><h2>Load distribution</h2><p>By heart-rate zone · {z.withHr} of {z.sessions} sessions have heart rate</p></div></div>
+      <div className="ax-head"><div><h2>Load distribution</h2><p>{z.withHr} of {z.sessions} sessions have heart rate</p></div></div>
       <div className="ax-dist">
         <div className="donut-wrap">
           <svg viewBox="0 0 140 140" className="donut" role="img" aria-label="Load by zone">
@@ -228,7 +228,7 @@ export function LoadDistribution({ range }: { range: Range }) {
         </div>
         <div className={`note ${easyDelta != null && easyDelta >= 0 ? "ok" : ""}`}>
           <div className="t">Easy share {z.easy}%{easyDelta != null ? ` · ${sign(easyDelta)} pts vs previous period` : ""}</div>
-          <div className="s">Base-phase target: 75–80% of load easy. Zones are from each session's average heart rate until per-second data arrives.</div>
+          <div className="s">Base-phase target: 75–80 % easy.</div>
         </div>
       </div>
     </section>
@@ -272,7 +272,7 @@ function SportCard({ sp }: { sp: Sp }) {
 export function SportRow() {
   return (
     <section className="card ax-panel" aria-label="Sport performance">
-      <div className="ax-head"><div><h2>Sport performance</h2><p>Last 4 weeks vs the 4 weeks before</p></div></div>
+      <div className="ax-head"><div><h2>Sport performance</h2><p>4 weeks vs the 4 before</p></div></div>
       <div className="ax-sports"><SportCard sp="swim" /><SportCard sp="bike" /><SportCard sp="run" /></div>
     </section>
   );
@@ -309,7 +309,7 @@ export function Progress({ range, onPick }: { range: Range; onPick: (id: string)
   return (
     <section className="card ax-panel" aria-label="Progress over time">
       <div className="ax-head">
-        <div><h2>Progress over time</h2><p>Every session as a point · click a point to analyse it{normalise ? " · all sports shown as % of each sport's first session in range" : ""}</p></div>
+        <div><h2>Progress over time</h2>{normalise && <p>% of each sport's first session in range</p>}</div>
         <div className="ax-tools">
           {sp === "all" && <span className="lgd">{sports.map((k) => <span key={k}><i style={{ background: COLORS[k] }} />{k[0].toUpperCase() + k.slice(1)}</span>)}</span>}
           <div className="pill-group">{(["all", "swim", "bike", "run"] as const).map((k) => <button key={k} type="button" className={sp === k ? "on" : ""} onClick={() => setSp(k)}>{k === "all" ? "All" : k[0].toUpperCase() + k.slice(1)}</button>)}</div>
@@ -384,7 +384,7 @@ export function Recovery() {
   const pct = (a: number | null, b: number | null) => (a != null && b ? ((a - b) / b) * 100 : null);
   return (
     <section className="card ax-panel" aria-label="Recovery">
-      <div className="ax-head"><div><h2>Body</h2><p>Garmin body data · weekly trend, not a daily verdict</p></div></div>
+      <div className="ax-head"><div><h2>Body</h2><p>From Garmin</p></div></div>
       <div className="ax-recovery">
         <div className="tiles">
           {tile("Sleep", w.sleep != null ? `${Math.floor(w.sleep)} h ${Math.round((w.sleep % 1) * 60)} m` : null, pct(w.sleep, p.sleep), "up", "sleep_h")}
@@ -408,9 +408,9 @@ export function Quality({ onPick }: { onPick: (id: string) => void }) {
   const rows = an.trainingQuality(6);
   return (
     <section className="card ax-panel" aria-label="Training quality">
-      <div className="ax-head"><div><h2>Recent activities vs plan</h2><p>Completed = same sport, at least 70 % of the planned time</p></div><Link href="/activities" className="link">View all activities →</Link></div>
+      <div className="ax-head"><div><h2>Recent activities vs plan</h2></div><Link href="/activities" className="link">View all activities →</Link></div>
       <table className="tbl small ax-quality">
-        <thead><tr><th>Date</th><th>Activity</th><th className="num">Planned</th><th className="num">Done</th><th className="num">Load</th><th>Status</th><th>Facts</th></tr></thead>
+        <thead><tr><th>Date</th><th>Activity</th><th className="num">Planned</th><th className="num">Done</th><th className="num">Load</th><th title="Completed = same sport, at least 70 % of the planned time">Status</th><th>Facts</th></tr></thead>
         <tbody>
           {rows.map((r) => (
             <tr key={r.a.id} className="row" onClick={() => onPick(r.a.id)}>
@@ -452,7 +452,7 @@ export function RaceReadiness() {
   const so = [D.bikeMi > 0 ? `longest ride ${r.longest.bike.toFixed(1)} of ${D.bikeMi} mi` : null, D.runMi > 0 ? `longest run ${r.longest.run.toFixed(1)} of ${D.runMi} mi` : null].filter(Boolean).join(" · ");
   return (
     <section className="card ax-panel" aria-label="Race projection">
-      <div className="ax-head"><div><h2>Race projection</h2><p>{r.ready ? "From your longest recent sessions · run uses Riegel's distance formula" + (D.swimYd > 0 && D.runMi > 0 ? ", +12 % off the bike" : "") : "Shown from the Build phase, or once long sessions reach half the race distance"}</p></div><span className="badge">{ATHLETE.race.name}</span></div>
+      <div className="ax-head"><div><h2>Race projection</h2><p>{r.ready ? "From your longest recent sessions" + (D.swimYd > 0 && D.runMi > 0 ? " · run +12 % off the bike" : "") : "Shows from the Build phase, or when long sessions reach half the race distance"}</p></div><span className="badge">{ATHLETE.race.name}</span></div>
       {!r.ready ? (
         <p className="ax-note">Last 8 weeks: {so || "no long sessions yet"}.</p>
       ) : (
@@ -472,7 +472,7 @@ export function Observations() {
   const o = an.observations();
   return (
     <section className="card ax-panel" aria-label="Sunday review facts">
-      <div className="ax-head"><div><h2>Sunday review · facts</h2><p>What the coach reads before proposing any change</p></div></div>
+      <div className="ax-head"><div><h2>Sunday review · facts</h2></div></div>
       <div className="ax-obs">{o.map((x, i) => <div key={x.title} className="ob"><span className="n">{i + 1}</span><div><b>{x.title}</b><p><CoachNote text={x.text} /></p></div></div>)}</div>
     </section>
   );

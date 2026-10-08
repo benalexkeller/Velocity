@@ -98,8 +98,8 @@
 /* this week */
 .tw { padding: 16px 20px 18px; }
 .tw .head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
-.tw .head small { color: var(--muted); font-size: 13px; text-align: right; }
-.tw .cols { display: grid; grid-template-columns: repeat(3, 1fr); }
+
+.tw .cols { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
 .tw .col { padding: 0 14px 0 0; margin-right: 14px; border-right: 1px solid var(--line-2); }
 .tw .col:last-child { border-right: 0; margin-right: 0; }
 .tw .k { font-size: 13px; color: var(--ink-2); }

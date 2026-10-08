@@ -37,7 +37,6 @@ function Nutrition() {
           <section className="card box">
             <span className="wordmark">{BRAND.name}</span>
             <h1>Set up nutrition</h1>
-            <p className="sub">Targets are computed from your body data and each day's training. Takes a minute; everything can be changed later on the Guide tab.</p>
             <NutritionSetup onDone={() => setTab("track")} />
           </section>
         </div>

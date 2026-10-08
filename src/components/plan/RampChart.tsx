@@ -24,7 +24,7 @@ export function RampChart({ selected, onPick }: { selected?: number | null; onPi
   const bars = WEEKS.map((w) => ({ w, p: plannedByDiscipline(w), a: actualOf(w) }));
   const x = (i: number) => L + i * gw + (gw - bw) / 2;
 
-  if (!plan.hasPlan) return <div className="card muted" style={{ padding: 18, fontSize: 14 }}>No plan yet. This chart shows planned hours per week by sport once a plan exists.{plan.athlete.hasRace ? "" : " Set your race under Profile first."}</div>;
+  if (!plan.hasPlan) return <div className="card muted" style={{ padding: 18, fontSize: 14 }}>No plan yet.</div>;
   return (
     <svg ref={svgRef} className="chart ramp" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Planned weekly training hours by discipline across the plan, ending in the race">
       {/* y axis */}

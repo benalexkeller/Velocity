@@ -132,7 +132,7 @@ function Plan() {
             <button type="button" className="badge" aria-expanded={calInfo} onClick={() => setCalInfo((o) => !o)} title={`Google Calendar sync ${plan.calendar ? "on" : "off"}`}><span className={plan.calendar ? "ok" : "ok off"}>{plan.calendar ? "✓" : "–"}</span>Calendar</button>
             {calInfo && (
               <div className="menu" role="dialog">
-                <div className="small"><b>Google Calendar</b><br />The Google connection isn't built yet. This switch records whether sessions should be written to your calendar once it is.</div>
+                <div className="small"><b>Google Calendar</b><br />Not connected yet.</div>
                 <button type="button" onClick={() => { plan.toggleCalendar(); setCalInfo(false); }}>{plan.calendar ? "Turn sync off" : "Turn sync on"}</button>
               </div>
             )}
@@ -143,7 +143,7 @@ function Plan() {
 
         {!plan.hasPlan && (
           <section className="card no-plan" aria-label="No plan yet">
-            <div><div className="eyebrow">No plan yet</div><h3>Answer five screens of questions and the plan is built for your race, your hours and your days.</h3><p className="muted">Or upload a plan you already have as a spreadsheet. Either way every session can be moved, edited or locked afterwards.</p></div>
+            <div><div className="eyebrow">No plan yet</div><h3>Build a plan from your race, hours and days, or upload a spreadsheet.</h3></div>
             <div className="row"><Link href="/plan/new" className="btn">Build my plan<Icon name="arrow" /></Link><Link href="/plan/new?import=1" className="btn ghost">Upload a plan</Link></div>
           </section>
         )}
@@ -155,8 +155,8 @@ function Plan() {
 
         <section className="section">
           <div className="section-head">
-            <h2>{plan.hasPlan ? `The road to ${plan.athlete.race.distanceLabel || plan.athlete.race.name}` : "The road to race day"}</h2>
-            <span className="sub">{plan.hasPlan ? `${plan.weeks.length} weeks · ${plan.phases.length} phases · race ${dateLabel(plan.athlete.race.date)} ${plan.athlete.race.date.slice(0, 4)} · click a week` : plan.athlete.hasRace ? `${plan.athlete.race.name} · ${dateLabel(plan.athlete.race.date)} ${plan.athlete.race.date.slice(0, 4)} · no plan yet` : "No race set · build a plan to add one"}</span>
+            <h2>Weekly hours</h2>
+            <span className="sub">{plan.hasPlan ? `${plan.weeks.length} weeks · ${plan.phases.length} phases · race ${dateLabel(plan.athlete.race.date)} ${plan.athlete.race.date.slice(0, 4)}` : plan.athlete.hasRace ? `${plan.athlete.race.name} · ${dateLabel(plan.athlete.race.date)} ${plan.athlete.race.date.slice(0, 4)} · no plan yet` : "No race set · build a plan to add one"}</span>
             <span className="legend">
               <span><i style={{ background: "var(--swim)" }} />Swim</span>
               <span><i style={{ background: "var(--bike)" }} />Bike</span>
@@ -172,7 +172,6 @@ function Plan() {
           <section className="section">
             <div className="section-head">
               <h2>Your plan explained</h2>
-              <span className="sub">Each phase: what changes and the milestones to hit.</span>
             </div>
             <PlanExplained />
           </section>
@@ -182,7 +181,6 @@ function Plan() {
           <section className="section">
             <div className="section-head">
               <h2>How this plan is built</h2>
-              <span className="sub">The rules the builder follows and where they come from.</span>
             </div>
             <ol className="method">
               {METHOD.map((m) => <li key={m.url + m.rule.slice(0, 12)}><b>{m.rule}</b><span><a href={m.url} target="_blank" rel="noreferrer">{m.source}</a></span></li>)}

@@ -68,7 +68,7 @@ function DayView({ date, setDate, setView }: { date: string; setDate: (d: string
 
       {!t ? (
         <section className="card nu-targets empty" aria-label="Today's targets">
-          <div><div className="k">Daily targets</div><div className="v">Add your weight to get calorie, carbohydrate, protein and fluid targets.</div><div className="u">Nutrition → Guide → Edit plan.</div></div>
+          <div><div className="k">Daily targets</div><div className="v">Add your weight to get targets.</div><div className="u">Guide → Edit plan</div></div>
         </section>
       ) : (
       <section className="card nu-targets" aria-label="Today's targets">
@@ -145,7 +145,7 @@ function MealCard({ meal, entries, onAdd, onRemove }: { meal: Meal; entries: Log
   return (
     <div className="nu-meal">
       <div className="body">
-        <div className="mh"><b>{label}</b>{meal === "other" && <span className="muted small">snacks, drinks, fuel during sessions</span>}{entries.length > 0 && <span className="tot"><b>{fmt(tot.kcal)} kcal</b><span>{fmt(tot.c)} g carbs</span><span>{fmt(tot.p)} g protein</span><span>{fmt(tot.f)} g fat</span></span>}</div>
+        <div className="mh"><b>{label}</b>{entries.length > 0 && <span className="tot"><b>{fmt(tot.kcal)} kcal</b><span>{fmt(tot.c)} g carbs</span><span>{fmt(tot.p)} g protein</span><span>{fmt(tot.f)} g fat</span></span>}</div>
         {entries.map((e) => (
           <div key={e.id} className="row">
             <span className="n">{e.name}{e.brand ? <small> · {e.brand}</small> : null}{e.source === "quick" && <small> · estimate</small>}</span>
@@ -216,7 +216,7 @@ function WeekView({ date, setDate, setView }: { date: string; setDate: (d: strin
         <section className="card nu-weekside" aria-label="Week summary">
           <div className="k">Average</div><div className="v"><b>{fmt(avg)} kcal</b> · target {fmt(avgT)}</div><div className="u">{logged.length} of 7 days logged</div>
           {[["Carbs", macroK.c, "var(--carb)"], ["Protein", macroK.p, "var(--protein)"], ["Fat", macroK.f, "var(--fat)"]].map(([k, v, col]) => <div key={k as string} className="pct"><span>{k}</span><b>{macroDays ? `${Math.round(((v as number) / macroTot) * 100)}%` : "—"}</b><Bar v={v as number} t={macroTot} color={col as string} /></div>)}
-          <div className="k" style={{ marginTop: 14 }}>Days on target</div><div className="v"><b>{onTarget} of {logged.length}</b></div><div className="u">within ±10% of the day's calorie target</div>
+          <div className="k" style={{ marginTop: 14 }}>Days on target</div><div className="v"><b>{onTarget} of {logged.length}</b></div><div className="u">within ±10 % of target</div>
         </section>
       </div>
       <section className="card nu-weektable" aria-label="Week by day">

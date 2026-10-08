@@ -20,8 +20,10 @@
 .wg-col { position: relative; border-left: 1px solid var(--line-2); background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 19px, var(--line-2) 19px, var(--line-2) 20px, transparent 20px, transparent 40px); }
 .wg-col.today { background-color: var(--accent-soft); }
 .wg-now { position: absolute; left: 0; right: 0; height: 0; border-top: 2px solid var(--accent); z-index: 2; }
+.wg-now span b { font-weight: inherit; }
+@media (max-width: 600px) { .wg-now span .now-w { display: none; } }
 .wg-now::before { content: ""; position: absolute; left: -1px; top: -5px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
-.wg-now span { position: absolute; right: 4px; top: -15px; font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: 0.06em; background: var(--surface); padding: 1px 4px; border-radius: 4px; }
+.wg-now span { white-space: nowrap; position: absolute; right: 4px; top: -15px; font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: 0.06em; background: var(--surface); padding: 1px 4px; border-radius: 4px; }
 .wg-ev { position: absolute; left: 4px; right: 4px; border-radius: 8px; padding: 5px 6px 5px 7px; font-size: 12px; line-height: 1.25; overflow: hidden; z-index: 1; display: flex; align-items: center; gap: 7px; }
 .wg-ev .txt { min-width: 0; }
 .wg-ev b { display: flex; align-items: center; gap: 3px; font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -97,6 +99,8 @@
 .sp-chart { width: 100%; height: auto; display: block; }
 .sp-chart text.ink { fill: var(--ink); }
 @media (max-width: 900px) { .sp-grid { grid-template-columns: 1fr; } .sp-left { border-right: 0; padding-right: 0; grid-template-columns: 1fr 1fr; } .sp-head h2 { font-size: 28px; } }
+@media (max-width: 600px) { .sp-head { flex-wrap: wrap; gap: 10px 12px; padding-right: 36px; } .sp-head > div { flex: 1 1 calc(100% - 80px); min-width: 0; } .sp-head h2 { font-size: 22px; } .sp-head .sp-wk { display: none; } .sp-head .status { margin-left: 60px; } .sp-head .status.locked + .status { margin-left: 0; } .sp-left .stat .v { font-size: 22px; } }
+.sp-left .stat .v { white-space: nowrap; }
 
 /* month grid */
 .mg { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px; background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 12px; }

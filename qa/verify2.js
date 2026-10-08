@@ -13,7 +13,8 @@ const ok = (name, cond, detail = '') => out.push(`${cond ? 'PASS' : 'FAIL'} ${na
   // Seed athlete: the dashboard still renders and shows the compliance wording
   await p.goto(base + '/dashboard', { waitUntil: 'networkidle' });
   const tw = await p.textContent('.card.tw');
-  ok('V-088 dashboard compliance as done · 28 days', /% done · 28 days/.test(tw || ''), (tw || '').slice(0, 80));
+  const twHead = await p.$eval('.card.tw .head', (e) => e.getBoundingClientRect().height);
+  ok('This week card: one-line header, no 28-day line, no unit inside the big number', twHead < 30 && !/28 days/.test(tw || '') && /Hours/.test(tw || ''), `head ${Math.round(twHead)}px · ${(tw || '').slice(0, 60)}`);
   // Activities detail: load and effort still present for a Garmin activity
   await p.goto(base + '/activities', { waitUntil: 'networkidle' });
   const rows = await p.$$('tr.row'); await rows[0].click(); await p.waitForTimeout(300);

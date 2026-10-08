@@ -12,7 +12,7 @@ import { CoachBar } from "@/components/CoachBar";
 import { LogActivity } from "@/components/dashboard/LogActivity";
 import { useEffect, useState } from "react";
 import { PaceChart, VolumeChart } from "@/components/dashboard/Charts";
-import { rollingCompliance, weekLoad, type Session } from "@/lib/data";
+import { weekLoad, type Session } from "@/lib/data";
 import { usePlan } from "@/lib/store";
 import { DAYS, MONTHS, addDays, dateLabel, fmtDur, fmtHMS, fromYmd, shortDate, today, ymd } from "@/lib/format";
 import { fmtDist, fmtSpeed, runPace, swimDist, swimPace } from "@/lib/units";
@@ -44,7 +44,6 @@ function Dashboard() {
   const ds = ymd(t);
   const cur = plan.currentWeek();
   const ws = { ...plan.weekStatus(cur), load: weekLoad(cur, plan.counted) };
-  const comp = rollingCompliance(28, plan.weeks);
   const todayS = plan.sessionOn(ds);
   const next = [1, 2].map((n) => ({ off: n, s: plan.sessionOn(ymd(addDays(t, n))) }));
   const last = plan.counted[plan.counted.length - 1];
@@ -97,7 +96,6 @@ function Dashboard() {
           <section className="card logcard" aria-label="Log activity">
             <button type="button" className="plus" aria-label="Log activity" aria-expanded={logging} onClick={() => setLogging((o) => !o)}><Icon name="plus" /></button>
             <b>Add manually</b>
-            <small>Log a swim, bike, run or anything else</small>
           </section>
           <LogActivity open={logging} onClose={() => setLogging(false)} onSaved={(a) => { plan.logActivity(a); setLogging(false); setToast(`Saved · ${a.name} · ${fmtHMS(a.min)}`); }} />
           </div>
@@ -126,10 +124,10 @@ function Dashboard() {
 
           <div className="dash-right">
           <Link href="/analysis" className="card tw" aria-label="This week — open analysis">
-            <div className="head"><span className="eyebrow">This week</span><small title={comp.pct == null ? undefined : `${Math.round(comp.done * 2) / 2} of ${comp.planned} sessions completed in the last 28 days`}>{comp.pct == null ? "No sessions planned yet" : `${comp.pct}% done · 28 days`}</small></div>
+            <div className="head"><span className="eyebrow">This week</span></div>
             <div className="cols">
               <div className="col"><div className="k">Sessions</div><div className="v">{ws.done}<span className="dim">/{ws.total}</span></div><div className="progress"><i style={{ width: `${ws.total ? Math.min(100, (ws.done / ws.total) * 100) : 0}%` }} /></div></div>
-              <div className="col"><div className="k">Volume</div><div className="v">{ws.actualH.toFixed(1)}<span className="dim">/{Math.round(ws.plannedH)} h</span></div><div className="progress"><i style={{ width: `${Math.min(100, (ws.actualH / ws.plannedH) * 100)}%` }} /></div></div>
+              <div className="col"><div className="k">Hours</div><div className="v">{ws.actualH ? ws.actualH.toFixed(1) : 0}<span className="dim">/{Math.round(ws.plannedH)}</span></div><div className="progress"><i style={{ width: `${Math.min(100, (ws.actualH / ws.plannedH) * 100)}%` }} /></div></div>
               <div className="col"><div className="k">Load</div><div className="v">{ws.load.actual}<span className="dim">/{ws.load.planned}</span></div><div className="progress"><i style={{ width: `${Math.min(100, (ws.load.actual / Math.max(1, ws.load.planned)) * 100)}%` }} /></div></div>
             </div>
           </Link>
@@ -175,7 +173,7 @@ function Dashboard() {
           <VolumeChart />
         </div>
 
-        {toast && <div className="toast" role="status">✓ {toast} <span className="muted">· saved on this device until accounts exist</span></div>}
+        {toast && <div className="toast" role="status">✓ {toast}</div>}
         <CoachBar id="dash-coach" />
       </div>
     </main>

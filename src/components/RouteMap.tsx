@@ -172,7 +172,7 @@ export function MapModal({ route, title, sub, onClose }: { route: [number, numbe
   return createPortal(
     <div className="map-modal" role="dialog" aria-label={`Map · ${title}`} onClick={onClose}>
       <div className="box" onClick={(e) => e.stopPropagation()}>
-        <div className="hd"><div><b>{title}</b>{sub && <span className="muted"> · {sub}</span>}</div><span className="muted small">Scroll or pinch to zoom · drag to move · double-click zooms in</span><button type="button" className="close" onClick={onClose} aria-label="Close"><Icon name="close" /></button></div>
+        <div className="hd"><div><b>{title}</b>{sub && <span className="muted"> · {sub}</span>}</div><button type="button" className="close" onClick={onClose} aria-label="Close"><Icon name="close" /></button></div>
         <RouteMap route={route} height="100%" interactive pad={0.08} />
       </div>
     </div>,

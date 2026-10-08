@@ -116,7 +116,6 @@ function Manual({ date, meal, onDone }: { date: string; meal: Meal; onDone: () =
       if (save) nut.saveCustomFood({ name: name.trim(), per100: { kcal: k, carbs: num(c) ?? 0, protein: num(p) ?? 0, fat: num(f) ?? 0, fibre: num(fi) ?? 0, sodium: num(na) ?? 0 }, servings: [{ label: amount.trim() || "1 serving", g: 100 }] });
       onDone();
     }}>
-      <p className="hint">Name it and give the calories. Everything else is optional.</p>
       <label><b>What</b><input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Chicken burrito, or Lunch at the canteen" required /></label>
       <div className="two">
         <label><b>Calories</b><input value={kcal} onChange={(e) => setKcal(e.target.value)} inputMode="numeric" placeholder="650" required /></label>

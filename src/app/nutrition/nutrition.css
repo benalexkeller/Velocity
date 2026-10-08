@@ -246,3 +246,8 @@
 
 @media (max-width: 1100px) { .nu-cols, .nu-cols.week, .nu-cols.guide { grid-template-columns: 1fr; } .nu-plan .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } .nu-plan .grid > div:nth-child(4) { padding-left: 0; border-left: 0; } .nu-targets { grid-template-columns: 1fr 1fr 1fr; } .nu-targets > div { border-left: 0; padding: 6px 0; } .nu-supp-grid { grid-template-columns: 1fr 1fr; } .nu-supp-open .cols { grid-template-columns: 1fr; } }
 @media (max-width: 700px) { .nu-targets { grid-template-columns: 1fr 1fr; } .nu-plan .grid { grid-template-columns: 1fr 1fr; } .nu-plan .grid > div:nth-child(odd) { padding-left: 0; border-left: 0; } .nu-stages .row { grid-template-columns: 56px 1fr 100px 20px; } .nu-stages .when, .nu-stages .rate { display: none; } .nu-supp-grid { grid-template-columns: 1fr; } .nu-meal .row { grid-template-columns: minmax(0, 1fr) 60px 50px 22px; } .nu-meal .row .num:nth-child(4), .nu-meal .row .num:nth-child(5), .nu-meal .row .num:nth-child(6), .nu-meal .row .a { display: none; } .nu-manual .nu-macros { grid-template-columns: 1fr 1fr; } }
+.nu-guide details.how summary { cursor: pointer; color: var(--muted); list-style: none; display: inline-flex; align-items: center; gap: 4px; }
+.nu-guide details.how summary::-webkit-details-marker { display: none; }
+.nu-guide details.how summary::after { content: "›"; transform: rotate(90deg); display: inline-block; transition: transform .15s; }
+.nu-guide details.how[open] summary::after { transform: rotate(-90deg); }
+.nu-guide details.how[open] summary { margin-bottom: 6px; color: var(--ink-2); }

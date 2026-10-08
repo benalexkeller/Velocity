@@ -125,7 +125,7 @@ function GoalStep({ intake, set, imperial, weeks }: { intake: Intake; set: <K ex
       </div>
       {g.type === "other" && <label><b>What is it?</b><input value={g.custom_label ?? ""} onChange={(e) => set("goal", { custom_label: e.target.value })} placeholder="e.g. 24-hour relay, swimrun, multi-day hike" /></label>}
 
-      <div className="pb-q"><h2>Which race?</h2><span className="hint">Search the list or type it in. The date always comes from you — race dates change every year.</span></div>
+      <div className="pb-q"><h2>Which race?</h2></div>
       <div className="pb-search" ref={box}>
         <label><b>Find an event</b><span className="pb-searchin"><Icon name="search" /><input value={q} onChange={(e) => { setQ(e.target.value); setOpen(true); }} onFocus={() => setOpen(true)} placeholder="IRONMAN, Berlin, 70.3, marathon…" /></span></label>
         {open && hits.length > 0 && <ul className="pb-hits" role="listbox">{hits.map((ev) => <li key={ev.name}><button type="button" onClick={() => pickEvent(ev)}><b>{ev.name}</b><span>{ev.location} · {eventType(ev.type).label} · usually {usualMonth(ev.month)}</span></button></li>)}</ul>}
@@ -184,7 +184,7 @@ function HistoryStep({ intake, set, kind }: { intake: Intake; set: <K extends ke
         </div>
       )}
 
-      <div className="pb-q"><h2>The last 6–8 weeks</h2><span className="hint">What you have actually done, not what you meant to do. The plan starts from here.</span></div>
+      <div className="pb-q"><h2>The last 6–8 weeks</h2></div>
       <label><b>Sessions per week</b><Stepper value={h.sessions_per_week} min={0} max={14} onChange={(v) => set("history", { sessions_per_week: v })} unit={h.sessions_per_week === 1 ? "session" : "sessions"} /></label>
       <div className="pb-hours">
         <span className="k">Hours per week</span>
@@ -201,7 +201,7 @@ function FitnessStep({ intake, set, kind, imperial }: { intake: Intake; set: <K 
   const swim = kind === "tri" || kind === "swim", bike = kind === "tri" || kind === "bike", run = kind === "tri" || kind === "run";
   return (
     <>
-      <div className="pb-q"><h2>Where you are now</h2><span className="hint">Rough numbers are fine. Leave blank what you do not know.</span></div>
+      <div className="pb-q"><h2>Where you are now</h2><span className="hint">Leave blank what you don't know.</span></div>
       {swim && <div className="pb-sport"><span className="k">Swim</span><div className="two">
         <label><b>Pace per 100 {imperial ? "yd" : "m"} (m:ss)</b><input value={f.swim_pace_100} onChange={(e) => set("fitness", { swim_pace_100: e.target.value })} placeholder="1:50" inputMode="numeric" /></label>
         <label><b>Longest swim, last 8 weeks ({imperial ? "yd" : "m"})</b><NumInput value={f.swim_longest} onChange={(v) => set("fitness", { swim_longest: v })} placeholder={imperial ? "2000" : "1500"} inputMode="numeric" /></label>
@@ -221,7 +221,7 @@ function FitnessStep({ intake, set, kind, imperial }: { intake: Intake; set: <K 
           <label><b>Resting heart rate</b><NumInput value={f.rhr} onChange={(v) => set("fitness", { rhr: v })} placeholder="52" inputMode="numeric" disabled={f.garmin_later} /></label>
           <label><b>Lactate threshold HR</b><NumInput value={f.lthr} onChange={(v) => set("fitness", { lthr: v })} placeholder="165" inputMode="numeric" disabled={f.garmin_later} /></label>
         </div>
-        <label className="pb-chk"><input type="checkbox" checked={f.garmin_later} onChange={(e) => set("fitness", { garmin_later: e.target.checked })} /><b>Import these from Garmin later</b><span className="hint">The watch measures all three. Once Garmin is connected they fill in by themselves.</span></label>
+        <label className="pb-chk"><input type="checkbox" checked={f.garmin_later} onChange={(e) => set("fitness", { garmin_later: e.target.checked })} /><b>Import these from my watch later</b></label>
       </div>
     </>
   );
@@ -234,7 +234,7 @@ function TimeStep({ intake, set, kind, plan }: { intake: Intake; set: <K extends
   const weekendOn = t.days.includes(6) || t.days.includes(0);
   return (
     <>
-      <div className="pb-q"><h2>How much time can you give?</h2><span className="hint">The biggest week of the plan uses this maximum. Most weeks are lighter.</span></div>
+      <div className="pb-q"><h2>How much time can you give?</h2><span className="hint">Used for the peak week.</span></div>
       <label><b>Maximum hours per week</b><Stepper value={t.max_hours} min={2} max={30} step={0.5} onChange={(v) => set("time", { max_hours: v })} unit="h / week" /></label>
       <div className="pb-q small"><h2>Which days?</h2></div>
       <div className="days">{DAY_LABEL.map((d, i) => { const n = DAY_NUM[i]; const on = t.days.includes(n); return <button key={d} type="button" className={on ? "on" : ""} aria-pressed={on} onClick={() => toggleDay(n)}>{d}</button>; })}</div>
@@ -243,9 +243,9 @@ function TimeStep({ intake, set, kind, plan }: { intake: Intake; set: <K extends
         <label><b>Best time on weekdays</b><div className="days">{TOD.map((o) => <button key={o.k} type="button" className={t.time_of_day === o.k ? "on" : ""} onClick={() => set("time", { time_of_day: o.k })}>{o.label}<small> {o.time}</small></button>)}</div></label>
         <label><b>Weekend start time</b><input type="time" step={900} value={t.weekend_start} onChange={(e) => set("time", { weekend_start: e.target.value })} /></label>
       </div>
-      <div className="pb-q small"><h2>Long sessions on the weekend?</h2><span className="hint">{kind === "tri" ? "Long ride Saturday, long run Sunday; brick sessions later in the plan." : "The long session is the one that grows every week."}</span></div>
+      <div className="pb-q small"><h2>Long sessions on the weekend?</h2>{kind === "tri" && <span className="hint">Long ride Saturday, long run Sunday.</span>}</div>
       <div className="days">{[[true, "Yes"], [false, "No, on a weekday"]].map(([v, l]) => <button key={String(v)} type="button" className={t.long_weekend === v ? "on" : ""} disabled={v === true && !weekendOn} onClick={() => set("time", { long_weekend: v as boolean })}>{l as string}</button>)}</div>
-      <div className="pb-q small"><h2>Dates you cannot train</h2><span className="hint">Holidays, work travel. Those days become rest days.</span></div>
+      <div className="pb-q small"><h2>Dates you cannot train</h2><span className="hint">They become rest days.</span></div>
       <div className="pb-blackouts">
         {t.blackouts.map((b, i) => (
           <div key={i} className="pb-bo">
@@ -259,7 +259,7 @@ function TimeStep({ intake, set, kind, plan }: { intake: Intake; set: <K extends
       </div>
       <div className="pb-cal">
         <button type="button" className={`btn ghost${t.calendar_sync ? " on" : ""}`} onClick={() => { set("time", { calendar_sync: !t.calendar_sync }); if (plan.calendar !== !t.calendar_sync) plan.toggleCalendar(); }}><Icon name="calendar" />{t.calendar_sync ? "✓ Workouts will sync to Google Calendar" : "Sync workouts to Google Calendar"}</button>
-        <span className="hint">Records the choice. The Google connection itself is not built yet; when it is, sessions are written to your calendar.</span>
+        <span className="hint">Not connected yet.</span>
       </div>
     </>
   );
@@ -273,13 +273,13 @@ function DevicesStep({ intake, set, setIntake, edit, hasPlan }: { intake: Intake
   void set;
   return (
     <>
-      <div className="pb-q"><h2>Which devices do you have?</h2><span className="hint">Connections are not live yet; this records what you use so it can connect when they open. Garmin brings activities, heart rate and VO2max.</span></div>
+      <div className="pb-q"><h2>Which devices do you have?</h2><span className="hint">Not connected yet.</span></div>
       <div className="days">{DEVICES.map((d) => <button key={d.k} type="button" className={intake.devices.includes(d.k) ? "on" : ""} onClick={() => toggle(d.k)}>{d.label}</button>)}</div>
       <div style={{ marginTop: 10 }}><ConnectWearable variant="ghost" onPick={(k, on) => setIntake((cur) => ({ ...cur, devices: on ? [...cur.devices.filter((x) => x !== "none" && x !== k), k] : cur.devices.filter((x) => x !== k) }))} /></div>
-      <div className="pb-q small"><h2>Strength training?</h2><span className="hint">Two short sessions a week (20 min) added to easy days. Off in the taper and race week.</span></div>
+      <div className="pb-q small"><h2>Strength training?</h2><span className="hint">2 × 20 min a week on easy days. Off in taper and race week.</span></div>
       <div className="days">{[[true, "Yes"], [false, "No"]].map(([v, l]) => <button key={String(v)} type="button" className={intake.strength === v ? "on" : ""} onClick={() => setIntake((cur) => ({ ...cur, strength: v as boolean }))}>{l as string}</button>)}</div>
       <div className="pb-recap">
-        <span className="k">What the plan will be built from</span>
+        <span className="k">Summary</span>
         <ul>
           <li><b>{intake.goal.event || intake.goal.custom_label || et.label}</b> · {et.label} · {intake.goal.date ? dateLabel(intake.goal.date) + " " + intake.goal.date.slice(0, 4) : "no date"} · {weeks} weeks</li>
           <li>Goal: {intake.goal.kind === "finish" ? "finish" : intake.goal.kind === "time" ? `${hoursToText(intake.goal.target_hours)}` : "podium / qualify"}{intake.goal.splits ? ` (swim ${hoursToText(intake.goal.splits.swim)} · bike ${hoursToText(intake.goal.splits.bike)} · run ${hoursToText(intake.goal.splits.run)})` : ""}</li>
@@ -287,7 +287,7 @@ function DevicesStep({ intake, set, setIntake, edit, hasPlan }: { intake: Intake
           <li>{intake.time.days.length} days · {TOD.find((o) => o.k === intake.time.time_of_day)?.label} on weekdays · long sessions {intake.time.long_weekend ? "on the weekend" : "on a weekday"} · {intake.time.blackouts.filter((b) => b.from && b.to).length} blackout period{intake.time.blackouts.filter((b) => b.from && b.to).length === 1 ? "" : "s"}</li>
           <li>Strength {intake.strength ? "on" : "off"} · {intake.devices.length && !intake.devices.includes("none") ? intake.devices.map((d) => DEVICES.find((x) => x.k === d)?.label).join(", ") : "no devices"}</li>
         </ul>
-        {(edit || hasPlan) && <span className="hint bad">{edit ? "Rebuilding replaces the plan from this week on. Sessions you moved, edited or locked go back to the plan's positions." : "You already have a plan. Building a new one replaces it; moves, edits and locks are reset."}</span>}
+        {(edit || hasPlan) && <span className="hint bad">{edit ? "Rebuilding replaces the plan from this week on. Moves, edits and locks are reset." : "This replaces your current plan. Moves, edits and locks are reset."}</span>}
       </div>
     </>
   );

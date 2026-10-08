@@ -8,13 +8,13 @@ import { useNutrition } from "@/lib/nutrition/store";
 const DRINK_CARB = 0.06; // 6 % drink mix: 60 g carbohydrate per litre
 const GEL_G = 25;
 
-/** "60 g/h = 0.6 L drink mix (36 g) + 1 gel" — the hourly target in things the athlete carries. */
+/** "60 g carbs per hour: 0.6 L of 6 % drink mix + 1 gel" — the hourly target in things the athlete carries. */
 export function perHourInProducts(perHour: number, fluidLh: number) {
   if (!perHour) return fluidLh ? `water, ${fluidLh} L/h` : "water if thirsty";
   const drinkG = Math.round(fluidLh * 1000 * DRINK_CARB);
   const fromDrink = Math.min(perHour, drinkG);
   const gels = Math.max(0, Math.ceil((perHour - fromDrink) / GEL_G));
-  return `${perHour} g/h = ${fluidLh} L drink mix at 6 % (${fromDrink} g)${gels ? ` + ${gels} gel${gels > 1 ? "s" : ""} (${GEL_G} g each)` : ""}`;
+  return `${perHour} g carbs per hour: ${fluidLh} L of 6 % drink mix${gels ? ` + ${gels} gel${gels > 1 ? "s" : ""}` : ""}`;
 }
 
 export function FuelLine({ s }: { s: Session }) {
@@ -39,9 +39,9 @@ export function FuelBlock({ s }: { s: Session }) {
     <div className="sp-fuel" aria-label="Fuel for this session">
       <div className="eyebrow muted">Fuel</div>
       <dl>
-        <dt>Before</dt><dd>{f.before ? `${f.before} g carbohydrate by ${f.beforeAt}, low fibre and fat` : "Nothing needed beyond your normal meal"}</dd>
-        <dt>During</dt><dd>{perHourInProducts(f.perHour, f.fluidLh)}{f.during ? ` · ${f.during} g in total` : ""}{f.naMgH ? ` · ${f.naMgH} mg sodium per hour` : ""}{f.perHour > 60 ? " · glucose:fructose mix" : ""}</dd>
-        <dt>After</dt><dd>{f.after.carbs ? `${f.after.carbs} g carbohydrate + ${f.after.protein} g protein ${f.window}` : `${f.after.protein} g protein at the next meal`}</dd>
+        <dt>Before</dt><dd>{f.before ? `${f.before} g carbs by ${f.beforeAt}, low fibre and fat` : "Nothing needed beyond your normal meal"}</dd>
+        <dt>During</dt><dd>{perHourInProducts(f.perHour, f.fluidLh)}{f.naMgH ? ` · ${f.naMgH} mg sodium per hour` : ""}{f.perHour > 60 ? " · glucose:fructose mix" : ""}</dd>
+        <dt>After</dt><dd>{f.after.carbs ? `${f.after.carbs} g carbs + ${f.after.protein} g protein ${f.window}` : `${f.after.protein} g protein at the next meal`}</dd>
       </dl>
     </div>
   );

@@ -14,7 +14,7 @@ const ok = (name, cond, detail = '') => out.push(`${cond ? 'PASS' : 'FAIL'} ${na
   ok('V-022 no "Race capability score"', !/capability score/i.test(body));
   ok('V-025 no "Health score" ring', !/Health score/.test(body) && !/Building|Near targets/.test(body));
   ok('V-023 no "On track" verdict', !/On track for/.test(body));
-  ok('V-023 projection gated in base phase', /Shown from the Build phase/.test(body), (body.match(/Last 8 weeks:[^.]*\./) || [''])[0]);
+  ok('V-023 projection gated in base phase', /Shows from the Build phase/.test(body), (body.match(/Last 8 weeks:[^.]*\./) || [''])[0]);
   ok('V-084 VO2max trend shown', /VO2max/.test(body) && !!(await p.$('svg[aria-label="VO2max over time"]')));
   const fit = await p.$$eval('.kpi', ks => ks.map(k => k.textContent).find(t => /Fitness/.test(t)) || '');
   ok('V-021 Fitness seeded (not a warm-up artefact)', /\d/.test(fit), fit.replace(/\s+/g, ' ').slice(0, 60));
