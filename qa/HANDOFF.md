@@ -33,7 +33,7 @@ mkdir -p ../qa && cd ../qa && npm init -y && PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 
 cp ../velocity/qa/shots.js . && node shots.js   # launch uses executablePath /opt/pw-browsers/chromium in the cloud workspace
 ```
 
-Pushing: the cloud workspace cannot push to this repo (git proxy refuses). Push from the owner's Mac: `git bundle create velocity.bundle --all` → send the file → `device_commit_files` into `/Users/benjaminkeller/garmin-mcp/` → in `device_bash`: `git clone velocity.bundle`/`git fetch`, then `git push https://<TOKEN>@github.com/benalexkeller/Velocity deslop` with a classic PAT (scope `repo`) from the owner. Vercel then builds a preview URL for the branch automatically.
+Pushing: the cloud workspace cannot push to this repo (git proxy refuses; checked again 8 Oct). Push from the owner's Mac: `git bundle create velocity.bundle --all` → send the file → `device_commit_files` into `/Users/benjaminkeller/garmin-mcp/` → in `device_bash`: `git clone velocity.bundle`/`git fetch`, then `git push https://<TOKEN>@github.com/benalexkeller/Velocity deslop` with a classic PAT (scope `repo`) from the owner. Vercel then builds a preview URL for the branch automatically.
 
 ## The work, in order (details in REPORT.md §5 and §6)
 
@@ -62,16 +62,30 @@ Rules that still apply (from `CLAUDE.md` and the owner):
 - `5bc5b04` item 13: phone pass — 0 of 53 phone states overflow (`qa/phone.js`), bottom tab bar.
 - next commit: items 14–15: 8-step type scale (34 → 8 rendered sizes), status colours as tokens, `--muted-2` readable, page eyebrows removed, sentence-case tabs; `lib/ticks.ts` (`niceTicks`, `useWidth`) — charts draw at their real width so axis text is 12 px everywhere, round ticks, zero floor, one zone/macro palette, Form grey dashed, swim colour readable.
 
-Checks (run against `npx next start -p 3111` from a folder with playwright): `verify1.js` 17/17, `verify2.js` 8/8, `verify3.js` 15/15, `verify4.js` 8/8, `phone.js` 0 overflow.
+- `2f83676` items 14–15 (above). **Pushed and live on the `deslop` preview up to here.**
 
-**Next, in order** (REPORT.md §6 work packages; rows in §3):
-1. **WP6 Analysis content and order** — V-026 Training-quality status words instead of %, V-080/081 KPI tiles (report's six), V-086 recovery baselines, V-087 section order (KPI → flags → Sunday facts → week in review → F/F/F → volume → long sessions → aerobic progress → body → thresholds → projection → activity analysis), V-090 "Analysis needs data" empty state. Note: the Training-quality table still shows "100 %" for a rest-day run and bike-for-swim (V-026) — most visible remaining wrong number.
-2. **WP7 Plan generator** — V-010 swims for ≤ 4-day tri plans, V-014 step parser (threshold/race pace/run off the bike), V-012 race-day session, V-072 no back-to-back hard days, V-065 missed-session proposals, progression templates. Known from ramp-check: session minimums push a 2 h/week marathoner to 3.4 h in week 2; a gran fondo plan can schedule 10.6 h against a 10 h maximum — both need a cap pass.
-3. **WP8 nutrition remainder** — V-049 fuel line on the dashboard hero and the Plan session panel (use `nut.fuelFor` / `sessionFuel`), gut-training status and sweat tests in set-up (NUT §I, §K), race-day page (§H). The "During" row has no logged value because PR folded in-session food into "Other" (his 2026-09-30 decision); ask him before adding a separate meal.
-4. **WP4 remainder** — V-108 week grid as a list on phones, V-118/119/159 control heights, card padding and gap scale; line-height tokens.
-5. **WP9 copy** — V-039 developer vocabulary, V-040 feel-good lines ("The road to 140.6", "Taper — Freshen up"), V-042 session/activity glossary, V-044 one date format, V-046 one icon set.
-6. **WP10/WP11** — V-037 hydration (#418) via a `useNow()` hook, keyboard access to week grid / activities, focus rings, lint.
+**Done after that (Opus 5.5, 8 Oct 2026, local commits — push them, see "Pushing" below):**
+- `168089d` flush period steppers (`PeriodStepper`), "Connect wearable" button + sheet everywhere incl. setup and builder (`ConnectWearable.tsx`, devices are recorded, nothing connects yet), session fuel line on the dashboard hero and Plan panel (V-049), status words on Analysis (V-026).
+- `17ba10b` owner's requests: ~60 filler/descriptor sentences cut or shortened app-wide; This week card on one line; Nutrition method paragraph behind "How targets are calculated"; interval chart rebuilt (repeats grouped, labels only where they fit, fuel lane before/feeds/after, ticks by width); activity Exclude/Delete moved into a ⋮ menu. `qa/wrapcheck.js` flags wrapped labels and lists muted sentences.
+- `8d4ce21` coach panel: only today's messages (messages carry `day`), close button on Plan (remembered in `velocity.coach.v1`), the coach bar on every page opens the same panel on the right (`CoachDock.tsx`), example thread gone. `qa/verify6.js` 17 checks.
+- `bfabef7` "Your plan explained" replaced by phase buttons + the selected phase's facts under the Weekly hours chart (`PhaseDetail` in `PlanExplained.tsx`); chart phase brackets select the phase. `qa/verify7.js` 12 checks.
+- `b0ba969` V-108 phones get the week as a list; ramp chart scrolls at 760 px; V-064 keyboard + focus rings; lock icon clear of text. `qa/verify8.js` 11 checks.
+- `c0b87ea` V-037 0 hydration errors (the store renders nothing until the browser has the data; `useNow()`), V-044 one date style (`dateFull`, `rangeLabel`), V-087 Analysis order, V-090 "Analysis needs data". `qa/hydra.js`.
+- `a250ca3` V-080/081 KPI row: This week · Week load · Fitness (pts, "no baseline yet") · Form (state word) · Completed 28 d · Run efficiency.
+- `4c02203` WP7: V-010 swim doubles for 3–4-day tri plans (+ builder refuses tri < 3 days), V-012 race day with legs/sport/targets, V-014 step parser (threshold/hard Z4, tempo/race pace Z3, written recoveries, race-pace finishes, run off the bike), header/target/hero from the key work (`hardestStep`), "Threshold" intensity, V-072 hard-day spacing, hour cap. `qa/gen-check.ts` 24 checks (`npx tsx`).
+- `4b6f963` V-039 developer vocabulary out · `33d36ba` V-040 last feel-good lines out · `bf3d541` lint.
 
-Known follow-ups from slices 1–2: the seed athlete's load numbers moved slightly (RPE path and sport defaults changed; HR path unchanged at LTHR 155); `eslint` still reports the pre-existing `set-state-in-effect` pattern (41 → ~44 errors, none new in kind); metric athletes still see imperial pace strings in zones (zones are stored imperial; metric display is roadmap item 4).
+Checks (run against `npx next start -p 3111` from a folder with playwright): verify1 17/17 · verify2 8/8 · verify3 15/15 · verify4 8/8 · verify5 14/14 · verify6 17/17 · verify7 12/12 · verify8 11/11 · `phone.js` 0 overflow · `hydra.js` 0 hydration errors (try `node hydra.js America/Los_Angeles`) · `gen-check.ts` 24/24.
 
-How to verify after each slice: `cd velocity && npx tsc --noEmit -p . && npx next build && (npx next start -p 3111 &)` then `node qa/verify1.js` and `node qa/verify2.js` from a folder that has `playwright` installed (see "How to resume").
+Server tip: never `pkill -f "next start"` in the same shell command that starts the server (the pattern matches the command itself and kills the shell). Stop and start in separate calls; start with `(setsid nohup npx next start -p 3111 > server.log 2>&1 < /dev/null &)`.
+
+**Still open, in order:**
+1. **V-086** Analysis flag strip (days since last session, form below −30, ACWR ramp, body data age, threshold not set).
+2. **V-065** missed-session proposals (Monday card: repeat the missed long session, shift the +10 % steps; Accept / Keep plan).
+3. **WP8 nutrition remainder** — gut-training status and sweat tests in set-up (NUT §I, §K), race-day page (§H). Ask PR before adding a separate in-session meal (his 2026-09-30 decision folded it into "Other").
+4. **WP4 remainder** — V-118/119/159 control heights, card padding and gap scale, line-height tokens.
+5. **WP9** — V-042 session/activity glossary, V-046 one icon set.
+6. **Lint** — 34 errors, mostly the pre-existing `react-hooks/set-state-in-effect` pattern and unescaped quotes.
+7. Re-grade with the second-round prompt at the end of `claude/critique-prompt.md`.
+
+Known follow-ups: the seed athlete's load numbers moved slightly in slices 1–2 (RPE path and sport defaults; HR path unchanged at LTHR 155); metric athletes still see imperial pace strings in zones (zones are stored imperial; metric display is roadmap item 4); the coach panel drawer sits over the page on non-Plan pages (pushing the page would need container queries; the Plan page docks it as a column).
