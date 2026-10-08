@@ -50,7 +50,7 @@ function Search({ date, meal, onDone, onCustom }: { date: string; meal: Meal; on
     const t = setTimeout(async () => {
       const r = await searchFoods(q, nut.foods, ac.signal);
       if (ac.signal.aborted) return;
-      setResults(r.foods); setNote(r.error ?? (!usdaAvailable() ? "Built-in foods only until the food-database key is set." : null)); setBusy(false);
+      setResults(r.foods); setNote(r.error ?? (!usdaAvailable() ? "Searching the built-in food list." : null)); setBusy(false);
     }, 300);
     return () => { clearTimeout(t); };
   }, [q, nut.foods]);

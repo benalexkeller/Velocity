@@ -22,7 +22,7 @@ export default function AdminPage() {
   const flip = async (e: FeedbackEntry) => { const status = e.status === "done" ? "open" : "done"; setFb((cur) => (cur ?? []).map((x) => (x.id === e.id ? { ...x, status } : x))); try { await setFeedbackStatus(e.id, status); } catch (x) { setFbErr(x instanceof Error ? x.message : "Could not update."); } };
   const open = (fb ?? []).filter((e) => e.status !== "done");
   const shown = showDone ? fb ?? [] : open;
-  if (!plan.accounts) return <main className="main"><div className="admin"><div className="page-head"><h1>Admin</h1></div><p className="muted">Accounts are off in this copy.</p></div></main>;
+  if (!plan.accounts) return <main className="main"><div className="admin"><div className="page-head"><h1>Admin</h1></div><p className="muted">Admin tools arrive with accounts.</p></div></main>;
   if (!plan.athlete.isAdmin) return <main className="main"><div className="admin"><div className="page-head"><h1>Admin</h1></div><p className="muted">This page is for the admin account.</p></div></main>;
   return (
     <main className="main">

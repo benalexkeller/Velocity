@@ -33,7 +33,7 @@ export function CoachRail({ onClose, drawer = false }: { onClose: () => void; dr
               <button type="button" className="coach-ic" aria-label="Coach options" aria-expanded={menu} onClick={() => setMenu((m) => !m)}><Icon name="kebab" /></button>
               {menu && (
                 <div className="menu" role="menu">
-                  <button type="button" role="menuitem" onClick={() => { plan.reset(); setMenu(false); }}>Clear changes saved on this device ({plan.changes})</button>
+                  <button type="button" role="menuitem" onClick={() => { plan.reset(); setMenu(false); }}>Erase changes saved on this device ({plan.changes})</button>
                 </div>
               )}
             </span>

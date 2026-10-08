@@ -29,7 +29,7 @@ function Login() {
 
   if (!ACCOUNTS_ON) {
     return (
-      <main className="auth"><section className="card box"><span className="wordmark">{BRAND.name}</span><h1>Accounts are off</h1><p className="sub">Local mode: everything is saved in this browser.</p><button type="button" className="btn" onClick={() => router.push("/dashboard")}>Open the app</button></section></main>
+      <main className="auth"><section className="card box"><span className="wordmark">{BRAND.name}</span><h1>Sign in</h1><p className="sub">Sign-in is not available yet. Your data is kept on this device.</p><button type="button" className="btn" onClick={() => router.push("/dashboard")}>Open the app</button></section></main>
     );
   }
 

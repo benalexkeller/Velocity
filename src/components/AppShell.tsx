@@ -34,7 +34,7 @@ function AccountMenu() {
       <button type="button" aria-label="Account" aria-expanded={open} onClick={() => setOpen((o) => !o)}>{a.avatarUrl ? <img src={a.avatarUrl} alt="" /> : initials}</button>
       {open && (
         <div className="menu" role="menu">
-          <div className="who"><b>{a.name}</b>{a.username ? `@${a.username}` : a.email ?? "local mode"}</div>
+          <div className="who"><b>{a.name}</b>{a.username ? `@${a.username}` : a.email ?? "saved on this device"}</div>
           <Link href="/profile" role="menuitem" onClick={() => setOpen(false)}>Profile</Link>
           {plan.accounts && a.isAdmin && <Link href="/admin" role="menuitem" onClick={() => setOpen(false)}>Admin · users & feedback</Link>}
           {plan.accounts ? <button type="button" role="menuitem" onClick={() => { setOpen(false); void plan.signOut(); }}>Sign out</button> : <div className="who" style={{ border: 0, margin: 0 }}>No account · saved in this browser</div>}
