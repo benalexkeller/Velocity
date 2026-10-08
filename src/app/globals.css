@@ -366,3 +366,5 @@ svg.chart .accent { fill: var(--accent); }
 .sp-fuel dt { color: var(--muted); }
 .sp-fuel dd { margin: 0; color: var(--ink); }
 .sp-fuel p { margin: 6px 0 0; font-size: 14px; }
+.linkbtn { border: 0; background: none; color: var(--accent); font: inherit; font-weight: 600; font-size: 13px; padding: 0; cursor: pointer; }
+.linkbtn:hover { text-decoration: underline; }

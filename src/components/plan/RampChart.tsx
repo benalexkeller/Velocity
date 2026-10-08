@@ -3,14 +3,14 @@ import { plannedByDiscipline, sumH, type Week } from "@/lib/data";
 import { usePlan } from "@/lib/store";
 import { niceTicks, useWidth } from "@/lib/ticks";
 
-/** "The road to 140.6" — planned hours per week stacked by discipline; the last bar is race day. */
-export function RampChart({ selected, onPick }: { selected?: number | null; onPick?: (week: number) => void }) {
+/** Weekly hours: planned hours per week stacked by discipline; the last bar is race day. Phase brackets select a phase. */
+export function RampChart({ selected, phase, onPick, onPhase }: { selected?: number | null; phase?: string | null; onPick?: (week: number) => void; onPhase?: (short: string) => void }) {
   const plan = usePlan();
   const WEEKS = plan.weeks;
   const PHASES = plan.phases;
   const ATHLETE = plan.athlete;
   const cur = plan.currentWeek().week;
-  const selPhase = selected ? PHASES.find((p) => selected >= p.from && selected <= p.to) : null;
+  const selPhase = selected ? PHASES.find((p) => selected >= p.from && selected <= p.to) : phase ? PHASES.find((p) => p.short === phase) : null;
   const actualOf = (w: Week) => plan.weekStatus(w).bySport;
   const [svgRef, W] = useWidth<SVGSVGElement>(1180); const H = 250, L = 46, R = 40, T = 56, B = 30;
   const n = WEEKS.length; // 33 incl. race week
@@ -40,7 +40,7 @@ export function RampChart({ selected, onPick }: { selected?: number | null; onPi
         const x0 = L + (p.from - 1) * gw + 4, x1 = L + p.to * gw - 4;
         const on = selPhase?.short === p.short;
         return (
-          <g key={p.short} style={{ cursor: onPick ? "pointer" : undefined }} onClick={() => onPick?.(p.from)}>
+          <g key={p.short} style={{ cursor: onPhase || onPick ? "pointer" : undefined }} onClick={() => (onPhase ? onPhase(p.short) : onPick?.(p.from))}>
             {on && <rect x={x0 - 4} y={T - 40} width={x1 - x0 + 8} height={H - B - T + 40} fill="var(--accent-soft)" opacity={0.55} rx={6} />}
             <line x1={x0} y1={T - 20} x2={x1} y2={T - 20} stroke={on ? "var(--accent)" : "var(--line)"} strokeWidth={on ? 2 : 1} />
             <line x1={x0} y1={T - 26} x2={x0} y2={T - 20} stroke={on ? "var(--accent)" : "var(--line)"} />

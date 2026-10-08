@@ -223,12 +223,14 @@ const PHASE_COPY: Record<string, { purpose: string; goals: [string, string][] }>
   "Peak": { purpose: "Race simulation, longest run, heat preparation.", goals: [["Race simulation", "Full race-simulation session."], ["Longest run", "2:45 long run, four weeks out."], ["Heat prep", "Overdressed indoor sessions and sauna."]] },
   "Taper": { purpose: "Volume drops. Short intensity touches remain.", goals: [["Taper 1", "Volume −35%. Bike serviced. Pacing chart drafted."], ["Taper 2", "Volume −50%. Fueling and travel finalized."], ["Race week", "Fly in mid-week. Short openers. Race Saturday."]] },
   "Race Week": { purpose: "Volume drops. Short intensity touches remain.", goals: [] },
+  "Base": { purpose: "Easy volume in all three sports; long sessions get longer.", goals: [] },
+  "Build": { purpose: "Race-effort intervals and bricks on top of the long sessions.", goals: [] },
 };
 export function phasesOf(weeks: Week[]): Phase[] {
   const out: Phase[] = [];
   for (const w of weeks) {
     if (w.phaseShort === "No plan") continue;
-    const short = w.phaseShort === "Race Week" ? "Taper" : w.phaseShort;
+    const short = /^race week$/i.test(w.phaseShort) ? "Taper" : w.phaseShort;
     const last = out[out.length - 1];
     if (last && last.short === short) { last.to = w.week; last.weeks.push(w); }
     else out.push({ name: w.phase, short, from: w.week, to: w.week, weeks: [w], peakHours: 0, purpose: PHASE_COPY[short]?.purpose ?? "", goals: [] });

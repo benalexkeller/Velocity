@@ -126,15 +126,25 @@
 .section-head .legend .settings { color: var(--accent); font-weight: 600; text-decoration: none; margin-left: 8px; }
 svg.ramp { width: 100%; height: auto; display: block; }
 
-/* plan explained */
-.pe { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px 40px; }
-.pe-head { display: flex; align-items: baseline; gap: 10px; }
-.pe-head h3 { font-size: 16px; }
-.pe-phase p { margin: 2px 0 10px; font-size: 13px; }
-.pe ol { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
-.pe li { display: grid; grid-template-columns: 22px 150px 1fr; gap: 10px; align-items: baseline; padding: 7px 0; border-top: 1px solid var(--line-2); font-size: 13px; }
-.pe li b { font-weight: 600; }
-.pe li .n { color: var(--muted); font-size: 12px; }
+/* phase detail (under the weekly-hours chart) */
+.phd { margin-top: 12px; padding: 14px 18px 16px; display: grid; gap: 10px; }
+.phd-tabs { justify-self: start; box-shadow: none; border: 1px solid var(--line); max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.phd-tabs::-webkit-scrollbar { display: none; }
+.phd-tabs button { position: relative; white-space: nowrap; }
+.phd-tabs .now { position: absolute; top: 5px; right: 6px; width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+.phd-tabs button.on .now { background: #fff; }
+.phd-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.phd-head b { font-size: 16px; }
+.phd-head .muted { font-size: 13px; }
+.phd-head .linkbtn { margin-left: auto; font-size: 13px; }
+@media (max-width: 600px) { .phd-head { display: grid; grid-template-columns: 1fr auto; row-gap: 2px; } .phd-head .muted { grid-column: 1 / -1; grid-row: 2; } .phd-head .linkbtn { grid-column: 2; grid-row: 1; } }
+.phd-purpose { margin: -4px 0 0; font-size: 14px; color: var(--ink-2); }
+.phd-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 0; margin: 2px 0 0; border-top: 1px solid var(--line-2); }
+.phd-stats > div { padding: 10px 12px 0 0; }
+.phd-stats dt { font-size: 12px; color: var(--muted); }
+.phd-stats dd { margin: 2px 0 0; font-size: 16px; font-weight: 600; white-space: nowrap; }
+.phd-ms { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.phd-ms li { font-size: 13px; color: var(--ink-2); background: var(--surface-2); border-radius: 8px; padding: 4px 9px; }
 
 @media (max-width: 900px) {
   .wg-head, .wg-body { grid-template-columns: 40px repeat(7, 1fr); }

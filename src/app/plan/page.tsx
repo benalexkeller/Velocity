@@ -13,7 +13,7 @@ import { SessionPanel } from "@/components/plan/SessionPanel";
 import { MonthGrid } from "@/components/plan/MonthGrid";
 import { PeriodStepper } from "@/components/PeriodStepper";
 import { RampChart } from "@/components/plan/RampChart";
-import { PlanExplained } from "@/components/plan/PlanExplained";
+import { PhaseDetail } from "@/components/plan/PlanExplained";
 import { plannedByDiscipline, plannedLoad, type Sport, type Week } from "@/lib/data";
 import { usePlan } from "@/lib/store";
 import { NutritionProvider } from "@/lib/nutrition/store";
@@ -105,6 +105,7 @@ function Plan() {
   const [view, setView] = useState<"week" | "month">("week");
   const [adding, setAdding] = useState(false);
   const [overview, setOverview] = useState<number | null>(null);
+  const [phaseSel, setPhaseSel] = useState<string | null>(null);
   const [calInfo, setCalInfo] = useState(false);
   useEffect(() => { if (fromUrl) { setSel(fromUrl); const hit = plan.findSession(fromUrl); if (hit) setWk(hit.w.week); } }, [fromUrl, plan]);
   useEffect(() => { if (plan.ready && !fromUrl) setWk(plan.currentWeek().week); }, [plan.ready]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -112,6 +113,7 @@ function Plan() {
   const dock = useCoachDock();
   const monthDate = fromYmd(week.start);
   const [mo, setMo] = useState({ y: monthDate.getFullYear(), m: monthDate.getMonth() });
+  const openWeek = (n: number) => { setWk(n); setView("week"); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const pick = (id: string) => { setSel(id); const hit = plan.findSession(id); if (hit) setWk(hit.w.week); };
 
   return (
@@ -166,18 +168,10 @@ function Plan() {
               {plan.hasPlan && <Link href={plan.intake ? "/plan/new?edit=1" : "/plan/new"} className="settings" title={plan.intake ? "Change the answers and rebuild the plan" : "Build a new plan from a few questions"}>Plan settings →</Link>}
             </span>
           </div>
-          <RampChart selected={overview} onPick={(n) => setOverview(n === overview ? null : n)} />
-          {overview && <WeekOverview week={plan.weekByNumber(overview)} onClose={() => setOverview(null)} onOpenWeek={() => { setWk(overview); setView("week"); window.scrollTo({ top: 0, behavior: "smooth" }); }} />}
+          <RampChart selected={overview} phase={phaseSel} onPick={(n) => setOverview(n === overview ? null : n)} onPhase={(k) => { setPhaseSel(k); setOverview(null); }} />
+          {overview ? <WeekOverview week={plan.weekByNumber(overview)} onClose={() => setOverview(null)} onOpenWeek={() => openWeek(overview)} />
+            : plan.hasPlan && <PhaseDetail selected={phaseSel} onSelect={setPhaseSel} onOpenWeek={openWeek} />}
         </section>
-
-        {plan.seed && (
-          <section className="section">
-            <div className="section-head">
-              <h2>Your plan explained</h2>
-            </div>
-            <PlanExplained />
-          </section>
-        )}
 
         {plan.intake && (
           <section className="section">

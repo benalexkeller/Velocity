@@ -90,7 +90,7 @@ function phaseOf(N: number): { phases: Phase[]; names: string[]; recovery: boole
     if (p === "base") { const k = base >= 9 ? 3 : base >= 5 ? 2 : 1; const part = Math.min(k, Math.floor((i / base) * k) + 1); return k === 1 ? "Base — Aerobic foundation" : ["Base 1 — Foundation", "Base 2 — Aerobic development", "Base 3 — Endurance"][part - 1]; }
     if (p === "build") { const j = i - base; const k = build >= 6 ? 2 : 1; const part = Math.min(k, Math.floor((j / build) * k) + 1); return k === 1 ? "Build — Race-specific" : ["Build 1 — Race-specific", "Build 2 — Intensity"][part - 1]; }
     if (p === "peak") return "Peak — Race simulation";
-    if (p === "taper") return "Taper — Freshen up";
+    if (p === "taper") return "Taper — Volume down";
     return "Race week";
   });
   const recovery = phases.map((p, i) => (p === "base" || p === "build") && i > 0 && (i + 1) % RULES.recoveryEvery === 0 && phases[i + 1] !== "peak");
