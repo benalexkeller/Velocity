@@ -24,7 +24,7 @@ export default function PlanPage() {
   return <Suspense fallback={null}><Plan /></Suspense>;
 }
 
-// "+ Add workout": creates a session in the local plan.
+// "+ Add session": creates a session in the local plan.
 function AddWorkout({ week, onDone }: { week: Week; onDone: (id: string | null) => void }) {
   const plan = usePlan();
   const [sport, setSport] = useState<Sport>("run");
@@ -34,14 +34,14 @@ function AddWorkout({ week, onDone }: { week: Week; onDone: (id: string | null) 
   const [intensity, setIntensity] = useState("Zone 2");
   const [text, setText] = useState("");
   return (
-    <form className="card sp-form add-workout" onSubmit={(e) => { e.preventDefault(); const id = plan.addSession({ sport, date, start, min: Math.max(5, parseInt(min) || 45), intensity, text: text.trim() || `${sport[0].toUpperCase() + sport.slice(1)} ${min} min ${intensity}` }); onDone(id); }}>
-      <div className="eyebrow">Add workout</div>
+    <form className="card sp-form add-workout" onSubmit={(e) => { e.preventDefault(); const id = plan.addSession({ sport, date, start, min: Math.max(5, parseInt(min) || 45), intensity, text: text.trim() || `${sport[0].toUpperCase() + sport.slice(1)} ${min} min ${intensity}` }); if (id) onDone(id); }}>
+      <div className="eyebrow">Add session</div>
       <div className="two">
         <label>Sport<select value={sport} onChange={(e) => setSport(e.target.value as Sport)}>{SPORTS.map((k) => <option key={k} value={k}>{k[0].toUpperCase() + k.slice(1)}</option>)}</select></label>
         <label>Intensity<select value={intensity} onChange={(e) => setIntensity(e.target.value)}>{INTENSITIES.map((k) => <option key={k}>{k}</option>)}</select></label>
       </div>
       <div className="two">
-        <label>Day<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
+        <label>Day<input type="date" value={date} min={plan.planRange?.start} max={plan.planRange?.end} onChange={(e) => setDate(e.target.value)} />{plan.planRange && (date < plan.planRange.start || date > plan.planRange.end) && <small className="err">Outside the plan · {dateLabel(plan.planRange.start)} – {dateLabel(plan.planRange.end)}</small>}</label>
         <label>Start<input type="time" step={900} value={start} onChange={(e) => setStart(e.target.value)} /></label>
       </div>
       <div className="two">
@@ -138,7 +138,7 @@ function Plan() {
             )}
           </span>
           {!plan.hasPlan && <Link href="/plan/new" className="btn ghost">Build plan</Link>}
-          <button className="btn" type="button" onClick={() => setAdding((a) => !a)} aria-expanded={adding}><Icon name="plus" />Add workout</button>
+          <button className="btn" type="button" onClick={() => setAdding((a) => !a)} aria-expanded={adding}><Icon name="plus" />Add session</button>
         </div>
 
         {!plan.hasPlan && (
@@ -151,7 +151,7 @@ function Plan() {
         {adding && <AddWorkout week={week} onDone={(id) => { setAdding(false); if (id) { setSel(id); const hit = plan.findSession(id); if (hit) setWk(hit.w.week); } }} />}
 
         {view === "week" ? <WeekGrid week={week} selectedId={sel} onPick={(x) => setSel(x.id)} /> : <MonthGrid year={mo.y} month={mo.m} selectedId={sel} onPick={(x) => { pick(x.id); setView("week"); }} />}
-        <SessionPanel id={sel} onClose={() => setSel(null)} />
+        <SessionPanel key={sel ?? "none"} id={sel} onClose={() => setSel(null)} />
 
         <section className="section">
           <div className="section-head">

@@ -86,6 +86,8 @@ export interface PlanStore {
   activities: Activity[]; // everything still in the list, including excluded
   counted: Activity[]; // what analysis, volume and session status use
   activitiesOn: (date: string) => Activity[];
+  /** First and last day of the plan (yyyy-mm-dd); sessions cannot be moved or added outside it. */
+  planRange: { start: string; end: string } | null;
   weekOf: (d: Date) => Week | undefined;
   currentWeek: () => Week;
   weekByNumber: (n: number) => Week;
@@ -157,6 +159,8 @@ export function PlanProvider({ children }: { children: ReactNode }) {
     const findSession = (id: string | null) => { if (!id) return null; for (const w of d.weeks) { const s = w.sessions.find((x) => x.id === id); if (s) return { s, w }; } return null; };
     const st = data.state;
     const changes = Object.keys(st.patches).length + st.added.length + data.activities.filter((a) => a.source === "manual").length;
+    const planRange = d.weeks.length ? { start: d.weeks[0].start, end: ymd(addDays(fromYmd(d.weeks[d.weeks.length - 1].start), 6)) } : null;
+    const inPlan = (date: string) => !planRange || (date >= planRange.start && date <= planRange.end);
     const toActivity = (m: ManualActivity): Activity => ({ id: m.id, date: m.date, start: m.start, sport: m.sport, name: m.name, min: m.min, mi: m.mi, yd: m.yd, pace_s: m.pace_s, mph: m.mph, p100_s: m.p100_s, hr: m.hr, elev_ft: m.elev_ft, source: "manual", note: m.note, exertion: m.exertion });
     return {
       ready, accounts: ACCOUNTS_ON, athlete, profile: data.profile, race: data.race, hasPlan: data.plan.length > 0, planJson: data.plan, body: data.body, intake: data.intake,
@@ -174,12 +178,12 @@ export function PlanProvider({ children }: { children: ReactNode }) {
         await be.saveState(state);
         setData((cur) => ({ ...cur, plan: weeks, state }));
       },
-      weeks: d.weeks, phases: d.phases, activities: d.activities, counted: d.counted, activitiesOn: d.activitiesOn, weekOf, currentWeek, weekByNumber, weekStatus, sessionOn, findSession,
-      moveSession: (id, to) => setState((s) => ({ ...s, patches: { ...s.patches, [id]: { ...s.patches[id], date: to.date, ...(to.start ? { start: to.start } : {}) } } })),
+      weeks: d.weeks, phases: d.phases, activities: d.activities, counted: d.counted, activitiesOn: d.activitiesOn, planRange, weekOf, currentWeek, weekByNumber, weekStatus, sessionOn, findSession,
+      moveSession: (id, to) => { if (!inPlan(to.date)) return; setState((s) => ({ ...s, patches: { ...s.patches, [id]: { ...s.patches[id], date: to.date, ...(to.start ? { start: to.start } : {}) } } })); },
       editSession: (id, patch) => setState((s) => ({ ...s, patches: { ...s.patches, [id]: { ...s.patches[id], ...patch } } })),
       toggleLock: (id) => setState((s) => ({ ...s, patches: { ...s.patches, [id]: { ...s.patches[id], locked: !s.patches[id]?.locked } } })),
       deleteSession: (id) => setState((s) => ({ ...s, patches: { ...s.patches, [id]: { ...s.patches[id], deleted: true } }, added: s.added.filter((a) => a.id !== id) })),
-      addSession: (a) => { const id = `add-${Date.now()}`; setState((s) => ({ ...s, added: [...s.added, { ...a, id }] })); return id; },
+      addSession: (a) => { if (!inPlan(a.date)) return ""; const id = `add-${Date.now()}`; setState((s) => ({ ...s, added: [...s.added, { ...a, id }] })); return id; },
       logActivity: (m) => { const a = toActivity(m); setData((cur) => ({ ...cur, activities: [...cur.activities.filter((x) => x.id !== a.id), a] })); void be.upsertActivity(a); },
       deleteActivity: (id) => { setData((cur) => ({ ...cur, activities: cur.activities.filter((x) => x.id !== id) })); void be.deleteActivity(id); },
       toggleExcluded: (id) => { const cur = data.activities.find((a) => a.id === id); if (!cur) return; const excluded = !cur.excluded; setData((c) => ({ ...c, activities: c.activities.map((a) => (a.id === id ? { ...a, excluded: excluded || undefined } : a)) })); void be.setExcluded(id, excluded); },

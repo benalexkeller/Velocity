@@ -40,7 +40,7 @@ export interface Backend {
 // Local (browser) — the format the app has used so far, kept so PR's changes survive
 // ====================================================================================
 const KEY = "velocity.store.v1";
-export interface LocalState extends PlanStateJson { manual: Activity[]; hidden: string[]; excluded: string[]; thread: ThreadMsg[]; plan?: PlanWeekJson[] | null; intake?: Intake | null; race?: Race | null; availability?: Availability | null }
+export interface LocalState extends PlanStateJson { manual: Activity[]; hidden: string[]; excluded: string[]; thread: ThreadMsg[]; plan?: PlanWeekJson[] | null; intake?: Intake | null; race?: Race | null; availability?: Availability | null; profile?: Partial<Profile> | null }
 const EMPTY_LOCAL: LocalState = { ...EMPTY_STATE, manual: [], hidden: [], excluded: [], thread: [] };
 
 export function readLocal(): LocalState {
@@ -71,10 +71,12 @@ export class LocalBackend implements Backend {
     if (demo === "empty") {
       const created = new Date().toISOString();
       const profile: Profile = { id: "demo", email: "new@example.com", username: "newathlete", name: "New Athlete", avatar_url: null, units: "imperial", timezone: "America/Los_Angeles", city: null, availability: null, zones: null, is_admin: false, setup_done: true, created_at: created };
-      return { profile: { ...profile, availability: this.s.availability ?? null }, race: this.s.race ?? null, plan: this.s.plan ?? [], intake: this.s.intake ?? null, state: { patches: this.s.patches, added: this.s.added, undone: false, calendar: true }, activities: this.s.manual, body: [], thread: this.s.thread };
+      return { profile: { ...profile, ...(this.s.profile ?? {}), availability: this.s.availability ?? null }, race: this.s.race ?? null, plan: this.s.plan ?? [], intake: this.s.intake ?? null, state: { patches: this.s.patches, added: this.s.added, undone: false, calendar: true }, activities: this.s.manual, body: [], thread: this.s.thread };
     }
     // a plan built or imported in this browser replaces the seed plan (and its race) until "clear local changes"
-    return { profile: null, race: this.s.race ?? null, plan: this.s.plan ?? PLAN_SEED, intake: this.s.intake ?? null, state: { patches: this.s.patches, added: this.s.added, undone: this.s.undone, calendar: this.s.calendar }, activities: localActivities(this.s), body: BODY_SEED, thread: this.s.thread, availability: this.s.availability ?? null };
+    // a profile saved in this browser (set-up screen) replaces the seed athlete's name, units and city
+    const saved = this.s.profile && Object.keys(this.s.profile).length ? { id: "local", email: null, username: "", name: "", avatar_url: null, units: "imperial" as const, timezone: "America/Los_Angeles", city: null, availability: this.s.availability ?? null, zones: null, is_admin: false, setup_done: true, created_at: new Date().toISOString(), ...this.s.profile } as Profile : null;
+    return { profile: saved, race: this.s.race ?? null, plan: this.s.plan ?? PLAN_SEED, intake: this.s.intake ?? null, state: { patches: this.s.patches, added: this.s.added, undone: this.s.undone, calendar: this.s.calendar }, activities: localActivities(this.s), body: BODY_SEED, thread: this.s.thread, availability: this.s.availability ?? null };
   }
   private put(next: Partial<LocalState>) { this.s = { ...this.s, ...next }; writeLocal(this.s); }
   async saveState(state: PlanStateJson) { this.put(state); }
@@ -85,7 +87,10 @@ export class LocalBackend implements Backend {
   }
   async setExcluded(id: string, excluded: boolean) { this.put({ excluded: excluded ? [...new Set([...this.s.excluded, id])] : this.s.excluded.filter((x) => x !== id) }); }
   async appendThread(msgs: ThreadMsg[]) { this.put({ thread: [...this.s.thread, ...msgs] }); }
-  async saveProfile(p: Partial<Profile>) { if (p.availability !== undefined) this.put({ availability: p.availability }); }
+  async saveProfile(p: Partial<Profile>) {
+    const { availability, ...rest } = p;
+    this.put({ ...(availability !== undefined ? { availability } : {}), ...(Object.keys(rest).length ? { profile: { ...(this.s.profile ?? {}), ...rest } } : {}) });
+  }
   async saveRace(r: Race | null) { this.put({ race: r }); }
   async savePlan(weeks: PlanWeekJson[], intake?: Intake | null) { this.put({ plan: weeks, ...(intake !== undefined ? { intake } : {}) }); }
   async saveBody() { /* seed only */ }

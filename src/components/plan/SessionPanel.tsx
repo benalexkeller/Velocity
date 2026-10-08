@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Icon } from "../icons";
 import { SportIcon } from "../SportIcon";
@@ -7,7 +7,7 @@ import { RouteMap } from "../RouteMap";
 import { LogActivity } from "../dashboard/LogActivity";
 import { activityLoad, plannedLoad, type Session, type Sport } from "@/lib/data";
 import { usePlan } from "@/lib/store";
-import { dateLabel, fmtHMS, fmtPace } from "@/lib/format";
+import { dateLabel, fmtHMS, fmtPace, today, ymd } from "@/lib/format";
 import { elev, fmtDist, fmtSpeed, runPace, swimDist, swimPace } from "@/lib/units";
 import { workoutFor, zoneName, type Segment, type Zone } from "@/lib/workout";
 
@@ -19,11 +19,13 @@ function MoveForm({ s, onDone }: { s: Session; onDone: () => void }) {
   const plan = usePlan();
   const [date, setDate] = useState(s.date);
   const [start, setStart] = useState(s.start ?? "06:30");
+  const r = plan.planRange;
+  const outside = !!r && (date < r.start || date > r.end);
   return (
-    <form className="sp-form" onSubmit={(e) => { e.preventDefault(); plan.moveSession(s.id, { date, start }); onDone(); }}>
-      <label>Day<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
+    <form className="sp-form" onSubmit={(e) => { e.preventDefault(); if (outside) return; plan.moveSession(s.id, { date, start }); onDone(); }}>
+      <label>Day<input type="date" value={date} min={r?.start} max={r?.end} onChange={(e) => setDate(e.target.value)} />{outside && r && <small className="err">Outside the plan · {dateLabel(r.start)} – {dateLabel(r.end)}</small>}</label>
       <label>Start<input type="time" step={900} value={start} onChange={(e) => setStart(e.target.value)} /></label>
-      <div className="row"><button type="submit" className="btn">Move session</button><button type="button" className="btn ghost" onClick={onDone}>Cancel</button></div>
+      <div className="row"><button type="submit" className="btn" disabled={outside}>Move session</button><button type="button" className="btn ghost" onClick={onDone}>Cancel</button></div>
     </form>
   );
 }
@@ -91,6 +93,7 @@ export function SessionPanel({ id, onClose }: { id: string | null; onClose: () =
   const plan = usePlan();
   const [mode, setMode] = useState<"view" | "log" | "move" | "edit">("view");
   const [toast, setToast] = useState<string | null>(null);
+  useEffect(() => { if (!toast) return; const t = setTimeout(() => setToast(null), 3000); return () => clearTimeout(t); }, [toast]);
   const hit = plan.findSession(id);
   if (!hit) return null;
   const { s, w } = hit;
@@ -145,7 +148,7 @@ export function SessionPanel({ id, onClose }: { id: string | null; onClose: () =
           )}
           {mode === "view" && (
             <div className="sp-actions">
-              {s.sport !== "rest" && acts.length === 0 && <button type="button" className="btn" onClick={() => setMode("log")}><Icon name="plus" />Log activity</button>}
+              {s.sport !== "rest" && acts.length === 0 && (s.date <= ymd(today()) ? <button type="button" className="btn" onClick={() => setMode("log")}><Icon name="plus" />Log activity</button> : <span className="sp-toast">Log it once it is done · {dateLabel(s.date)}</span>)}
               {!s.locked && s.status !== "done" && <button type="button" className="btn ghost" onClick={() => setMode("move")}>Move</button>}
               <button type="button" className="btn ghost" onClick={() => setMode("edit")}>Edit</button>
               {s.status !== "done" && <button type="button" className={`btn ghost${s.locked ? " on" : ""}`} onClick={() => { plan.toggleLock(s.id); setToast(s.locked ? "Unlocked · can be moved again" : "Locked · stays where it is"); }}><Icon name={s.locked ? "lock" : "unlock"} />{s.locked ? "Unlock" : "Lock"}</button>}

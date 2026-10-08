@@ -49,3 +49,4 @@ Rules that still apply (from `CLAUDE.md` and the owner):
 ## Status log (append below)
 
 - 2026-10-07 23:30 — reviews merged; branch `deslop` created with `qa/`; no fixes yet.
+- 2026-10-08 — Slice 1 (First 15 items 1–3) done and verified by `qa/verify1.js` (17 checks): V-001 V-002 V-003 V-004 V-005 V-006 V-007 V-036 V-056 V-057 V-133. Semantic colour tokens (`--ok/--warn/--danger`, `--z1…--z5`) added to `globals.css` for later slices. Next: item 4 (zones from intake, V-015) → item 5 (LTHR load, V-019/020/089) → item 6 (session status, V-016/088).

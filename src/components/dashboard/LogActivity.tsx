@@ -38,7 +38,7 @@ function Wheel({ value, max, label, onChange }: { value: number; max: number; la
     <div className="wh" ref={ref}>
       <button type="button" tabIndex={-1} onClick={() => onChange(clamp(value - 1))} aria-label={`${label} down`}><Icon name="chevron" /></button>
       <span className="ghost">{value > 0 ? pad(value - 1) : ""}</span>
-      <input value={txt ?? pad(value)} onFocus={(e) => { setTxt(String(value)); e.target.select(); }} onChange={(e) => { const t = e.target.value.replace(/\D/g, "").slice(0, 2); setTxt(t); if (t !== "") onChange(clamp(parseInt(t))); }} onBlur={() => setTxt(null)} onKeyDown={(e) => { if (e.key === "ArrowUp") { e.preventDefault(); onChange(clamp(value + 1)); setTxt(null); } if (e.key === "ArrowDown") { e.preventDefault(); onChange(clamp(value - 1)); setTxt(null); } }} inputMode="numeric" aria-label={label} />
+      <input value={txt ?? pad(value)} onFocus={(e) => { setTxt(""); e.target.select(); }} onMouseUp={(e) => e.preventDefault()} onChange={(e) => { const t = e.target.value.replace(/\D/g, "").slice(-2); setTxt(t); onChange(t === "" ? 0 : clamp(parseInt(t))); }} onBlur={() => setTxt(null)} onKeyDown={(e) => { if (e.key === "ArrowUp") { e.preventDefault(); onChange(clamp(value + 1)); setTxt(null); } if (e.key === "ArrowDown") { e.preventDefault(); onChange(clamp(value - 1)); setTxt(null); } }} inputMode="numeric" aria-label={label} />
       <span className="ghost">{value < max ? pad(value + 1) : ""}</span>
       <button type="button" tabIndex={-1} onClick={() => onChange(clamp(value + 1))} aria-label={`${label} up`}><Icon name="chevron" /></button>
       <small>{label}</small>
@@ -67,12 +67,16 @@ export function LogActivity({ open, onClose, onSaved, initial, inline }: { open:
   const [last, setLast] = useState<("dist" | "dur" | "pace")[]>([]); // the two most recently edited fields drive the third
   // open → slide in; close → slide back, then unmount
   const [phase, setPhase] = useState<"closed" | "open" | "closing">(open ? "open" : "closed");
+  const reset = () => { setName(""); setDist(""); setDur(initial?.min ? `${initial.min}:00` : ""); setPace(""); setHr(""); setElev(""); setEffort(0); setFeel(""); setNote(""); setLast([]); };
   useEffect(() => {
     if (open) { setPhase("open"); return; }
     setPhase((p) => (p === "open" ? "closing" : p));
-    const t = setTimeout(() => setPhase("closed"), 300);
+    const t = setTimeout(() => { setPhase("closed"); reset(); }, 300);
     return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
+  // a different session or day prefills a fresh form
+  useEffect(() => { setSport(initial?.sport ?? "run"); setDate(initial?.date ?? ymd(new Date())); setTime(initial?.time ?? `${String(new Date().getHours()).padStart(2, "0")}:00`); setName(initial?.name ?? ""); setDur(initial?.min ? `${initial.min}:00` : ""); setDist(""); setPace(""); setLast([]); }, [initial?.sport, initial?.date, initial?.time, initial?.min, initial?.name]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const touch = (k: "dist" | "dur" | "pace") => setLast((l) => [k, ...l.filter((x) => x !== k)].slice(0, 2));
   const timed = sport === "swim" || sport === "bike" || sport === "run";
@@ -112,13 +116,30 @@ export function LogActivity({ open, onClose, onSaved, initial, inline }: { open:
 
   const placeholder = useMemo(() => defaultName(sport, time), [sport, time]);
   const sec = toSec(dur);
-  const valid = sec > 0;
   const setDurPart = (h: number, m: number, s: number) => { setDur(hms(h * 3600 + m * 60 + s)); touch("dur"); };
   const dh = Math.floor(sec / 3600), dm = Math.floor((sec % 3600) / 60), ds = Math.round(sec % 60);
 
+  // validation: every number must be a number inside a sensible range; nothing is dropped silently
+  const todayStr = ymd(new Date());
+  const numErr = (s: string) => s.trim() !== "" && isNaN(parseFloat(s)) ? "Numbers only" : null;
+  const distMax = sport === "swim" ? (metric ? 20000 : 20000) : metric ? 480 : 300;
+  const errs: Record<string, string | null> = {
+    date: date > todayStr ? "You can log it once it is done" : null,
+    dur: sec <= 0 ? "Duration is required" : sec > 24 * 3600 ? "Longer than a day" : null,
+    dist: numErr(dist) ?? (dist.trim() !== "" && (num(dist) <= 0 || num(dist) > distMax) ? `Between 0 and ${distMax.toLocaleString()} ${unit}` : null),
+    pace: sport === "bike"
+      ? numErr(pace) ?? (pace.trim() !== "" && (num(pace) < (metric ? 5 : 3) || num(pace) > (metric ? 80 : 50)) ? `Between ${metric ? "5 and 80 km/h" : "3 and 50 mph"}` : null)
+      : pace.trim() !== "" && !toSec(pace) ? "Use m:ss" : pace.trim() !== "" && sport === "run" && (toSec(pace) < 120 || toSec(pace) > 1800) ? "Between 2:00 and 30:00" : pace.trim() !== "" && sport === "swim" && (toSec(pace) < 40 || toSec(pace) > 360) ? "Between 0:40 and 6:00" : null,
+    hr: numErr(hr) ?? (hr.trim() !== "" && (num(hr) < 30 || num(hr) > 240) ? "Between 30 and 240 bpm" : null),
+    elev: numErr(elev) ?? (elev.trim() !== "" && (num(elev) < 0 || num(elev) > (metric ? 9000 : 30000)) ? `Between 0 and ${metric ? "9,000 m" : "30,000 ft"}` : null),
+  };
+  const valid = Object.values(errs).every((e) => !e);
+  const Err = ({ k }: { k: string }) => (errs[k] ? <small className="lf-err" role="alert">{errs[k]}</small> : null);
+
   const save = () => {
     const T = toSec(dur);
-    const a: ManualActivity = { id: `manual-${Date.now()}`, name: name.trim() || placeholder, sport, date, start: time, min: Math.round(T / 60), source: "manual", exertion: effort || undefined, feel: feel || undefined, note: note.trim() || undefined };
+    // minutes with seconds kept (17:32 → 17.53), so nothing is rounded to the minute
+    const a: ManualActivity = { id: `manual-${Date.now()}`, name: name.trim() || placeholder, sport, date, start: time, min: +(T / 60).toFixed(2), source: "manual", exertion: effort || undefined, feel: feel || undefined, note: note.trim() || undefined };
     // stored in miles / yards / mph / seconds per mile / feet, like the Garmin records
     const D = num(dist);
     if (sport === "swim") { if (D) a.yd = Math.round(metric ? D / YD : D); if (toSec(pace)) a.p100_s = Math.round(metric ? toSec(pace) * YD : toSec(pace)); }
@@ -126,9 +147,9 @@ export function LogActivity({ open, onClose, onSaved, initial, inline }: { open:
     else if (sport === "run") { if (D) a.mi = +(metric ? D / KM : D).toFixed(2); if (toSec(pace)) a.pace_s = Math.round(metric ? toSec(pace) * KM : toSec(pace)); }
     else if (sport === "hike") { if (D) a.mi = +(metric ? D / KM : D).toFixed(2); }
     if (num(elev)) a.elev_ft = Math.round(metric ? num(elev) / FT : num(elev));
-    if (num(hr) >= 30 && num(hr) <= 240) a.hr = Math.round(num(hr));
+    if (num(hr)) a.hr = Math.round(num(hr));
     onSaved(a);
-    setName(""); setDist(""); setDur(""); setPace(""); setHr(""); setElev(""); setEffort(0); setFeel(""); setNote(""); setLast([]);
+    reset();
   };
 
   if (phase === "closed") return null;
@@ -145,9 +166,9 @@ export function LogActivity({ open, onClose, onSaved, initial, inline }: { open:
           {SPORTS.map((s) => <button key={s.k} type="button" role="radio" aria-checked={sport === s.k} className={sport === s.k ? "on" : ""} onClick={() => { setSport(s.k); setDist(""); setPace(""); setLast(toSec(dur) ? ["dur"] : []); }}><SportIcon sport={s.k} size={15} />{s.label}</button>)}
         </div>
         <div className="lf-grid">
-          <label>Day<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
+          <label>Day<input type="date" value={date} max={todayStr} onChange={(e) => setDate(e.target.value)} aria-invalid={!!errs.date} /><Err k="date" /></label>
           <label>Start time<input type="time" step={900} value={time} onChange={(e) => setTime(e.target.value)} /></label>
-          <label>Avg heart rate (bpm)<input value={hr} onChange={(e) => setHr(e.target.value)} placeholder="145" inputMode="numeric" /></label>
+          <label>Heart rate (bpm)<input value={hr} onChange={(e) => setHr(e.target.value)} placeholder="145" inputMode="numeric" aria-invalid={!!errs.hr} /><Err k="hr" /></label>
           <div className="lf-dur" aria-label="Duration">
             <span className="k">Duration</span>
             <div className="wheels">
@@ -155,10 +176,11 @@ export function LogActivity({ open, onClose, onSaved, initial, inline }: { open:
               <Wheel value={dm} max={59} label="min" onChange={(v) => setDurPart(dh, v, ds)} />
               <Wheel value={ds} max={59} label="s" onChange={(v) => setDurPart(dh, dm, v)} />
             </div>
+            {sec > 0 && <Err k="dur" />}
           </div>
-          {(timed || sport === "hike") ? <label>Distance<span className="lf-unit-in"><input value={dist} onChange={(e) => { setDist(e.target.value); touch("dist"); }} placeholder={sport === "swim" ? (metric ? "1500" : "1640") : metric ? "10" : "6.2"} inputMode="decimal" />{units}</span></label> : <span />}
-          {timed ? <label>{paceLabel}<input value={pace} onChange={(e) => { setPace(e.target.value); touch("pace"); }} placeholder={sport === "bike" ? (metric ? "28" : "17.5") : sport === "swim" ? (metric ? "2:00" : "1:50") : metric ? "5:55" : "9:30"} inputMode="decimal" /></label> : <span />}
-          {(sport === "bike" || sport === "run" || sport === "hike") ? <label>Elevation gain ({elevUnit})<input value={elev} onChange={(e) => setElev(e.target.value)} placeholder="0" inputMode="numeric" /></label> : <span />}
+          {(timed || sport === "hike") ? <label>Distance<span className="lf-unit-in"><input value={dist} onChange={(e) => { setDist(e.target.value); touch("dist"); }} placeholder={sport === "swim" ? (metric ? "1500" : "1640") : metric ? "10" : "6.2"} inputMode="decimal" aria-invalid={!!errs.dist} />{units}</span><Err k="dist" /></label> : <span />}
+          {timed ? <label>{paceLabel}<input value={pace} onChange={(e) => { setPace(e.target.value); touch("pace"); }} placeholder={sport === "bike" ? (metric ? "28" : "17.5") : sport === "swim" ? (metric ? "2:00" : "1:50") : metric ? "5:55" : "9:30"} inputMode="decimal" aria-invalid={!!errs.pace} /><Err k="pace" /></label> : <span />}
+          {(sport === "bike" || sport === "run" || sport === "hike") ? <label>Elevation gain ({elevUnit})<input value={elev} onChange={(e) => setElev(e.target.value)} placeholder="0" inputMode="numeric" aria-invalid={!!errs.elev} /><Err k="elev" /></label> : <span />}
         </div>
       </div>
       <div className="lf-right">
@@ -172,7 +194,7 @@ export function LogActivity({ open, onClose, onSaved, initial, inline }: { open:
         </div>
         <textarea className="lf-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Notes — what happened, pain, conditions" rows={2} />
         <div className="lf-actions">
-          <span className="muted">{valid ? `${SPORTS.find((s) => s.k === sport)?.label} · ${hms(sec)}${dist ? ` · ${dist} ${unit}` : ""}${pace ? ` · ${pace}${sport === "bike" ? (metric ? " km/h" : " mph") : sport === "swim" ? (metric ? "/100 m" : "/100 yd") : metric ? "/km" : "/mi"}` : ""}${num(hr) ? ` · ${hr} bpm` : ""}` : "Duration is required"}</span>
+          <span className="muted">{valid ? `${SPORTS.find((s) => s.k === sport)?.label} · ${hms(sec)}${dist ? ` · ${dist} ${unit}` : ""}${pace ? ` · ${pace}${sport === "bike" ? (metric ? " km/h" : " mph") : sport === "swim" ? (metric ? "/100 m" : "/100 yd") : metric ? "/km" : "/mi"}` : ""}${num(hr) ? ` · ${hr} bpm` : ""}` : sec <= 0 ? "Duration is required" : "Check the fields marked in red"}</span>
           <button type="button" className="btn ghost" onClick={onClose}>Cancel</button>
           <button type="submit" className="btn" disabled={!valid}>Save</button>
         </div>

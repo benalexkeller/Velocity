@@ -27,6 +27,20 @@
   --strength-soft: #EDEFF5;
   --rest-soft: #EDEFF5;
 
+  /* semantic colours — the only greens, ambers and reds in the app */
+  --ok: #157347;
+  --ok-soft: #EAF7EF;
+  --warn: #B54708;
+  --warn-soft: #FFF6E5;
+  --danger: #B42318;
+  --danger-soft: #FEF3F2;
+  /* effort zones, shared by the session chart and the analysis charts */
+  --z1: #DCE6FB;
+  --z2: #93B4F8;
+  --z3: #2459FE;
+  --z4: #1E3A8A;
+  --z5: #101114;
+
   --bubble-user: #E5E8F0;
   --bubble-coach: #FFFFFF;
   --track: #EBEDF2;

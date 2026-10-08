@@ -1,6 +1,6 @@
 "use client";
 // The plan builder: five screens of questions (branching by event type), then the build screen, or a spreadsheet import.
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type InputHTMLAttributes } from "react";
 import { useRouter } from "next/navigation";
 import { Icon } from "../icons";
 import { usePlan } from "@/lib/store";
@@ -16,7 +16,20 @@ import { ImportPlan } from "./ImportPlan";
 const DAY_LABEL = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"], DAY_NUM = [1, 2, 3, 4, 5, 6, 0];
 const TOD: { k: Intake["time"]["time_of_day"]; label: string; time: string }[] = [{ k: "morning", label: "Morning", time: "06:30" }, { k: "midday", label: "Midday", time: "12:00" }, { k: "evening", label: "Evening", time: "18:00" }];
 const STEPS = ["Goal", "History", "Fitness", "Time", "Devices"];
-const num = (s: string) => { const n = parseFloat(s); return isNaN(n) ? null : n; };
+
+/** Decimal field that keeps what is typed ("2." stays "2.") and hands the parsed number up as it goes; clamps on blur. */
+function NumInput({ value, onChange, min, max, ...rest }: { value: number | null; onChange: (v: number | null) => void; min?: number; max?: number } & Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange">) {
+  const [txt, setTxt] = useState<string | null>(null);
+  const shown = txt ?? (value == null ? "" : String(value));
+  const clamp = (v: number) => Math.min(max ?? Infinity, Math.max(min ?? -Infinity, v));
+  return <input {...rest} value={shown} inputMode={rest.inputMode ?? "decimal"} onChange={(e) => { const t = e.target.value.replace(",", "."); setTxt(t); const v = parseFloat(t); onChange(t.trim() === "" ? null : isNaN(v) ? value : v); }} onBlur={() => { const v = parseFloat(shown); onChange(shown.trim() === "" || isNaN(v) ? null : clamp(v)); setTxt(null); }} />;
+}
+/** h:mm field that lets the colon and partial minutes be typed; converts when the text is a full time. */
+function TimeInput({ hours, onChange, ...rest }: { hours: number | null; onChange: (h: number | null) => void } & Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange">) {
+  const [txt, setTxt] = useState<string | null>(null);
+  const shown = txt ?? hoursToText(hours);
+  return <input {...rest} value={shown} inputMode="numeric" placeholder={rest.placeholder ?? "h:mm"} onChange={(e) => { const t = e.target.value; setTxt(t); if (/^\d{1,2}:\d{2}$/.test(t) || t.trim() === "") onChange(textToHours(t)); }} onBlur={() => { onChange(textToHours(shown)); setTxt(null); }} />;
+}
 
 type Patch<T> = Partial<T> | ((cur: T) => Partial<T>);
 
@@ -131,13 +144,13 @@ function GoalStep({ intake, set, imperial, weeks }: { intake: Intake; set: <K ex
       </div>
       {g.kind !== "finish" && (
         <div className="two">
-          <label><b>{g.kind === "time" ? "Target time (h:mm)" : "Time it will take (h:mm, optional)"}</b><input value={target} onChange={(e) => setTargetText(e.target.value)} placeholder={hoursToText(info.hours)} inputMode="numeric" /></label>
+          <label><b>{g.kind === "time" ? "Target time (h:mm)" : "Time it will take (h:mm, optional)"}</b><TimeInput hours={g.target_hours} onChange={(h) => setTargetText(hoursToText(h))} placeholder={hoursToText(info.hours)} /></label>
           {et.kind === "tri" && <label className="pb-chk" style={{ alignSelf: "end" }}><input type="checkbox" checked={splitOn} onChange={(e) => { setSplitOn(e.target.checked); const h = textToHours(target); set("goal", { splits: e.target.checked && h ? autoSplits(h, g.type) : null }); }} /><b>Split it into swim / bike / run</b></label>}
         </div>
       )}
       {g.kind !== "finish" && splitOn && g.splits && et.kind === "tri" && (
         <div className="pb-splits">
-          {(["swim", "bike", "run", "transitions"] as const).map((k) => <label key={k}><b>{k === "transitions" ? "T1 + T2" : k[0].toUpperCase() + k.slice(1)}</b><input value={hoursToText(g.splits![k])} onChange={(e) => { const h = textToHours(e.target.value); if (h != null) set("goal", (cur) => ({ splits: { ...cur.splits!, [k]: h } })); }} inputMode="numeric" /></label>)}
+          {(["swim", "bike", "run", "transitions"] as const).map((k) => <label key={k}><b>{k === "transitions" ? "T1 + T2" : k[0].toUpperCase() + k.slice(1)}</b><TimeInput hours={g.splits![k]} onChange={(h) => { if (h != null) set("goal", (cur) => ({ splits: { ...cur.splits!, [k]: h } })); }} /></label>)}
           <div className="sum"><span className="k">Adds up to</span><b>{hoursToText(splitSum)}</b>{g.target_hours && Math.abs(splitSum - g.target_hours) > 0.02 ? <span className="hint bad">target is {hoursToText(g.target_hours)}</span> : <span className="hint ok">matches the target</span>}</div>
           <span className="hint">{imperial ? `${info.dist.swimYd.toLocaleString()} yd · ${info.dist.bikeMi} mi · ${info.dist.runMi} mi` : `${Math.round(info.dist.swimYd * 0.9144).toLocaleString()} m · ${(info.dist.bikeMi * 1.609).toFixed(0)} km · ${(info.dist.runMi * 1.609).toFixed(1)} km`}</span>
         </div>
@@ -175,7 +188,7 @@ function HistoryStep({ intake, set, kind }: { intake: Intake; set: <K extends ke
       <label><b>Sessions per week</b><Stepper value={h.sessions_per_week} min={0} max={14} onChange={(v) => set("history", { sessions_per_week: v })} unit={h.sessions_per_week === 1 ? "session" : "sessions"} /></label>
       <div className="pb-hours">
         <span className="k">Hours per week</span>
-        <div className="grid">{hourFields.map((f) => <label key={f.k}><b>{f.label}</b><span className="unit-in"><input value={h.hours[f.k] || ""} onChange={(e) => set("history", (cur) => ({ hours: { ...cur.hours, [f.k]: num(e.target.value) ?? 0 } }))} inputMode="decimal" placeholder="0" /><span className="units"><span>h</span></span></span></label>)}</div>
+        <div className="grid">{hourFields.map((f) => <label key={f.k}><b>{f.label}</b><span className="unit-in"><NumInput value={h.hours[f.k] || null} min={0} max={40} onChange={(v) => set("history", (cur) => ({ hours: { ...cur.hours, [f.k]: v ?? 0 } }))} placeholder="0" /><span className="units"><span>h</span></span></span></label>)}</div>
         <span className="hint">{total ? `${total.toFixed(1)} h per week now.` : "0 h: the plan starts at half of your maximum and ramps up."}</span>
       </div>
     </>
@@ -185,29 +198,28 @@ function HistoryStep({ intake, set, kind }: { intake: Intake; set: <K extends ke
 // ---------- 3 · fitness ----------
 function FitnessStep({ intake, set, kind, imperial }: { intake: Intake; set: <K extends keyof Intake>(k: K, p: Patch<Intake[K]>) => void; kind: Kind; imperial: boolean }) {
   const f = intake.fitness;
-  const n = (v: number | null) => (v == null ? "" : String(v));
   const swim = kind === "tri" || kind === "swim", bike = kind === "tri" || kind === "bike", run = kind === "tri" || kind === "run";
   return (
     <>
       <div className="pb-q"><h2>Where you are now</h2><span className="hint">Rough numbers are fine. Leave blank what you do not know.</span></div>
       {swim && <div className="pb-sport"><span className="k">Swim</span><div className="two">
         <label><b>Pace per 100 {imperial ? "yd" : "m"} (m:ss)</b><input value={f.swim_pace_100} onChange={(e) => set("fitness", { swim_pace_100: e.target.value })} placeholder="1:50" inputMode="numeric" /></label>
-        <label><b>Longest swim, last 8 weeks ({imperial ? "yd" : "m"})</b><input value={n(f.swim_longest)} onChange={(e) => set("fitness", { swim_longest: num(e.target.value) })} placeholder={imperial ? "2000" : "1500"} inputMode="numeric" /></label>
+        <label><b>Longest swim, last 8 weeks ({imperial ? "yd" : "m"})</b><NumInput value={f.swim_longest} onChange={(v) => set("fitness", { swim_longest: v })} placeholder={imperial ? "2000" : "1500"} inputMode="numeric" /></label>
       </div></div>}
       {bike && <div className="pb-sport"><span className="k">Bike</span><div className="three">
-        <label><b>Steady solo speed ({imperial ? "mph" : "km/h"})</b><input value={n(f.bike_speed)} onChange={(e) => set("fitness", { bike_speed: num(e.target.value) })} placeholder={imperial ? "17" : "28"} inputMode="decimal" /></label>
-        <label><b>FTP (W, if you know it)</b><input value={n(f.bike_ftp)} onChange={(e) => set("fitness", { bike_ftp: num(e.target.value) })} placeholder="220" inputMode="numeric" /></label>
-        <label><b>Longest ride, last 8 weeks ({imperial ? "mi" : "km"})</b><input value={n(f.bike_longest)} onChange={(e) => set("fitness", { bike_longest: num(e.target.value) })} placeholder={imperial ? "40" : "60"} inputMode="decimal" /></label>
+        <label><b>Steady solo speed ({imperial ? "mph" : "km/h"})</b><NumInput value={f.bike_speed} onChange={(v) => set("fitness", { bike_speed: v })} placeholder={imperial ? "17" : "28"} inputMode="decimal" /></label>
+        <label><b>FTP (W, if you know it)</b><NumInput value={f.bike_ftp} onChange={(v) => set("fitness", { bike_ftp: v })} placeholder="220" inputMode="numeric" /></label>
+        <label><b>Longest ride, last 8 weeks ({imperial ? "mi" : "km"})</b><NumInput value={f.bike_longest} onChange={(v) => set("fitness", { bike_longest: v })} placeholder={imperial ? "40" : "60"} inputMode="decimal" /></label>
       </div></div>}
       {run && <div className="pb-sport"><span className="k">Run</span><div className="two">
         <label><b>Easy pace per {imperial ? "mile" : "km"} (m:ss)</b><input value={f.run_pace} onChange={(e) => set("fitness", { run_pace: e.target.value })} placeholder={imperial ? "9:30" : "5:55"} inputMode="numeric" /></label>
-        <label><b>Longest run, last 8 weeks ({imperial ? "mi" : "km"})</b><input value={n(f.run_longest)} onChange={(e) => set("fitness", { run_longest: num(e.target.value) })} placeholder={imperial ? "8" : "13"} inputMode="decimal" /></label>
+        <label><b>Longest run, last 8 weeks ({imperial ? "mi" : "km"})</b><NumInput value={f.run_longest} onChange={(v) => set("fitness", { run_longest: v })} placeholder={imperial ? "8" : "13"} inputMode="decimal" /></label>
       </div></div>}
       <div className="pb-sport"><span className="k">Physiology · optional</span>
         <div className="three">
-          <label><b>VO2max</b><input value={n(f.vo2max)} onChange={(e) => set("fitness", { vo2max: num(e.target.value) })} placeholder="48" inputMode="decimal" disabled={f.garmin_later} /></label>
-          <label><b>Resting heart rate</b><input value={n(f.rhr)} onChange={(e) => set("fitness", { rhr: num(e.target.value) })} placeholder="52" inputMode="numeric" disabled={f.garmin_later} /></label>
-          <label><b>Lactate threshold HR</b><input value={n(f.lthr)} onChange={(e) => set("fitness", { lthr: num(e.target.value) })} placeholder="165" inputMode="numeric" disabled={f.garmin_later} /></label>
+          <label><b>VO2max</b><NumInput value={f.vo2max} onChange={(v) => set("fitness", { vo2max: v })} placeholder="48" inputMode="decimal" disabled={f.garmin_later} /></label>
+          <label><b>Resting heart rate</b><NumInput value={f.rhr} onChange={(v) => set("fitness", { rhr: v })} placeholder="52" inputMode="numeric" disabled={f.garmin_later} /></label>
+          <label><b>Lactate threshold HR</b><NumInput value={f.lthr} onChange={(v) => set("fitness", { lthr: v })} placeholder="165" inputMode="numeric" disabled={f.garmin_later} /></label>
         </div>
         <label className="pb-chk"><input type="checkbox" checked={f.garmin_later} onChange={(e) => set("fitness", { garmin_later: e.target.checked })} /><b>Import these from Garmin later</b><span className="hint">The watch measures all three. Once Garmin is connected they fill in by themselves.</span></label>
       </div>
@@ -285,7 +297,7 @@ function Stepper({ value, min, max, step = 1, unit, onChange }: { value: number;
   return (
     <span className="pb-stepper">
       <button type="button" onClick={() => onChange(clamp(value - step))} aria-label="Less">−</button>
-      <input value={value} onChange={(e) => { const v = parseFloat(e.target.value); if (!isNaN(v)) onChange(clamp(v)); }} inputMode="decimal" />
+      <NumInput value={value} min={min} max={max} onChange={(v) => { if (v != null) onChange(clamp(v)); }} />
       <button type="button" onClick={() => onChange(clamp(value + step))} aria-label="More">+</button>
       {unit && <span className="u">{unit}</span>}
     </span>
