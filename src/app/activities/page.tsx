@@ -126,7 +126,7 @@ function Activities() {
                 const w = when(a), pp = paceOrPower(a);
                 return (
                   <FragmentRow key={a.id} showGroup={showGroup} group={g}>
-                    <tr className={`row${sel === a.id ? " sel" : ""}${a.excluded ? " excluded" : ""}`} onClick={() => { setSel(a.id); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
+                    <tr className={`row${sel === a.id ? " sel" : ""}${a.excluded ? " excluded" : ""}`} tabIndex={0} aria-label={`${a.name}, ${a.date}`} onClick={() => { setSel(a.id); window.scrollTo({ top: 0, behavior: "smooth" }); }} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSel(a.id); } }}>
                       <td className="when">{w.l1}<small>{w.l2}</small></td>
                       <td><div className="act"><SportIcon sport={a.sport} size={30} /><div><b>{a.name}{a.excluded && <span className="tag">Excluded</span>}</b><small>{subtitle(a)}</small></div></div></td>
                       <td className="num">{distance(a)}</td>

@@ -26,6 +26,7 @@ export function RampChart({ selected, phase, onPick, onPhase }: { selected?: num
 
   if (!plan.hasPlan) return <div className="card muted" style={{ padding: 18, fontSize: 14 }}>No plan yet.</div>;
   return (
+    <div className="ramp-wrap">
     <svg ref={svgRef} className="chart ramp" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Planned weekly training hours by discipline across the plan, ending in the race">
       {/* y axis */}
       <text x={L - 6} y={T - 6} textAnchor="end">Hours</text>
@@ -98,6 +99,7 @@ export function RampChart({ selected, phase, onPick, onPhase }: { selected?: num
         );
       })()}
     </svg>
+    </div>
   );
 }
 function formatH(h: number) { const H = Math.floor(h), M = Math.round((h - H) * 60); return `${H}:${String(M).padStart(2, "0")}`; }

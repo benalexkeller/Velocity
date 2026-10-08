@@ -1,5 +1,6 @@
 /* ---------- Plan page ---------- */
-.plan { padding-right: 18px; min-width: 0; }
+.plan { min-width: 0; }
+.main.with-coach .plan { padding-right: 18px; }
 .plan-head { display: flex; align-items: center; gap: 14px; padding: 8px 0 10px; flex-wrap: wrap; }
 .plan-head .range { font-size: 16px; color: var(--muted); white-space: nowrap; margin-left: -2px; }
 .plan-head .grow { flex: 1; }
@@ -51,6 +52,7 @@
 .wg.dragging .wg-ev:not(.drag) { pointer-events: none; }
 .wg-col.target { background-color: var(--surface-2); } .wg-col.today.target { background-color: var(--accent-soft); }
 .wg-day.target b { text-decoration: underline; text-underline-offset: 3px; }
+.wg-ev:not(.done):not(.rest) { padding-right: 22px; }
 .wg-ev .lk { position: absolute; top: 3px; right: 3px; width: 18px; height: 18px; border-radius: 5px; border: 0; background: transparent; color: inherit; display: inline-flex; align-items: center; justify-content: center; opacity: 0; cursor: pointer; padding: 0; }
 .wg-ev .lk svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
 .wg-ev:hover .lk, .wg-ev.locked .lk { opacity: 0.85; }
@@ -110,7 +112,7 @@
 .mg-c.dim { opacity: 0.4; }
 .mg-c.today { border-color: var(--accent); background: var(--accent-soft); }
 .mg-c.today .n { color: var(--accent); }
-.mg-s { display: flex; align-items: center; gap: 5px; font-size: 12px; border-radius: 5px; padding: 2px 5px; background: var(--swim-soft); }
+.mg-s { display: flex; align-items: center; gap: 5px; width: 100%; min-width: 0; border: 0; font: inherit; text-align: left; color: var(--ink); font-size: 12px; border-radius: 5px; padding: 2px 5px; background: var(--swim-soft); }
 .mg-s .sport-icon { color: var(--accent); }
 .mg-s.rest { background: var(--strength-soft); } .mg-s.rest .sport-icon { color: var(--ink-2); }
 .mg-c.done .mg-s { background: var(--run-soft); color: #fff; } .mg-c.done .mg-s .sport-icon { color: #fff; }
@@ -125,6 +127,8 @@
 .legend i { display: inline-block; width: 11px; height: 11px; border-radius: 50%; margin-right: 6px; vertical-align: -1px; }
 .section-head .legend .settings { color: var(--accent); font-weight: 600; text-decoration: none; margin-left: 8px; }
 svg.ramp { width: 100%; height: auto; display: block; }
+.ramp-wrap { overflow-x: auto; scrollbar-width: thin; }
+@media (max-width: 760px) { svg.ramp { min-width: 760px; } }
 
 /* phase detail (under the weekly-hours chart) */
 .phd { margin-top: 12px; padding: 14px 18px 16px; display: grid; gap: 10px; }
@@ -208,3 +212,29 @@ svg.ramp { width: 100%; height: auto; display: block; }
 .method li a { color: var(--muted); text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
 .method li a:hover { color: var(--accent); }
 @media (max-width: 900px) { .method { grid-template-columns: 1fr; } }
+
+/* phone week list (the time grid is for 761 px and up) */
+.wl { display: none; list-style: none; margin: 0; padding: 0; }
+@media (max-width: 760px) {
+  .wg { display: none; }
+  .wl { display: grid; background: var(--surface); border-radius: 16px; box-shadow: var(--shadow); overflow: hidden; }
+  .wl li { display: grid; grid-template-columns: 48px minmax(0, 1fr); gap: 10px; align-items: start; padding: 10px 12px; border-top: 1px solid var(--line-2); }
+  .wl li:first-child { border-top: 0; }
+  .wl li.today { background: var(--accent-soft); }
+  .wl-d { display: grid; justify-items: center; padding-top: 4px; }
+  .wl-d span { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .wl-d b { font-size: 18px; }
+  .wl li.today .wl-d span, .wl li.today .wl-d b { color: var(--accent); }
+  .wl-ss { display: grid; gap: 6px; min-width: 0; }
+  .wl-rest { font-size: 14px; color: var(--muted); padding: 10px 0; }
+  .wl-s { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; text-align: left; border: 0; border-radius: 10px; padding: 6px 10px; background: var(--swim-soft); color: var(--ink); font: inherit; cursor: pointer; }
+  .wl-s .sport-icon { color: var(--accent); flex: 0 0 auto; }
+  .wl-s .t { display: grid; min-width: 0; flex: 1; }
+  .wl-s .t b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wl-s .t small { font-size: 12px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .wl-s.done { background: var(--run-soft); color: #fff; } .wl-s.done .sport-icon, .wl-s.done .t small { color: #fff; }
+  .wl-s.sel { box-shadow: 0 0 0 2px var(--accent); }
+  .wl-st { font-size: 12px; font-weight: 600; white-space: nowrap; }
+  .wl-st.missed { color: var(--danger); } .wl-st.partial, .wl-st.substituted { color: var(--ink-2); }
+  .wl-lk { width: 14px; height: 14px; display: inline-flex; color: var(--ink-2); } .wl-lk svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+}

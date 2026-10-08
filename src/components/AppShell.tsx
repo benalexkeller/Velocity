@@ -65,7 +65,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </header>
       <nav className="nav" aria-label="Primary">
         {NAV.map((n) => (
-          <Link key={n.href} href={n.href} className={path === n.href ? "active" : ""}>
+          <Link key={n.href} href={n.href} className={path === n.href ? "active" : ""} aria-current={path === n.href ? "page" : undefined}>
             <Icon name={n.icon} />
             <span className="lbl">{n.label}</span>{n.short && <span className="lbl-short">{n.short}</span>}
           </Link>

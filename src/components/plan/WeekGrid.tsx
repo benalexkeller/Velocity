@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "../icons";
 import { SportIcon } from "../SportIcon";
-import { SPORT_LABEL, type Session, type Week } from "@/lib/data";
+import { SPORT_LABEL, STATUS_LABEL, type Session, type Week } from "@/lib/data";
 import { usePlan } from "@/lib/store";
 import { DAYS, addDays, fromYmd, hoursToClock, today, ymd } from "@/lib/format";
 
@@ -75,6 +75,8 @@ export function WeekGrid({ week, selectedId, onPick }: { week: Week; selectedId?
   };
 
   return (
+    <>
+    <WeekList week={week} selectedId={selectedId} onPick={onPick} />
     <div className={`wg${drag ? " dragging" : ""}`}>
       <div className="wg-head">
         <div />
@@ -102,7 +104,7 @@ export function WeekGrid({ week, selectedId, onPick }: { week: Week; selectedId?
           const sessions = week.sessions.filter((s) => s.dayIndex === i);
           return (
             <div key={i} className={`wg-col${isT ? " today" : ""}${drag && drag.day === i ? " target" : ""}`}>
-              {sessions.map((s) => <Block key={s.id} s={s} y={y} selected={s.id === selectedId} drag={drag?.id === s.id ? drag : null} onDown={onDown(s)} onMove={onMove(s)} onUp={onUp(s)} onLock={() => plan.toggleLock(s.id)} />)}
+              {sessions.map((s) => <Block key={s.id} s={s} y={y} selected={s.id === selectedId} drag={drag?.id === s.id ? drag : null} onDown={onDown(s)} onMove={onMove(s)} onUp={onUp(s)} onLock={() => plan.toggleLock(s.id)} onPick={onPick} />)}
               {isT && nowH >= H0 && nowH <= H1 && (
                 <div className="wg-now" style={{ top: y(nowH) }}>
                   <span><b className="now-w">NOW </b>{hoursToClock(nowH)}</span>
@@ -114,10 +116,45 @@ export function WeekGrid({ week, selectedId, onPick }: { week: Week; selectedId?
       </div>
       </div>
     </div>
+    </>
   );
 }
 
-function Block({ s, y, selected, drag, onDown, onMove, onUp, onLock }: { s: Session; y: (h: number) => number; selected?: boolean; drag: Drag | null; onDown: (e: React.PointerEvent) => void; onMove: (e: React.PointerEvent) => void; onUp: (e: React.PointerEvent) => void; onLock: () => void }) {
+// Phones: the week as a list, one row per day. The time grid needs more width than a phone has.
+function WeekList({ week, selectedId, onPick }: { week: Week; selectedId?: string | null; onPick?: (s: Session) => void }) {
+  const start = fromYmd(week.start);
+  const t = today();
+  return (
+    <ol className="wl" aria-label={`Week ${week.week}`}>
+      {DAYS.map((d, i) => {
+        const date = addDays(start, i);
+        const isT = date.getTime() === t.getTime();
+        const ss = week.sessions.filter((s) => s.dayIndex === i);
+        return (
+          <li key={d} className={isT ? "today" : ""}>
+            <span className="wl-d"><span>{d}</span><b>{date.getDate()}</b></span>
+            <div className="wl-ss">
+              {ss.length === 0 || ss.every((s) => s.sport === "rest") ? <span className="wl-rest">Rest</span> : ss.filter((s) => s.sport !== "rest").map((s) => {
+                const a = s.status === "done" || s.status === "partial" ? s.actual : undefined;
+                return (
+                  <button key={s.id} type="button" className={`wl-s ${a?.sport ?? s.sport} ${s.status}${s.id === selectedId ? " sel" : ""}`} onClick={() => onPick?.(s)}>
+                    <SportIcon sport={a?.sport ?? s.sport} size={20} />
+                    <span className="t"><b>{a ? SPORT_LABEL[a.sport] : s.title}{s.start ? ` · ${a?.start ?? s.start}` : ""}</b><small>{a ? `${a.min} min done` : `${s.intensity} · ${s.min} min`}</small></span>
+                    {s.status !== "planned" && <span className={`wl-st ${s.status}`}>{s.status === "done" ? "✓" : STATUS_LABEL[s.status]}</span>}
+                    {s.locked && s.status !== "done" && <span className="wl-lk" aria-label="Locked"><Icon name="lock" /></span>}
+                  </button>
+                );
+              })}
+            </div>
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+function Block({ s, y, selected, drag, onDown, onMove, onUp, onLock, onPick }: { s: Session; y: (h: number) => number; selected?: boolean; drag: Drag | null; onDown: (e: React.PointerEvent) => void; onMove: (e: React.PointerEvent) => void; onUp: (e: React.PointerEvent) => void; onLock: () => void; onPick?: (s: Session) => void }) {
+  const onKey = (e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onPick?.(s); } };
   const done = s.status === "done" || s.status === "partial";
   const a = done ? s.actual : undefined;
   // what was actually done replaces the plan on the block: sport, name and length from the logged activity
@@ -133,7 +170,7 @@ function Block({ s, y, selected, drag, onDown, onMove, onUp, onLock }: { s: Sess
   const lock = !done && <button type="button" className="lk" onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onLock(); }} aria-label={s.locked ? "Unlock session" : "Lock session"} title={s.locked ? "Locked · click to unlock" : "Lock in place"}><Icon name={s.locked ? "lock" : "unlock"} /></button>;
   if (s.sport === "rest") {
     return (
-      <div className={cls} style={{ top: y(VIEW0) + 6, ...style }} {...handlers} role="button" tabIndex={0}>
+      <div className={cls} style={{ top: y(VIEW0) + 6, ...style }} {...handlers} role="button" tabIndex={0} aria-label={`Rest day, ${DAYS[s.dayIndex]}`} onKeyDown={onKey}>
         <SportIcon sport="rest" size={20} />
         <div className="txt"><b>Rest day{done && <span className="ck"><Icon name="check" /></span>}</b><small>No session</small></div>
         {lock}
@@ -143,7 +180,7 @@ function Block({ s, y, selected, drag, onDown, onMove, onUp, onLock }: { s: Sess
   const h1 = h0 + min / 60;
   const startLabel = drag ? clock(drag.h) : a?.start ?? s.start;
   return (
-    <div className={cls} style={{ top: y(h0) + 2, height: Math.max(44, (h1 - h0) * ROW - 4), ...style }} title={a ? `${a.name} · ${a.min} min${differs ? ` · planned ${s.title} ${s.min} min` : ""}` : s.text} {...handlers} role="button" tabIndex={0}>
+    <div className={cls} style={{ top: y(h0) + 2, height: Math.max(44, (h1 - h0) * ROW - 4), ...style }} title={a ? `${a.name} · ${a.min} min${differs ? ` · planned ${s.title} ${s.min} min` : ""}` : s.text} {...handlers} role="button" tabIndex={0} aria-label={`${s.title}, ${DAYS[s.dayIndex]} ${s.start ?? ""}, ${s.intensity}, ${s.min} minutes, ${s.status}`} onKeyDown={onKey}>
       <SportIcon sport={sport} size={20} />
       <div className="txt">
         <b>{a ? SPORT_LABEL[a.sport] : s.title}{done && <span className="ck"><Icon name="check" /></span>}<span className="dot">·</span>{startLabel}</b>
