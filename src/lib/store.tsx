@@ -73,6 +73,8 @@ export interface PlanStore {
   profile: Profile | null;
   race: Race | null;
   hasPlan: boolean;
+  /** True only for the owner's seed plan in local mode; example content (coach thread) shows only then. */
+  seed: boolean;
   planJson: PlanWeekJson[];
   intake: Intake | null;
   /** Save a race + availability + a generated plan in one go (the plan builder). Resets moves/edits/locks. */
@@ -162,7 +164,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
     const inPlan = (date: string) => !planRange || (date >= planRange.start && date <= planRange.end);
     const toActivity = (m: ManualActivity): Activity => ({ id: m.id, date: m.date, start: m.start, sport: m.sport, name: m.name, min: m.min, mi: m.mi, yd: m.yd, pace_s: m.pace_s, mph: m.mph, p100_s: m.p100_s, hr: m.hr, elev_ft: m.elev_ft, source: "manual", note: m.note, exertion: m.exertion });
     return {
-      ready, accounts: ACCOUNTS_ON, athlete, profile: data.profile, race: data.race, hasPlan: data.plan.length > 0, planJson: data.plan, body: data.body, intake: data.intake,
+      ready, accounts: ACCOUNTS_ON, athlete, profile: data.profile, race: data.race, hasPlan: data.plan.length > 0, seed: !ACCOUNTS_ON && data.plan === PLAN_SEED, planJson: data.plan, body: data.body, intake: data.intake,
       buildPlan: async (intake, weeks, race, availability) => {
         const state: PlanStateJson = { ...data.state, patches: {}, added: [], undone: false };
         // the athlete's own zones and thresholds, from the answers just given

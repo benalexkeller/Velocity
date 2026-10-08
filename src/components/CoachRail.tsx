@@ -6,14 +6,14 @@ import { usePlan } from "@/lib/store";
 
 export interface CoachMsg { who: "You" | "Coach" | "action"; at?: string; text: string }
 
-// Coach side panel. The seed thread is the example conversation; new messages go to the local store
-// and get a data answer until the coach service is connected. "Undo" reverts the example plan change.
+// Coach side panel. The seed thread (owner's local copy only) is the example conversation; new messages go to
+// the store and get a data answer until the coach service is connected. No fake plan changes are shown.
 export function CoachRail({ thread, placeholder = "Ask your coach or log how it went…", summary }: { thread: CoachMsg[]; placeholder?: string; summary?: string }) {
   const plan = usePlan();
   const [draft, setDraft] = useState("");
   const [menu, setMenu] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
-  const msgs: CoachMsg[] = [...thread.filter((m) => !(plan.undone && m.who === "action")), ...(plan.undone ? [{ who: "action" as const, at: "", text: "Plan change reverted · ride back to 07:30" }] : []), ...plan.thread];
+  const msgs: CoachMsg[] = [...thread.filter((m) => m.who !== "action"), ...plan.thread];
   useEffect(() => { const box = endRef.current?.parentElement; if (box) box.scrollTop = box.scrollHeight; }, [plan.thread.length]);
   function send() {
     const t = draft.trim();
@@ -29,8 +29,8 @@ export function CoachRail({ thread, placeholder = "Ask your coach or log how it 
           <button type="button" className="iconlink" aria-label="Coach options" aria-expanded={menu} onClick={() => setMenu((m) => !m)} style={{ width: 24, height: 24, color: "var(--muted)", border: 0, background: "none", padding: 0 }}><Icon name="more" /></button>
           {menu && (
             <div className="menu" role="menu">
-              <button type="button" role="menuitem" onClick={() => { plan.reset(); setMenu(false); }}>Clear my local changes ({plan.changes})</button>
-              <div className="muted small">Coach service: not connected. Sunday review: not scheduled.</div>
+              {!plan.accounts && <button type="button" role="menuitem" onClick={() => { plan.reset(); setMenu(false); }}>Clear changes saved on this device ({plan.changes})</button>}
+              <div className="muted small">Coach replies: limited to today, tomorrow, this week, moving a session and the race. Weekly review: not yet available.</div>
             </div>
           )}
         </span>
@@ -39,7 +39,7 @@ export function CoachRail({ thread, placeholder = "Ask your coach or log how it 
       <div className="msgs">
         {msgs.map((m, i) =>
           m.who === "action" ? (
-            <div key={i} className="msg action"><span className="ok">✓</span><b>{m.text}</b><button type="button" onClick={() => plan.undoPlanUpdate()}>{plan.undone ? "Redo" : "Undo"}</button></div>
+            <div key={i} className="msg action"><b>{m.text}</b></div>
           ) : (
             <div key={i} className={`msg ${m.who === "You" ? "user" : "coach-msg"}`}>
               <span className="who">{m.who} {m.at && <span style={{ marginLeft: 6 }}>{m.at}</span>}</span>
@@ -47,6 +47,7 @@ export function CoachRail({ thread, placeholder = "Ask your coach or log how it 
             </div>
           )
         )}
+        {msgs.length === 0 && <p className="muted small">No messages yet. Ask about today&apos;s session, this week or the race.</p>}
         <div ref={endRef} />
       </div>
       <form className="input" onSubmit={(e) => { e.preventDefault(); send(); }}>

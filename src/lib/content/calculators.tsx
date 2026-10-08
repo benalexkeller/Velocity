@@ -2,7 +2,8 @@
 import { useState } from "react";
 import type { Cube } from "@/components/Cubes";
 import { fmtHMS, fmtPace } from "@/lib/format";
-import { SEED_ANALYSIS } from "@/lib/analysis";
+import { useAnalysis } from "@/lib/useAnalysis";
+import type { RaceDistance } from "@/lib/athlete";
 
 // ---------- helpers ----------
 const num = (s: string) => { const n = parseFloat(s); return isNaN(n) ? 0 : n; };
@@ -18,8 +19,11 @@ const RACES = {
   "Sprint": { swimYd: 820, bikeMi: 12.4, runMi: 3.1 },
   "Marathon": { swimYd: 0, bikeMi: 0, runMi: 26.2 },
   "Half marathon": { swimYd: 0, bikeMi: 0, runMi: 13.1 },
+  "Century ride": { swimYd: 0, bikeMi: 100, runMi: 0 },
+  "Gran fondo (80 mi)": { swimYd: 0, bikeMi: 80, runMi: 0 },
 } as const;
 type RaceKey = keyof typeof RACES;
+const RACE_OF: Partial<Record<RaceDistance, RaceKey>> = { "140.6": "Ironman 140.6", "70.3": "Ironman 70.3", olympic: "Olympic", sprint: "Sprint", marathon: "Marathon", half: "Half marathon", century: "Century ride", gran_fondo: "Gran fondo (80 mi)" };
 
 function Res({ k, v, u, hero }: { k: string; v: string; u?: string; hero?: boolean }) {
   return <div className={hero ? "hero-v" : ""}><div className="k">{k}</div><div className="v">{v}{u && <small>{u}</small>}</div></div>;
@@ -27,13 +31,18 @@ function Res({ k, v, u, hero }: { k: string; v: string; u?: string; hero?: boole
 
 // ---------- 1. Race time ----------
 function RaceTime() {
-  const [race, setRace] = useState<RaceKey>("Ironman 140.6");
+  const an = useAnalysis();
+  const [race, setRace] = useState<RaceKey>(RACE_OF[an.athlete.race.distance] ?? "Ironman 140.6");
   const [swim, setSwim] = useState("2:05"); const [t1, setT1] = useState("8"); const [bike, setBike] = useState("17.5"); const [t2, setT2] = useState("5"); const [run, setRun] = useState("10:45");
   const d = RACES[race];
   const swimS = (d.swimYd / 100) * toSec(swim), bikeS = num(bike) ? (d.bikeMi / num(bike)) * 3600 : 0, runS = d.runMi * toSec(run);
   const tr = d.swimYd ? (num(t1) + num(t2)) * 60 : 0;
   const total = swimS + bikeS + runS + tr;
-  const mine = () => { const p = SEED_ANALYSIS.raceProjection(); const s = p.swimH && d.swimYd ? (p.swimH * 3600) / (4224 / 100) : null; const b = p.bikeH ? 112 / p.bikeH : null; const r = p.runH ? (p.runH * 3600) / 26.2 : null; if (s) setSwim(fmtPace(s)); if (b) setBike(b.toFixed(1)); if (r) setRun(fmtPace(r)); };
+  // the athlete's own 4-week averages (sessions long enough to count), never another account's
+  const avg = { swim: an.weightedAvgPace("swim"), bike: an.weightedAvgPace("bike"), run: an.weightedAvgPace("run") };
+  const hasAvg = (d.swimYd > 0 && avg.swim != null) || (d.bikeMi > 0 && avg.bike != null) || (d.runMi > 0 && avg.run != null);
+  const mine = () => { if (avg.swim) setSwim(fmtPace(avg.swim)); if (avg.bike) setBike(avg.bike.toFixed(1)); if (avg.run) setRun(fmtPace(avg.run)); };
+  const goalH = an.athlete.hasRace && an.athlete.race.goal ? an.athlete.raceSplits.swim + an.athlete.raceSplits.bike + an.athlete.raceSplits.run + an.athlete.raceSplits.transitions : null;
   return (
     <div className="calc">
       <div className="inputs">
@@ -41,18 +50,18 @@ function RaceTime() {
         {d.swimYd > 0 && <label>Swim pace per 100 yd (m:ss)<input value={swim} onChange={(e) => setSwim(e.target.value)} /></label>}
         {d.swimYd > 0 && <div className="two"><label>T1 (min)<input value={t1} onChange={(e) => setT1(e.target.value)} /></label><label>T2 (min)<input value={t2} onChange={(e) => setT2(e.target.value)} /></label></div>}
         {d.bikeMi > 0 && <label>Bike speed (mph)<input value={bike} onChange={(e) => setBike(e.target.value)} /></label>}
-        <label>Run pace per mile (m:ss)<input value={run} onChange={(e) => setRun(e.target.value)} /></label>
-        <button type="button" className="btn ghost" onClick={mine}>Use my current 4-week paces</button>
+        {d.runMi > 0 && <label>Run pace per mile (m:ss)<input value={run} onChange={(e) => setRun(e.target.value)} /></label>}
+        <button type="button" className="btn ghost" onClick={mine} disabled={!hasAvg}>{hasAvg ? "Use my 4-week average paces" : "No activities in the last 4 weeks"}</button>
       </div>
       <div className="out">
         <div className="res">
           <Res k="Finish time" v={hms(total)} hero />
           {d.swimYd > 0 && <Res k={`Swim ${(d.swimYd / 1760).toFixed(1)} mi`} v={hms(swimS)} />}
           {d.bikeMi > 0 && <Res k={`Bike ${d.bikeMi} mi`} v={hms(bikeS)} />}
-          <Res k={`Run ${d.runMi} mi`} v={hms(runS)} />
+          {d.runMi > 0 && <Res k={`Run ${d.runMi} mi`} v={hms(runS)} />}
           {d.swimYd > 0 && <Res k="Transitions" v={hms(tr)} />}
         </div>
-        <div className="note">Sub-13 at Ironman Texas needs about: swim 2:05/100 yd, T1 8 min, bike 17.5 mph, T2 5 min, run 10:45/mi.</div>
+        <div className="note">{goalH && RACE_OF[an.athlete.race.distance] === race ? `Your goal for ${an.athlete.race.name}: ${hms(goalH * 3600)}.` : "Average paces from training are a starting point; race-day pace over the full distance is usually slower."}</div>
       </div>
     </div>
   );

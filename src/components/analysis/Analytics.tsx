@@ -1,7 +1,6 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
-import { Icon } from "../icons";
 import { SportIcon } from "../SportIcon";
 import { CoachNote } from "../CoachNote";
 import { activityLoad, plannedLoad } from "@/lib/data";
@@ -347,36 +346,52 @@ export function Progress({ range, onPick }: { range: Range; onPick: (id: string)
 }
 
 // ---------- 7. Recovery ----------
+/** VO2max estimates over time (Garmin), one point per reading. Replaces the old home-made health score. */
+function Vo2Chart({ pts }: { pts: { date: string; v: number }[] }) {
+  if (pts.length < 2) return <p className="muted small">{pts.length ? `One reading: ${pts[0].v} on ${dateLabel(pts[0].date)}. The trend appears with the second.` : "No VO2max readings yet. They arrive with the Garmin import."}</p>;
+  const W = 300, H = 120, L = 30, R = 8, T = 10, B = 22;
+  const vs = pts.map((p) => p.v);
+  const lo = Math.floor(Math.min(...vs) - 1), hi = Math.ceil(Math.max(...vs) + 1);
+  const t0 = fromYmd(pts[0].date).getTime(), t1 = fromYmd(pts[pts.length - 1].date).getTime() || t0 + 1;
+  const x = (d: string) => L + ((fromYmd(d).getTime() - t0) / Math.max(1, t1 - t0)) * (W - L - R);
+  const y = (v: number) => T + ((hi - v) / Math.max(1, hi - lo)) * (H - T - B);
+  const ticks = [lo, Math.round((lo + hi) / 2), hi];
+  return (
+    <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="VO2max over time">
+      {ticks.map((v) => <g key={v}><line x1={L} x2={W - R} y1={y(v)} y2={y(v)} stroke="var(--grid)" /><text x={L - 6} y={y(v) + 4} textAnchor="end">{v}</text></g>)}
+      <polyline fill="none" stroke="var(--accent)" strokeWidth="2" points={pts.map((p) => `${x(p.date)},${y(p.v)}`).join(" ")} />
+      {pts.map((p) => <circle key={p.date} cx={x(p.date)} cy={y(p.v)} r="3" fill="var(--accent)" />)}
+      <text x={L} y={H - 6}>{shortDate(pts[0].date)}</text>
+      <text x={W - R} y={H - 6} textAnchor="end">{shortDate(pts[pts.length - 1].date)}</text>
+    </svg>
+  );
+}
 export function Recovery() {
   const an = useAnalysis();
   const bodySummary = an.bodySummary;
   const w = bodySummary(7), p = bodySummary(7, 7);
-  const h = an.healthScore();
-  const bars = (k: "rhr" | "hrv" | "sleep_h" | "stress") => [...Array(14)].map((_, i) => { const d = addDays(today(), -13 + i); const day = bodySummary(1, 13 - i); return k === "rhr" ? day.rhr ?? 0 : k === "hrv" ? day.hrv ?? 0 : k === "sleep_h" ? day.sleep ?? 0 : day.stress ?? 0; }).map((v) => v ?? 0);
-  const ring = h.score ?? 0, r = 46, c = 2 * Math.PI * r, len = (Math.min(100, ring) / 100) * c;
-  const tile = (label: string, v: string, delta: number | null, good: "up" | "down", k: "rhr" | "hrv" | "sleep_h" | "stress", suffix = "", digits = 0) => (
-    <div className="rt"><div className="k">{label}</div><div className="v">{v}</div><Delta v={delta} good={good} suffix={suffix} digits={digits} /><div className="u">7-day avg</div><Bars pts={bars(k)} w={120} h={26} /></div>
+  const vo2 = an.BODY.filter((b) => b.vo2 != null).map((b) => ({ date: b.date, v: b.vo2 as number }));
+  const vNow = vo2.at(-1), v4 = [...vo2].reverse().find((b) => fromYmd(b.date) <= addDays(today(), -28));
+  const lastOf = (k: "rhr" | "hrv" | "sleep_h" | "stress") => [...an.BODY].reverse().find((b) => b[k] != null)?.date;
+  const bars = (k: "rhr" | "hrv" | "sleep_h" | "stress") => [...Array(14)].map((_, i) => { const day = bodySummary(1, 13 - i); return k === "rhr" ? day.rhr ?? 0 : k === "hrv" ? day.hrv ?? 0 : k === "sleep_h" ? day.sleep ?? 0 : day.stress ?? 0; }).map((v) => v ?? 0);
+  const tile = (label: string, v: string | null, delta: number | null, good: "up" | "down", k: "rhr" | "hrv" | "sleep_h" | "stress", suffix = "", digits = 0) => (
+    <div className="rt"><div className="k">{label}</div><div className="v">{v ?? "—"}</div>{v != null && <Delta v={delta} good={good} suffix={suffix} digits={digits} />}<div className="u">{v != null ? "7-day average" : lastOf(k) ? `No data in 7 days · last ${dateLabel(lastOf(k) as string)}` : "No data yet"}</div>{v != null && <Bars pts={bars(k)} w={120} h={26} />}</div>
   );
   const pct = (a: number | null, b: number | null) => (a != null && b ? ((a - b) / b) * 100 : null);
   return (
     <section className="card ax-panel" aria-label="Recovery">
-      <div className="ax-head"><div><h2>Recovery</h2><p>Garmin body data · evidence for the Sunday review, not a daily verdict</p></div></div>
+      <div className="ax-head"><div><h2>Body</h2><p>Garmin body data · weekly trend, not a daily verdict</p></div></div>
       <div className="ax-recovery">
         <div className="tiles">
-          {tile("Sleep", w.sleep != null ? `${Math.floor(w.sleep)} h ${Math.round((w.sleep % 1) * 60)} m` : "—", pct(w.sleep, p.sleep), "up", "sleep_h")}
-          {tile("HRV", w.hrv != null ? `${w.hrv.toFixed(0)} ms` : "—", pct(w.hrv, p.hrv), "up", "hrv")}
-          {tile("Resting HR", w.rhr != null ? `${w.rhr.toFixed(0)} bpm` : "—", pct(w.rhr, p.rhr), "down", "rhr")}
-          {tile("Stress", w.stress != null ? w.stress.toFixed(0) : "—", pct(w.stress, p.stress), "down", "stress")}
+          {tile("Sleep", w.sleep != null ? `${Math.floor(w.sleep)} h ${Math.round((w.sleep % 1) * 60)} m` : null, pct(w.sleep, p.sleep), "up", "sleep_h")}
+          {tile("HRV", w.hrv != null ? `${w.hrv.toFixed(0)} ms` : null, pct(w.hrv, p.hrv), "up", "hrv")}
+          {tile("Resting HR", w.rhr != null ? `${w.rhr.toFixed(0)} bpm` : null, pct(w.rhr, p.rhr), "down", "rhr")}
+          {tile("Stress", w.stress != null ? w.stress.toFixed(0) : null, pct(w.stress, p.stress), "down", "stress")}
         </div>
-        <div className="score">
-          <div className="k">Health score</div>
-          <div className="ringwrap">
-            <svg viewBox="0 0 120 120" className="ring"><circle cx="60" cy="60" r={r} fill="none" stroke="var(--track)" strokeWidth="10" /><circle cx="60" cy="60" r={r} fill="none" stroke="var(--accent)" strokeWidth="10" strokeLinecap="round" strokeDasharray={`${len} ${c - len}`} transform="rotate(-90 60 60)" /><text x="60" y="58" textAnchor="middle" className="ink" fontSize="26" fontWeight="600">{h.score ?? "—"}</text><text x="60" y="76" textAnchor="middle" fontSize="10">/ 100</text></svg>
-            <div>
-              <b>{h.score == null ? "No data" : h.score >= 100 ? "Targets met" : h.score >= 85 ? "Near targets" : "Building"}</b>
-              <p>VO2max {h.inputs.vo2 ?? "—"} (target 60) · resting HR {h.inputs.rhr?.toFixed(0) ?? "—"} (38) · HRV {h.inputs.hrv?.toFixed(0) ?? "—"} (96). 70 = plan-start values, 100 = all targets.</p>
-            </div>
-          </div>
+        <div className="score vo2">
+          <div className="k">VO2max <span className="muted">· ml/kg/min · Garmin estimate</span></div>
+          <div className="vo2-now"><b>{vNow ? vNow.v : "—"}</b>{vNow && <span className="muted">{v4 ? `${vNow.v - v4.v >= 0 ? "+" : ""}${(vNow.v - v4.v).toFixed(0)} vs 4 weeks ago · ` : ""}last reading {dateLabel(vNow.date)}</span>}</div>
+          <Vo2Chart pts={vo2} />
         </div>
       </div>
     </section>
@@ -415,21 +430,34 @@ export function RaceReadiness() {
   const an = useAnalysis();
   const ATHLETE = an.athlete;
   const r = an.raceReadiness();
+  const D = ATHLETE.raceDist;
   const h = (x: number | null | undefined) => (x == null ? "—" : fmtHMS(x * 60));
-  const rng = (x: { lo: number; hi: number } | null) => (x ? `${h(x.lo)} – ${h(x.hi)}` : "—");
+  const swimLabel = D.swimYd >= 1760 ? `${(D.swimYd / 1760).toFixed(1)} mi` : `${D.swimYd.toLocaleString()} yd`;
+  const legs = ([
+    { k: "swim" as const, show: D.swimYd > 0, label: `Swim · ${swimLabel}`, v: r.swimH },
+    { k: "bike" as const, show: D.bikeMi > 0, label: `Bike · ${D.bikeMi} mi`, v: r.bikeH },
+    { k: "run" as const, show: D.runMi > 0, label: `Run · ${D.runMi} mi`, v: r.runH },
+  ]).filter((l) => l.show);
+  if (!ATHLETE.hasRace) {
+    return (
+      <section className="card ax-panel" aria-label="Race projection">
+        <div className="ax-head"><div><h2>Race projection</h2><p>No race set.</p></div><Link href="/plan/new" className="link">Set a race in the plan builder →</Link></div>
+      </section>
+    );
+  }
+  const so = [D.bikeMi > 0 ? `longest ride ${r.longest.bike.toFixed(1)} of ${D.bikeMi} mi` : null, D.runMi > 0 ? `longest run ${r.longest.run.toFixed(1)} of ${D.runMi} mi` : null].filter(Boolean).join(" · ");
   return (
-    <section className="card ax-panel" aria-label="Race readiness">
-      <div className="ax-head"><div><h2>Race readiness</h2><p>Projected from current 4-week average pace · no fatigue adjustment</p></div><span className="badge">{ATHLETE.race.name} · {ATHLETE.race.distanceLabel}</span></div>
-      <div className="ax-race">
-        <div className="leg"><SportIcon sport="swim" size={22} /><div><div className="k">Swim · 2.4 mi</div><div className="v">{h(r.swimH)}</div><div className="u">{rng(r.ranges.swim)}</div></div></div>
-        <div className="leg"><SportIcon sport="bike" size={22} /><div><div className="k">Bike · 112 mi</div><div className="v">{h(r.bikeH)}</div><div className="u">{rng(r.ranges.bike)}</div></div></div>
-        <div className="leg"><SportIcon sport="run" size={22} /><div><div className="k">Run · 26.2 mi</div><div className="v">{h(r.runH)}</div><div className="u">{rng(r.ranges.run)}</div></div></div>
-        <div className="leg total"><span className="trophy"><Icon name="check" /></span><div><div className="k">Total finish time</div><div className="v">{h(r.total)}</div><div className="u">{rng(r.ranges.total)} · incl. {h(r.transitions)} transitions</div></div></div>
-        <div className={`verdict ${r.onTrack ? "ok" : "warn"}`}>
-          <b>{!ATHLETE.hasRace ? "No race set · add it under Profile" : r.onTrack == null ? "Not enough data" : r.onTrack ? `On track for ${ATHLETE.race.goal || "the goal"}` : `${Math.round(r.gapMin ?? 0)} min behind ${ATHLETE.race.goal || "the goal"}`}</b>
-          <p>Goal {h(r.goalTotal)} · projected {h(r.total)} ({sign(r.gapMin != null ? Math.round(r.gapMin) : null)} min). {r.sessions4w} sessions in the last 4 weeks. Race capability score {r.score ?? "—"}.</p>
+    <section className="card ax-panel" aria-label="Race projection">
+      <div className="ax-head"><div><h2>Race projection</h2><p>{r.ready ? "From your longest recent sessions · run uses Riegel's distance formula" + (D.swimYd > 0 && D.runMi > 0 ? ", +12 % off the bike" : "") : "Shown from the Build phase, or once long sessions reach half the race distance"}</p></div><span className="badge">{ATHLETE.race.name}</span></div>
+      {!r.ready ? (
+        <p className="ax-note">Last 8 weeks: {so || "no long sessions yet"}.</p>
+      ) : (
+        <div className="ax-race">
+          {legs.map((l) => <div key={l.k} className="leg"><SportIcon sport={l.k} size={22} /><div><div className="k">{l.label}</div><div className="v">{h(l.v)}</div></div></div>)}
+          <div className="leg total"><div><div className="k">Projected finish</div><div className="v">{h(r.total)}</div>{r.transitions > 0 && <div className="u">incl. {h(r.transitions)} transitions</div>}</div></div>
+          {r.goalTotal != null && r.total != null && <div className="leg"><div><div className="k">Goal</div><div className="v">{h(r.goalTotal)}</div><div className="u">{Math.abs(Math.round(r.gapMin ?? 0))} min {(r.gapMin ?? 0) <= 0 ? "under" : "over"}</div></div></div>}
         </div>
-      </div>
+      )}
     </section>
   );
 }

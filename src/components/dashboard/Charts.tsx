@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { actualByDiscipline, plannedByDiscipline, type Activity } from "@/lib/data";
 import { usePlan } from "@/lib/store";
 import { fmtPace, fromYmd, shortDate, today, addDays, fmtHours } from "@/lib/format";
+import { paceEligible } from "@/lib/analysis";
 import { runPace, swimPace } from "@/lib/units";
 
 type Sp = "swim" | "bike" | "run";
@@ -19,7 +20,7 @@ export function PaceChart() {
   const plan = usePlan();
   const [sp, setSp] = useState<Sp>("run");
   const since = addDays(today(), -56);
-  const pts = plan.counted.filter((a) => a.sport === sp && fromYmd(a.date) >= since).map((a) => ({ date: a.date, v: paceOf(a, sp), min: a.min })).filter((p): p is { date: string; v: number; min: number } => p.v != null);
+  const pts = plan.counted.filter((a) => a.sport === sp && fromYmd(a.date) >= since && paceEligible(a, sp)).map((a) => ({ date: a.date, v: paceOf(a, sp), min: a.min })).filter((p): p is { date: string; v: number; min: number } => p.v != null);
   const inv = sp !== "bike"; // pace: faster (lower seconds) plotted higher, like the mock
   const W = 420, H = 190, L = 44, R = 10, T = 12, B = 26;
   let lo = pts.length ? Math.min(...pts.map((p) => p.v)) : 0, hi = pts.length ? Math.max(...pts.map((p) => p.v)) : 1;

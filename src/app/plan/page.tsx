@@ -189,7 +189,7 @@ function Plan() {
         )}
       </div>
 
-      <CoachRail thread={COACH_THREAD as never} summary={`Week ${week.week} · ${ws.done} of ${ws.total} sessions · ${fmtHours(ws.actualH)} of ${fmtHours(ws.plannedH)}${plan.changes ? ` · ${plan.changes} local change${plan.changes === 1 ? "" : "s"}` : " · plan unchanged since Sunday"}`} />
+      <CoachRail thread={(plan.seed ? COACH_THREAD : []) as never} summary={`Week ${week.week} · ${ws.done} of ${ws.total} sessions · ${fmtHours(ws.actualH)} of ${fmtHours(ws.plannedH)}`} />
     </main>
   );
 }

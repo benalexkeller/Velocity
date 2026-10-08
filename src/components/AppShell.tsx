@@ -58,8 +58,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           {greet}, {ATHLETE.firstName}.
         </span>
         <span className="meta">
-          {todayLabel()}{ATHLETE.weather ? ` · ${ATHLETE.weather}` : ""}
-          {ATHLETE.weather && <span style={{ width: 18, height: 18, display: "inline-flex" }}><Icon name="sun" /></span>}
+          {todayLabel()}
         </span>
         <AccountMenu />
       </header>

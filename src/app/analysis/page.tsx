@@ -3,7 +3,7 @@ import "./analysis.css";
 import { useState } from "react";
 import { CoachBar } from "@/components/CoachBar";
 import { ActivityAnalyzer, ActivityPanel } from "@/components/analysis/Panels";
-import { KpiRow, LoadDistribution, Observations, Overview, Progress, Quality, RaceReadiness, Recovery, SportRow, Volume, type Range } from "@/components/analysis/Analytics";
+import { KpiRow, Observations, Overview, Progress, Quality, RaceReadiness, Recovery, SportRow, Volume, type Range } from "@/components/analysis/Analytics";
 import { addDays, dateLabel, today } from "@/lib/format";
 import { usePlan } from "@/lib/store";
 
@@ -33,7 +33,6 @@ export default function AnalysisPage() {
         <KpiRow />
         <Overview range={range} />
         <Volume range={range} />
-        <LoadDistribution range={range} />
         <SportRow />
         <Progress range={range} onPick={pick} />
         <Recovery />

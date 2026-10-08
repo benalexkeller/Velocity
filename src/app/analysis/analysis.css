@@ -110,14 +110,15 @@
 .ax-quality tr.row { cursor: pointer; }
 
 /* 9. race */
-.ax-race { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)) 300px; gap: 12px; align-items: stretch; }
+.ax-race { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; align-items: stretch; }
+.ax-note { margin: 0; font-size: 14px; color: var(--ink-2); }
+.ax-recovery .vo2-now { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; font-size: 13px; }
+.ax-recovery .vo2-now b { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; }
 .leg { border: 1px solid var(--line-2); border-radius: 12px; padding: 12px 14px; display: flex; gap: 10px; align-items: flex-start; }
 .leg .sport-icon, .leg .trophy { color: var(--accent); flex: 0 0 auto; }
 .leg .trophy { width: 22px; height: 22px; display: inline-flex; } .leg .trophy svg { stroke: currentColor; fill: none; stroke-width: 2.4; }
 .leg .k { font-size: 12px; color: var(--muted); } .leg .v { font-size: 24px; font-weight: 600; letter-spacing: -0.02em; margin: 2px 0; } .leg .u { font-size: 11.5px; color: var(--muted); }
 .leg.total { background: var(--surface-2); }
-.verdict { border-radius: 12px; padding: 12px 14px; background: #EAF7EF; } .verdict.warn { background: #FDF3E7; }
-.verdict b { display: block; font-size: 14px; margin-bottom: 4px; } .verdict p { margin: 0; font-size: 12.5px; color: var(--ink-2); line-height: 1.45; }
 
 /* 10. observations */
 .ax-obs { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
@@ -132,7 +133,7 @@
 @media (max-width: 1250px) {
   .ax-kpis { grid-template-columns: repeat(3, 1fr); }
   .ax-dist { grid-template-columns: 1fr 1fr; } .ax-dist .note { grid-column: 1 / -1; }
-  .ax-race { grid-template-columns: repeat(2, 1fr); } .verdict { grid-column: 1 / -1; }
+  .ax-race { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .ax-recovery { grid-template-columns: 1fr; }
 }
 @media (max-width: 800px) {

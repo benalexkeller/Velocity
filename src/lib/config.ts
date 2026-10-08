@@ -5,7 +5,7 @@ export const BRAND = { name: "Velocity" };
 export const ATHLETE = {
   firstName: "PR",
   units: "imperial" as "imperial" | "metric",
-  weather: "22°C",
+  weather: "",
   city: "Munich",
   race: { name: "IRONMAN Texas", date: "2027-04-24", goal: "Sub-13", distanceLabel: "140.6" },
   // Sub-13 race targets used for the race bar (hours)

@@ -228,7 +228,7 @@ export const NUTRITION: Cube[] = [
           <li>45 kcal/kg FFM/day: full adaptation. 30–45: acceptable short-term. Under 30: impaired recovery, hormones, immune function and bone (RED-S).</li>
           <li>75 kg athlete at 15% body fat: FFM 64 kg. A 2-hour ride (about 1400 kcal) on a 2500 kcal intake leaves 1100 kcal = 17 kcal/kg FFM. Too low.</li>
           <li>Weight loss, if wanted, belongs in Base 1–2 at a maximum deficit of 300–500 kcal per day, never on long-ride days, and never in Build or Peak.</li>
-          <li>Warning signs: rising resting HR, falling HRV, poor sleep, repeated illness, stalled paces at the same effort. The Health score tracks the first three.</li>
+          <li>Warning signs: rising resting HR, falling HRV, poor sleep, repeated illness, stalled paces at the same effort. The Body panel on Analysis shows the first three.</li>
         </ul>
       </>
     ),

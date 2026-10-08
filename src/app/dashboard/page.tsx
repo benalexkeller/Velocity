@@ -11,7 +11,7 @@ import { useEffect, useState } from "react";
 import { PaceChart, VolumeChart } from "@/components/dashboard/Charts";
 import { rollingCompliance, weekLoad, type Session } from "@/lib/data";
 import { usePlan } from "@/lib/store";
-import { DAYS, MONTHS, addDays, dateLabel, fmtDur, fmtHMS, fromYmd, today, ymd } from "@/lib/format";
+import { DAYS, MONTHS, addDays, dateLabel, fmtDur, fmtHMS, fromYmd, shortDate, today, ymd } from "@/lib/format";
 import { fmtDist, fmtSpeed, runPace, swimDist, swimPace } from "@/lib/units";
 import { fmtPace } from "@/lib/format";
 
@@ -41,7 +41,9 @@ export default function Dashboard() {
   const todayS = plan.sessionOn(ds);
   const next = [1, 2].map((n) => ({ off: n, s: plan.sessionOn(ymd(addDays(t, n))) }));
   const last = plan.counted[plan.counted.length - 1];
-  const garmin = plan.activities.some((a) => a.source === "garmin"); // until the Garmin connection exists, "connected" = Garmin data present
+  // no live Garmin connection yet: say when the last import happened, never "connected"
+  const lastGarmin = [...plan.activities].reverse().find((a) => a.source === "garmin");
+  const garmin = !!lastGarmin;
   const done = todayS?.status === "done";
   const tgt = todayS ? target(todayS, plan.athlete.zones) : null;
   const PHASES = plan.phases, WEEKS = plan.weeks;
@@ -80,7 +82,7 @@ export default function Dashboard() {
                   <div className="stat"><div className="k">Next session</div><div className="v">{next[0].s ? `${next[0].s.title} ${next[0].s.min} min` : "—"}</div><div className="u">{next[0].s ? `${DAYS[(addDays(t, 1).getDay() + 6) % 7]}${next[0].s.start ? ` · ${next[0].s.start}` : ""}` : ""}</div></div>
                 </>
               )}
-              <div className="stat gm">{garmin && <div className="garmin" aria-hidden="true"><Watch width={116} /></div>}<div className="k">Garmin</div><div className="v">{garmin ? <><i className="led" />Connected</> : <span className="dim">Not connected</span>}</div></div>
+              <div className="stat gm">{garmin && <div className="garmin" aria-hidden="true"><Watch width={116} time={last ? fmtHMS(last.min) : ""} dist={last?.mi ? `${last.mi.toFixed(1)} mi` : last?.yd ? `${last.yd.toLocaleString()} yd` : ""} hr={last?.hr} /></div>}<div className="k">Garmin</div><div className="v">{garmin ? <span className="garmin-date">Imported {shortDate(lastGarmin!.date)}</span> : <span className="dim">Not connected</span>}</div></div>
             </div>
           </Link>
 

@@ -32,57 +32,6 @@ function Spark({ pts, w = 120, h = 34 }: { pts: (number | null)[]; w?: number; h
   );
 }
 
-export function ScoreRow() {
-  const an = useAnalysis();
-  const ATHLETE = an.athlete;
-  const race = an.raceScore(), health = an.healthScore();
-  const raceHist = [28, 21, 14, 7, 0].map((o) => an.raceScore(o).score);
-  const healthHist = [28, 21, 14, 7, 0].map((o) => an.healthScore(o).score);
-  const load = an.loadNow();
-  const comp = an.rollingCompliance(28), wk = an.weekStatus(an.currentWeek());
-  const phases = an.complianceByPhase();
-  const delta = (h: (number | null)[]) => (h[4] != null && h[0] != null ? (h[4] as number) - (h[0] as number) : null);
-  return (
-    <div className="an-scores">
-      <section className="card score" aria-label="Race capability score">
-        <div className="eyebrow">Race capability</div>
-        <div className="row"><div className="big">{race.score ?? "—"}</div><Spark pts={raceHist} /></div>
-        <div className="sub">{sign(delta(raceHist))} vs 4 weeks ago · 100 = on track for {ATHLETE.race.goal}</div>
-        <div className="parts">
-          <span>Run {race.parts.run?.toFixed(0) ?? "—"}</span><span>Bike {race.parts.bike?.toFixed(0) ?? "—"}</span><span>Swim {race.parts.swim?.toFixed(0) ?? "—"}</span><span>Durability {race.parts.durability?.toFixed(0) ?? "—"}</span>
-        </div>
-      </section>
-      <section className="card score" aria-label="Health score">
-        <div className="eyebrow">Health</div>
-        <div className="row"><div className="big">{health.score ?? "—"}</div><Spark pts={healthHist} /></div>
-        <div className="sub">{sign(delta(healthHist))} vs 4 weeks ago · 100 = all targets met</div>
-        <div className="parts">
-          <span>VO2 {health.inputs.vo2 ?? "—"}</span><span>RHR {health.inputs.rhr?.toFixed(0) ?? "—"}</span><span>HRV {health.inputs.hrv?.toFixed(0) ?? "—"}</span>
-        </div>
-      </section>
-      <section className="card score" aria-label="Load">
-        <div className="eyebrow">Fitness · Fatigue · Form</div>
-        <div className="triple">
-          <div><div className="big">{load.fitness.toFixed(0)}</div><div className="k">Fitness</div></div>
-          <div><div className="big">{load.fatigue.toFixed(0)}</div><div className="k">Fatigue</div></div>
-          <div><div className="big">{sign(load.form)}</div><div className="k">Form</div></div>
-        </div>
-        <div className="sub">{load.rampFlag ? <span className="flag">Load ramp {sign(load.ramp * 100)}% vs last week — above 10%</span> : `This week ${load.thisWeek} · last week ${load.lastWeek} · ramp ${sign(load.ramp * 100)}%`}</div>
-      </section>
-      <section className="card score" aria-label="Compliance">
-        <div className="eyebrow">Compliance</div>
-        <div className="triple">
-          <div><div className="big">{wk.done}<span className="dim">/{wk.total}</span></div><div className="k">This week</div></div>
-          <div><div className="big">{comp.pct}<span className="dim">%</span></div><div className="k">28 days</div></div>
-          <div><div className="big">{phases[phases.length - 1]?.pct ?? "—"}<span className="dim">%</span></div><div className="k">{phases[phases.length - 1]?.phase ?? "Phase"}</div></div>
-        </div>
-        <div className="sub">Sessions done ÷ sessions planned. Rest days excluded.</div>
-      </section>
-    </div>
-  );
-}
-
-// ---------- Load chart ----------
 export function LoadChart({ range }: { range: Range }) {
   const { LOAD_SERIES } = useAnalysis();
   const days = range === 99 ? LOAD_SERIES.length : Math.min(LOAD_SERIES.length, range * 7);
