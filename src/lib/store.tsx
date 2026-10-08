@@ -3,10 +3,11 @@
 // working copy in memory, writes every change straight back. Everything the pages read comes from here.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { ACTIVITIES as SEED_ACTIVITIES, PLAN_SEED, SPORT_LABEL, buildWeeks, intensityOf, isRaceDay, phasesOf, sportOf, sumH, virtualWeeks, whyOf, type Activity, type Phase, type PlanWeekJson, type Session, type Sport, type Week } from "./data";
+import { ACTIVITIES as SEED_ACTIVITIES, PLAN_SEED, SPORT_LABEL, STATUS_CREDIT, buildWeeks, fitsSession, intensityOf, isRaceDay, phasesOf, sportOf, statusOf, sumH, virtualWeeks, whyOf, type Activity, type Phase, type PlanWeekJson, type Session, type Sport, type Week } from "./data";
 import { BODY_SEED, type BodyDay } from "./analysis";
 import { athleteOf, type Athlete, type Profile, type Race } from "./athlete";
 import type { Intake } from "./plan/intake";
+import { deriveZones } from "./plan/zones";
 import type { Availability } from "./data";
 import { EMPTY_DATA, makeBackend, readLocal, type AddedSession, type Backend, type PlanStateJson, type SessionPatch, type ThreadMsg, type UserData } from "./backend";
 import { ACCOUNTS_ON } from "./supabase/env";
@@ -22,7 +23,6 @@ function derive(data: UserData, athlete: Athlete) {
   const activities = [...data.activities].sort((a, b) => (a.date + (a.start ?? "")).localeCompare(b.date + (b.start ?? "")));
   const counted = activities.filter((a) => !a.excluded);
   const on = (date: string) => counted.filter((a) => a.date === date);
-  const t = today();
   const baseWeeks = data.plan.length ? buildWeeks(data.plan, [], athlete.availability) : virtualWeeks();
   const st = data.state;
   const base: Session[] = [];
@@ -44,23 +44,22 @@ function derive(data: UserData, athlete: Athlete) {
   const weeks: Week[] = baseWeeks.map((w) => {
     const start = fromYmd(w.start);
     const inWeek = base.filter((s) => { const d = fromYmd(s.date); return d >= start && d <= addDays(start, 6); });
-    // pair each day's sessions with what was logged: same sport first (brick = bike or run), then whatever is left, longest first
+    // pair each day's sessions with what was logged: same sport only (brick = bike or run), longest first.
+    // An activity of another sport never completes a session; it makes the session "substituted".
     const actualOf = new Map<string, Activity>();
     for (const date of new Set(inWeek.map((s) => s.date))) {
       const acts = [...on(date)].sort((a, b) => b.min - a.min);
-      const ss = inWeek.filter((s) => s.date === date && s.sport !== "rest");
+      const ss = inWeek.filter((s) => s.date === date && s.sport !== "rest").sort((a, b) => b.min - a.min);
       const free = new Set(acts.map((a) => a.id));
-      const fits = (s: Session, a: Activity) => a.sport === s.sport || (s.sport === "brick" && (a.sport === "bike" || a.sport === "run"));
-      for (const s of ss) { const a = acts.find((x) => free.has(x.id) && fits(s, x)); if (a) { actualOf.set(s.id, a); free.delete(a.id); } }
-      for (const s of ss) { if (actualOf.has(s.id)) continue; const a = acts.find((x) => free.has(x.id)); if (a) { actualOf.set(s.id, a); free.delete(a.id); } }
+      for (const s of ss) { const a = acts.find((x) => free.has(x.id) && fitsSession(s.sport, x)); if (a) { actualOf.set(s.id, a); free.delete(a.id); } }
     }
     const sessions = inWeek.map((s) => {
       const d = fromYmd(s.date);
       const dayIndex = Math.round((d.getTime() - start.getTime()) / 86400000);
-      const acts = on(s.date);
-      const isPast = d < t;
-      const status: Session["status"] = acts.length ? "done" : s.sport === "rest" ? (isPast ? "done" : "planned") : isPast ? "missed" : "planned";
-      return { ...s, dayIndex, status, actual: actualOf.get(s.id) };
+      const paired = actualOf.get(s.id);
+      const others = on(s.date).filter((a) => a !== paired && ![...actualOf.values()].includes(a));
+      const status: Session["status"] = statusOf(s, paired, others);
+      return { ...s, dayIndex, status, actual: paired };
     }).sort((a, b) => a.dayIndex - b.dayIndex || (a.start ?? "").localeCompare(b.start ?? ""));
     return { ...w, sessions, plannedMin: sessions.reduce((x, s) => x + (s.min || 0), 0) - (w.race ? sessions.filter((s) => isRaceDay(s.text)).reduce((x, s) => x + s.min, 0) : 0) };
   });
@@ -91,7 +90,7 @@ export interface PlanStore {
   weekOf: (d: Date) => Week | undefined;
   currentWeek: () => Week;
   weekByNumber: (n: number) => Week;
-  weekStatus: (w: Week) => { done: number; total: number; actualH: number; plannedH: number; bySport: { swim: number; bike: number; run: number; other: number } };
+  weekStatus: (w: Week) => { done: number; credit: number; total: number; actualH: number; plannedH: number; bySport: { swim: number; bike: number; run: number; other: number } };
   sessionOn: (date: string) => Session | undefined;
   findSession: (id: string | null) => { s: Session; w: Week } | null;
   moveSession: (id: string, to: { date: string; start?: string }) => void;
@@ -153,7 +152,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
       const sessions = w.sessions.filter((s) => s.sport !== "rest");
       const by = { swim: 0, bike: 0, run: 0, other: 0 };
       for (let i = 0; i < 7; i++) for (const a of d.activitiesOn(ymd(addDays(fromYmd(w.start), i)))) { const h = a.min / 60; if (a.sport === "swim" || a.sport === "bike" || a.sport === "run") by[a.sport] += h; else by.other += h; }
-      return { done: sessions.filter((s) => s.status === "done").length, total: sessions.length, actualH: sumH(by), plannedH: w.plannedMin / 60, bySport: by };
+      return { done: sessions.filter((s) => s.status === "done").length, credit: sessions.reduce((x, s) => x + STATUS_CREDIT[s.status], 0), total: sessions.length, actualH: sumH(by), plannedH: w.plannedMin / 60, bySport: by };
     };
     const sessionOn = (date: string) => { const w = weekOf(fromYmd(date)); return w?.sessions.find((s) => s.date === date); };
     const findSession = (id: string | null) => { if (!id) return null; for (const w of d.weeks) { const s = w.sessions.find((x) => x.id === id); if (s) return { s, w }; } return null; };
@@ -166,11 +165,14 @@ export function PlanProvider({ children }: { children: ReactNode }) {
       ready, accounts: ACCOUNTS_ON, athlete, profile: data.profile, race: data.race, hasPlan: data.plan.length > 0, planJson: data.plan, body: data.body, intake: data.intake,
       buildPlan: async (intake, weeks, race, availability) => {
         const state: PlanStateJson = { ...data.state, patches: {}, added: [], undone: false };
+        // the athlete's own zones and thresholds, from the answers just given
+        const zones = deriveZones(intake, athlete.units, race.distance);
         await be.saveRace(race);
-        await be.saveProfile({ availability });
+        await be.saveProfile({ availability, ...(zones ? { zones } : {}) });
         await be.savePlan(weeks, intake);
         await be.saveState(state);
-        setData((cur) => ({ ...cur, race, plan: weeks, intake, state, availability, profile: cur.profile ? { ...cur.profile, availability } : cur.profile }));
+        const cur2 = await be.load().catch(() => null);
+        setData((cur) => cur2 ?? ({ ...cur, race, plan: weeks, intake, state, availability, profile: cur.profile ? { ...cur.profile, availability, ...(zones ? { zones } : {}) } : cur.profile }));
       },
       replacePlan: async (weeks) => {
         const state: PlanStateJson = { ...data.state, patches: {}, added: [], undone: false };

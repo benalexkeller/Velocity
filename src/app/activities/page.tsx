@@ -7,6 +7,7 @@ import { SportIcon } from "@/components/SportIcon";
 import { MapModal, RouteMap } from "@/components/RouteMap";
 import { CoachNote } from "@/components/CoachNote";
 import { activityLoad, type Activity } from "@/lib/data";
+import { hrZone } from "@/lib/athlete";
 import { usePlan } from "@/lib/store";
 import { DAYS, MONTHS, addDays, fmtHMS, fmtPace, fromYmd, today } from "@/lib/format";
 import { elev, fmtDist, fmtSpeed, runPace, swimDist, swimPace } from "@/lib/units";
@@ -41,9 +42,9 @@ function paceOrPower(a: Activity) {
   if (a.sport === "bike" && a.mph) return { v: fmtSpeed(a.mph), u: "" };
   return { v: "—", u: "" };
 }
-function effortLevel(a: Activity) {
+function effortLevel(a: Activity, lthr: number | null) {
   if (a.exertion) return Math.min(5, Math.ceil(a.exertion / 2));
-  if (a.hr) return a.hr > 168 ? 5 : a.hr > 158 ? 4 : a.hr > 148 ? 3 : a.hr > 135 ? 2 : 1;
+  if (a.hr) return hrZone(a.sport, a.hr, lthr);
   return 0;
 }
 function Effort({ n }: { n: number }) {
@@ -131,7 +132,7 @@ function Activities() {
                       <td className="num">{fmtHMS(a.min)}</td>
                       <td className="num hide-sm">{pp.v}<small>{pp.u}</small></td>
                       <td className="num hide-sm">{a.elev_ft ? `${elev(a.elev_ft).v.toLocaleString()} ${elev(0).u}` : "—"}</td>
-                      <td className="hide-sm">{effortLevel(a) ? <Effort n={effortLevel(a)} /> : "—"}</td>
+                      <td className="hide-sm">{effortLevel(a, plan.athlete.lthr) ? <Effort n={effortLevel(a, plan.athlete.lthr)} /> : "—"}</td>
                       <td>{a.route ? <div className="thumb"><RouteMap route={a.route} height={36} bg="var(--surface-2)" pad={0.1} /></div> : null}</td>
                       <td><span className="chev"><Icon name="chevron" /></span></td>
                     </tr>
@@ -185,8 +186,8 @@ function Drawer({ a, onDeleted }: { a: Activity; onDeleted: () => void }) {
         <div><div className="v">{pp.v}<small>{pp.u}</small></div><div className="k">{a.sport === "bike" ? "Avg speed" : "Pace"}</div></div>
         {a.hr ? <div><div className="v">{Math.round(a.hr)}<small>bpm</small></div><div className="k">Avg heart rate</div></div> : null}
         {a.elev_ft ? <div><div className="v">{elev(a.elev_ft).v.toLocaleString()}<small>{elev(0).u}</small></div><div className="k">Elevation gain</div></div> : null}
-        <div><div className="v">{activityLoad(a)}</div><div className="k">Load</div></div>
-        <div><div className="v"><Effort n={effortLevel(a) || 1} /></div><div className="k">Effort</div></div>
+        <div><div className="v">{activityLoad(a, plan.athlete.lthr ?? undefined)}</div><div className="k">Load</div></div>
+        <div><div className="v"><Effort n={effortLevel(a, plan.athlete.lthr) || 1} /></div><div className="k">Effort</div></div>
       </div>
       <h4>Route</h4>
       <div className="map">

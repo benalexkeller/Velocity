@@ -38,6 +38,8 @@
 .wg-ev.done { background: var(--run-soft); color: #fff; }
 .wg-ev.done .sport-icon, .wg-ev.done .ck { color: #fff; }
 .wg-ev.done small { opacity: 0.75; }
+.wg-ev.partial { background: var(--muted); }
+.wg-ev.substituted { border: 1px dashed var(--muted); background: var(--surface); color: var(--ink); }
 .wg-ev.rest { background: var(--strength-soft); }
 .wg-ev.rest .sport-icon { color: var(--ink-2); }
 .wg-ev.rest.done { background: var(--run-soft); color: #fff; }
@@ -66,7 +68,9 @@
 .sp-head h2 .dim { color: var(--muted); font-weight: 400; }
 .sp-head .status { margin-left: auto; display: inline-block; font-size: 12px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; border-radius: 999px; padding: 4px 10px; background: var(--swim-soft); color: var(--accent); }
 .sp-head .status.done { background: var(--run-soft); color: #fff; }
-.sp-head .status.missed { background: #FDECEC; color: #B42318; }
+.sp-head .status.missed { background: var(--danger-soft); color: var(--danger); }
+.sp-head .status.partial { background: var(--surface-2); color: var(--ink-2); }
+.sp-head .status.substituted { background: var(--surface-2); color: var(--ink-2); }
 .sp-head .status.locked { margin-left: auto; background: var(--surface-2); color: var(--ink-2); display: inline-flex; align-items: center; gap: 5px; } .sp-head .status.locked + .status { margin-left: 0; }
 .sp-head .status.locked svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 1.8; }
 .sp-left .stat.actual .v { color: var(--accent); }

@@ -50,3 +50,24 @@ Rules that still apply (from `CLAUDE.md` and the owner):
 
 - 2026-10-07 23:30 — reviews merged; branch `deslop` created with `qa/`; no fixes yet.
 - 2026-10-08 — Slice 1 (First 15 items 1–3) done and verified by `qa/verify1.js` (17 checks): V-001 V-002 V-003 V-004 V-005 V-006 V-007 V-036 V-056 V-057 V-133. Semantic colour tokens (`--ok/--warn/--danger`, `--z1…--z5`) added to `globals.css` for later slices. Next: item 4 (zones from intake, V-015) → item 5 (LTHR load, V-019/020/089) → item 6 (session status, V-016/088).
+- 2026-10-08 — Slice 2 (First 15 items 4–6) done and verified by `qa/verify2.js` (8 checks): V-015 zones derived from the builder's answers (`src/lib/plan/zones.ts`, saved to `profile.zones` with `meta.lthr/ftp` at build time; panel says "from your answers"); V-019/020 load = min × (HR ÷ LTHR)² with `athlete.lthr` (seed athlete keeps 155), RPE and sport defaults, one `hrZone()` in `lib/athlete.ts` used by Analysis and Activities; V-089 planned load uses one formula (`plannedLoad`) on Analysis too; V-016 session status by paired same-sport activity (`statusOf` in `lib/data/index.ts`: done ≥ 70 %, partial, substituted, missed) — compliance counts partial/substituted as 0.5, today's open session not counted (V-088 naming "Completed sessions" on dashboard + Analysis tile).
+
+## What is left (in order) — for the next session, any model
+
+Done so far: First 15 items **1–6** (11 P0s closed: V-001…007, 015, 016, 019, 020, 036 + P1/P2 036, 056, 057, 088, 089, 133). Branch `deslop` passes `tsc` and `next build`; both verify scripts pass against the local build.
+
+Next, exactly as REPORT.md §5 describes them (row numbers = §3 of REPORT.md):
+7. Delete the race capability score, health score and "On track" verdict; gate the projection; race legs from `athlete.raceDist` (V-022, 023, 024, 025, 143). Files: `lib/analysis.ts` (raceScore, healthScore, raceReadiness), `components/analysis/Analytics.tsx:374–430`, `Panels.tsx:50`.
+8. Analysis crash + cold start (V-029, 021, 027): `lib/analysis.ts:80–94` start 42 days before min(planStart, first activity), seed the EWMA, `LOAD_SERIES.at(-1) ?? …`; add `src/app/error.tsx`; minimum-duration filter in `weightedAvgPace`.
+9. Seed out of other accounts (V-035 calculators `SEED_ANALYSIS` → `useAnalysis()`, V-054 coach thread only on the seed, V-047 delete weather, V-050 "Garmin · imported <date>", V-051 real numbers on the watch).
+10. Nutrition `targetsFor` (V-030 fat cap 1.2 g/kg, V-031 carb-load days + race-day detection) in `lib/nutrition/targets.ts`.
+11. Nutrition reads what was done (V-032), real meal slots (V-033), estimate days "—" (V-034), During row (V-091), no targets without a weight (V-104).
+12. Plan hours tell the truth (V-008, 009, 011, 013) in `lib/plan/generate.ts`; re-run `qa/harness/C3/gen.ts` after.
+13. Phone CSS pass (V-106, 107, 152, 153) — acceptance: `scrollWidth === 390` on every state in `qa/shots.js` output `_log.txt`.
+14. Type ramp + colour tokens (V-110–113, 116) — `--ok/--warn/--danger/--z1…5` already exist in `globals.css :root`; the ramp and the 125 hex literals are still to do.
+15. Charts: `lib/ticks.ts niceTicks`, container-measured width, zero floor, shared `ZONE_FILL` (V-124, 125, 126, 028).
+Then the remaining work packages WP6–WP11 (REPORT.md §6).
+
+Known follow-ups from slices 1–2: the seed athlete's load numbers moved slightly (RPE path and sport defaults changed; HR path unchanged at LTHR 155); `eslint` still reports the pre-existing `set-state-in-effect` pattern (41 → ~44 errors, none new in kind); metric athletes still see imperial pace strings in zones (zones are stored imperial; metric display is roadmap item 4).
+
+How to verify after each slice: `cd velocity && npx tsc --noEmit -p . && npx next build && (npx next start -p 3111 &)` then `node qa/verify1.js` and `node qa/verify2.js` from a folder that has `playwright` installed (see "How to resume").

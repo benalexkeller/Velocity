@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Icon } from "../icons";
 import { SportIcon } from "../SportIcon";
 import { CoachNote } from "../CoachNote";
-import { activityLoad } from "@/lib/data";
+import { activityLoad, plannedLoad } from "@/lib/data";
 import { METRICS, type Metric } from "@/lib/analysis";
 import { useAnalysis } from "@/lib/useAnalysis";
 import { addDays, dateLabel, fmtHMS, fmtHours, fmtPace, fromYmd, shortDate, today } from "@/lib/format";
@@ -52,7 +52,7 @@ export const KPI_INFO = {
   fatigue: { title: "Fatigue (acute load)", text: "The same exponentially weighted average of daily load, but with a 7-day time constant (ATL). It reacts fast: a big week pushes it up within days and a rest week drops it. On its own it is neither good nor bad; read it against Fitness. A fall is shown as positive because it usually means recovery." },
   form: { title: "Form (training stress balance)", text: "Fitness minus Fatigue (TSB). Negative during loading blocks (you are carrying more acute than chronic load), positive after a taper or rest week. Roughly: below −30 you are digging deep, −10 to +5 is normal build training, +5 to +25 is fresh. Race day should be positive. Change is in points vs 7 days ago." },
   volume: { title: "Weekly volume", text: "Hours of completed activities in the current plan week (Monday to Sunday), all sports, taken from Garmin and manual logs. Change is vs the previous plan week. The dashboard's This week card shows the same number next to the planned hours." },
-  consistency: { title: "Consistency", text: "Sessions completed ÷ sessions planned over the last 12 plan weeks, rest days excluded. A session counts as completed when any activity is logged on its day. Compliance, not quality: it does not judge pace or duration. Change is in percentage points vs the 12 weeks before." },
+  consistency: { title: "Completed sessions", text: "Sessions completed ÷ sessions planned over the last 12 plan weeks, rest days excluded. Completed = an activity of the same sport covering at least 70 % of the planned time; a shorter one or another sport counts half; today's session is not counted until the day is over. It does not judge pace. Change is in percentage points vs the 12 weeks before." },
   zones: { title: "Load by heart-rate zone", text: "Each session's load is assigned to a zone by its average heart rate: Z1 below 135 bpm, Z2 135–147, Z3 148–157, Z4 158–167, Z5 168 and above (provisional zones, recalibrated at the week-4 threshold test). Share = that zone's load ÷ all load with heart rate. Load = the sum, minutes × intensity factor. Sessions without heart rate are excluded from the split. Per-second heart-rate data from the Garmin connection will replace the per-session average." },
   intensity: { title: "Intensity distribution", text: "Easy = Z1 + Z2 (below the first ventilatory threshold, conversational), Moderate = Z3 (between thresholds, tempo), Hard = Z4 + Z5 (above the second threshold). Polarized and pyramidal endurance programmes put 75–85% of load in the easy band; this plan targets 75–80% in the Base phases." },
 } as const;
@@ -68,7 +68,7 @@ export function KpiRow() {
       <div className="card kpi"><div className="k">Fatigue<Info {...KPI_INFO.fatigue} /></div><div className="row"><div className="v">{k.fatigue.v.toFixed(0)}</div><Delta v={k.fatigue.d} good="down" /></div><div className="u">7-day load</div><Spark pts={k.fatigue.spark} color="var(--ink)" /></div>
       <div className="card kpi"><div className="k">Form<Info {...KPI_INFO.form} /></div><div className="row"><div className="v">{sign(k.form.v)}</div><Delta v={k.form.dAbs} suffix="" /></div><div className="u">fitness − fatigue</div><Spark pts={k.form.spark} color="var(--swim)" /></div>
       <div className="card kpi"><div className="k">Weekly volume<Info {...KPI_INFO.volume} /></div><div className="row"><div className="v">{k.volume.v.toFixed(1)}<small> h</small></div><Delta v={k.volume.d} /></div><div className="u">This week</div><Bars pts={k.volume.bars} /></div>
-      <div className="card kpi"><div className="k">Consistency<Info {...KPI_INFO.consistency} /></div><div className="row"><div className="v">{k.consistency.v ?? "—"}<small>%</small></div><Delta v={k.consistency.dAbs} suffix=" pts" /></div><div className="u">12-week sessions done</div><Bars pts={k.consistency.bars} /></div>
+      <div className="card kpi"><div className="k">Completed sessions<Info {...KPI_INFO.consistency} /></div><div className="row"><div className="v">{k.consistency.v ?? "—"}{k.consistency.v != null && <small>%</small>}</div><Delta v={k.consistency.dAbs} suffix=" pts" /></div><div className="u">12 weeks · done ÷ planned</div><Bars pts={k.consistency.bars} /></div>
     </div>
   );
 }
@@ -138,10 +138,10 @@ export function Volume({ range }: { range: Range }) {
     const hours = { swim: 0, bike: 0, run: 0, other: 0 }, count = { swim: 0, bike: 0, run: 0, other: 0 };
     for (const a of acts) {
       const k = a.sport === "swim" || a.sport === "bike" || a.sport === "run" ? a.sport : "other";
-      g[k] += mode === "hours" ? a.min / 60 : mode === "load" ? activityLoad(a) : a.sport === "swim" ? (a.yd ?? 0) / 1760 : a.mi ?? 0;
+      g[k] += mode === "hours" ? a.min / 60 : mode === "load" ? activityLoad(a, an.athlete.lthr ?? undefined) : a.sport === "swim" ? (a.yd ?? 0) / 1760 : a.mi ?? 0;
       hours[k] += a.min / 60; count[k]++;
     }
-    const planned = mode === "hours" ? w.plannedMin / 60 : mode === "load" ? w.sessions.reduce((s2, x) => s2 + (x.sport === "rest" ? 0 : Math.round(x.min * 0.75)), 0) : null;
+    const planned = mode === "hours" ? w.plannedMin / 60 : mode === "load" ? w.sessions.reduce((s2, x) => s2 + plannedLoad(x), 0) : null;
     const plannedSessions = w.sessions.filter((x) => x.sport !== "rest").length;
     return { w, g, planned, hours, count, activities: acts.length, hoursTotal: acts.reduce((t, a) => t + a.min, 0) / 60, plannedH: w.plannedMin / 60, plannedSessions };
   };

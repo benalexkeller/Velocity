@@ -8,6 +8,7 @@ import type { Availability } from "./data";
 import { ACTIVITIES as SEED_ACTIVITIES, PLAN_SEED, SPORT_LABEL, type Activity, type PlanWeekJson, type Sport } from "./data";
 import { BODY_SEED, type BodyDay } from "./analysis";
 import type { Profile, Race } from "./athlete";
+import { ATHLETE } from "./config";
 import { supabase } from "./supabase/client";
 
 export interface SessionPatch { date?: string; start?: string; min?: number; intensity?: string; text?: string; sport?: Sport; deleted?: boolean; locked?: boolean }
@@ -75,7 +76,7 @@ export class LocalBackend implements Backend {
     }
     // a plan built or imported in this browser replaces the seed plan (and its race) until "clear local changes"
     // a profile saved in this browser (set-up screen) replaces the seed athlete's name, units and city
-    const saved = this.s.profile && Object.keys(this.s.profile).length ? { id: "local", email: null, username: "", name: "", avatar_url: null, units: "imperial" as const, timezone: "America/Los_Angeles", city: null, availability: this.s.availability ?? null, zones: null, is_admin: false, setup_done: true, created_at: new Date().toISOString(), ...this.s.profile } as Profile : null;
+    const saved = this.s.profile && Object.keys(this.s.profile).length ? { id: "local", email: null, username: "", name: ATHLETE.firstName, avatar_url: null, units: "imperial" as const, timezone: "America/Los_Angeles", city: null, availability: this.s.availability ?? null, zones: null, is_admin: false, setup_done: true, created_at: new Date().toISOString(), ...this.s.profile } as Profile : null;
     return { profile: saved, race: this.s.race ?? null, plan: this.s.plan ?? PLAN_SEED, intake: this.s.intake ?? null, state: { patches: this.s.patches, added: this.s.added, undone: this.s.undone, calendar: this.s.calendar }, activities: localActivities(this.s), body: BODY_SEED, thread: this.s.thread, availability: this.s.availability ?? null };
   }
   private put(next: Partial<LocalState>) { this.s = { ...this.s, ...next }; writeLocal(this.s); }

@@ -5,7 +5,7 @@ import { Icon } from "../icons";
 import { SportIcon } from "../SportIcon";
 import { RouteMap } from "../RouteMap";
 import { LogActivity } from "../dashboard/LogActivity";
-import { activityLoad, plannedLoad, type Session, type Sport } from "@/lib/data";
+import { STATUS_LABEL, activityLoad, plannedLoad, type Session, type Sport } from "@/lib/data";
 import { usePlan } from "@/lib/store";
 import { dateLabel, fmtHMS, fmtPace, today, ymd } from "@/lib/format";
 import { elev, fmtDist, fmtSpeed, runPace, swimDist, swimPace } from "@/lib/units";
@@ -53,7 +53,7 @@ function targetOf(s: Session, zones: Record<string, Record<string, string>>) {
   const sp = s.sport === "brick" ? "bike" : s.sport;
   const z = zones[sp]?.[s.intensity];
   if (!z) return null;
-  return { k: sp === "bike" ? "Target speed" : "Target pace", v: z, u: sp === "bike" ? "" : sp === "swim" ? "per 100 yd" : "per mile" };
+  return { k: sp === "bike" ? (/W$/.test(z) ? "Target power" : "Target speed") : "Target pace", v: z, u: sp === "bike" ? "" : sp === "swim" ? "per 100 yd" : "per mile" };
 }
 
 const ZONE_FILL: Record<Zone, string> = { 1: "#DCE6FB", 2: "#A5C7FD", 3: "#2459FE", 4: "#0E2E8A", 5: "#101114" };
@@ -100,7 +100,7 @@ export function SessionPanel({ id, onClose }: { id: string | null; onClose: () =
   const tgt = targetOf(s, plan.athlete.zones);
   const acts = plan.activitiesOn(s.date);
   const wk = workoutFor(s, plan.athlete.zones);
-  const status = s.status === "done" ? "Completed" : s.status === "missed" ? "Missed" : "Planned";
+  const status = STATUS_LABEL[s.status];
   const zoneOfIntensity: Zone = s.intensity === "Tempo" ? 3 : s.intensity === "Intervals" || s.intensity === "Race" ? 4 : 2;
   return (
     <section className={`card session-panel ${s.status}`} aria-label="Session detail">
@@ -112,7 +112,7 @@ export function SessionPanel({ id, onClose }: { id: string | null; onClose: () =
           <h2>{s.title}{s.sport !== "rest" && <span className="dim"> · {s.intensity}</span>}</h2>
         </div>
         {s.locked && s.status !== "done" && <span className="status locked" title="Locked: drag and Move are off until you unlock it"><Icon name="lock" />Locked</span>}
-        <span className={`status ${s.status}`}>{s.status === "done" && "✓ "}{status}</span>
+        <span className={`status ${s.status}`}>{s.status === "done" && "✓ "}{status}{s.status === "partial" && s.actual ? ` · ${Math.round(s.actual.min)} of ${s.min} min` : ""}</span>
       </div>
 
       <div className="sp-grid">
@@ -121,7 +121,7 @@ export function SessionPanel({ id, onClose }: { id: string | null; onClose: () =
             <>
               <div className="stat"><div className="k">Duration</div><div className="v">{s.min} min</div></div>
               <div className="stat"><div className="k">Zone</div><div className="v">{zoneName(zoneOfIntensity).split(" · ")[0]}<small> · {s.intensity}</small></div></div>
-              {tgt && <div className="stat"><div className="k">{tgt.k}</div><div className="v">{tgt.v}</div>{tgt.u && <div className="u">{tgt.u}</div>}</div>}
+              {tgt && <div className="stat"><div className="k">{tgt.k}</div><div className="v">{tgt.v}</div><div className="u">{tgt.u}{plan.athlete.zonesSource === "intake" ? `${tgt.u ? " · " : ""}from your answers` : plan.athlete.zonesSource === "default" ? `${tgt.u ? " · " : ""}default zones` : ""}</div></div>}
               <div className="stat"><div className="k">Planned load</div><div className="v">{plannedLoad(s)}</div></div>
               {s.actual && (s.actual.sport !== s.sport || Math.abs(s.actual.min - s.min) >= 5) && <div className="stat actual"><div className="k">Done as</div><div className="v">{s.actual.sport[0].toUpperCase() + s.actual.sport.slice(1)} {s.actual.min} min</div><div className="u">planned {s.title} {s.min} min</div></div>}
             </>
@@ -140,7 +140,7 @@ export function SessionPanel({ id, onClose }: { id: string | null; onClose: () =
               {acts.map((a) => (
                 <Link key={a.id} href={`/activities?a=${a.id}`} className="sp-act">
                   <SportIcon sport={a.sport} size={22} />
-                  <div className="t"><b>{a.name}</b><small>{a.start ? `${a.start} · ` : ""}{fmtHMS(a.min)}{a.sport === "swim" && a.yd ? ` · ${swimDist(a.yd).v.toLocaleString()} ${swimDist(0).u}` : a.mi ? ` · ${fmtDist(a.mi)}` : ""}{a.sport === "run" && a.pace_s ? ` · ${fmtPace(runPace(a.pace_s).s)}${runPace(0).u}` : a.sport === "bike" && a.mph ? ` · ${fmtSpeed(a.mph)}` : a.sport === "swim" && a.p100_s ? ` · ${fmtPace(swimPace(a.p100_s).s)}${swimPace(0).u}` : ""}{a.hr ? ` · ${a.hr} bpm` : ""}{a.elev_ft ? ` · ${elev(a.elev_ft).v} ${elev(0).u}` : ""} · load {activityLoad(a)}</small></div>
+                  <div className="t"><b>{a.name}</b><small>{a.start ? `${a.start} · ` : ""}{fmtHMS(a.min)}{a.sport === "swim" && a.yd ? ` · ${swimDist(a.yd).v.toLocaleString()} ${swimDist(0).u}` : a.mi ? ` · ${fmtDist(a.mi)}` : ""}{a.sport === "run" && a.pace_s ? ` · ${fmtPace(runPace(a.pace_s).s)}${runPace(0).u}` : a.sport === "bike" && a.mph ? ` · ${fmtSpeed(a.mph)}` : a.sport === "swim" && a.p100_s ? ` · ${fmtPace(swimPace(a.p100_s).s)}${swimPace(0).u}` : ""}{a.hr ? ` · ${a.hr} bpm` : ""}{a.elev_ft ? ` · ${elev(a.elev_ft).v} ${elev(0).u}` : ""} · load {activityLoad(a, plan.athlete.lthr ?? undefined)}</small></div>
                   {a.route && <div className="thumb"><RouteMap route={a.route} height={40} bg="var(--surface-2)" pad={0.1} /></div>}
                 </Link>
               ))}

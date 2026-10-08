@@ -11,6 +11,8 @@ export const ATHLETE = {
   // Sub-13 race targets used for the race bar (hours)
   raceSplits: { swim: 1.5, bike: 6.4, run: 4.75, transitions: 0.35 },
   planStart: "2026-09-07",
+  // Lactate-threshold heart rate used for load (intensity = HR ÷ LTHR) and HR zones
+  lthr: 155,
   // Provisional zones (recalibrated at the week-4 and week-18 tests)
   zones: {
     run: { "Zone 2": "10:15 – 11:15", Aerobic: "10:15 – 11:15", Endurance: "10:30 – 11:15", Tempo: "9:15 – 9:40", Intervals: "8:45 – 9:15", Race: "10:30 – 11:00" },

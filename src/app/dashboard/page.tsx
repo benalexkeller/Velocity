@@ -116,7 +116,7 @@ export default function Dashboard() {
 
           <div className="dash-right">
           <Link href="/analysis" className="card tw" aria-label="This week — open analysis">
-            <div className="head"><span className="eyebrow">This week</span><small>Rolling compliance {comp.pct}% · 28 days</small></div>
+            <div className="head"><span className="eyebrow">This week</span><small>{comp.pct == null ? "No sessions planned yet" : `Completed sessions · 28 days · ${comp.pct}% (${Math.round(comp.done * 2) / 2} of ${comp.planned})`}</small></div>
             <div className="cols">
               <div className="col"><div className="k">Sessions</div><div className="v">{ws.done}<span className="dim">/{ws.total}</span></div><div className="progress"><i style={{ width: `${ws.total ? Math.min(100, (ws.done / ws.total) * 100) : 0}%` }} /></div></div>
               <div className="col"><div className="k">Volume</div><div className="v">{ws.actualH.toFixed(1)}<span className="dim">/{Math.round(ws.plannedH)} h</span></div><div className="progress"><i style={{ width: `${Math.min(100, (ws.actualH / ws.plannedH) * 100)}%` }} /></div></div>

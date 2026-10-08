@@ -134,7 +134,7 @@ export function LogActivity({ open, onClose, onSaved, initial, inline }: { open:
     elev: numErr(elev) ?? (elev.trim() !== "" && (num(elev) < 0 || num(elev) > (metric ? 9000 : 30000)) ? `Between 0 and ${metric ? "9,000 m" : "30,000 ft"}` : null),
   };
   const valid = Object.values(errs).every((e) => !e);
-  const Err = ({ k }: { k: string }) => (errs[k] ? <small className="lf-err" role="alert">{errs[k]}</small> : null);
+  const err = (k: string) => (errs[k] ? <small className="lf-err" role="alert">{errs[k]}</small> : null);
 
   const save = () => {
     const T = toSec(dur);
@@ -166,9 +166,9 @@ export function LogActivity({ open, onClose, onSaved, initial, inline }: { open:
           {SPORTS.map((s) => <button key={s.k} type="button" role="radio" aria-checked={sport === s.k} className={sport === s.k ? "on" : ""} onClick={() => { setSport(s.k); setDist(""); setPace(""); setLast(toSec(dur) ? ["dur"] : []); }}><SportIcon sport={s.k} size={15} />{s.label}</button>)}
         </div>
         <div className="lf-grid">
-          <label>Day<input type="date" value={date} max={todayStr} onChange={(e) => setDate(e.target.value)} aria-invalid={!!errs.date} /><Err k="date" /></label>
+          <label>Day<input type="date" value={date} max={todayStr} onChange={(e) => setDate(e.target.value)} aria-invalid={!!errs.date} />{err("date")}</label>
           <label>Start time<input type="time" step={900} value={time} onChange={(e) => setTime(e.target.value)} /></label>
-          <label>Heart rate (bpm)<input value={hr} onChange={(e) => setHr(e.target.value)} placeholder="145" inputMode="numeric" aria-invalid={!!errs.hr} /><Err k="hr" /></label>
+          <label>Heart rate (bpm)<input value={hr} onChange={(e) => setHr(e.target.value)} placeholder="145" inputMode="numeric" aria-invalid={!!errs.hr} />{err("hr")}</label>
           <div className="lf-dur" aria-label="Duration">
             <span className="k">Duration</span>
             <div className="wheels">
@@ -176,11 +176,11 @@ export function LogActivity({ open, onClose, onSaved, initial, inline }: { open:
               <Wheel value={dm} max={59} label="min" onChange={(v) => setDurPart(dh, v, ds)} />
               <Wheel value={ds} max={59} label="s" onChange={(v) => setDurPart(dh, dm, v)} />
             </div>
-            {sec > 0 && <Err k="dur" />}
+            {sec > 0 && err("dur")}
           </div>
-          {(timed || sport === "hike") ? <label>Distance<span className="lf-unit-in"><input value={dist} onChange={(e) => { setDist(e.target.value); touch("dist"); }} placeholder={sport === "swim" ? (metric ? "1500" : "1640") : metric ? "10" : "6.2"} inputMode="decimal" aria-invalid={!!errs.dist} />{units}</span><Err k="dist" /></label> : <span />}
-          {timed ? <label>{paceLabel}<input value={pace} onChange={(e) => { setPace(e.target.value); touch("pace"); }} placeholder={sport === "bike" ? (metric ? "28" : "17.5") : sport === "swim" ? (metric ? "2:00" : "1:50") : metric ? "5:55" : "9:30"} inputMode="decimal" aria-invalid={!!errs.pace} /><Err k="pace" /></label> : <span />}
-          {(sport === "bike" || sport === "run" || sport === "hike") ? <label>Elevation gain ({elevUnit})<input value={elev} onChange={(e) => setElev(e.target.value)} placeholder="0" inputMode="numeric" aria-invalid={!!errs.elev} /><Err k="elev" /></label> : <span />}
+          {(timed || sport === "hike") ? <label>Distance<span className="lf-unit-in"><input value={dist} onChange={(e) => { setDist(e.target.value); touch("dist"); }} placeholder={sport === "swim" ? (metric ? "1500" : "1640") : metric ? "10" : "6.2"} inputMode="decimal" aria-invalid={!!errs.dist} />{units}</span>{err("dist")}</label> : <span />}
+          {timed ? <label>{paceLabel}<input value={pace} onChange={(e) => { setPace(e.target.value); touch("pace"); }} placeholder={sport === "bike" ? (metric ? "28" : "17.5") : sport === "swim" ? (metric ? "2:00" : "1:50") : metric ? "5:55" : "9:30"} inputMode="decimal" aria-invalid={!!errs.pace} />{err("pace")}</label> : <span />}
+          {(sport === "bike" || sport === "run" || sport === "hike") ? <label>Elevation gain ({elevUnit})<input value={elev} onChange={(e) => setElev(e.target.value)} placeholder="0" inputMode="numeric" aria-invalid={!!errs.elev} />{err("elev")}</label> : <span />}
         </div>
       </div>
       <div className="lf-right">

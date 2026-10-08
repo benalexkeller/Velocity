@@ -41,7 +41,7 @@ export function WeekGrid({ week, selectedId, onPick }: { week: Week; selectedId?
   };
   const grab = useRef<{ id: string; x: number; y: number; offPx: number; moved: boolean; last?: { day: number; h: number } } | null>(null);
   const onDown = (s: Session) => (e: React.PointerEvent) => {
-    if (e.button !== 0 || s.locked || s.status === "done") return;
+    if (e.button !== 0 || s.locked || s.status === "done" || s.status === "partial") return;
     const r = body.current!.getBoundingClientRect();
     grab.current = { id: s.id, x: e.clientX, y: e.clientY, offPx: e.clientY - r.top - y(toH(s.start)), moved: false };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -118,7 +118,7 @@ export function WeekGrid({ week, selectedId, onPick }: { week: Week; selectedId?
 }
 
 function Block({ s, y, selected, drag, onDown, onMove, onUp, onLock }: { s: Session; y: (h: number) => number; selected?: boolean; drag: Drag | null; onDown: (e: React.PointerEvent) => void; onMove: (e: React.PointerEvent) => void; onUp: (e: React.PointerEvent) => void; onLock: () => void }) {
-  const done = s.status === "done";
+  const done = s.status === "done" || s.status === "partial";
   const a = done ? s.actual : undefined;
   // what was actually done replaces the plan on the block: sport, name and length from the logged activity
   const sport = a?.sport ?? s.sport;
@@ -128,7 +128,7 @@ function Block({ s, y, selected, drag, onDown, onMove, onUp, onLock }: { s: Sess
   const dx = drag ? (drag.day - s.dayIndex) * drag.colW : 0;
   const dy = drag && s.sport !== "rest" ? (drag.h - h0) * ROW : 0;
   const style: React.CSSProperties = drag ? { transform: `translate(${dx}px, ${dy}px)` } : {};
-  const cls = `wg-ev ${sport}${done ? " done" : ""}${selected ? " sel" : ""}${s.locked ? " locked" : ""}${drag ? " drag" : ""}`;
+  const cls = `wg-ev ${sport}${done ? " done" : ""}${s.status === "partial" ? " partial" : ""}${s.status === "substituted" ? " substituted" : ""}${selected ? " sel" : ""}${s.locked ? " locked" : ""}${drag ? " drag" : ""}`;
   const handlers = { onPointerDown: onDown, onPointerMove: onMove, onPointerUp: onUp, onPointerCancel: onUp };
   const lock = !done && <button type="button" className="lk" onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onLock(); }} aria-label={s.locked ? "Unlock session" : "Lock session"} title={s.locked ? "Locked · click to unlock" : "Lock in place"}><Icon name={s.locked ? "lock" : "unlock"} /></button>;
   if (s.sport === "rest") {
