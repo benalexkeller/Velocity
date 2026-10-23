@@ -17,7 +17,7 @@ export function Supplements() {
   const openS = open ? SUPPLEMENTS.find((s) => s.id === open) : null;
   return (
     <div className="nu-supplements">
-      <p className="muted small">Information only, not medical advice. Third-party tested products only (NSF Certified for Sport, Informed Sport). Grades follow the IOC consensus statement (2018) and the AIS framework.</p>
+      <p className="muted small">Not medical advice. Use third-party tested products (NSF Certified for Sport, Informed Sport). Grades: IOC consensus (2018), AIS framework.</p>
       <div className="pill-group nu-filter" role="tablist">
         {([["all", "All"], ["A", "Strong evidence"], ["B", "Some evidence"], ["C", "Limited evidence"]] as [Filter, string][]).map(([k, l]) => <button key={k} type="button" className={filter === k ? "on" : ""} onClick={() => setFilter(k)}>{l}</button>)}
       </div>

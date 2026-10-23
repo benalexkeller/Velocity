@@ -5,13 +5,17 @@ import { Icon } from "@/components/icons";
 import { SportIcon } from "@/components/SportIcon";
 import { MapModal, RouteMap } from "@/components/RouteMap";
 import { Watch } from "@/components/Watch";
+import { ConnectWearable } from "@/components/ConnectWearable";
+import { FuelLine } from "@/components/nutrition/SessionFuel";
+import { NutritionProvider } from "@/lib/nutrition/store";
 import { CoachBar } from "@/components/CoachBar";
 import { LogActivity } from "@/components/dashboard/LogActivity";
 import { useEffect, useState } from "react";
 import { PaceChart, VolumeChart } from "@/components/dashboard/Charts";
-import { rollingCompliance, weekLoad, type Session } from "@/lib/data";
+import { weekLoad, type Session } from "@/lib/data";
 import { usePlan } from "@/lib/store";
-import { DAYS, MONTHS, addDays, dateLabel, fmtDur, fmtHMS, fromYmd, today, ymd } from "@/lib/format";
+import { hardestStep } from "@/lib/workout";
+import { DAYS, MONTHS, addDays, dateLabel, fmtDur, fmtHMS, fromYmd, shortDate, today, ymd } from "@/lib/format";
 import { fmtDist, fmtSpeed, runPace, swimDist, swimPace } from "@/lib/units";
 import { fmtPace } from "@/lib/format";
 
@@ -20,28 +24,37 @@ function heroSub(s: Session) {
   const t = s.text.toLowerCase();
   if (/drill|technique/.test(t)) return "Technique";
   if (/long ride|long run/.test(t)) return "Long endurance";
-  if (/tempo|threshold/.test(t)) return "Tempo";
+  if (/threshold|lthr/.test(t)) return "Threshold";
+  if (/tempo/.test(t)) return "Tempo";
   if (/strides/.test(t)) return "Aerobic + strides";
   return "Aerobic endurance";
 }
+// the hero shows the target of the session's key work (same as the Plan panel)
 function target(s: Session, z: Record<string, Record<string, string>>) {
-  if (s.sport === "run") return { k: "Target pace", v: z.run[s.intensity] ?? z.run["Zone 2"], u: `per ${runPace(0).u.replace("/", "")}` };
-  if (s.sport === "bike" || s.sport === "brick") return { k: "Target speed", v: z.bike[s.intensity] ?? z.bike["Zone 2"], u: "" };
-  if (s.sport === "swim") return { k: "Target pace", v: z.swim[s.intensity] ?? z.swim["Aerobic"], u: `per 100 ${swimDist(0).u}` };
+  const key = hardestStep(s, z);
+  const t = key && /\d/.test(key.seg.target) ? key.seg.target.replace(/\s*\/(mi|100 yd)$/, "") : null;
+  if (s.sport === "run") return { k: "Target pace", v: t ?? z.run[s.intensity] ?? z.run["Zone 2"], u: `per ${runPace(0).u.replace("/", "")}` };
+  if (s.sport === "bike" || s.sport === "brick") return { k: "Target speed", v: t ?? z.bike[s.intensity] ?? z.bike["Zone 2"], u: "" };
+  if (s.sport === "swim") return { k: "Target pace", v: t ?? z.swim[s.intensity] ?? z.swim["Aerobic"], u: `per 100 ${swimDist(0).u}` };
   return null;
 }
 
-export default function Dashboard() {
+export default function DashboardPage() {
+  return <NutritionProvider><Dashboard /></NutritionProvider>;
+}
+
+function Dashboard() {
   const plan = usePlan();
   const t = today();
   const ds = ymd(t);
   const cur = plan.currentWeek();
   const ws = { ...plan.weekStatus(cur), load: weekLoad(cur, plan.counted) };
-  const comp = rollingCompliance(28, plan.weeks);
   const todayS = plan.sessionOn(ds);
   const next = [1, 2].map((n) => ({ off: n, s: plan.sessionOn(ymd(addDays(t, n))) }));
   const last = plan.counted[plan.counted.length - 1];
-  const garmin = plan.activities.some((a) => a.source === "garmin"); // until the Garmin connection exists, "connected" = Garmin data present
+  // no live Garmin connection yet: say when the last import happened, never "connected"
+  const lastGarmin = [...plan.activities].reverse().find((a) => a.source === "garmin");
+  const garmin = !!lastGarmin;
   const done = todayS?.status === "done";
   const tgt = todayS ? target(todayS, plan.athlete.zones) : null;
   const PHASES = plan.phases, WEEKS = plan.weeks;
@@ -80,14 +93,14 @@ export default function Dashboard() {
                   <div className="stat"><div className="k">Next session</div><div className="v">{next[0].s ? `${next[0].s.title} ${next[0].s.min} min` : "—"}</div><div className="u">{next[0].s ? `${DAYS[(addDays(t, 1).getDay() + 6) % 7]}${next[0].s.start ? ` · ${next[0].s.start}` : ""}` : ""}</div></div>
                 </>
               )}
-              <div className="stat gm">{garmin && <div className="garmin" aria-hidden="true"><Watch width={116} /></div>}<div className="k">Garmin</div><div className="v">{garmin ? <><i className="led" />Connected</> : <span className="dim">Not connected</span>}</div></div>
+              <div className="stat gm">{garmin && <div className="garmin" aria-hidden="true"><Watch width={116} time={last ? fmtHMS(last.min) : ""} dist={last?.mi ? `${last.mi.toFixed(1)} mi` : last?.yd ? `${last.yd.toLocaleString()} yd` : ""} hr={last?.hr} /></div>}<div className="k"><i className={`gm-dot${garmin ? " on" : ""}`} aria-label={garmin ? "connected" : "not connected"} />{garmin ? "Garmin" : "Wearable"}<ConnectWearable variant="dark" label="Connect" /></div><div className="v">{garmin ? <span className="garmin-date">Imported {shortDate(lastGarmin!.date)}</span> : <span className="dim">Not connected</span>}</div></div>
             </div>
+            {todayS && todayS.sport !== "rest" && <FuelLine s={todayS} />}
           </Link>
 
           <section className="card logcard" aria-label="Log activity">
             <button type="button" className="plus" aria-label="Log activity" aria-expanded={logging} onClick={() => setLogging((o) => !o)}><Icon name="plus" /></button>
             <b>Add manually</b>
-            <small>Log a swim, bike, run or anything else</small>
           </section>
           <LogActivity open={logging} onClose={() => setLogging(false)} onSaved={(a) => { plan.logActivity(a); setLogging(false); setToast(`Saved · ${a.name} · ${fmtHMS(a.min)}`); }} />
           </div>
@@ -116,10 +129,10 @@ export default function Dashboard() {
 
           <div className="dash-right">
           <Link href="/analysis" className="card tw" aria-label="This week — open analysis">
-            <div className="head"><span className="eyebrow">This week</span><small>Rolling compliance {comp.pct}% · 28 days</small></div>
+            <div className="head"><span className="eyebrow">This week</span></div>
             <div className="cols">
               <div className="col"><div className="k">Sessions</div><div className="v">{ws.done}<span className="dim">/{ws.total}</span></div><div className="progress"><i style={{ width: `${ws.total ? Math.min(100, (ws.done / ws.total) * 100) : 0}%` }} /></div></div>
-              <div className="col"><div className="k">Volume</div><div className="v">{ws.actualH.toFixed(1)}<span className="dim">/{Math.round(ws.plannedH)} h</span></div><div className="progress"><i style={{ width: `${Math.min(100, (ws.actualH / ws.plannedH) * 100)}%` }} /></div></div>
+              <div className="col"><div className="k">Hours</div><div className="v">{ws.actualH ? ws.actualH.toFixed(1) : 0}<span className="dim">/{Math.round(ws.plannedH)}</span></div><div className="progress"><i style={{ width: `${Math.min(100, (ws.actualH / ws.plannedH) * 100)}%` }} /></div></div>
               <div className="col"><div className="k">Load</div><div className="v">{ws.load.actual}<span className="dim">/{ws.load.planned}</span></div><div className="progress"><i style={{ width: `${Math.min(100, (ws.load.actual / Math.max(1, ws.load.planned)) * 100)}%` }} /></div></div>
             </div>
           </Link>
@@ -165,7 +178,7 @@ export default function Dashboard() {
           <VolumeChart />
         </div>
 
-        {toast && <div className="toast" role="status">✓ {toast} <span className="muted">· saved on this device until accounts exist</span></div>}
+        {toast && <div className="toast" role="status">✓ {toast}</div>}
         <CoachBar id="dash-coach" />
       </div>
     </main>

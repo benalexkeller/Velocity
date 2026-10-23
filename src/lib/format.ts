@@ -26,6 +26,18 @@ export function dateLabel(s: string) {
   const d = fromYmd(s);
   return `${DAYS[(d.getDay() + 6) % 7]} ${d.getDate()} ${MONTHS[d.getMonth()]}`;
 }
+/** One date style app-wide: "Wed 7 Oct" this year, "Sat 24 Apr 2027" in another year. */
+export function dateFull(s: string) {
+  const d = fromYmd(s);
+  return `${dateLabel(s)}${d.getFullYear() !== new Date().getFullYear() ? ` ${d.getFullYear()}` : ""}`;
+}
+/** Range: "5 – 11 Oct", "28 Sep – 4 Oct", "28 Dec 2026 – 3 Jan 2027". */
+export function rangeLabel(a: string, b: string) {
+  const x = fromYmd(a), y = fromYmd(b);
+  const yr = (d: Date) => (d.getFullYear() !== new Date().getFullYear() || x.getFullYear() !== y.getFullYear() ? ` ${d.getFullYear()}` : "");
+  if (x.getMonth() === y.getMonth() && x.getFullYear() === y.getFullYear()) return `${x.getDate()} – ${y.getDate()} ${MONTHS[y.getMonth()]}${yr(y)}`;
+  return `${x.getDate()} ${MONTHS[x.getMonth()]}${x.getFullYear() !== y.getFullYear() ? ` ${x.getFullYear()}` : ""} – ${y.getDate()} ${MONTHS[y.getMonth()]}${yr(y)}`;
+}
 export function shortDate(s: string) {
   const d = fromYmd(s);
   return `${d.getDate()} ${MONTHS[d.getMonth()]}`;

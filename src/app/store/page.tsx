@@ -13,7 +13,6 @@ export default function StorePage() {
       <div className="page" style={{ display: "grid", gap: 16, paddingTop: 10 }}>
         <div className="page-head">
           <div>
-            <div className="eyebrow muted">Curated · {PRODUCTS.length} products · checkout on the brand's site</div>
             <h1>Store</h1>
           </div>
           <span className="grow" />

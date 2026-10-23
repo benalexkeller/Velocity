@@ -1,5 +1,5 @@
 // A round multisport watch, drawn in SVG. Used as the "hovering" device on the dashboard hero.
-export function Watch({ width = 118, time = "42:18", dist = "5.2 mi", hr = 148 }: { width?: number; time?: string; dist?: string; hr?: number }) {
+export function Watch({ width = 118, time = "", dist = "", hr }: { width?: number; time?: string; dist?: string; hr?: number }) {
   const height = Math.round((width * 164) / 120);
   return (
     <svg className="watch" width={width} height={height} viewBox="0 0 120 164" role="img" aria-label="Garmin watch">
@@ -41,9 +41,8 @@ export function Watch({ width = 118, time = "42:18", dist = "5.2 mi", hr = 148 }
       <text x="60" y="76" textAnchor="middle" fill="#FFFFFF" fontSize="16" fontWeight="600" fontFamily="inherit" letterSpacing="-0.02em">{time}</text>
       <line x1="38" y1="81.5" x2="82" y2="81.5" stroke="#2A2E36" strokeWidth="1" />
       <text x="60" y="93" textAnchor="middle" fill="#FFFFFF" fontSize="10" fontWeight="600" fontFamily="inherit">{dist}</text>
-      <path transform="translate(47 97.5) scale(0.62)" d="M 5 9 c -2.4 -2.2 -2.4 -5.4 0 -7 c 1.4 -1 3.2 -0.5 4 0.9 c 0.8 -1.4 2.6 -1.9 4 -0.9 c 2.4 1.6 2.4 4.8 0 7 l -4 3.6 z" fill="#EF4444" />
+      {hr != null && <path transform="translate(47 97.5) scale(0.62)" d="M 5 9 c -2.4 -2.2 -2.4 -5.4 0 -7 c 1.4 -1 3.2 -0.5 4 0.9 c 0.8 -1.4 2.6 -1.9 4 -0.9 c 2.4 1.6 2.4 4.8 0 7 l -4 3.6 z" fill="#EF4444" />}
       <text x="58" y="105" textAnchor="start" fill="#FFFFFF" fontSize="10.5" fontWeight="600" fontFamily="inherit">{hr}</text>
-      <text x="60" y="116" textAnchor="middle" fill="#6B7280" fontSize="6" letterSpacing="0.16em" fontFamily="inherit">GARMIN</text>
     </svg>
   );
 }

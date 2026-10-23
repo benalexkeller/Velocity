@@ -5,7 +5,10 @@
 .acts-head { display: flex; align-items: flex-end; gap: 16px; margin: 4px 0 14px; }
 .acts-head .grow { flex: 1; }
 .tbl .when { color: var(--ink-2); font-size: 13px; white-space: nowrap; } .tbl .when small { display: block; color: var(--muted); }
-.tbl .act { display: flex; align-items: center; gap: 14px; }
+.tbl .act { display: flex; align-items: center; gap: 14px; min-width: 200px; }
+.acts-tbl thead th { white-space: nowrap; }
+.tbl .act small { white-space: nowrap; }
+@media (max-width: 1439px) { .tbl .col-elev { display: none; } }
 .tbl .act .sport-icon { color: var(--accent); width: 30px; height: 30px; }
 .tbl .act b { display: block; font-weight: 600; } .tbl .act small { color: var(--muted); }
 .tbl .num { font-weight: 500; white-space: nowrap; } .tbl .num small { color: var(--muted); font-weight: 400; margin-left: 3px; }
@@ -23,12 +26,12 @@
 .drawer { position: sticky; top: 68px; align-self: start; padding: 20px 20px 18px; display: grid; gap: 12px; max-height: calc(100vh - 84px); overflow: auto; }
 .drawer .hd { display: flex; gap: 12px; align-items: flex-start; }
 .drawer .hd .sport-icon { color: var(--accent); flex: 0 0 auto; }
-.drawer .hd b { display: block; font-size: 18px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.2; }
-.drawer .hd small { display: block; color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+.drawer .hd b { display: block; font-size: 20px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.2; }
+.drawer .hd small { display: block; color: var(--muted); font-size: 13px; margin-top: 2px; }
 .drawer .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px 10px; padding: 12px 0 4px; border-top: 1px solid var(--line-2); }
-.drawer .grid .v { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; white-space: nowrap; } .drawer .grid .v small { font-size: 12px; font-weight: 400; margin-left: 3px; color: var(--muted); }
+.drawer .grid .v { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; white-space: nowrap; } .drawer .grid .v small { font-size: 12px; font-weight: 400; margin-left: 3px; color: var(--muted); }
 .drawer .grid .k { font-size: 12px; color: var(--muted); }
-.drawer h4 { font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin: 6px 0 -4px; }
+.drawer h4 { font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); font-weight: 600; margin: 6px 0 -4px; }
 .drawer .kv div { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 1px solid var(--line-2); font-size: 13px; }
 .drawer .kv div span:first-child { color: var(--muted); }
 .drawer .note { font-size: 13px; line-height: 1.45; color: var(--ink-2); background: var(--surface-2); border-radius: 10px; padding: 10px 12px; }
@@ -39,24 +42,38 @@
   .acts { grid-template-columns: 1fr; }
   .drawer { position: relative; top: 0; max-height: none; }
   .search { width: 100%; }
-  .tbl .hide-sm { display: none; }
+  .tbl .hide-sm, .tbl .thumb, .tbl td:has(> .thumb), .tbl th.th-map { display: none; }
+  .tbl .when { white-space: normal; }
 }
 
 /* filters popover */
 .menu.filters { position: absolute; right: 0; top: 50px; z-index: 30; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 32px rgba(16,17,20,0.12); padding: 12px; min-width: 240px; display: grid; gap: 10px; }
-.menu.filters .k { font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
+.menu.filters .k { font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); font-weight: 600; }
 .menu.filters .chk { display: flex; align-items: center; gap: 8px; font-size: 13px; }
-.pill-group.small button { padding: 5px 12px; font-size: 12.5px; }
+.pill-group.small button { padding: 5px 12px; font-size: 13px; }
 .iconbtn.on { color: var(--accent); box-shadow: 0 0 0 2px var(--accent); }
 
 /* exclude / delete */
 .drawer .actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .drawer .actions .btn.on { background: var(--ink); color: #fff; border-color: var(--ink); }
-.drawer .confirm { display: inline-flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-2); }
+.drawer .confirm { display: inline-flex; align-items: center; gap: 8px; font-size: 13px; color: var(--ink-2); }
 .acts-tbl tr.row.excluded td { opacity: 0.55; }
-.acts-tbl tr.row.excluded td .tag { display: inline-block; margin-left: 8px; font-size: 10px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); border-radius: 999px; padding: 2px 7px; vertical-align: middle; }
+.acts-tbl tr.row.excluded td .tag { display: inline-block; margin-left: 8px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--muted); background: var(--surface-2); border-radius: 999px; padding: 2px 7px; vertical-align: middle; }
 
 /* route map in the detail panel */
 .drawer .map { position: relative; }
 .drawer .map .exp { position: absolute; top: 8px; right: 8px; width: 28px; height: 28px; border-radius: 8px; background: var(--surface); box-shadow: var(--shadow); display: inline-flex; align-items: center; justify-content: center; border: 0; cursor: pointer; }
 .drawer .map .exp svg { width: 15px; height: 15px; stroke: currentColor; fill: none; stroke-width: 1.8; }
+
+/* activity options menu (⋯): exclude and delete are secondary actions */
+.drawer .hd > div { flex: 1 1 auto; min-width: 0; }
+.act-more { position: relative; flex: 0 0 auto; }
+.act-more .iconbtn.more { width: 32px; height: 32px; border-radius: 8px; box-shadow: none; background: none; color: var(--ink-2); cursor: pointer; }
+.act-more .iconbtn.more:hover, .act-more .iconbtn.more[aria-expanded="true"] { background: var(--surface-2); color: var(--ink); }
+.act-more .iconbtn svg { width: 20px; height: 20px; stroke: currentColor; fill: none; stroke-width: 2.8; stroke-linecap: round; }
+.act-more .menu { position: absolute; right: 0; top: 38px; z-index: 30; min-width: 240px; display: grid; gap: 2px; padding: 6px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 32px rgba(16,17,20,0.12); }
+.act-more .menu > button { border: 0; background: none; text-align: left; padding: 8px 10px; border-radius: 8px; font: inherit; font-size: 14px; color: var(--ink); cursor: pointer; }
+.act-more .menu > button:hover { background: var(--surface-2); }
+.act-more .menu > button.danger { color: var(--danger); }
+.act-more .confirm { display: grid; gap: 8px; padding: 8px 10px; font-size: 13px; color: var(--ink-2); }
+.act-more .confirm > div { display: flex; gap: 8px; }

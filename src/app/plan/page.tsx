@@ -6,25 +6,29 @@ import "./plan.css";
 import { Icon } from "@/components/icons";
 import { SportIcon } from "@/components/SportIcon";
 import { CoachRail } from "@/components/CoachRail";
+import { CoachBar } from "@/components/CoachBar";
+import { useCoachDock } from "@/components/CoachDock";
 import { WeekGrid, weekRange } from "@/components/plan/WeekGrid";
 import { SessionPanel } from "@/components/plan/SessionPanel";
 import { MonthGrid } from "@/components/plan/MonthGrid";
+import { PeriodStepper } from "@/components/PeriodStepper";
 import { RampChart } from "@/components/plan/RampChart";
-import { PlanExplained } from "@/components/plan/PlanExplained";
-import { COACH_THREAD, plannedByDiscipline, plannedLoad, type Sport, type Week } from "@/lib/data";
+import { PhaseDetail } from "@/components/plan/PlanExplained";
+import { plannedByDiscipline, plannedLoad, type Sport, type Week } from "@/lib/data";
 import { usePlan } from "@/lib/store";
-import { dateLabel, fromYmd, fmtHours, addDays, ymd } from "@/lib/format";
+import { NutritionProvider } from "@/lib/nutrition/store";
+import { dateFull, dateLabel, fromYmd, fmtHours, addDays, ymd } from "@/lib/format";
 import { METHOD } from "@/lib/plan/rules";
 
 const M = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-const INTENSITIES = ["Zone 2", "Aerobic", "Technique", "Endurance", "Tempo", "Intervals", "Race"];
+const INTENSITIES = ["Zone 2", "Aerobic", "Technique", "Endurance", "Tempo", "Threshold", "Intervals", "Race"];
 const SPORTS: Sport[] = ["swim", "bike", "run", "brick", "strength", "hike", "other"];
 
 export default function PlanPage() {
-  return <Suspense fallback={null}><Plan /></Suspense>;
+  return <Suspense fallback={null}><NutritionProvider><Plan /></NutritionProvider></Suspense>;
 }
 
-// "+ Add workout": creates a session in the local plan.
+// "+ Add session": creates a session in the local plan.
 function AddWorkout({ week, onDone }: { week: Week; onDone: (id: string | null) => void }) {
   const plan = usePlan();
   const [sport, setSport] = useState<Sport>("run");
@@ -34,14 +38,14 @@ function AddWorkout({ week, onDone }: { week: Week; onDone: (id: string | null) 
   const [intensity, setIntensity] = useState("Zone 2");
   const [text, setText] = useState("");
   return (
-    <form className="card sp-form add-workout" onSubmit={(e) => { e.preventDefault(); const id = plan.addSession({ sport, date, start, min: Math.max(5, parseInt(min) || 45), intensity, text: text.trim() || `${sport[0].toUpperCase() + sport.slice(1)} ${min} min ${intensity}` }); onDone(id); }}>
-      <div className="eyebrow">Add workout</div>
+    <form className="card sp-form add-workout" onSubmit={(e) => { e.preventDefault(); const id = plan.addSession({ sport, date, start, min: Math.max(5, parseInt(min) || 45), intensity, text: text.trim() || `${sport[0].toUpperCase() + sport.slice(1)} ${min} min ${intensity}` }); if (id) onDone(id); }}>
+      <div className="eyebrow">Add session</div>
       <div className="two">
         <label>Sport<select value={sport} onChange={(e) => setSport(e.target.value as Sport)}>{SPORTS.map((k) => <option key={k} value={k}>{k[0].toUpperCase() + k.slice(1)}</option>)}</select></label>
         <label>Intensity<select value={intensity} onChange={(e) => setIntensity(e.target.value)}>{INTENSITIES.map((k) => <option key={k}>{k}</option>)}</select></label>
       </div>
       <div className="two">
-        <label>Day<input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
+        <label>Day<input type="date" value={date} min={plan.planRange?.start} max={plan.planRange?.end} onChange={(e) => setDate(e.target.value)} />{plan.planRange && (date < plan.planRange.start || date > plan.planRange.end) && <small className="err">Outside the plan · {dateLabel(plan.planRange.start)} – {dateLabel(plan.planRange.end)}</small>}</label>
         <label>Start<input type="time" step={900} value={start} onChange={(e) => setStart(e.target.value)} /></label>
       </div>
       <div className="two">
@@ -101,26 +105,26 @@ function Plan() {
   const [view, setView] = useState<"week" | "month">("week");
   const [adding, setAdding] = useState(false);
   const [overview, setOverview] = useState<number | null>(null);
+  const [phaseSel, setPhaseSel] = useState<string | null>(null);
   const [calInfo, setCalInfo] = useState(false);
   useEffect(() => { if (fromUrl) { setSel(fromUrl); const hit = plan.findSession(fromUrl); if (hit) setWk(hit.w.week); } }, [fromUrl, plan]);
   useEffect(() => { if (plan.ready && !fromUrl) setWk(plan.currentWeek().week); }, [plan.ready]); // eslint-disable-line react-hooks/exhaustive-deps
   const week = plan.weekByNumber(wk);
-  const ws = plan.weekStatus(week);
+  const dock = useCoachDock();
   const monthDate = fromYmd(week.start);
   const [mo, setMo] = useState({ y: monthDate.getFullYear(), m: monthDate.getMonth() });
+  const openWeek = (n: number) => { setWk(n); setView("week"); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const pick = (id: string) => { setSel(id); const hit = plan.findSession(id); if (hit) setWk(hit.w.week); };
 
   return (
-    <main className="main with-coach">
+    <main className={dock.docked && dock.open ? "main with-coach" : "main"}>
       <div className="plan">
         <div className="plan-head">
-          <button className="back" type="button" aria-label="Previous week" onClick={() => (view === "week" ? setWk(Math.max(1, wk - 1)) : setMo(({ y, m }) => (m === 0 ? { y: y - 1, m: 11 } : { y, m: m - 1 })))}>
-            <Icon name="back" />
-          </button>
-          <h1>{view === "week" ? `Week ${week.week}` : M[mo.m]}</h1>
-          <button className="back" type="button" aria-label="Next week" onClick={() => (view === "week" ? setWk(Math.min(plan.weeks.length, wk + 1)) : setMo(({ y, m }) => (m === 11 ? { y: y + 1, m: 0 } : { y, m: m + 1 })))}>
-            <Icon name="chevron" />
-          </button>
+          <PeriodStepper big width={view === "week" ? 118 : 150} label={view === "week" ? `Week ${week.week}` : M[mo.m]}
+            prevLabel={view === "week" ? "Previous week" : "Previous month"} nextLabel={view === "week" ? "Next week" : "Next month"}
+            prevDisabled={view === "week" && wk <= 1} nextDisabled={view === "week" && wk >= plan.weeks.length}
+            onPrev={() => (view === "week" ? setWk(Math.max(1, wk - 1)) : setMo(({ y, m }) => (m === 0 ? { y: y - 1, m: 11 } : { y, m: m - 1 })))}
+            onNext={() => (view === "week" ? setWk(Math.min(plan.weeks.length, wk + 1)) : setMo(({ y, m }) => (m === 11 ? { y: y + 1, m: 0 } : { y, m: m + 1 })))} />
           <span className="range">{view === "week" ? weekRange(week) : mo.y}</span>
           {wk !== cur.week && view === "week" && <button type="button" className="btn ghost small" onClick={() => setWk(cur.week)}>Today</button>}
           <span className="grow" />
@@ -132,18 +136,18 @@ function Plan() {
             <button type="button" className="badge" aria-expanded={calInfo} onClick={() => setCalInfo((o) => !o)} title={`Google Calendar sync ${plan.calendar ? "on" : "off"}`}><span className={plan.calendar ? "ok" : "ok off"}>{plan.calendar ? "✓" : "–"}</span>Calendar</button>
             {calInfo && (
               <div className="menu" role="dialog">
-                <div className="small"><b>Google Calendar</b><br />The Google connection isn't built yet. This switch records whether sessions should be written to your calendar once it is.</div>
+                <div className="small"><b>Google Calendar</b><br />Not connected yet.</div>
                 <button type="button" onClick={() => { plan.toggleCalendar(); setCalInfo(false); }}>{plan.calendar ? "Turn sync off" : "Turn sync on"}</button>
               </div>
             )}
           </span>
           {!plan.hasPlan && <Link href="/plan/new" className="btn ghost">Build plan</Link>}
-          <button className="btn" type="button" onClick={() => setAdding((a) => !a)} aria-expanded={adding}><Icon name="plus" />Add workout</button>
+          <button className="btn" type="button" onClick={() => setAdding((a) => !a)} aria-expanded={adding}><Icon name="plus" />Add session</button>
         </div>
 
         {!plan.hasPlan && (
           <section className="card no-plan" aria-label="No plan yet">
-            <div><div className="eyebrow">No plan yet</div><h3>Answer five screens of questions and the plan is built for your race, your hours and your days.</h3><p className="muted">Or upload a plan you already have as a spreadsheet. Either way every session can be moved, edited or locked afterwards.</p></div>
+            <div><div className="eyebrow">No plan yet</div><h3>Build a plan from your race, hours and days, or upload a spreadsheet.</h3></div>
             <div className="row"><Link href="/plan/new" className="btn">Build my plan<Icon name="arrow" /></Link><Link href="/plan/new?import=1" className="btn ghost">Upload a plan</Link></div>
           </section>
         )}
@@ -151,12 +155,12 @@ function Plan() {
         {adding && <AddWorkout week={week} onDone={(id) => { setAdding(false); if (id) { setSel(id); const hit = plan.findSession(id); if (hit) setWk(hit.w.week); } }} />}
 
         {view === "week" ? <WeekGrid week={week} selectedId={sel} onPick={(x) => setSel(x.id)} /> : <MonthGrid year={mo.y} month={mo.m} selectedId={sel} onPick={(x) => { pick(x.id); setView("week"); }} />}
-        <SessionPanel id={sel} onClose={() => setSel(null)} />
+        <SessionPanel key={sel ?? "none"} id={sel} onClose={() => setSel(null)} />
 
         <section className="section">
           <div className="section-head">
-            <h2>{plan.hasPlan ? `The road to ${plan.athlete.race.distanceLabel || plan.athlete.race.name}` : "The road to race day"}</h2>
-            <span className="sub">{plan.hasPlan ? `${plan.weeks.length} weeks · ${plan.phases.length} phases · race ${dateLabel(plan.athlete.race.date)} ${plan.athlete.race.date.slice(0, 4)} · click a week` : plan.athlete.hasRace ? `${plan.athlete.race.name} · ${dateLabel(plan.athlete.race.date)} ${plan.athlete.race.date.slice(0, 4)} · no plan yet` : "No race set · build a plan to add one"}</span>
+            <h2>Weekly hours</h2>
+            <span className="sub">{plan.hasPlan ? `${plan.weeks.length} weeks · ${plan.phases.length} phases · race ${dateFull(plan.athlete.race.date)}` : plan.athlete.hasRace ? `${plan.athlete.race.name} · ${dateLabel(plan.athlete.race.date)} ${plan.athlete.race.date.slice(0, 4)} · no plan yet` : "No race set · build a plan to add one"}</span>
             <span className="legend">
               <span><i style={{ background: "var(--swim)" }} />Swim</span>
               <span><i style={{ background: "var(--bike)" }} />Bike</span>
@@ -164,32 +168,25 @@ function Plan() {
               {plan.hasPlan && <Link href={plan.intake ? "/plan/new?edit=1" : "/plan/new"} className="settings" title={plan.intake ? "Change the answers and rebuild the plan" : "Build a new plan from a few questions"}>Plan settings →</Link>}
             </span>
           </div>
-          <RampChart selected={overview} onPick={(n) => setOverview(n === overview ? null : n)} />
-          {overview && <WeekOverview week={plan.weekByNumber(overview)} onClose={() => setOverview(null)} onOpenWeek={() => { setWk(overview); setView("week"); window.scrollTo({ top: 0, behavior: "smooth" }); }} />}
-        </section>
-
-        <section className="section">
-          <div className="section-head">
-            <h2>Your plan explained</h2>
-            <span className="sub">Each phase: what changes and the milestones to hit.</span>
-          </div>
-          <PlanExplained />
+          <RampChart selected={overview} phase={phaseSel} onPick={(n) => setOverview(n === overview ? null : n)} onPhase={(k) => { setPhaseSel(k); setOverview(null); }} />
+          {overview ? <WeekOverview week={plan.weekByNumber(overview)} onClose={() => setOverview(null)} onOpenWeek={() => openWeek(overview)} />
+            : plan.hasPlan && <PhaseDetail selected={phaseSel} onSelect={setPhaseSel} onOpenWeek={openWeek} />}
         </section>
 
         {plan.intake && (
           <section className="section">
             <div className="section-head">
               <h2>How this plan is built</h2>
-              <span className="sub">The rules the builder follows and where they come from.</span>
             </div>
             <ol className="method">
               {METHOD.map((m) => <li key={m.url + m.rule.slice(0, 12)}><b>{m.rule}</b><span><a href={m.url} target="_blank" rel="noreferrer">{m.source}</a></span></li>)}
             </ol>
           </section>
         )}
+        <CoachBar id="plan-coach" />
       </div>
 
-      <CoachRail thread={COACH_THREAD as never} summary={`Week ${week.week} · ${ws.done} of ${ws.total} sessions · ${fmtHours(ws.actualH)} of ${fmtHours(ws.plannedH)}${plan.changes ? ` · ${plan.changes} local change${plan.changes === 1 ? "" : "s"}` : " · plan unchanged since Sunday"}`} />
+      {dock.docked && dock.open && <CoachRail onClose={() => dock.setOpen(false)} />}
     </main>
   );
 }

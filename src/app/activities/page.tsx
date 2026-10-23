@@ -7,22 +7,23 @@ import { SportIcon } from "@/components/SportIcon";
 import { MapModal, RouteMap } from "@/components/RouteMap";
 import { CoachNote } from "@/components/CoachNote";
 import { activityLoad, type Activity } from "@/lib/data";
+import { hrZone } from "@/lib/athlete";
+import { ConnectWearable } from "@/components/ConnectWearable";
 import { usePlan } from "@/lib/store";
-import { DAYS, MONTHS, addDays, fmtHMS, fmtPace, fromYmd, today } from "@/lib/format";
+import { addDays, dateFull, fmtHMS, fmtPace, fromYmd, today } from "@/lib/format";
 import { elev, fmtDist, fmtSpeed, runPace, swimDist, swimPace } from "@/lib/units";
 
 type Tab = "all" | "swim" | "bike" | "run";
 
 function groupLabel(date: string) {
   const d = fromYmd(date), t = today();
-  if (d.getTime() === t.getTime()) return { key: "today", label: "Today", sub: `${DAYS[(t.getDay() + 6) % 7]}, ${MONTHS[t.getMonth()]} ${t.getDate()}, ${t.getFullYear()}` };
+  if (d.getTime() === t.getTime()) return { key: "today", label: "Today", sub: dateFull(date) };
   const monday = addDays(t, -((t.getDay() + 6) % 7));
-  if (d >= monday) return { key: "week", label: "This Week", sub: "" };
+  if (d >= monday) return { key: "week", label: "This week", sub: "" };
   return { key: `${d.getFullYear()}-${d.getMonth()}`, label: `${["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"][d.getMonth()]} ${d.getFullYear()}`, sub: "" };
 }
 function when(a: Activity) {
-  const d = fromYmd(a.date);
-  return { l1: `${DAYS[(d.getDay() + 6) % 7]}, ${MONTHS[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`, l2: a.start ?? "" };
+  return { l1: dateFull(a.date), l2: a.start ?? "" };
 }
 function subtitle(a: Activity) {
   if (a.sport === "swim") return "Pool session";
@@ -41,9 +42,9 @@ function paceOrPower(a: Activity) {
   if (a.sport === "bike" && a.mph) return { v: fmtSpeed(a.mph), u: "" };
   return { v: "—", u: "" };
 }
-function effortLevel(a: Activity) {
+function effortLevel(a: Activity, lthr: number | null) {
   if (a.exertion) return Math.min(5, Math.ceil(a.exertion / 2));
-  if (a.hr) return a.hr > 168 ? 5 : a.hr > 158 ? 4 : a.hr > 148 ? 3 : a.hr > 135 ? 2 : 1;
+  if (a.hr) return hrZone(a.sport, a.hr, lthr);
   return 0;
 }
 function Effort({ n }: { n: number }) {
@@ -91,12 +92,12 @@ function Activities() {
           <div className="acts-sticky" ref={stickyRef}>
           <div className="acts-head">
             <div>
-              <div className="eyebrow muted">Activity archive</div>
               <h1>Activities</h1>
             </div>
             <span className="grow" />
             <label className="search"><Icon name="search" /><input id="act-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search activities…" aria-label="Search activities" /></label>
             <span style={{ position: "relative" }}>
+              <ConnectWearable variant="ghost" />
               <button className={`iconbtn${source !== "all" || gpsOnly ? " on" : ""}`} type="button" aria-label="Filters" aria-expanded={filters} onClick={() => setFilters((f) => !f)}><Icon name="filter" /></button>
               {filters && (
                 <div className="menu filters" role="dialog" aria-label="Filters">
@@ -109,12 +110,12 @@ function Activities() {
             </span>
           </div>
           <div className="tabs" role="tablist">
-            {(["all", "swim", "bike", "run"] as Tab[]).map((k) => <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>{k}</button>)}
+            {(["all", "swim", "bike", "run"] as Tab[]).map((k) => <button key={k} type="button" role="tab" aria-selected={tab === k} className={tab === k ? "on" : ""} onClick={() => setTab(k)}>{k[0].toUpperCase() + k.slice(1)}</button>)}
           </div>
           </div>
           <table className="tbl acts-tbl" style={{ ["--acts-top" as string]: `${stickyH}px` }}>
             <thead>
-              <tr><th>Date</th><th>Activity</th><th>Distance</th><th>Time</th><th className="hide-sm">Pace / speed</th><th className="hide-sm">Elevation</th><th className="hide-sm">Effort</th><th /><th /></tr>
+              <tr><th>Date</th><th>Activity</th><th>Distance</th><th>Time</th><th className="hide-sm">Pace / speed</th><th className="hide-sm col-elev">Elevation</th><th className="hide-sm">Effort</th><th /><th /></tr>
             </thead>
             <tbody>
               {list.map((a) => {
@@ -124,14 +125,14 @@ function Activities() {
                 const w = when(a), pp = paceOrPower(a);
                 return (
                   <FragmentRow key={a.id} showGroup={showGroup} group={g}>
-                    <tr className={`row${sel === a.id ? " sel" : ""}${a.excluded ? " excluded" : ""}`} onClick={() => { setSel(a.id); window.scrollTo({ top: 0, behavior: "smooth" }); }}>
+                    <tr className={`row${sel === a.id ? " sel" : ""}${a.excluded ? " excluded" : ""}`} tabIndex={0} aria-label={`${a.name}, ${a.date}`} onClick={() => { setSel(a.id); window.scrollTo({ top: 0, behavior: "smooth" }); }} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSel(a.id); } }}>
                       <td className="when">{w.l1}<small>{w.l2}</small></td>
                       <td><div className="act"><SportIcon sport={a.sport} size={30} /><div><b>{a.name}{a.excluded && <span className="tag">Excluded</span>}</b><small>{subtitle(a)}</small></div></div></td>
                       <td className="num">{distance(a)}</td>
                       <td className="num">{fmtHMS(a.min)}</td>
                       <td className="num hide-sm">{pp.v}<small>{pp.u}</small></td>
-                      <td className="num hide-sm">{a.elev_ft ? `${elev(a.elev_ft).v.toLocaleString()} ${elev(0).u}` : "—"}</td>
-                      <td className="hide-sm">{effortLevel(a) ? <Effort n={effortLevel(a)} /> : "—"}</td>
+                      <td className="num hide-sm col-elev">{a.elev_ft ? `${elev(a.elev_ft).v.toLocaleString()} ${elev(0).u}` : "—"}</td>
+                      <td className="hide-sm">{effortLevel(a, plan.athlete.lthr) ? <Effort n={effortLevel(a, plan.athlete.lthr)} /> : "—"}</td>
                       <td>{a.route ? <div className="thumb"><RouteMap route={a.route} height={36} bg="var(--surface-2)" pad={0.1} /></div> : null}</td>
                       <td><span className="chev"><Icon name="chevron" /></span></td>
                     </tr>
@@ -161,32 +162,38 @@ function Drawer({ a, onDeleted }: { a: Activity; onDeleted: () => void }) {
   const plan = usePlan();
   const w = when(a), pp = paceOrPower(a);
   const [confirm, setConfirm] = useState(false);
+  const [menu, setMenu] = useState(false);
   const [big, setBig] = useState(false);
-  useEffect(() => { setConfirm(false); setBig(false); }, [a.id]);
+  useEffect(() => { setConfirm(false); setBig(false); setMenu(false); }, [a.id]);
   return (
     <aside className="card drawer" aria-label="Activity detail">
       {big && a.route && <MapModal route={a.route} title={a.name} sub={`${w.l1} · ${distance(a)} · ${fmtHMS(a.min)}`} onClose={() => setBig(false)} />}
       <div className="hd">
         <SportIcon sport={a.sport} size={40} />
         <div><b>{a.name}</b><small>{w.l1}{w.l2 ? ` · ${w.l2}` : ""}</small><small>{subtitle(a)}{a.excluded ? " · excluded from analysis" : ""}</small></div>
+        <span className="act-more">
+          <button type="button" className="iconbtn more" aria-label="More options" aria-haspopup="menu" aria-expanded={menu} onClick={() => { setMenu((m) => !m); setConfirm(false); }}><Icon name="kebab" /></button>
+          {menu && (
+            <div className="menu" role="menu" onKeyDown={(e) => { if (e.key === "Escape") setMenu(false); }}>
+              <button type="button" role="menuitem" onClick={() => { plan.toggleExcluded(a.id); setMenu(false); }}>{a.excluded ? "Include in analysis" : "Exclude from analysis"}</button>
+              {confirm ? (
+                <div className="confirm"><span>Delete this activity? This cannot be undone.</span><div><button type="button" className="btn danger small" onClick={() => { plan.deleteActivity(a.id); setMenu(false); onDeleted(); }}>Delete</button><button type="button" className="btn ghost small" onClick={() => setConfirm(false)}>Cancel</button></div></div>
+              ) : (
+                <button type="button" role="menuitem" className="danger" onClick={() => setConfirm(true)}>Delete activity</button>
+              )}
+            </div>
+          )}
+        </span>
       </div>
-      <div className="actions">
-        <button type="button" className={`btn ghost small${a.excluded ? " on" : ""}`} onClick={() => plan.toggleExcluded(a.id)} aria-pressed={!!a.excluded}>{a.excluded ? "Include in analysis" : "Exclude from analysis"}</button>
-        {confirm ? (
-          <span className="confirm"><span>Delete this activity?</span><button type="button" className="btn danger small" onClick={() => { plan.deleteActivity(a.id); onDeleted(); }}>Delete</button><button type="button" className="btn ghost small" onClick={() => setConfirm(false)}>Cancel</button></span>
-        ) : (
-          <button type="button" className="btn ghost small" onClick={() => setConfirm(true)}>Delete</button>
-        )}
-      </div>
-      {a.excluded && <div className="note">Not counted in analysis, weekly volume, load or session status. It stays in this list.</div>}
+      {a.excluded && <div className="note">Excluded from analysis, volume, load and session status.</div>}
       <div className="grid">
         <div><div className="v">{distance(a)}</div><div className="k">Distance</div></div>
         <div><div className="v">{fmtHMS(a.min)}</div><div className="k">Time</div></div>
         <div><div className="v">{pp.v}<small>{pp.u}</small></div><div className="k">{a.sport === "bike" ? "Avg speed" : "Pace"}</div></div>
         {a.hr ? <div><div className="v">{Math.round(a.hr)}<small>bpm</small></div><div className="k">Avg heart rate</div></div> : null}
         {a.elev_ft ? <div><div className="v">{elev(a.elev_ft).v.toLocaleString()}<small>{elev(0).u}</small></div><div className="k">Elevation gain</div></div> : null}
-        <div><div className="v">{activityLoad(a)}</div><div className="k">Load</div></div>
-        <div><div className="v"><Effort n={effortLevel(a) || 1} /></div><div className="k">Effort</div></div>
+        <div><div className="v">{activityLoad(a, plan.athlete.lthr ?? undefined)}</div><div className="k">Load</div></div>
+        <div><div className="v"><Effort n={effortLevel(a, plan.athlete.lthr) || 1} /></div><div className="k">Effort</div></div>
       </div>
       <h4>Route</h4>
       <div className="map">

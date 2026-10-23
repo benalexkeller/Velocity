@@ -27,11 +27,11 @@ export function MonthGrid({ year, month, onPick, selectedId }: { year: number; m
           <div key={ds} className={`mg-c${dim ? " dim" : ""}${isT ? " today" : ""}${done ? " done" : ""}`}>
             <span className="n">{d.getDate()}</span>
             {(done ? acts : sessions).slice(0, 3).map((s, i) => (
-              <div key={i} className={`mg-s ${s.sport}${"title" in s && s.id === selectedId ? " sel" : ""}`} onClick={() => { if ("title" in s) onPick?.(s); else { const ss = sessions[0]; if (ss) onPick?.(ss); } }} role={onPick ? "button" : undefined}>
+              <button type="button" key={i} className={`mg-s ${s.sport}${"title" in s && s.id === selectedId ? " sel" : ""}`} onClick={() => { if ("title" in s) onPick?.(s); else { const ss = sessions[0]; if (ss) onPick?.(ss); } }}>
                 <SportIcon sport={s.sport} size={12} />
                 <span>{"title" in s ? s.title : s.name}</span>
                 {"min" in s && s.min ? <em>{s.min}m</em> : null}
-              </div>
+              </button>
             ))}
           </div>
         );

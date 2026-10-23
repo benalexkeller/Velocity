@@ -3,8 +3,8 @@
 // `createAnalysis(activities, weeks)` builds the whole toolkit for a given data set, so the pages
 // can run it over the live plan store (seed + everything logged on this device) — see useAnalysis().
 import bodySeed from "./data/seed/body.json";
-import { ACTIVITIES as SEED_ACTIVITIES, WEEKS as SEED_WEEKS, PHASES as SEED_PHASES, activityLoad, activitiesOn as activitiesOnIn, actualByDiscipline as actualByDisciplineIn, plannedByDiscipline, currentWeek as currentWeekIn, rollingCompliance as rollingComplianceIn, weekStatus as weekStatusIn, type Activity, type Phase, type Session, type Sport, type Week } from "./data";
-import { DEFAULT_ATHLETE, type Athlete } from "./athlete";
+import { ACTIVITIES as SEED_ACTIVITIES, WEEKS as SEED_WEEKS, PHASES as SEED_PHASES, activityLoad as activityLoadIn, activitiesOn as activitiesOnIn, actualByDiscipline as actualByDisciplineIn, plannedByDiscipline, plannedLoad as plannedLoadOf, currentWeek as currentWeekIn, rollingCompliance as rollingComplianceIn, STATUS_CREDIT, weekStatus as weekStatusIn, type Activity, type Phase, type Session, type Sport, type Week } from "./data";
+import { DEFAULT_ATHLETE, DEFAULT_LTHR, hrZone, type Athlete } from "./athlete";
 import { addDays, fromYmd, today, ymd } from "./format";
 
 // ---------- body metrics (Garmin) ----------
@@ -33,6 +33,12 @@ export function paceOf(a: Activity, sp: "run" | "swim" | "bike"): number | null 
   if (sp === "swim") return a.p100_s ?? null;
   return a.mph ?? null;
 }
+/** Sessions long enough for their pace to mean something in an average (a 12-min swim does not move the 4-week swim pace). */
+export function paceEligible(a: Activity, sp: "run" | "swim" | "bike"): boolean {
+  if (sp === "swim") return a.min >= 15 && (a.yd ?? 0) >= 500;
+  if (sp === "bike") return a.min >= 20 && (a.mi ?? 0) >= 5;
+  return a.min >= 15 && (a.mi ?? 0) >= 2;
+}
 export function parseRange(s: string | undefined): [number, number] | null {
   if (!s) return null;
   const parts = s.replace(/mph/g, "").split(/[–-]/).map((x) => x.trim());
@@ -42,9 +48,9 @@ export function parseRange(s: string | undefined): [number, number] | null {
   return isNaN(a) || isNaN(b) ? null : [a, b];
 }
 /** Heart-rate zone of a session from its average HR (per-second HR arrives with the Garmin API). */
-export function zoneOf(a: Activity): 1 | 2 | 3 | 4 | 5 | null {
+export function zoneOfIn(a: Activity, lthr: number | null = DEFAULT_LTHR): 1 | 2 | 3 | 4 | 5 | null {
   if (!a.hr) return null;
-  return a.hr < 135 ? 1 : a.hr < 148 ? 2 : a.hr < 158 ? 3 : a.hr < 168 ? 4 : 5;
+  return hrZone(a.sport, a.hr, lthr);
 }
 export interface LoadPoint { date: string; load: number; fitness: number; fatigue: number; form: number }
 export type Metric = "pace" | "hr" | "distance" | "duration" | "load";
@@ -55,6 +61,9 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
   const PHASES = inputs.phases ?? SEED_PHASES;
   const BODY = (inputs.body ?? BODY_SEED).slice().sort((a, b) => a.date.localeCompare(b.date));
   const ATHLETE = inputs.athlete ?? DEFAULT_ATHLETE;
+  const LTHR = ATHLETE.lthr ?? DEFAULT_LTHR;
+  const activityLoad = (a: Activity) => activityLoadIn(a, LTHR);
+  const zoneOf = (a: Activity) => zoneOfIn(a, LTHR);
   const activitiesOn = (date: string) => activitiesOnIn(date, ACTIVITIES);
   const actualByDiscipline = (w: Week) => actualByDisciplineIn(w, ACTIVITIES);
   const currentWeek = () => currentWeekIn(WEEKS);
@@ -77,23 +86,33 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
 
   // ---------- load model (earned from work done) ----------
   // Fitness = 42-day exponentially weighted daily load; Fatigue = 7-day; Form = Fitness − Fatigue.
+  // The averages start 42 days before the first data (plan start or first activity, whichever is earlier),
+  // seeded with the mean daily load of the first 14 days, so Fitness is not a warm-up artefact.
+  // Only days from the plan start (or today, if the plan starts later) are shown.
   const LOAD_SERIES: LoadPoint[] = (() => {
     const out: LoadPoint[] = [];
-    let fit = 0, fat = 0;
-    const start = fromYmd(ATHLETE.planStart), t = today();
-    for (let d = start; d <= t; d = addDays(d, 1)) {
-      const date = ymd(d);
-      const load = activitiesOn(date).reduce((s, a) => s + activityLoad(a), 0);
+    const t = today();
+    const firstAct = ACTIVITIES.length ? fromYmd(ACTIVITIES.reduce((m, a) => (a.date < m ? a.date : m), ACTIVITIES[0].date)) : null;
+    const planStart = fromYmd(ATHLETE.planStart);
+    const dataStart = [planStart, t, ...(firstAct ? [firstAct] : [])].reduce((m, d) => (d < m ? d : m));
+    const showFrom = planStart < t ? planStart : t;
+    const dayLoadAt = (d: Date) => activitiesOn(ymd(d)).reduce((s, a) => s + activityLoad(a), 0);
+    let seed = 0;
+    for (let i = 0; i < 14; i++) seed += dayLoadAt(addDays(dataStart, i));
+    let fit = seed / 14, fat = seed / 14;
+    for (let d = addDays(dataStart, -42); d <= t; d = addDays(d, 1)) {
+      const load = d >= dataStart ? dayLoadAt(d) : seed / 14;
       fit += (load - fit) / 42;
       fat += (load - fat) / 7;
-      out.push({ date, load, fitness: fit, fatigue: fat, form: fit - fat });
+      if (d >= showFrom) out.push({ date: ymd(d), load: d >= dataStart ? load : 0, fitness: fit, fatigue: fat, form: fit - fat });
     }
+    if (!out.length) out.push({ date: ymd(t), load: 0, fitness: 0, fatigue: 0, form: 0 });
     return out;
   })();
   function loadNow() {
-    const last = LOAD_SERIES[LOAD_SERIES.length - 1];
+    const last = LOAD_SERIES.at(-1) ?? { date: ymd(today()), load: 0, fitness: 0, fatigue: 0, form: 0 };
     const wk = currentWeek();
-    const weekLoad = (w: number) => { const s = fromYmd(WEEKS[w - 1].start); let t = 0; for (let i = 0; i < 7; i++) t += activitiesOn(ymd(addDays(s, i))).reduce((x, a) => x + activityLoad(a), 0); return t; };
+    const weekLoad = (w: number) => { if (!WEEKS[w - 1]) return 0; const s = fromYmd(WEEKS[w - 1].start); let t = 0; for (let i = 0; i < 7; i++) t += activitiesOn(ymd(addDays(s, i))).reduce((x, a) => x + activityLoad(a), 0); return t; };
     const thisW = weekLoad(wk.week), lastW = wk.week > 1 ? weekLoad(wk.week - 1) : 0;
     const ramp = lastW ? (thisW - lastW) / lastW : 0;
     return { ...last, thisWeek: thisW, lastWeek: lastW, ramp, rampFlag: ramp > 0.10 && fromYmd(wk.start) <= addDays(today(), -6) };
@@ -111,7 +130,7 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
   function complianceFor(sessions: Session[]) {
     const t = today();
     const s = sessions.filter((x) => x.sport !== "rest" && fromYmd(x.date) <= t);
-    const done = s.filter((x) => x.status === "done").length;
+    const done = s.reduce((n, x) => n + STATUS_CREDIT[x.status], 0);
     return { done, total: s.length, pct: s.length ? Math.round((done / s.length) * 100) : null };
   }
   function complianceByPhase() {
@@ -124,40 +143,9 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
   }
   function weightedAvgPace(sp: "run" | "swim" | "bike", days = 28, endOffset = 0) {
     const end = addDays(today(), -endOffset), since = addDays(end, -days);
-    const pts = ACTIVITIES.filter((a) => a.sport === sp && fromYmd(a.date) > since && fromYmd(a.date) <= end && paceOf(a, sp) != null);
+    const pts = ACTIVITIES.filter((a) => a.sport === sp && fromYmd(a.date) > since && fromYmd(a.date) <= end && paceOf(a, sp) != null && paceEligible(a, sp));
     const w = pts.reduce((s, a) => s + a.min, 0);
     return w ? pts.reduce((s, a) => s + (paceOf(a, sp) as number) * a.min, 0) / w : null;
-  }
-
-  // ---------- scores ----------
-  // Each component: 70 at the plan-start baseline, 100 at the target; no floor or ceiling beyond 40–120.
-  function component(current: number | null, baseline: number, target: number) {
-    if (current == null) return null;
-    const v = 70 + 30 * ((current - baseline) / (target - baseline));
-    return Math.max(40, Math.min(120, v));
-  }
-  function healthScore(endOffset = 0) {
-    const b = bodySummary(7, endOffset);
-    const parts = { vo2: component(b.vo2, 52, 60), rhr: component(b.rhr, 46, 38), hrv: component(b.hrv, 77, 96) };
-    const w = { vo2: 0.5, rhr: 0.25, hrv: 0.25 };
-    let tot = 0, ws = 0;
-    (Object.keys(parts) as (keyof typeof parts)[]).forEach((k) => { if (parts[k] != null) { tot += (parts[k] as number) * w[k]; ws += w[k]; } });
-    return { score: ws ? Math.round(tot / ws) : null, parts, inputs: b };
-  }
-  function raceScore(endOffset = 0) {
-    const mid = (c: { start: [number, number]; race: [number, number] }, k: 0 | 1) => (c[k === 0 ? "start" : "race"][0] + c[k === 0 ? "start" : "race"][1]) / 2;
-    const run = weightedAvgPace("run", 28, endOffset), bike = weightedAvgPace("bike", 28, endOffset), swim = weightedAvgPace("swim", 28, endOffset);
-    const comp = rollingCompliance(28);
-    const parts = {
-      run: component(run, mid(CORRIDOR.run, 0), mid(CORRIDOR.run, 1)),
-      bike: component(bike, mid(CORRIDOR.bike, 0), mid(CORRIDOR.bike, 1)),
-      swim: component(swim, mid(CORRIDOR.swim, 0), mid(CORRIDOR.swim, 1)),
-      durability: component(comp.planned ? comp.done / comp.planned : null, 0.6, 1.0),
-    };
-    const w = { run: 0.4, bike: 0.35, swim: 0.15, durability: 0.1 };
-    let tot = 0, ws = 0;
-    (Object.keys(parts) as (keyof typeof parts)[]).forEach((k) => { if (parts[k] != null) { tot += (parts[k] as number) * w[k]; ws += w[k]; } });
-    return { score: ws ? Math.round(tot / ws) : null, parts, inputs: { run, bike, swim, compliance: comp } };
   }
 
   // ---------- volume ----------
@@ -190,16 +178,38 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
     return { ...t, bests };
   }
 
-  // ---------- race projection (v1: current 4-week average pace, no fatigue adjustment) ----------
+  // ---------- race projection ----------
+  // Shown only once training is specific enough (Build phase, or long sessions at half the race distance).
+  // Run: Riegel from the longest recent run (exponent 1.06), ×1.12 off the bike in a triathlon.
+  // Bike: average speed of rides of 2 h or more. Swim: pace of the longest swim ≥ 1,500 yd (or ¾ of the race swim) × 1.05.
   function raceProjection() {
-    const run = weightedAvgPace("run"), bike = weightedAvgPace("bike"), swim = weightedAvgPace("swim");
-    const D = ATHLETE.raceDist; // race-day distances for the athlete's event (e.g. 4,224 yd · 112 mi · 26.2 mi)
-    const swimH = D.swimYd === 0 ? 0 : swim != null ? (D.swimYd / 100) * swim / 3600 : null;
-    const bikeH = D.bikeMi === 0 ? 0 : bike != null ? D.bikeMi / bike : null;
-    const runH = D.runMi === 0 ? 0 : run != null ? (D.runMi * run) / 3600 : null;
-    const tr = ATHLETE.raceSplits.transitions;
+    const D = ATHLETE.raceDist;
+    const t = today(), since = addDays(t, -56);
+    const recent = ACTIVITIES.filter((a) => fromYmd(a.date) > since && fromYmd(a.date) <= t);
+    const longest = (sp: "run" | "bike" | "swim") => recent.filter((a) => a.sport === sp).reduce<Activity | null>((m, a) => { const d = sp === "swim" ? a.yd ?? 0 : a.mi ?? 0; const md = m ? (sp === "swim" ? m.yd ?? 0 : m.mi ?? 0) : -1; return d > md ? a : m; }, null);
+    const lr = longest("run"), lb = longest("bike"), ls = longest("swim");
+    const tri = D.swimYd > 0 && D.bikeMi > 0 && D.runMi > 0;
+    const phase = currentWeek()?.phase ?? "";
+    const specific = /build|peak|taper|race/i.test(phase);
+    const halfDone = (D.runMi === 0 || (lr?.mi ?? 0) >= D.runMi * 0.5) && (D.bikeMi === 0 || (lb?.mi ?? 0) >= D.bikeMi * 0.5);
+    const ready = ATHLETE.hasRace && (specific || halfDone);
+    let runH: number | null = D.runMi === 0 ? 0 : null;
+    if (D.runMi > 0 && lr?.mi && lr.mi >= 2) runH = ((lr.min / 60) * Math.pow(D.runMi / lr.mi, 1.06)) * (tri ? 1.12 : 1);
+    let bikeH: number | null = D.bikeMi === 0 ? 0 : null;
+    if (D.bikeMi > 0) {
+      const rides = recent.filter((a) => a.sport === "bike" && a.mph && a.min >= 120);
+      const w = rides.reduce((x, a) => x + a.min, 0);
+      if (w) bikeH = D.bikeMi / (rides.reduce((x, a) => x + (a.mph as number) * a.min, 0) / w);
+    }
+    let swimH: number | null = D.swimYd === 0 ? 0 : null;
+    if (D.swimYd > 0) {
+      const minYd = Math.min(1500, D.swimYd * 0.75);
+      const sw = recent.filter((a) => a.sport === "swim" && a.p100_s && (a.yd ?? 0) >= minYd).sort((a, b) => (b.yd ?? 0) - (a.yd ?? 0))[0];
+      if (sw?.p100_s) swimH = ((D.swimYd / 100) * sw.p100_s * 1.05) / 3600;
+    }
+    const tr = tri ? ATHLETE.raceSplits.transitions : 0;
     const total = swimH != null && bikeH != null && runH != null ? swimH + bikeH + runH + tr : null;
-    return { swimH, bikeH, runH, transitions: tr, total, goal: ATHLETE.raceSplits };
+    return { ready, phase, longest: { run: lr?.mi ?? 0, bike: lb?.mi ?? 0, swim: ls?.yd ?? 0 }, swimH, bikeH, runH, transitions: tr, total, goal: ATHLETE.raceSplits };
   }
 
   // ---------- single-activity analysis ----------
@@ -208,7 +218,9 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
     const onDay = week?.sessions.filter((s) => s.date === a.date) ?? [];
     const restDay = onDay.length > 0 && onDay.every((s) => s.sport === "rest");
     // a rest day is not a planned session: nothing to compare duration or pace against
-    const planned = onDay.find((s) => s.sport === a.sport || (s.sport === "brick" && (a.sport === "bike" || a.sport === "run"))) ?? onDay.find((s) => s.sport !== "rest") ?? null;
+    // the session this activity was paired with (same sport only); another sport never stands in for the plan
+    const planned = onDay.find((s) => s.actual?.id === a.id) ?? onDay.find((s) => s.sport === a.sport || (s.sport === "brick" && (a.sport === "bike" || a.sport === "run"))) ?? null;
+    const otherPlanned = planned ? null : onDay.find((s) => s.sport !== "rest") ?? null;
     const sp = a.sport === "swim" || a.sport === "bike" || a.sport === "run" ? a.sport : null;
     const zone = planned && sp ? ATHLETE.zones[sp]?.[planned.intensity] : undefined;
     const range = parseRange(zone);
@@ -224,7 +236,7 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
     const ef = pace != null && a.hr ? (sp === "bike" ? pace / a.hr : (1 / pace) * 3600 / a.hr) : null; // speed per bpm
     const sameType = sp ? ACTIVITIES.filter((x) => x.sport === sp && x.id !== a.id && x.hr && paceOf(x, sp) != null && fromYmd(x.date) >= addDays(fromYmd(a.date), -28) && fromYmd(x.date) <= fromYmd(a.date)) : [];
     const efAvg = sameType.length ? sameType.reduce((s, x) => { const p = paceOf(x, sp as "run") as number; return s + (sp === "bike" ? p / (x.hr as number) : ((1 / p) * 3600) / (x.hr as number)); }, 0) / sameType.length : null;
-    return { planned, restDay, zone, range, pace, verdict, load, durDelta, fitnessEffect: load / 42, fatigueEffect: load / 7, ef, efAvg, efN: sameType.length, sport: sp as Sport | null };
+    return { planned, otherPlanned, restDay, zone, range, pace, verdict, load, durDelta, fitnessEffect: load / 42, fatigueEffect: load / 7, ef, efAvg, efN: sameType.length, sport: sp as Sport | null };
   }
 
   // =====================================================================
@@ -235,26 +247,41 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
   const between = (a: Activity, from: Date, to: Date) => { const d = fromYmd(a.date); return d > from && d <= to; };
 
   /** Top KPI tiles. Deltas compare with the previous period of the same length. */
+  // KPI row (V-080/081): this week vs plan, week load, fitness, form, 28-day compliance, run efficiency.
+  // Deltas are in points or units, and only when the earlier window has data.
   function kpis() {
     const t = today();
-    const avgLoad = (endOffset: number) => { let s = 0; for (let i = 0; i < 7; i++) s += dayLoad(addDays(t, -endOffset - i)); return s / 7; };
-    const load7 = avgLoad(0), load7prev = avgLoad(7);
     const last = LOAD_SERIES[LOAD_SERIES.length - 1], wkAgo = LOAD_SERIES[Math.max(0, LOAD_SERIES.length - 8)];
     const cur = currentWeek(), prev = cur.week > 1 ? WEEKS[cur.week - 2] : null;
-    const volNow = weekStatus(cur).actualH, volPrev = prev ? weekStatus(prev).actualH : null;
-    const comp12 = complianceFor(WEEKS.slice(Math.max(0, cur.week - 12), cur.week).flatMap((w) => w.sessions));
-    const compPrev = cur.week > 12 ? complianceFor(WEEKS.slice(Math.max(0, cur.week - 24), cur.week - 12).flatMap((w) => w.sessions)) : { pct: null };
+    const ws = weekStatus(cur);
+    const planned = (w: Week) => w.sessions.reduce((x, s) => x + plannedLoadOf(s), 0);
+    const actual = (w: Week) => { let x = 0; for (let i = 0; i < 7; i++) for (const a of activitiesOn(ymd(addDays(fromYmd(w.start), i)))) x += activityLoad(a); return x; };
     const spark = (k: "fitness" | "fatigue" | "form") => LOAD_SERIES.slice(-28).map((p) => p[k]);
-    const loadBars = Array.from({ length: 14 }, (_, i) => dayLoad(addDays(t, -13 + i)));
-    const volBars = WEEKS.slice(Math.max(0, cur.week - 12), cur.week).map((w) => weekStatus(w).actualH);
-    const compBars = WEEKS.slice(Math.max(0, cur.week - 12), cur.week).map((w) => complianceFor(w.sessions).pct ?? 0);
+    const recent = WEEKS.slice(Math.max(0, cur.week - 8), cur.week);
+    const daysWithLoad = (from: number, to: number) => { let n = 0; for (let i = from; i < to; i++) if (dayLoad(addDays(t, -i)) > 0) n++; return n; };
+    const baseline = daysWithLoad(7, 49) >= 3; // the 7-days-ago value means something only with earlier training
+    const form = last.form;
+    const formWord = form <= -30 ? "very fatigued" : form < -10 ? "fatigued" : form <= 5 ? "neutral" : form <= 25 ? "fresh" : last.fitness < wkAgo.fitness ? "detraining" : "very fresh";
+    const comp = rollingCompliance(28);
+    // run efficiency: metres per minute per heartbeat on steady runs ≥ 20 min (threshold and above left out), duration-weighted
+    const ef = (fromDay: number, toDay: number) => {
+      let w = 0, x = 0;
+      for (const a of ACTIVITIES) {
+        if (a.sport !== "run" || !a.hr || !a.pace_s || a.min < 20) continue;
+        const d = fromYmd(a.date), age = (t.getTime() - d.getTime()) / 864e5;
+        if (age < fromDay || age >= toDay || hrZone("run", a.hr, LTHR) > 3) continue;
+        x += ((1609.34 / (a.pace_s / 60)) / a.hr) * a.min; w += a.min;
+      }
+      return w ? x / w : null;
+    };
+    const efNow = ef(0, 28), efPrev = ef(28, 56);
     return {
-      load: { v: load7, d: pctDelta(load7, load7prev), bars: loadBars },
-      fitness: { v: last.fitness, d: pctDelta(last.fitness, wkAgo.fitness), spark: spark("fitness") },
-      fatigue: { v: last.fatigue, d: pctDelta(last.fatigue, wkAgo.fatigue), spark: spark("fatigue") },
-      form: { v: last.form, dAbs: last.form - wkAgo.form, spark: spark("form") },
-      volume: { v: volNow, d: pctDelta(volNow, volPrev), bars: volBars },
-      consistency: { v: comp12.pct, dAbs: comp12.pct != null && compPrev.pct != null ? comp12.pct - compPrev.pct : null, bars: compBars },
+      week: { done: ws.done, total: ws.total, h: ws.actualH, plannedH: ws.plannedH, bars: recent.map((w) => weekStatus(w).actualH) },
+      load: { v: Math.round(actual(cur)), planned: Math.round(planned(cur)), last: prev ? Math.round(actual(prev)) : null, bars: recent.map((w) => actual(w)) },
+      fitness: { v: last.fitness, d: baseline ? last.fitness - wkAgo.fitness : null, spark: spark("fitness") },
+      form: { v: form, word: formWord, fatigue: last.fatigue, fitness: last.fitness, spark: spark("form") },
+      compliance: { v: comp.pct, done: comp.done, planned: comp.planned },
+      ef: { v: efNow, d: efNow != null && efPrev != null ? efNow - efPrev : null },
     };
   }
 
@@ -284,10 +311,10 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
     const wavg = (xs: Activity[], f: (a: Activity) => number | null) => { const v = xs.filter((a) => f(a) != null); const w = v.reduce((s, a) => s + a.min, 0); return w ? v.reduce((s, a) => s + (f(a) as number) * a.min, 0) / w : null; };
     const pace = (a: Activity) => paceOf(a, sp);
     const hr = (a: Activity) => a.hr ?? null;
-    const best = (xs: Activity[]) => { const v = xs.map(pace).filter((x): x is number => x != null); return v.length ? (sp === "bike" ? Math.max(...v) : Math.min(...v)) : null; };
+    const best = (xs: Activity[]) => { const v = xs.filter((a) => paceEligible(a, sp)).map(pace).filter((x): x is number => x != null); return v.length ? (sp === "bike" ? Math.max(...v) : Math.min(...v)) : null; };
     const longest = (xs: Activity[]) => { const v = xs.map((a) => (sp === "swim" ? a.yd ?? 0 : a.mi ?? 0)); return v.length ? Math.max(...v) : null; };
     const rows = [
-      { k: sp === "bike" ? "Avg speed" : "Pace", cur: wavg(cur, pace), prev: wavg(prev, pace), kind: sp === "bike" ? "speed" : "pace" as const },
+      { k: sp === "bike" ? "Avg speed" : "Pace", cur: wavg(cur.filter((a) => paceEligible(a, sp)), pace), prev: wavg(prev.filter((a) => paceEligible(a, sp)), pace), kind: sp === "bike" ? "speed" : "pace" as const },
       { k: sp === "bike" ? "Best speed" : "Best pace", cur: best(cur), prev: best(prev), kind: sp === "bike" ? "speed" : "pace" as const },
       { k: "Heart rate", cur: wavg(cur, hr), prev: wavg(prev, hr), kind: "hr" as const },
       { k: sp === "swim" ? "Longest swim" : sp === "bike" ? "Longest ride" : "Longest run", cur: longest(cur), prev: longest(prev), kind: "dist" as const },
@@ -308,29 +335,28 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
   }
 
   /** Recent sessions with planned vs actual and an execution score. */
+  /** Recent activities against the plan, in words: Completed (same sport, ≥ 70 % of the planned time), Partial, Unplanned. */
   function trainingQuality(n = 6) {
     return [...ACTIVITIES].reverse().slice(0, n).map((a) => {
       const r = analyzeActivity(a);
-      const durScore = r.planned ? Math.min(1, a.min / Math.max(1, r.planned.min)) : 1;
-      const paceScore = r.verdict === "in range" ? 1 : r.verdict ? 0.8 : 1;
-      const execution = Math.round(durScore * paceScore * 100);
+      const status: "Completed" | "Partial" | "Unplanned" = r.planned ? (a.min >= 0.7 * r.planned.min ? "Completed" : "Partial") : "Unplanned";
       const facts: string[] = [];
-      if (r.planned) facts.push(`${a.min} of ${r.planned.min} min planned`); else facts.push(r.restDay ? "rest day in the plan" : "no session planned that day");
+      if (r.planned) facts.push(`${Math.round(a.min)} of ${r.planned.min} min planned`);
+      else if (r.otherPlanned) facts.push(`plan was ${r.otherPlanned.title.toLowerCase()} ${r.otherPlanned.min} min`);
+      else facts.push(r.restDay ? "rest day in the plan" : "no session planned that day");
       if (r.verdict && r.verdict !== "in range") facts.push(r.verdict); else if (r.verdict) facts.push("pace in range");
-      if (r.planned && r.planned.sport !== a.sport && r.planned.sport !== "brick") facts.push(`plan was ${r.planned.title.toLowerCase()}`);
-      return { a, planned: r.planned, load: r.load, execution, level: execution >= 90 ? "good" : execution >= 75 ? "ok" : "low", insight: facts.join(" · ") };
+      return { a, planned: r.planned, load: r.load, status, level: status === "Completed" ? "good" : status === "Partial" ? "ok" : "none", insight: facts.join(" · ") };
     });
   }
 
   function raceReadiness() {
     const p = raceProjection();
     const goal = ATHLETE.raceSplits;
-    const goalTotal = goal.swim + goal.bike + goal.run + goal.transitions;
-    const range = (h: number | null) => (h == null ? null : { lo: h * 0.97, hi: h * 1.04 });
-    const gapMin = p.total != null ? (p.total - goalTotal) * 60 : null;
+    const goalTotal = ATHLETE.hasRace && ATHLETE.race.goal ? goal.swim + goal.bike + goal.run + goal.transitions : null;
+    const gapMin = p.total != null && goalTotal != null ? (p.total - goalTotal) * 60 : null;
     const t = today();
     const n = ACTIVITIES.filter((a) => between(a, addDays(t, -28), t)).length;
-    return { ...p, goalTotal, ranges: { swim: range(p.swimH), bike: range(p.bikeH), run: range(p.runH), total: range(p.total) }, gapMin, onTrack: gapMin != null ? gapMin <= 0 : null, sessions4w: n, score: raceScore().score };
+    return { ...p, goalTotal, gapMin, sessions4w: n };
   }
 
   /** Three factual observations for the Sunday review, no advice. */
@@ -340,7 +366,7 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
     const ld = loadNow();
     out.push({ title: "Load", text: `Fitness ${ld.fitness.toFixed(0)}, fatigue ${ld.fatigue.toFixed(0)}, form ${ld.form > 0 ? "+" : ""}${ld.form.toFixed(0)}. This week ${ld.thisWeek} load vs ${ld.lastWeek} last week (${ld.ramp > 0 ? "+" : ""}${(ld.ramp * 100).toFixed(0)}%).` });
     const c = rollingCompliance(28);
-    out.push({ title: "Sessions", text: `${st.done} of ${st.total} sessions this week, ${fmtH(st.actualH)} of ${fmtH(st.plannedH)} planned. 28-day compliance ${c.pct}% (${c.done} of ${c.planned}).` });
+    out.push({ title: "Sessions", text: `${st.done} of ${st.total} sessions this week, ${fmtH(st.actualH)} of ${fmtH(st.plannedH)} planned. Completed sessions, 28 days: ${c.pct == null ? "—" : `${c.pct}%`} (${Math.round(c.done * 2) / 2} of ${c.planned}).` });
     const tt = totals();
     const lr = tt.bests.longestRun, lb = tt.bests.longestRide, ls = tt.bests.longestSwim;
     out.push({ title: "Long sessions", text: `Longest so far: run ${lr?.mi != null ? lr.mi.toFixed(1) + " mi" : "—"}, ride ${lb?.mi != null ? lb.mi.toFixed(1) + " mi" : "—"}, swim ${ls?.yd != null ? ls.yd.toLocaleString() + " yd" : "—"}. Race day: ${ATHLETE.raceDist.runMi ? ATHLETE.raceDist.runMi + " mi" : "—"} · ${ATHLETE.raceDist.bikeMi ? ATHLETE.raceDist.bikeMi + " mi" : "—"} · ${ATHLETE.raceDist.swimYd ? ATHLETE.raceDist.swimYd.toLocaleString() + " yd" : "—"}.` });
@@ -348,8 +374,10 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
   }
 
 
-  return { activities: ACTIVITIES, weeks: WEEKS, phases: PHASES, athlete: ATHLETE, BODY, bodySummary, corridorAt, activitiesOn, actualByDiscipline, currentWeek, rollingCompliance, weekStatus, LOAD_SERIES, loadNow, loadWeekly, complianceFor, complianceByPhase, paceSeries, weightedAvgPace, healthScore, raceScore, volumeWeekly, totals, raceProjection, analyzeActivity, kpis, zoneDistribution, sportPerformance, progressSeries, trainingQuality, raceReadiness, observations };
+  return { activities: ACTIVITIES, weeks: WEEKS, phases: PHASES, athlete: ATHLETE, BODY, bodySummary, corridorAt, activitiesOn, actualByDiscipline, currentWeek, rollingCompliance, weekStatus, LOAD_SERIES, loadNow, loadWeekly, complianceFor, complianceByPhase, paceSeries, weightedAvgPace, volumeWeekly, totals, raceProjection, analyzeActivity, kpis, zoneDistribution, sportPerformance, progressSeries, trainingQuality, raceReadiness, observations };
 }
 export type Analysis = ReturnType<typeof createAnalysis>;
 /** The seed-only toolkit, for code that runs outside the plan store (content, scripts). */
 export const SEED_ANALYSIS = createAnalysis(SEED_ACTIVITIES, SEED_WEEKS);
+
+export const zoneOf = zoneOfIn;

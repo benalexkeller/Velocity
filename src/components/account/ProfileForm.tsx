@@ -72,9 +72,8 @@ export function ProfileForm({ mode, onSaved }: { mode: "setup" | "edit"; onSaved
         <label><b>Weekday evening</b><input type="time" step={900} value={pm} onChange={(e) => setPm(e.target.value)} /></label>
         <label><b>Weekend start</b><input type="time" step={900} value={we} onChange={(e) => setWe(e.target.value)} /></label>
       </div>
-      <span className="hint">Session times in the plan calendar come from these.</span>
 
-      {mode === "edit" && <span className="hint">Race, goal and the plan itself: Plan → Plan settings.</span>}
+      {mode === "edit" && <span className="hint">Race and goal: Plan → Plan settings.</span>}
       {err && <div className="err">{err}</div>}
       {saved && mode === "edit" && <div className="ok-note">Saved.</div>}
       <div className="row"><button type="submit" className="btn" disabled={busy}>{busy ? "Saving…" : mode === "setup" ? "Save and build my plan" : "Save changes"}</button></div>

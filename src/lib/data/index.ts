@@ -6,7 +6,9 @@ import { addDays, fromYmd, today, ymd } from "../format";
 import { ATHLETE } from "../config";
 
 export type Sport = "swim" | "bike" | "run" | "strength" | "rest" | "hike" | "other" | "brick";
-export type Status = "planned" | "done" | "missed";
+/** planned · done (same sport, ≥ 70 % of the planned time) · partial (same sport, less) · substituted (another sport, ≥ 30 min) · missed */
+export type Status = "planned" | "done" | "partial" | "substituted" | "missed";
+export const STATUS_LABEL: Record<Status, string> = { planned: "Planned", done: "Completed", partial: "Partial", substituted: "Substituted", missed: "Missed" };
 
 export interface Session {
   id: string;
@@ -75,7 +77,8 @@ export const SPORT_LABEL: Record<Sport, string> = { swim: "Swim", bike: "Bike", 
 export function intensityOf(text: string) {
   const t = text.toLowerCase();
   if (/race sim|race day/.test(t)) return "Race";
-  if (/\btempo\b|threshold|lthr/.test(t)) return "Tempo";
+  if (/threshold|lthr/.test(t)) return "Threshold";
+  if (/\btempo\b/.test(t)) return "Tempo";
   if (/interval|hill reps|pickups/.test(t)) return "Intervals";
   if (/drill|technique/.test(t)) return "Technique";
   if (/\bez\b|easy|z2|recovery/.test(t)) return "Zone 2";
@@ -138,10 +141,22 @@ export const activitiesOn = (date: string, acts: Activity[] = ACTIVITIES) => act
 export type PlanWeekJson = { week: number; start: string; phase: string; focus: string; recovery: boolean; race: boolean; days: { text: string; min: number }[] };
 export const PLAN_SEED = planSeed as PlanWeekJson[];
 
-export function sessionStatus(sport: Sport, date: string, acts: Activity[]): Status {
-  const isPast = fromYmd(date) < today();
-  return acts.length ? "done" : sport === "rest" ? (isPast ? "done" : "planned") : isPast ? "missed" : "planned";
+/** Does this activity count for this session? Same sport; a brick takes a bike or a run. */
+export const fitsSession = (sportPlanned: Sport, a: Activity) => a.sport === sportPlanned || (sportPlanned === "brick" && (a.sport === "bike" || a.sport === "run"));
+/** Status of one session from the activity paired with it (if any) and the other activities logged that day. */
+export function statusOf(s: { sport: Sport; min: number; date: string }, paired: Activity | undefined, othersThatDay: Activity[]): Status {
+  const isPast = fromYmd(s.date) < today();
+  if (s.sport === "rest") return isPast ? "done" : "planned";
+  if (paired) return paired.min >= 0.7 * s.min ? "done" : "partial";
+  if (othersThatDay.some((a) => a.min >= 30)) return "substituted";
+  return isPast ? "missed" : "planned";
 }
+export function sessionStatus(sport: Sport, min: number, date: string, acts: Activity[]): Status {
+  const paired = acts.filter((a) => fitsSession(sport, a)).sort((a, b) => b.min - a.min)[0];
+  return statusOf({ sport, min, date }, paired, acts.filter((a) => a !== paired));
+}
+/** How much of a planned session a status is worth in a compliance figure. */
+export const STATUS_CREDIT: Record<Status, number> = { done: 1, partial: 0.5, substituted: 0.5, missed: 0, planned: 0 };
 
 /** Minutes of the race itself inside a race week (the "Race day" entry), so it is not counted as training. */
 export const isRaceDay = (text: string) => /^race day/i.test(text.replace(/^(AM|PM):\s*/i, ""));
@@ -159,9 +174,9 @@ export function buildWeeks(plan: PlanWeekJson[], acts: Activity[] = [], av: Avai
         id: `w${w.week}-${i}`, date, dayIndex: i,
         start: timeFor(d.text, i, sport, av),
         min: d.min, sport,
-        title: SPORT_LABEL[sport],
+        title: isRaceDay(d.text) ? "Race day" : SPORT_LABEL[sport],
         detail: sport === "rest" ? "No session" : `${intensity} · ${d.min} min`,
-        text: cleanText(d.text), intensity, why: whyOf(d.text, sport), status: sessionStatus(sport, date, activitiesOn(date, acts)),
+        text: cleanText(d.text), intensity, why: whyOf(d.text, sport), status: sessionStatus(sport, d.min, date, activitiesOn(date, acts)),
       };
     });
     return {
@@ -209,12 +224,14 @@ const PHASE_COPY: Record<string, { purpose: string; goals: [string, string][] }>
   "Peak": { purpose: "Race simulation, longest run, heat preparation.", goals: [["Race simulation", "Full race-simulation session."], ["Longest run", "2:45 long run, four weeks out."], ["Heat prep", "Overdressed indoor sessions and sauna."]] },
   "Taper": { purpose: "Volume drops. Short intensity touches remain.", goals: [["Taper 1", "Volume −35%. Bike serviced. Pacing chart drafted."], ["Taper 2", "Volume −50%. Fueling and travel finalized."], ["Race week", "Fly in mid-week. Short openers. Race Saturday."]] },
   "Race Week": { purpose: "Volume drops. Short intensity touches remain.", goals: [] },
+  "Base": { purpose: "Easy volume in all three sports; long sessions get longer.", goals: [] },
+  "Build": { purpose: "Race-effort intervals and bricks on top of the long sessions.", goals: [] },
 };
 export function phasesOf(weeks: Week[]): Phase[] {
   const out: Phase[] = [];
   for (const w of weeks) {
     if (w.phaseShort === "No plan") continue;
-    const short = w.phaseShort === "Race Week" ? "Taper" : w.phaseShort;
+    const short = /^race week$/i.test(w.phaseShort) ? "Taper" : w.phaseShort;
     const last = out[out.length - 1];
     if (last && last.short === short) { last.to = w.week; last.weeks.push(w); }
     else out.push({ name: w.phase, short, from: w.week, to: w.week, weeks: [w], peakHours: 0, purpose: PHASE_COPY[short]?.purpose ?? "", goals: [] });
@@ -256,11 +273,19 @@ export function actualByDiscipline(w: Week, acts: Activity[] = ACTIVITIES) {
 export const sumH = (o: { swim: number; bike: number; run: number; other: number }) => o.swim + o.bike + o.run + o.other;
 
 // ---------- load model (earned, from work done) ----------
-const INTENSITY_FACTOR: Record<string, number> = { "Zone 2": 0.7, Aerobic: 0.72, Technique: 0.65, Endurance: 0.75, Tempo: 0.9, Intervals: 0.95, Race: 1 };
-export function plannedLoad(s: Session) { return s.sport === "rest" ? 0 : Math.round(s.min * (INTENSITY_FACTOR[s.intensity] ?? 0.72)); }
-export function activityLoad(a: Activity) {
-  const ifac = a.hr ? Math.min(1.2, (a.hr / 155) ** 2) : a.exertion ? a.exertion / 8 : 0.75;
-  return Math.round(a.min * ifac);
+// Load = minutes × intensity², with intensity = average HR ÷ threshold HR (TSS-like). The planned
+// factor is the square of each zone's HR midpoint over threshold, so planned and actual sit on one scale.
+const INTENSITY_FACTOR: Record<string, number> = { "Zone 2": 0.76, Aerobic: 0.76, Technique: 0.65, Endurance: 0.78, Tempo: 0.85, Threshold: 0.85, Intervals: 0.94, Race: 0.85 };
+export const plannedFactor = (intensity: string) => INTENSITY_FACTOR[intensity] ?? 0.76;
+export function plannedLoad(s: Session) { return s.sport === "rest" ? 0 : Math.round(s.min * plannedFactor(s.intensity)); }
+/** Intensity of an activity: HR ÷ LTHR when there is a heart rate, else from the athlete's 1–10 effort, else a sport default. */
+export function intensityFactor(a: Activity, lthr = 155) {
+  if (a.hr) return Math.min(1.5, a.hr / lthr);
+  if (a.exertion) return Math.min(1.1, 0.5 + 0.05 * a.exertion);
+  return a.sport === "swim" || a.sport === "bike" || a.sport === "run" || a.sport === "brick" ? 0.72 : 0.5;
+}
+export function activityLoad(a: Activity, lthr = 155) {
+  return Math.round(a.min * intensityFactor(a, lthr) ** 2);
 }
 export function weekLoad(w: Week, acts: Activity[] = ACTIVITIES) {
   const planned = w.sessions.reduce((s, x) => s + plannedLoad(x), 0);
@@ -276,10 +301,11 @@ export function rollingCompliance(days = 28, weeks: Week[] = WEEKS) {
   for (const w of weeks) for (const s of w.sessions) {
     const d = fromYmd(s.date);
     if (s.sport === "rest" || d > t || d < addDays(t, -days)) continue;
+    if (d.getTime() === t.getTime() && s.status === "planned") continue; // today's session is not missed yet
     planned++;
-    if (s.status === "done") done++;
+    done += STATUS_CREDIT[s.status];
   }
-  return { planned, done, pct: planned ? Math.round((done / planned) * 100) : 0 };
+  return { planned, done, pct: planned ? Math.round((done / planned) * 100) : null };
 }
 export function weekStatus(w: Week, acts: Activity[] = ACTIVITIES) {
   const sessions = w.sessions.filter((s) => s.sport !== "rest");
@@ -287,14 +313,6 @@ export function weekStatus(w: Week, acts: Activity[] = ACTIVITIES) {
   return { done, total: sessions.length, actualH: sumH(actualByDiscipline(w, acts)), plannedH: w.plannedMin / 60, load: weekLoad(w, acts) };
 }
 
-// ---------- coach transcript (seed) ----------
-export const COACH_THREAD = [
-  { who: "You", at: "07:12", text: "Can we move tomorrow's ride from 7:30 to after work? Mornings are packed this week." },
-  { who: "Coach", at: "07:13", text: "Done. Tomorrow's bike is now 18:00 – 18:55 (55 min, tempo). I kept it a day away from Saturday's long ride so your legs are fresh for it. Weekly volume is unchanged." },
-  { who: "action", at: "", text: "Plan updated" },
-  { who: "You", at: "07:15", text: "Also — I got a calf cramp at mile 3 of the run yesterday. Why?" },
-  { who: "Coach", at: "07:16", text: "Most likely two things stacked up: you ran it at 8:24/mi with your heart rate at 170 on what was meant to be an easy day, and it was 19:16 after a full day on your feet with nothing to drink logged since lunch. Cramps at mile 3 are usually pace plus dehydration, not fitness. Keep easy runs easy (10:15+), drink 500 ml in the two hours before an evening run, and add 30 seconds of calf raises to your strength day. If it happens twice more, we look at electrolytes." },
-];
 // Sunday review: facts only — last week's numbers, this week's plan.
 export function sundayReview() {
   const cur = currentWeek();

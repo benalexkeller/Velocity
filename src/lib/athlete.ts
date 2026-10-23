@@ -24,6 +24,11 @@ export interface Athlete {
   raceSplits: { swim: number; bike: number; run: number; transitions: number };
   planStart: string;
   zones: Record<string, Record<string, string>>;
+  /** Lactate-threshold heart rate (run) and FTP from the intake; null when never given. Load and HR zones are built on these. */
+  lthr: number | null;
+  ftp: number | null;
+  /** Where the zone table came from: the coach (seed), the plan builder's answers, or the app's defaults. */
+  zonesSource: "coach" | "intake" | "default";
   isAdmin: boolean;
   setupDone: boolean;
 }
@@ -62,6 +67,9 @@ export const DEFAULT_ATHLETE: Athlete = {
   raceSplits: ATHLETE.raceSplits,
   planStart: ATHLETE.planStart,
   zones: ATHLETE.zones,
+  lthr: ATHLETE.lthr,
+  ftp: null,
+  zonesSource: "coach",
   isAdmin: true,
   setupDone: true,
 };
@@ -97,7 +105,26 @@ export function athleteOf(profile: Profile | null, race: Race | null, planStart:
     raceSplits: splits,
     planStart: start,
     zones: profile.zones ?? ATHLETE.zones,
+    lthr: profile.zones?.meta?.lthr ? Number(profile.zones.meta.lthr) || null : null,
+    ftp: profile.zones?.meta?.ftp ? Number(profile.zones.meta.ftp) || null : null,
+    zonesSource: profile.zones ? "intake" : "default",
     isAdmin: profile.is_admin,
     setupDone: profile.setup_done,
   };
+}
+
+/** Fallback threshold when the athlete never gave one; every page that uses it says so. */
+export const DEFAULT_LTHR = 155;
+
+/** Heart-rate zone from an average HR and the athlete's threshold (Friel's run/bike percentages). */
+export function hrZone(sport: string, hr: number, lthr: number | null): 1 | 2 | 3 | 4 | 5 {
+  const r = hr / (lthr ?? DEFAULT_LTHR);
+  const cut = sport === "bike" || sport === "brick" ? [0.81, 0.9, 0.94, 1.0] : [0.85, 0.9, 0.95, 1.0];
+  return r < cut[0] ? 1 : r < cut[1] ? 2 : r < cut[2] ? 3 : r < cut[3] ? 4 : 5;
+}
+/** Zone cut-offs in bpm for display ("Z2 · 132 – 138"). */
+export function hrZoneRanges(sport: string, lthr: number): Record<1 | 2 | 3 | 4 | 5, [number, number]> {
+  const c = sport === "bike" ? [0.81, 0.9, 0.94, 1.0] : [0.85, 0.9, 0.95, 1.0];
+  const b = (x: number) => Math.round(lthr * x);
+  return { 1: [Math.round(lthr * 0.6), b(c[0]) - 1], 2: [b(c[0]), b(c[1]) - 1], 3: [b(c[1]), b(c[2]) - 1], 4: [b(c[2]), b(c[3]) - 1], 5: [b(c[3]), Math.round(lthr * 1.1)] };
 }

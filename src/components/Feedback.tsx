@@ -50,7 +50,6 @@ export function FeedbackModal({ onClose }: { onClose: () => void }) {
         {done ? (
           <div className="fb-done">
             <b>Sent.</b>
-            <span>Every entry is read. Fixes and changes show up on the site; there is no reply by email unless we need a detail.</span>
             <div className="row"><button type="button" className="btn" onClick={onClose}>Close</button><button type="button" className="btn ghost" onClick={() => { setDone(false); setMsg(""); }}>Send another</button></div>
           </div>
         ) : (
@@ -58,7 +57,7 @@ export function FeedbackModal({ onClose }: { onClose: () => void }) {
             <label><b>Which part of the app?</b><div className="days">{FEEDBACK_TABS.map((t) => <button key={t.k} type="button" className={tab === t.k ? "on" : ""} onClick={() => setTab(t.k)}>{t.label}</button>)}</div></label>
             <label><b>What kind of feedback?</b><div className="days">{FEEDBACK_KINDS.map((k) => <button key={k.k} type="button" className={kind === k.k ? "on" : ""} onClick={() => setKind(k.k)}>{k.label}</button>)}</div></label>
             <label><b>Your comment</b><textarea value={msg} onChange={(e) => { setMsg(e.target.value); setErr(null); }} rows={5} placeholder={hint || "Anything."} autoFocus /></label>
-            <span className="hint">Attached automatically: this page ({path}), your account{plan.athlete.email ? ` (${plan.athlete.email})` : ""}, browser and screen size. Nothing else.</span>
+            <span className="hint">Sent with it: this page ({path}), your account, browser and screen size.</span>
             {err && <div className="err">{err}</div>}
             <div className="row"><button type="submit" className="btn fb-send" disabled={busy}>{busy ? "Sending…" : "Send feedback"}</button><button type="button" className="btn ghost" onClick={onClose}>Cancel</button></div>
           </>

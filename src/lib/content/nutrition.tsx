@@ -25,7 +25,7 @@ export const NUTRITION: Cube[] = [
     ),
   },
   {
-    id: "hydration", tag: "During training", title: "Fluid and sodium", summary: "Typical loss 0.5–1.5 L/h. Sodium 300–1000 mg per litre lost. Measure, don't guess.",
+    id: "hydration", tag: "During training", title: "Fluid and sodium", summary: "Typical loss 0.5–1.5 L/h. Sodium 300–1000 mg per litre lost. Measure sweat rate before setting a fluid target.",
     render: () => (
       <>
         <p>Sweat rate varies 3× between athletes and 2× between cool and hot days. The only reliable way to know yours is to weigh before and after a session (the Calculator page has a sweat-rate tool).</p>
@@ -228,7 +228,7 @@ export const NUTRITION: Cube[] = [
           <li>45 kcal/kg FFM/day: full adaptation. 30–45: acceptable short-term. Under 30: impaired recovery, hormones, immune function and bone (RED-S).</li>
           <li>75 kg athlete at 15% body fat: FFM 64 kg. A 2-hour ride (about 1400 kcal) on a 2500 kcal intake leaves 1100 kcal = 17 kcal/kg FFM. Too low.</li>
           <li>Weight loss, if wanted, belongs in Base 1–2 at a maximum deficit of 300–500 kcal per day, never on long-ride days, and never in Build or Peak.</li>
-          <li>Warning signs: rising resting HR, falling HRV, poor sleep, repeated illness, stalled paces at the same effort. The Health score tracks the first three.</li>
+          <li>Warning signs: rising resting HR, falling HRV, poor sleep, repeated illness, stalled paces at the same effort. The Body panel on Analysis shows the first three.</li>
         </ul>
       </>
     ),

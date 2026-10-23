@@ -9,7 +9,8 @@ import { projectWeight, sessionFuel, targetsFor, type DayTargets } from "./targe
 import { EMPTY_NUTRITION, ZERO, addM, entryMacros, scaleM, uid, nowHM, type Drink, type Food, type LogEntry, type Macros, type Meal, type NutritionData, type NutritionProfile, type Serving, type SupplementPick, type WeightEntry } from "./types";
 import type { Session } from "../data";
 
-export interface DaySummary { date: string; totals: Macros; targets: DayTargets; sessions: Session[]; drinks_ml: number; entries: LogEntry[]; logged: boolean }
+/** targets is null until a body weight is on file. sessions = what was done (activities) plus what is still planned. */
+export interface DaySummary { date: string; totals: Macros; targets: DayTargets | null; sessions: Session[]; basis: "planned" | "done" | "mixed" | "none"; drinks_ml: number; entries: LogEntry[]; logged: boolean; estimateOnly: boolean }
 
 export interface NutritionStore {
   ready: boolean;
@@ -45,6 +46,7 @@ export interface NutritionStore {
   addSupplement: (pick: SupplementPick) => void;
   removeSupplement: (id: string) => void;
   fuelFor: (s: Session) => ReturnType<typeof sessionFuel>;
+  hasWeight: boolean;
 }
 
 const Ctx = createContext<NutritionStore | null>(null);
@@ -61,18 +63,43 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
   const lastSaved = useRef<NutritionProfile | null>(null);
   useEffect(() => { if (!ready || data.profile === lastSaved.current) return; lastSaved.current = data.profile; void b.saveProfile(data.profile); }, [data.profile, ready, b]);
 
-  const weightKg = data.profile.weight_kg ?? 75;
-  const sessionsOn = useCallback((date: string) => { const w = plan.weekOf(fromYmd(date)); return (w?.sessions ?? []).filter((s) => s.date === date); }, [plan]);
+  const weightKg = data.profile.weight_kg ?? 0;
+  // the day's sessions as they happened: logged activities replace their planned session, missed sessions count
+  // for nothing, unplanned activities are added; future and not-yet-done sessions stay as planned
+  const sessionsOn = useCallback((date: string): { list: Session[]; basis: DaySummary["basis"] } => {
+    const w = plan.weekOf(fromYmd(date));
+    const planned = (w?.sessions ?? []).filter((s) => s.date === date);
+    const acts = plan.activitiesOn(date);
+    const paired = new Set(planned.map((s) => s.actual?.id).filter(Boolean) as string[]);
+    const list: Session[] = [];
+    let done = 0, plannedN = 0;
+    for (const s of planned) {
+      if (s.sport === "rest") { list.push(s); continue; }
+      if (s.actual) { list.push({ ...s, sport: s.actual.sport, min: s.actual.min }); done++; continue; }
+      if (s.status === "missed" || s.status === "substituted") continue;
+      list.push(s); plannedN++;
+    }
+    for (const a of acts) {
+      if (paired.has(a.id)) continue;
+      const lthr = plan.athlete.lthr ?? 155;
+      const intensity = a.hr ? (a.hr / lthr >= 0.9 ? "Tempo" : "Zone 2") : a.exertion && a.exertion >= 7 ? "Tempo" : "Zone 2";
+      list.push({ id: a.id, date, dayIndex: 0, start: a.start, min: a.min, sport: a.sport, title: a.name, detail: "", text: a.name, intensity, why: "", status: "done", actual: a });
+      done++;
+    }
+    return { list, basis: done && plannedN ? "mixed" : done ? "done" : plannedN ? "planned" : "none" };
+  }, [plan]);
 
   const store = useMemo<NutritionStore>(() => {
     const p = data.profile;
     const entriesOn = (date: string) => data.log.filter((e) => e.date === date);
     const day = (date: string): DaySummary => {
       const entries = entriesOn(date);
-      const sessions = sessionsOn(date);
+      const { list: sessions, basis } = sessionsOn(date);
       const totals = entries.reduce((a, e) => addM(a, entryMacros(e)), ZERO);
       const drinks_ml = data.drinks.filter((d) => d.date === date).reduce((a, d) => a + d.ml, 0);
-      return { date, totals, targets: targetsFor(p, sessions, plan.athlete.hasRace ? plan.athlete.race.date : undefined), sessions, drinks_ml, entries, logged: entries.length > 0 || drinks_ml > 0 };
+      const phase = plan.weekOf(fromYmd(date))?.phase ?? "";
+      const targets = targetsFor(p, sessions, { date, raceDate: plan.athlete.hasRace ? plan.athlete.race.date : undefined, raceDistance: plan.athlete.hasRace ? plan.athlete.race.distance : undefined, phase });
+      return { date, totals, targets, sessions, basis, drinks_ml, entries, logged: entries.length > 0 || drinks_ml > 0, estimateOnly: entries.length > 0 && entries.every((e) => e.source === "quick") };
     };
     const week = (weekStart: string) => Array.from({ length: 7 }, (_, i) => day(ymd(addDays(fromYmd(weekStart), i))));
     const bump = (food: Food) => { const cur = data.foods.find((f) => f.id === food.id); const next: Food = { ...food, favourite: cur?.favourite ?? food.favourite, uses: (cur?.uses ?? 0) + 1, last_used: new Date().toISOString() }; setData((d) => ({ ...d, foods: [...d.foods.filter((f) => f.id !== next.id), next] })); void b.upsertFood(next); };
@@ -104,12 +131,19 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
       removeDrink: (id) => { setData((d) => ({ ...d, drinks: d.drinks.filter((x) => x.id !== id) })); void b.deleteDrink(id); },
       weights: [...data.weights].sort((a, c) => a.date.localeCompare(c.date)),
       logWeight: (date, kg) => { const w = { date, weight_kg: kg }; setData((d) => ({ ...d, weights: [...d.weights.filter((x) => x.date !== date), w], profile: date === ymd(today()) ? { ...d.profile, weight_kg: kg } : d.profile })); void b.upsertWeight(w); },
-      projection: () => { const t = today(); const bal: number[] = []; for (let i = 1; i <= 14; i++) { const d = day(ymd(addDays(t, -i))); if (d.logged) bal.push(d.totals.kcal - d.targets.kcal); } return bal.length >= 3 ? projectWeight(bal) : null; },
+      projection: () => { const t = today(); const bal: number[] = []; for (let i = 1; i <= 14; i++) { const d = day(ymd(addDays(t, -i))); if (d.logged && d.targets) bal.push(d.totals.kcal - d.targets.kcal); } return bal.length >= 3 ? projectWeight(bal) : null; },
       takenOn: (date, id) => data.taken.find((t) => t.date === date && t.supplement_id === id)?.taken_at ?? null,
       toggleTaken: (date, id) => { const on = !data.taken.some((t) => t.date === date && t.supplement_id === id); const t = { date, supplement_id: id, taken_at: nowHM() }; setData((d) => ({ ...d, taken: on ? [...d.taken, t] : d.taken.filter((x) => !(x.date === date && x.supplement_id === id)) })); void b.setTaken(t, on); },
       addSupplement: (pick) => setData((d) => ({ ...d, profile: { ...d.profile, supplements: [...d.profile.supplements.filter((s) => s.id !== pick.id), pick] } })),
       removeSupplement: (id) => setData((d) => ({ ...d, profile: { ...d.profile, supplements: d.profile.supplements.filter((s) => s.id !== id) } })),
-      fuelFor: (s) => sessionFuel(s, weightKg),
+      fuelFor: (s) => {
+        // hours until the next planned session decide the recovery-carbohydrate advice
+        const startOf = (x: Session) => fromYmd(x.date).getTime() + (Number((x.start ?? "06:30").split(":")[0]) * 60 + Number((x.start ?? "06:30").split(":")[1])) * 60000;
+        const end = startOf(s) + s.min * 60000;
+        const next = plan.weeks.flatMap((wk) => wk.sessions).filter((x) => x.sport !== "rest" && x.id !== s.id && startOf(x) > end).sort((a, b) => startOf(a) - startOf(b))[0];
+        return sessionFuel(s, weightKg || 70, next ? (startOf(next) - end) / 3600000 : null);
+      },
+      hasWeight: !!p.weight_kg,
     };
   }, [data, ready, b, sessionsOn, plan.athlete, weightKg]);
 

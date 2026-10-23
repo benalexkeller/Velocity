@@ -10,7 +10,7 @@ import { NUTRITION } from "@/lib/content/nutrition";
 import type { Session } from "@/lib/data";
 import { addDays, shortDate, today, ymd } from "@/lib/format";
 import { NutritionSetup } from "./Setup";
-import { WeightChart, ratePerWeek, timelineOf, weekIndexOf, type WPoint } from "./WeightStages";
+import { WeightChart, ratePerWeek, timelineOf, type WPoint } from "./WeightStages";
 
 const fmt = (n: number, d = 0) => n.toLocaleString(undefined, { maximumFractionDigits: d });
 const kgToLb = (kg: number) => kg * 2.20462;
@@ -51,19 +51,19 @@ export function Guide() {
   const weekSessions = week.sessions.filter((s) => s.sport !== "rest");
   const age = p.birth_year ? new Date().getFullYear() - p.birth_year : null;
   const goalText = p.goal === "race_weight" ? (p.goal_weight_kg ? `${showW(p.goal_weight_kg)} by race day` : "target weight not set") : p.goal === "lose" ? "−400 kcal/day" : p.goal === "gain" ? "+300 kcal/day" : "no calorie adjustment";
-  const stageText = stages.filter((s) => s.date !== raceDate).map((s) => `${showW(s.weight_kg)} by W${timeline[weekIndexOf(timeline, s.date)]?.week ?? "?"} (${shortDate(s.date)})`).join(" · ");
+  const stageText = stages.filter((s) => s.date !== raceDate).map((s) => `${showW(s.weight_kg)} by ${shortDate(s.date)}`).join(" · ");
 
   return (
     <div className="nu-guide">
       <section className="card nu-plan" aria-label="Your nutrition plan">
-        <div className="hd"><div><div className="k">Your nutrition plan</div><div className="sub muted small">{p.setup_done ? "What every daily target is built from. Change anything here." : "Not set up yet — targets use default values."}</div></div><button type="button" className="btn small" onClick={() => setEditing((e) => !e)}>{editing ? "Close" : "Edit plan"}</button></div>
+        <div className="hd"><div><div className="k">Your nutrition plan</div>{!p.setup_done && <div className="sub muted small">Add your weight to get daily targets.</div>}</div><button type="button" className="btn small" onClick={() => setEditing((e) => !e)}>{editing ? "Close" : "Edit plan"}</button></div>
         {editing ? <NutritionSetup edit onDone={() => setEditing(false)} /> : (
           <div className="grid">
             <div><span className="k">Body</span><b>{p.weight_kg ? showW(p.weight_kg) : "—"}</b><span className="d">{[p.height_cm ? (imperial ? `${Math.round(p.height_cm / 2.54)} in` : `${p.height_cm} cm`) : null, age ? `${age} y` : null, p.sex === "male" ? "male" : p.sex === "female" ? "female" : null].filter(Boolean).join(" · ") || "height, age, sex not set"}</span></div>
             <div><span className="k">Goal</span><b>{GOAL_LABEL[p.goal]}</b><span className="d">{goalText}{stageText ? ` · stages: ${stageText}` : ""}</span></div>
-            <div><span className="k">Rest-day calories</span><b>{fmt(todayTargets.base)} kcal</b><span className="d">{p.base_kcal != null ? "your own number" : `resting ${fmt(bmrOf(p))} kcal × 1.4`}{todayTargets.goalAdj ? ` · ${todayTargets.goalAdj > 0 ? "+" : ""}${fmt(todayTargets.goalAdj)} kcal/day for the goal` : ""}</span></div>
-            <div><span className="k">Today</span><b>{fmt(todayTargets.kcal)} kcal</b><span className="d">{fmt(todayTargets.carbs)} g carbs · {fmt(todayTargets.protein)} g protein · {fmt(todayTargets.fat)} g fat · {(todayTargets.fluid_ml / 1000).toFixed(1)} L</span></div>
-            <div><span className="k">Bottle</span><b>{p.bottle_ml >= 1000 ? `${p.bottle_ml / 1000} L` : `${p.bottle_ml} ml`}</b><span className="d">one bottle = one tap on Track</span></div>
+            <div><span className="k">Rest-day calories</span><b>{todayTargets ? `${fmt(todayTargets.base)} kcal` : "—"}</b><span className="d">{!todayTargets ? "add your weight to calculate" : p.base_kcal != null ? "your own number" : `resting ${fmt(bmrOf(p))} kcal × 1.4`}{todayTargets?.goalAdj ? ` · ${todayTargets.goalAdj > 0 ? "+" : ""}${fmt(todayTargets.goalAdj)} kcal today for the goal` : ""}</span></div>
+            <div><span className="k">Today</span><b>{todayTargets ? `${fmt(todayTargets.kcal)} kcal` : "—"}</b><span className="d">{todayTargets ? `${fmt(todayTargets.carbs)} g carbs · ${fmt(todayTargets.protein)} g protein · ${fmt(todayTargets.fat)} g fat · ${(todayTargets.fluid_ml / 1000).toFixed(1)} L` : "no targets without a body weight"}</span></div>
+            <div><span className="k">Bottle</span><b>{p.bottle_ml >= 1000 ? `${p.bottle_ml / 1000} L` : `${p.bottle_ml} ml`}</b><span className="d" /></div>
             <div><span className="k">Supplements</span><b>{p.supplements.length ? p.supplements.length : "none"}</b><span className="d">{p.supplements.map((s) => `${SUPPLEMENT_MAP[s.id]?.name ?? s.id} ${s.dose} ${s.time}`).join(" · ") || "add from the Supplements tab"}</span></div>
           </div>
         )}
@@ -78,7 +78,7 @@ export function Guide() {
           <div className="nu-lgd"><span><i className="bar" /> planned hours per week</span>{path.length > 1 && <span><i className="tgt" /> weight targets</span>}<span><i className="dot" /> logged weight</span>{projLine && <span><i className="proj" /> projection</span>}</div>
           <div className="u">
             {next && needRate != null ? <>Next target {showW(next.weight_kg)} by {shortDate(next.date)}: {rateW(needRate)} from today's weight. </> : null}
-            {proj ? <>Last 14 logged days: {proj.avgBalance > 0 ? "+" : ""}{fmt(proj.avgBalance)} kcal/day vs target → {rateW(proj.kgPerWeek)}{projEnd != null ? ` → ${showW(projEnd)} by ${raceDate ? "race day" : "12 weeks"}` : ""} if nothing changes. 7,700 kcal ≈ 1 kg.</> : "After three logged days the projection appears here: average calorie balance per day × days to race ÷ 7,700 kcal per kg."}
+            {proj ? <>Last 14 logged days: {proj.avgBalance > 0 ? "+" : ""}{fmt(proj.avgBalance)} kcal/day vs target → {rateW(proj.kgPerWeek)}{projEnd != null ? ` → ${showW(projEnd)} by ${raceDate ? "race day" : "12 weeks"}` : ""} if nothing changes. 7,700 kcal ≈ 1 kg.</> : "Projection after three logged days."}
           </div>
         </section>
 
@@ -86,14 +86,14 @@ export function Guide() {
           <div className="hd"><div className="k">Your energy needs</div></div>
           <table className="tbl small">
             <thead><tr><th>Day type</th><th className="num">kcal</th><th className="num">Carbs g</th><th className="num">Protein g</th><th className="num">Fat g</th><th className="num">Fluid L</th></tr></thead>
-            <tbody>{types.map(([label, ss]) => { const t = targetsFor(p, ss, raceDate ?? undefined); return <tr key={label}><td>{label}</td><td className="num">{fmt(t.kcal)}</td><td className="num">{fmt(t.carbs)}</td><td className="num">{fmt(t.protein)}</td><td className="num">{fmt(t.fat)}</td><td className="num">{(t.fluid_ml / 1000).toFixed(1)}</td></tr>; })}</tbody>
+            <tbody>{types.map(([label, ss]) => { const t = targetsFor(p, ss, { raceDate: raceDate ?? undefined }); return <tr key={label}><td>{label}</td><td className="num">{t ? fmt(t.kcal) : "—"}</td><td className="num">{t ? fmt(t.carbs) : "—"}</td><td className="num">{t ? fmt(t.protein) : "—"}</td><td className="num">{t ? fmt(t.fat) : "—"}</td><td className="num">{t ? (t.fluid_ml / 1000).toFixed(1) : "—"}</td></tr>; })}</tbody>
           </table>
-          <div className="u">Resting energy {fmt(bmrOf(p))} kcal (Mifflin–St Jeor) × 1.4 for daily life, plus the session's energy (MET × kg × hours){p.goal !== "maintain" ? `, ${p.goal === "gain" ? "plus a surplus to gain" : p.goal === "lose" ? "minus a deficit to lose" : next ? "adjusted to reach the next weight stage by its date" : "adjusted to reach the target weight by race day"}` : ""}. Carbohydrate 3.5 g/kg on rest days up to 8 g/kg on long days; protein 1.7 g/kg; fat fills the rest, never under 0.8 g/kg. Fluid 35 ml/kg + 0.5 L per training hour.</div>
+          <details className="u how"><summary>How targets are calculated</summary>Resting energy {fmt(bmrOf(p))} kcal (Mifflin–St Jeor) × 1.4 for daily life, plus the session's energy (MET × kg × hours){p.goal !== "maintain" ? `, ${p.goal === "gain" ? "plus a surplus to gain" : p.goal === "lose" ? "minus a deficit to lose" : next ? "adjusted to reach the next weight stage by its date" : "adjusted to reach the target weight by race day"}` : ""}. Carbohydrate 3.5 g/kg on rest days, rising with training hours (≈ 6 g/kg for 2 h, ≈ 8.5 g/kg for 4 h, at most 12), 10 g/kg on the two carb-load days before a race; protein 1.7 g/kg (1.9 in Build and Peak, 2.2 in a deficit); fat 0.8–1.2 g/kg. No deficit on long days, in the taper or race week. Fluid 35 ml/kg plus what is drunk during sessions (at most 0.8 L/h).</details>
         </section>
       </div>
 
       <section className="card nu-weekfuel" aria-label="This week's fuel">
-        <div className="hd"><div className="k">This week's fuel · Week {week.week}</div><span className="muted small">Before / during / after each session, from your weight and the session's length and intensity.</span></div>
+        <div className="hd"><div className="k">This week's fuel · Week {week.week}</div></div>
         {weekSessions.length ? (
           <table className="tbl small">
             <thead><tr><th>Day</th><th>Session</th><th>Before</th><th>During</th><th>After</th></tr></thead>

@@ -23,7 +23,6 @@ function Nutrition() {
       <div className="page nu" style={{ display: "grid", gap: 14, paddingTop: 10 }}>
         <div className="page-head">
           <div>
-            <div className="eyebrow muted">Fuel</div>
             <h1>Nutrition</h1>
           </div>
         </div>
@@ -38,7 +37,6 @@ function Nutrition() {
           <section className="card box">
             <span className="wordmark">{BRAND.name}</span>
             <h1>Set up nutrition</h1>
-            <p className="sub">Targets are computed from your body data and each day's training. Takes a minute; everything can be changed later on the Guide tab.</p>
             <NutritionSetup onDone={() => setTab("track")} />
           </section>
         </div>

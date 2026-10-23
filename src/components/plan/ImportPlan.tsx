@@ -28,8 +28,8 @@ export function ImportPlan({ onBack, onDone }: { onBack: () => void; onDone: () 
     <div className="pb">
       <div className="pb-head"><div><div className="eyebrow muted">Your plan</div><h1>Upload your own plan</h1></div></div>
       <section className="card pb-card form pb-import">
-        <div className="pb-q"><h2>1 · Get the template</h2><span className="hint">One row per session: Date, Sport, Minutes, Description, then Intensity and Phase if you want them. Excel or CSV. Days without a row are rest days.</span></div>
-        <div className="row"><button type="button" className="btn ghost" onClick={download}>Download the template (.csv)</button><span className="hint">Open it in Excel or Numbers, fill it in, save as .xlsx or .csv.</span></div>
+        <div className="pb-q"><h2>1 · Get the template</h2><span className="hint">Columns: Date, Sport, Minutes, Description; Intensity and Phase optional. Days without a row are rest days.</span></div>
+        <div className="row"><button type="button" className="btn ghost" onClick={download}>Download the template (.csv)</button></div>
         <div className="pb-q"><h2>2 · Upload it</h2></div>
         <label className={`pb-drop${drag ? " over" : ""}`} onDragOver={(e) => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)} onDrop={(e) => { e.preventDefault(); setDrag(false); void read(e.dataTransfer.files[0]); }}>
           <input type="file" accept=".xlsx,.xls,.csv" onChange={(e) => void read(e.target.files?.[0])} />

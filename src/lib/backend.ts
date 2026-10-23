@@ -8,11 +8,14 @@ import type { Availability } from "./data";
 import { ACTIVITIES as SEED_ACTIVITIES, PLAN_SEED, SPORT_LABEL, type Activity, type PlanWeekJson, type Sport } from "./data";
 import { BODY_SEED, type BodyDay } from "./analysis";
 import type { Profile, Race } from "./athlete";
+import { ATHLETE } from "./config";
 import { supabase } from "./supabase/client";
+import { ymd as localYmd } from "./format";
 
 export interface SessionPatch { date?: string; start?: string; min?: number; intensity?: string; text?: string; sport?: Sport; deleted?: boolean; locked?: boolean }
 export interface AddedSession { id: string; date: string; start?: string; min: number; sport: Sport; intensity: string; text: string }
-export interface ThreadMsg { who: "You" | "Coach" | "action"; at: string; text: string }
+/** `day` (YYYY-MM-DD, local) decides which messages the coach panel shows: only today's. */
+export interface ThreadMsg { who: "You" | "Coach" | "action"; at: string; text: string; day?: string }
 export interface PlanStateJson { patches: Record<string, SessionPatch>; added: AddedSession[]; undone: boolean; calendar: boolean }
 export interface UserData { profile: Profile | null; race: Race | null; plan: PlanWeekJson[]; intake: Intake | null; state: PlanStateJson; activities: Activity[]; body: BodyDay[]; thread: ThreadMsg[]; availability?: Availability | null }
 
@@ -40,7 +43,7 @@ export interface Backend {
 // Local (browser) — the format the app has used so far, kept so PR's changes survive
 // ====================================================================================
 const KEY = "velocity.store.v1";
-export interface LocalState extends PlanStateJson { manual: Activity[]; hidden: string[]; excluded: string[]; thread: ThreadMsg[]; plan?: PlanWeekJson[] | null; intake?: Intake | null; race?: Race | null; availability?: Availability | null }
+export interface LocalState extends PlanStateJson { manual: Activity[]; hidden: string[]; excluded: string[]; thread: ThreadMsg[]; plan?: PlanWeekJson[] | null; intake?: Intake | null; race?: Race | null; availability?: Availability | null; profile?: Partial<Profile> | null }
 const EMPTY_LOCAL: LocalState = { ...EMPTY_STATE, manual: [], hidden: [], excluded: [], thread: [] };
 
 export function readLocal(): LocalState {
@@ -71,10 +74,12 @@ export class LocalBackend implements Backend {
     if (demo === "empty") {
       const created = new Date().toISOString();
       const profile: Profile = { id: "demo", email: "new@example.com", username: "newathlete", name: "New Athlete", avatar_url: null, units: "imperial", timezone: "America/Los_Angeles", city: null, availability: null, zones: null, is_admin: false, setup_done: true, created_at: created };
-      return { profile: { ...profile, availability: this.s.availability ?? null }, race: this.s.race ?? null, plan: this.s.plan ?? [], intake: this.s.intake ?? null, state: { patches: this.s.patches, added: this.s.added, undone: false, calendar: true }, activities: this.s.manual, body: [], thread: this.s.thread };
+      return { profile: { ...profile, ...(this.s.profile ?? {}), availability: this.s.availability ?? null }, race: this.s.race ?? null, plan: this.s.plan ?? [], intake: this.s.intake ?? null, state: { patches: this.s.patches, added: this.s.added, undone: false, calendar: true }, activities: this.s.manual, body: [], thread: this.s.thread };
     }
     // a plan built or imported in this browser replaces the seed plan (and its race) until "clear local changes"
-    return { profile: null, race: this.s.race ?? null, plan: this.s.plan ?? PLAN_SEED, intake: this.s.intake ?? null, state: { patches: this.s.patches, added: this.s.added, undone: this.s.undone, calendar: this.s.calendar }, activities: localActivities(this.s), body: BODY_SEED, thread: this.s.thread, availability: this.s.availability ?? null };
+    // a profile saved in this browser (set-up screen) replaces the seed athlete's name, units and city
+    const saved = this.s.profile && Object.keys(this.s.profile).length ? { id: "local", email: null, username: "", name: ATHLETE.firstName, avatar_url: null, units: "imperial" as const, timezone: "America/Los_Angeles", city: null, availability: this.s.availability ?? null, zones: null, is_admin: false, setup_done: true, created_at: new Date().toISOString(), ...this.s.profile } as Profile : null;
+    return { profile: saved, race: this.s.race ?? null, plan: this.s.plan ?? PLAN_SEED, intake: this.s.intake ?? null, state: { patches: this.s.patches, added: this.s.added, undone: this.s.undone, calendar: this.s.calendar }, activities: localActivities(this.s), body: BODY_SEED, thread: this.s.thread, availability: this.s.availability ?? null };
   }
   private put(next: Partial<LocalState>) { this.s = { ...this.s, ...next }; writeLocal(this.s); }
   async saveState(state: PlanStateJson) { this.put(state); }
@@ -85,7 +90,10 @@ export class LocalBackend implements Backend {
   }
   async setExcluded(id: string, excluded: boolean) { this.put({ excluded: excluded ? [...new Set([...this.s.excluded, id])] : this.s.excluded.filter((x) => x !== id) }); }
   async appendThread(msgs: ThreadMsg[]) { this.put({ thread: [...this.s.thread, ...msgs] }); }
-  async saveProfile(p: Partial<Profile>) { if (p.availability !== undefined) this.put({ availability: p.availability }); }
+  async saveProfile(p: Partial<Profile>) {
+    const { availability, ...rest } = p;
+    this.put({ ...(availability !== undefined ? { availability } : {}), ...(Object.keys(rest).length ? { profile: { ...(this.s.profile ?? {}), ...rest } } : {}) });
+  }
   async saveRace(r: Race | null) { this.put({ race: r }); }
   async savePlan(weeks: PlanWeekJson[], intake?: Intake | null) { this.put({ plan: weeks, ...(intake !== undefined ? { intake } : {}) }); }
   async saveBody() { /* seed only */ }
@@ -131,7 +139,7 @@ export class SupabaseBackend implements Backend {
       this.sb.from("plan_state").select("*").eq("user_id", uid).maybeSingle(),
       this.sb.from("activities").select("*").eq("user_id", uid).order("date").order("start"),
       this.sb.from("body_metrics").select("*").eq("user_id", uid).order("date"),
-      this.sb.from("coach_messages").select("who, at, text").eq("user_id", uid).order("id"),
+      this.sb.from("coach_messages").select("who, at, text, created_at").eq("user_id", uid).order("id"),
     ]);
     void this.sb.rpc("touch_profile");
     const st = state.data as Row | null;
@@ -143,7 +151,7 @@ export class SupabaseBackend implements Backend {
       state: st ? { patches: (st.patches as PlanStateJson["patches"]) ?? {}, added: (st.added as AddedSession[]) ?? [], undone: !!st.undone, calendar: st.calendar !== false } : EMPTY_STATE,
       activities: ((acts.data as Row[]) ?? []).map(rowToActivity),
       body: ((body.data as Row[]) ?? []).map((b) => ({ date: String(b.date), rhr: b.rhr as number, hrv: b.hrv as number, sleep_h: b.sleep_h == null ? undefined : Number(b.sleep_h), sleep_score: b.sleep_score as number, stress: b.stress as number, vo2: b.vo2 == null ? undefined : Number(b.vo2) })),
-      thread: ((thread.data as Row[]) ?? []).map((m) => ({ who: m.who as ThreadMsg["who"], at: String(m.at ?? ""), text: String(m.text) })),
+      thread: ((thread.data as Row[]) ?? []).map((m) => ({ who: m.who as ThreadMsg["who"], at: String(m.at ?? ""), text: String(m.text), day: m.created_at ? localYmd(new Date(String(m.created_at))) : undefined })),
     };
   }
   private fail(where: string, error: { message: string } | null) { if (error) console.error(`[velocity] ${where}: ${error.message}`); }
@@ -151,7 +159,7 @@ export class SupabaseBackend implements Backend {
   async upsertActivity(a: Activity) { const uid = await this.user(); const { error } = await this.sb.from("activities").upsert(activityToRow(uid, a)); this.fail("upsertActivity", error); }
   async deleteActivity(id: string) { const uid = await this.user(); const { error } = await this.sb.from("activities").delete().eq("user_id", uid).eq("id", id); this.fail("deleteActivity", error); }
   async setExcluded(id: string, excluded: boolean) { const uid = await this.user(); const { error } = await this.sb.from("activities").update({ excluded }).eq("user_id", uid).eq("id", id); this.fail("setExcluded", error); }
-  async appendThread(msgs: ThreadMsg[]) { const uid = await this.user(); const { error } = await this.sb.from("coach_messages").insert(msgs.map((m) => ({ user_id: uid, ...m }))); this.fail("appendThread", error); }
+  async appendThread(msgs: ThreadMsg[]) { const uid = await this.user(); const { error } = await this.sb.from("coach_messages").insert(msgs.map(({ day: _day, ...m }) => ({ user_id: uid, ...m }))); this.fail("appendThread", error); }
   async saveProfile(p: Partial<Profile>) { const uid = await this.user(); const { data: u } = await this.sb.auth.getUser(); const { error } = await this.sb.from("profiles").upsert({ id: uid, email: u.user?.email ?? null, ...p }); this.fail("saveProfile", error); if (error) throw error; }
   async saveRace(r: Race | null) {
     const uid = await this.user();
