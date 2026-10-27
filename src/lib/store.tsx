@@ -12,6 +12,8 @@ import type { Availability } from "./data";
 import { EMPTY_DATA, makeBackend, readLocal, type AddedSession, type Backend, type PlanStateJson, type SessionPatch, type ThreadMsg, type UserData } from "./backend";
 import { ACCOUNTS_ON } from "./supabase/env";
 import { addDays, dateFull, fromYmd, today, ymd } from "./format";
+import type { CoachReply, Proposal, ProposalStatus } from "./coach/types";
+import { buildCoachContext } from "./coach/context";
 
 export type { AddedSession, SessionPatch, ThreadMsg } from "./backend";
 export interface ManualActivity { id: string; name: string; sport: Sport; date: string; start: string; min: number; mi?: number; yd?: number; pace_s?: number; mph?: number; p100_s?: number; hr?: number; elev_ft?: number; exertion?: number; feel?: string; note?: string; source: "manual" }
@@ -103,7 +105,13 @@ export interface PlanStore {
   logActivity: (a: ManualActivity) => void;
   deleteActivity: (id: string) => void;
   toggleExcluded: (id: string) => void;
-  post: (text: string) => void;
+  /** Ask the coach. The answer arrives a moment later (busy is true meanwhile). */
+  post: (text: string) => Promise<void>;
+  busy: boolean;
+  /** Whether the coach service (model) is on for this site; false = rule-based answers only. */
+  coachOn: boolean;
+  /** Apply a proposal the coach made (its message id) or turn it down. */
+  decideProposal: (id: string, status: ProposalStatus) => Promise<void>;
   thread: ThreadMsg[];
   undone: boolean;
   undoPlanUpdate: () => void;
@@ -120,7 +128,7 @@ export interface PlanStore {
 }
 
 const Ctx = createContext<PlanStore | null>(null);
-const PUBLIC = (p: string) => p === "/login" || p.startsWith("/auth");
+const PUBLIC = (p: string) => p === "/" || p === "/login" || p.startsWith("/auth");
 
 export function PlanProvider({ children }: { children: ReactNode }) {
   const backend = useRef<Backend | null>(null);
@@ -130,9 +138,12 @@ export function PlanProvider({ children }: { children: ReactNode }) {
   const router = useRouter();
   const [data, setData] = useState<UserData>(EMPTY_DATA);
   const [ready, setReady] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [coachOn, setCoachOn] = useState(true);
+  const storeRef = useRef<PlanStore | null>(null);
 
   const reload = useCallback(async () => { try { setData(await be.load()); } catch (e) { console.error("[velocity] load", e); } setReady(true); }, [be]);
-  useEffect(() => { if (ACCOUNTS_ON && PUBLIC(path)) { setReady(true); return; } void reload(); }, [reload, path === "/login"]); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => { if (ACCOUNTS_ON && PUBLIC(path)) { setReady(true); return; } void reload(); }, [reload, PUBLIC(path)]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // first sign-in: finish the profile before anything else
   useEffect(() => {
@@ -162,6 +173,17 @@ export function PlanProvider({ children }: { children: ReactNode }) {
     const changes = Object.keys(st.patches).length + st.added.length + data.activities.filter((a) => a.source === "manual").length;
     const planRange = d.weeks.length ? { start: d.weeks[0].start, end: ymd(addDays(fromYmd(d.weeks[d.weeks.length - 1].start), 6)) } : null;
     const inPlan = (date: string) => !planRange || (date >= planRange.start && date <= planRange.end);
+    const applyProposal = (pr: Proposal) => {
+      for (const c of pr.changes) {
+        if (c.kind === "add") { if (c.date && c.min && c.sport) storeRef.current!.addSession({ date: c.date, start: c.start, min: c.min, sport: c.sport, intensity: c.intensity ?? "Zone 2", text: c.text ?? `${SPORT_LABEL[c.sport]} ${c.min} min` }); continue; }
+        if (!c.sessionId) continue;
+        const found = findSession(c.sessionId);
+        if (!found || found.s.locked || found.s.status === "done") continue;
+        if (c.kind === "delete") storeRef.current!.deleteSession(c.sessionId);
+        else if (c.kind === "move") { if (c.date) storeRef.current!.moveSession(c.sessionId, { date: c.date, start: c.start }); else if (c.start) storeRef.current!.editSession(c.sessionId, { start: c.start }); }
+        else if (c.kind === "edit") storeRef.current!.editSession(c.sessionId, { ...(c.min ? { min: c.min } : {}), ...(c.intensity ? { intensity: c.intensity } : {}), ...(c.text ? { text: c.text } : {}), ...(c.start ? { start: c.start } : {}), ...(c.sport ? { sport: c.sport } : {}) });
+      }
+    };
     const toActivity = (m: ManualActivity): Activity => ({ id: m.id, date: m.date, start: m.start, sport: m.sport, name: m.name, min: m.min, mi: m.mi, yd: m.yd, pace_s: m.pace_s, mph: m.mph, p100_s: m.p100_s, hr: m.hr, elev_ft: m.elev_ft, source: "manual", note: m.note, exertion: m.exertion });
     return {
       ready, accounts: ACCOUNTS_ON, athlete, profile: data.profile, race: data.race, hasPlan: data.plan.length > 0, seed: !ACCOUNTS_ON && data.plan === PLAN_SEED, planJson: data.plan, body: data.body, intake: data.intake,
@@ -191,7 +213,38 @@ export function PlanProvider({ children }: { children: ReactNode }) {
       logActivity: (m) => { const a = toActivity(m); setData((cur) => ({ ...cur, activities: [...cur.activities.filter((x) => x.id !== a.id), a] })); void be.upsertActivity(a); },
       deleteActivity: (id) => { setData((cur) => ({ ...cur, activities: cur.activities.filter((x) => x.id !== id) })); void be.deleteActivity(id); },
       toggleExcluded: (id) => { const cur = data.activities.find((a) => a.id === id); if (!cur) return; const excluded = !cur.excluded; setData((c) => ({ ...c, activities: c.activities.map((a) => (a.id === id ? { ...a, excluded: excluded || undefined } : a)) })); void be.setExcluded(id, excluded); },
-      post: (text) => { const day = ymd(today()); const msgs: ThreadMsg[] = [{ who: "You", at: nowHM(), text, day }, { who: "Coach", at: nowHM(), text: coachReply(text, d, athlete), day }]; setData((cur) => ({ ...cur, thread: [...cur.thread, ...msgs] })); void be.appendThread(msgs); },
+      post: async (text) => {
+        const day = ymd(today());
+        const you: ThreadMsg = { who: "You", at: nowHM(), text, day };
+        setData((cur) => ({ ...cur, thread: [...cur.thread, you] }));
+        const [savedYou] = await be.appendThread([you]);
+        setData((cur) => ({ ...cur, thread: cur.thread.map((m) => (m === you ? savedYou : m)) }));
+        setBusy(true);
+        let reply: ThreadMsg;
+        try {
+          const current = storeRef.current!;
+          const base = current.thread.filter((m) => m.day === day && m.who !== "action");
+          if (!base.some((m) => m === you || m === savedYou || (m.id != null && m.id === savedYou.id))) base.push(you);
+          const history = base.slice(-12).map((m) => ({ role: m.who === "You" ? ("user" as const) : ("assistant" as const), content: m.text }));
+          const r = await askCoach(history, current);
+          if (r === "off") { setCoachOn(false); reply = { who: "Coach", at: nowHM(), text: coachReply(text, d, athlete), day }; }
+          else reply = { who: "Coach", at: nowHM(), text: r.text, day, proposal: r.proposal ?? null, status: r.proposal ? "open" : null };
+        } catch {
+          reply = { who: "Coach", at: nowHM(), text: "No answer: the coach service did not respond. Try again in a minute.", day };
+        }
+        setBusy(false);
+        setData((cur) => ({ ...cur, thread: [...cur.thread, reply] }));
+        const [savedReply] = await be.appendThread([reply]);
+        setData((cur) => ({ ...cur, thread: cur.thread.map((m) => (m === reply ? savedReply : m)) }));
+      },
+      busy, coachOn,
+      decideProposal: async (id, status) => {
+        const msg = data.thread.find((m) => m.id === id);
+        if (!msg?.proposal || msg.status !== "open") return;
+        if (status === "accepted") applyProposal(msg.proposal);
+        setData((cur) => ({ ...cur, thread: cur.thread.map((m) => (m.id === id ? { ...m, status } : m)) }));
+        await be.setThreadStatus(id, status);
+      },
       thread: data.thread, undone: st.undone,
       undoPlanUpdate: () => setState((s) => ({ ...s, undone: !s.undone })),
       calendar: st.calendar, toggleCalendar: () => setState((s) => ({ ...s, calendar: !s.calendar })),
@@ -215,11 +268,13 @@ export function PlanProvider({ children }: { children: ReactNode }) {
       signOut: async () => { await be.signOut(); router.replace("/login"); },
       reload,
     };
-  }, [d, data, ready, athlete, be, setState, reload, router]);
+  }, [d, data, ready, busy, coachOn, athlete, be, setState, reload, router]);
+  useEffect(() => { storeRef.current = store; }, [store]);
 
   // Nothing date- or data-dependent is rendered until the data is loaded in the browser: the prerendered HTML
   // carries the build day's clock, so rendering it would flash wrong dates and break hydration (V-037).
-  return <Ctx.Provider value={store}>{!ready ? <div className="app-loading" aria-busy="true" /> : children}</Ctx.Provider>;
+  // The public front page ("/") needs no data and is rendered straight away, so it is in the prerendered HTML.
+  return <Ctx.Provider value={store}>{!ready && path !== "/" ? <div className="app-loading" aria-busy="true" /> : children}</Ctx.Provider>;
 }
 
 export function usePlan(): PlanStore {
@@ -228,8 +283,17 @@ export function usePlan(): PlanStore {
   return c;
 }
 
-// The coach service (Claude API) is not connected yet. Until it is, answer from the data for the
-// questions the data can answer, and say plainly when it cannot.
+// Asks the coach service (/api/coach → OpenRouter). "off" when the site has no model key, so the
+// rule-based answers below take over.
+async function askCoach(history: { role: "user" | "assistant"; content: string }[], store: PlanStore): Promise<CoachReply | "off"> {
+  const res = await fetch("/api/coach", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: history, context: buildCoachContext(store) }) });
+  if (res.status === 503) return "off";
+  if (!res.ok) throw new Error(`coach ${res.status}`);
+  return (await res.json()) as CoachReply;
+}
+
+// Without a model key the coach answers from the data for the questions the data can answer, and says
+// plainly when it cannot.
 function coachReply(text: string, d: ReturnType<typeof derive>, athlete: Athlete): string {
   const q = text.toLowerCase();
   const t = today();
@@ -245,5 +309,5 @@ function coachReply(text: string, d: ReturnType<typeof derive>, athlete: Athlete
   if (/this week|week/.test(q)) return `Week ${wk.week}${wk.phaseShort !== "No plan" ? ` (${wk.phaseShort})` : ""}: ${done} of ${total} sessions done, ${(wk.plannedMin / 60).toFixed(1)} h planned.${wk.focus ? ` Focus: ${wk.focus}.` : ""}`;
   if (/move|swap|change|reschedule/.test(q)) return "Open the session in the Plan calendar and use Move or Edit.";
   if (/race|goal/.test(q)) return athlete.hasRace ? `Race: ${athlete.race.name}, ${dateFull(athlete.race.date)}${athlete.race.goal ? `, goal ${athlete.race.goal}` : ""}. Projection: Analysis tab.` : "No race set. Plan → Plan settings.";
-  return "Not answered: the coach service is not connected yet. Answered now: today, tomorrow, this week, moving a session, the race.";
+  return "Not answered: the coach service is off on this site. Answered now: today, tomorrow, this week, moving a session, the race.";
 }

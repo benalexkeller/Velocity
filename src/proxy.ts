@@ -3,7 +3,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC = ["/login", "/auth"];
+// Pages anyone can open without signing in. "/" is the public front page; signed-in athletes are sent on to the app.
+const PUBLIC = ["/", "/login", "/auth", "/api/webhooks"];
 
 export async function proxy(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL, key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -22,14 +23,14 @@ export async function proxy(request: NextRequest) {
   let user: unknown = null;
   try { user = (await supabase.auth.getUser()).data.user; } catch { user = null; }
   const path = request.nextUrl.pathname;
-  const isPublic = PUBLIC.some((p) => path === p || path.startsWith(p + "/"));
+  const isPublic = PUBLIC.some((p) => path === p || (p !== "/" && path.startsWith(p + "/")));
   if (!user && !isPublic) {
     const to = request.nextUrl.clone();
     to.pathname = "/login";
     to.search = path && path !== "/" ? `?next=${encodeURIComponent(path)}` : "";
     return NextResponse.redirect(to);
   }
-  if (user && path === "/login") {
+  if (user && (path === "/login" || path === "/")) {
     const to = request.nextUrl.clone();
     to.pathname = "/dashboard";
     to.search = "";

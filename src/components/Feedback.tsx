@@ -1,25 +1,12 @@
 "use client";
-// The red "Give feedback" button in the top bar and the form it opens: which part of the app, what kind of
-// feedback, the comment. The page you were on is attached automatically.
+// The feedback form (opened from the account menu): which part of the app, what kind of feedback, the comment.
+// The page you were on is attached automatically.
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { usePathname } from "next/navigation";
 import { Icon } from "./icons";
 import { usePlan } from "@/lib/store";
 import { FEEDBACK_KINDS, FEEDBACK_TABS, submitFeedback, tabForPath } from "@/lib/feedback";
-
-export function FeedbackButton() {
-  const [open, setOpen] = useState(false);
-  return (
-    <>
-      <span className="fb-top">
-        <button type="button" className="fb-btn" onClick={() => setOpen(true)} aria-haspopup="dialog" aria-expanded={open}><Icon name="note" /><span>Give feedback</span></button>
-        <span className="fb-beta" title="Velocity is in beta: things change weekly and some parts are unfinished.">Beta</span>
-      </span>
-      {open && <FeedbackModal onClose={() => setOpen(false)} />}
-    </>
-  );
-}
 
 export function FeedbackModal({ onClose }: { onClose: () => void }) {
   const path = usePathname();
@@ -46,7 +33,7 @@ export function FeedbackModal({ onClose }: { onClose: () => void }) {
   return createPortal(
     <div className="fb-modal" role="dialog" aria-label="Give feedback" onClick={onClose}>
       <form className="box form" onClick={(e) => e.stopPropagation()} onSubmit={send}>
-        <div className="hd"><div><div className="eyebrow fb-red">Beta feedback</div><h2>What should we know?</h2></div><button type="button" className="close" onClick={onClose} aria-label="Close"><Icon name="close" /></button></div>
+        <div className="hd"><div><div className="eyebrow">Feedback</div><h2>What should we know?</h2></div><button type="button" className="close" onClick={onClose} aria-label="Close"><Icon name="close" /></button></div>
         {done ? (
           <div className="fb-done">
             <b>Sent.</b>
@@ -59,7 +46,7 @@ export function FeedbackModal({ onClose }: { onClose: () => void }) {
             <label><b>Your comment</b><textarea value={msg} onChange={(e) => { setMsg(e.target.value); setErr(null); }} rows={5} placeholder={hint || "Anything."} autoFocus /></label>
             <span className="hint">Sent with it: this page ({path}), your account, browser and screen size.</span>
             {err && <div className="err">{err}</div>}
-            <div className="row"><button type="submit" className="btn fb-send" disabled={busy}>{busy ? "Sending…" : "Send feedback"}</button><button type="button" className="btn ghost" onClick={onClose}>Cancel</button></div>
+            <div className="row"><button type="submit" className="btn" disabled={busy}>{busy ? "Sending…" : "Send feedback"}</button><button type="button" className="btn ghost" onClick={onClose}>Cancel</button></div>
           </>
         )}
       </form>

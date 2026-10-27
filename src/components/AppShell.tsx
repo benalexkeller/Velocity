@@ -7,7 +7,7 @@ import { BRAND } from "@/lib/config";
 import { usePlan } from "@/lib/store";
 import { useNow } from "@/lib/useNow";
 import { todayLabel } from "@/lib/format";
-import { FeedbackButton } from "./Feedback";
+import { FeedbackModal } from "./Feedback";
 import { CoachDockProvider } from "./CoachDock";
 import "@/app/account.css";
 
@@ -21,10 +21,11 @@ const NAV: { href: string; label: string; short?: string; icon: Parameters<typeo
   { href: "/calculator", label: "Calculator", short: "Tools", icon: "calc" },
 ];
 
-// Avatar button top right: profile, admin (if admin), sign out.
+// Avatar button top right: profile, feedback, admin (if admin), sign out.
 function AccountMenu() {
   const plan = usePlan();
   const [open, setOpen] = useState(false);
+  const [feedback, setFeedback] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => { if (!open) return; const h = (e: MouseEvent) => { if (!ref.current?.contains(e.target as Node)) setOpen(false); }; document.addEventListener("mousedown", h); return () => document.removeEventListener("mousedown", h); }, [open]);
   const a = plan.athlete;
@@ -36,10 +37,12 @@ function AccountMenu() {
         <div className="menu" role="menu">
           <div className="who"><b>{a.name}</b>{a.username ? `@${a.username}` : a.email ?? "saved on this device"}</div>
           <Link href="/profile" role="menuitem" onClick={() => setOpen(false)}>Profile</Link>
+          <button type="button" role="menuitem" onClick={() => { setOpen(false); setFeedback(true); }}>Send feedback</button>
           {plan.accounts && a.isAdmin && <Link href="/admin" role="menuitem" onClick={() => setOpen(false)}>Admin · users & feedback</Link>}
           {plan.accounts ? <button type="button" role="menuitem" onClick={() => { setOpen(false); void plan.signOut(); }}>Sign out</button> : <div className="who" style={{ border: 0, margin: 0 }}>No account · saved in this browser</div>}
         </div>
       )}
+      {feedback && <FeedbackModal onClose={() => setFeedback(false)} />}
     </div>
   );
 }
@@ -50,12 +53,11 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const ATHLETE = plan.athlete;
   const hour = useNow().getHours();
   const greet = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-  if (path === "/login" || path.startsWith("/auth") || path === "/setup") return <>{children}</>;
+  if (path === "/" || path === "/login" || path.startsWith("/auth") || path === "/setup") return <>{children}</>;
   return (
     <div className="shell">
       <header className="topbar">
         <span className="wordmark">{BRAND.name}</span>
-        <FeedbackButton />
         <span className="greet">
           {greet}, {ATHLETE.firstName}.
         </span>
