@@ -40,8 +40,16 @@ with tokens in `src/app/globals.css`, no UI library. `npm run dev` → http://lo
 - Commit as `Claude <noreply@anthropic.com>` is fine; end messages with the Co-Authored-By / Claude-Session trailers when the session provides them.
 - `main` deploys to production on every push. Build must pass (`npx next build`) before pushing.
 
+## Public site, coach, Garmin (branch `public-site`, 2026-10-27)
+- `/` is the public front page (`src/app/page.tsx` + `landing.css`, screenshots in `public/landing/`). Signed-in athletes are sent to `/dashboard` by `proxy.ts`; the page renders without the app shell and without loading data.
+- No beta signs anywhere: feedback lives in the account menu ("Send feedback"). Supplement names like "Beta-alanine" are fine.
+- Coach: `POST /api/coach` → OpenRouter (`OPENROUTER_API_KEY`, `COACH_MODEL` default `deepseek/deepseek-v4.1-flash`, `COACH_DAILY_CAP` 40). Context built in the browser by `src/lib/coach/context.ts`; instructions in `src/lib/coach/prompt.ts`. Plan changes come back as proposals (`coach_messages.proposal` + `status`, SQL in `supabase/schema-coach.sql`); Accept applies them through the store. Without a key the rule-based `coachReply` answers.
+- Garmin through Junction (junction.com): `src/lib/integrations/junction.ts`; routes `/api/connect/garmin` (start), `/done` (return), `/disconnect`, `/sync` (pulls the last 90 days with the athlete's own session: the minimum setup needs only the Junction key), `/api/connect/status`, webhook `/api/webhooks/junction` (Svix signature, service-role writes; optional, for automatic updates). Routes come from `map.summary_polyline`. Admin page lists connections + webhook calls (`admin_integrations`, `admin_webhook_log`). Env in `.env.example`; SQL in `supabase/schema-integrations.sql`. Switched on by `WEARABLE_PROVIDER=junction` + `WEARABLE_API_KEY`.
+- Phone app design: Claude Design canvas "Velocity Mobile" (6 screens, same tokens). Front-page review copy: artifact "Velocity Front Page".
+- Strava's API policy (June 2026) bans putting Strava data into an AI model: never add Strava as a data source for the coach.
+
 ## Roadmap (in order)
-1. Verify accounts on the live site; PR imports his seed data; Google sign-in (Supabase provider + Google Cloud OAuth client).
-2. Coach service (Claude API): onboarding interview → plan JSON; Sunday review reading the week's data.
-3. Garmin: scheduled import for PR now; official Garmin Connect Developer Program (needs the LLC) for everyone; Whoop; Google Calendar.
+1. Buy Junction (sandbox first), set the env values, run the two SQL files, test Connect Garmin on the live site; apply to Garmin's own developer program in parallel.
+2. Coach: Sunday weekly review as a scheduled job; onboarding interview that writes the plan.
+3. Google sign-in; Google Calendar writing; Whoop.
 4. Metric units in the UI, password reset, avatar upload, Stripe, legal/GDPR docs, monitoring.

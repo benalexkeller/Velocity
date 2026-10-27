@@ -2,7 +2,7 @@
 import "../account.css";
 import { Fragment, useState } from "react";
 import Link from "next/link";
-import { ConnectWearable, WEARABLES, useWearables } from "@/components/ConnectWearable";
+import { ConnectWearable, WEARABLES, useConnections, useWearables } from "@/components/ConnectWearable";
 import { usePlan } from "@/lib/store";
 import { ProfileForm } from "@/components/account/ProfileForm";
 import { dateFull, dateLabel } from "@/lib/format";
@@ -45,11 +45,16 @@ export default function ProfilePage() {
 
 function ProfileConnections() {
   const { picked } = useWearables();
+  const { garmin, garminLive } = useConnections();
+  const flag = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("garmin") : null;
+  const note = flag === "connected" ? "Garmin connected. Activities arrive on their own from now on; the last 90 days follow over the next hours." : flag === "error" ? "Garmin did not connect. Try again; if it fails twice, send feedback." : flag === "off" ? "Garmin sync is not switched on for this site yet." : null;
   return (
     <>
+      {note && <p className="small" style={{ margin: "0 0 10px" }}>{note}</p>}
       <div className="kv">
-        {WEARABLES.filter((w) => picked.includes(w.k)).map((w) => <Fragment key={w.k}><span>{w.name}</span><span>Picked · connects when live</span></Fragment>)}
-        {!picked.length && <><span>Wearable</span><span>None picked</span></>}
+        {garminLive && <><span>Garmin</span><span>{garmin?.status === "connected" ? `Connected${garmin.last_event_at ? ` · last data ${new Date(garmin.last_event_at).toLocaleDateString()}` : ""}` : garmin?.status === "error" ? "Connection failed" : "Not connected"}</span></>}
+        {WEARABLES.filter((w) => picked.includes(w.k) && !(w.k === "garmin" && garminLive)).map((w) => <Fragment key={w.k}><span>{w.name}</span><span>Picked · connects when live</span></Fragment>)}
+        {!picked.length && !garminLive && <><span>Wearable</span><span>None picked</span></>}
         <span>Google Calendar</span><span>Not available yet</span>
       </div>
       <div style={{ marginTop: 12 }}><ConnectWearable variant="ghost" /></div>

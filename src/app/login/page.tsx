@@ -19,7 +19,7 @@ function Login() {
   const params = useSearchParams();
   const next = params.get("next") || "/dashboard";
   const linkError = params.get("error");
-  const [mode, setMode] = useState<"in" | "up">("in");
+  const [mode, setMode] = useState<"in" | "up">(params.get("mode") === "up" ? "up" : "in");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -63,7 +63,7 @@ function Login() {
       <section className="card box">
         <span className="wordmark">{BRAND.name}</span>
         <h1>{mode === "in" ? "Sign in" : "Create your account"}</h1>
-        {mode === "up" && <p className="sub">Free during testing. Only you can see your data.</p>}
+        {mode === "up" && <p className="sub">Only you can see your data.</p>}
         <button type="button" className="btn google" onClick={google}><GoogleMark />Continue with Google</button>
         <div className="or">or with email</div>
         <form className="form" onSubmit={submit}>

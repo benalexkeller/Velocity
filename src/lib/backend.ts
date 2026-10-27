@@ -11,11 +11,13 @@ import type { Profile, Race } from "./athlete";
 import { ATHLETE } from "./config";
 import { supabase } from "./supabase/client";
 import { ymd as localYmd } from "./format";
+import type { Proposal, ProposalStatus } from "./coach/types";
 
 export interface SessionPatch { date?: string; start?: string; min?: number; intensity?: string; text?: string; sport?: Sport; deleted?: boolean; locked?: boolean }
 export interface AddedSession { id: string; date: string; start?: string; min: number; sport: Sport; intensity: string; text: string }
-/** `day` (YYYY-MM-DD, local) decides which messages the coach panel shows: only today's. */
-export interface ThreadMsg { who: "You" | "Coach" | "action"; at: string; text: string; day?: string }
+/** `day` (YYYY-MM-DD, local) decides which messages the coach panel shows: only today's. A Coach message can
+ *  carry a proposed plan change; `status` records what the athlete did with it. */
+export interface ThreadMsg { id?: string; who: "You" | "Coach" | "action"; at: string; text: string; day?: string; proposal?: Proposal | null; status?: ProposalStatus | null }
 export interface PlanStateJson { patches: Record<string, SessionPatch>; added: AddedSession[]; undone: boolean; calendar: boolean }
 export interface UserData { profile: Profile | null; race: Race | null; plan: PlanWeekJson[]; intake: Intake | null; state: PlanStateJson; activities: Activity[]; body: BodyDay[]; thread: ThreadMsg[]; availability?: Availability | null }
 
@@ -29,7 +31,9 @@ export interface Backend {
   upsertActivity(a: Activity): Promise<void>;
   deleteActivity(id: string): Promise<void>;
   setExcluded(id: string, excluded: boolean): Promise<void>;
-  appendThread(msgs: ThreadMsg[]): Promise<void>;
+  /** Saves messages and returns them with their ids. */
+  appendThread(msgs: ThreadMsg[]): Promise<ThreadMsg[]>;
+  setThreadStatus(id: string, status: ProposalStatus): Promise<void>;
   saveProfile(p: Partial<Profile>): Promise<void>;
   saveRace(r: Race | null): Promise<void>;
   savePlan(weeks: PlanWeekJson[], intake?: Intake | null): Promise<void>;
@@ -89,7 +93,8 @@ export class LocalBackend implements Backend {
     this.put({ manual: this.s.manual.filter((m) => m.id !== id), hidden: isManual || this.s.hidden.includes(id) ? this.s.hidden : [...this.s.hidden, id], excluded: this.s.excluded.filter((x) => x !== id) });
   }
   async setExcluded(id: string, excluded: boolean) { this.put({ excluded: excluded ? [...new Set([...this.s.excluded, id])] : this.s.excluded.filter((x) => x !== id) }); }
-  async appendThread(msgs: ThreadMsg[]) { this.put({ thread: [...this.s.thread, ...msgs] }); }
+  async appendThread(msgs: ThreadMsg[]) { const withIds = msgs.map((m, i) => ({ ...m, id: m.id ?? `${Date.now()}-${i}` })); this.put({ thread: [...this.s.thread, ...withIds] }); return withIds; }
+  async setThreadStatus(id: string, status: ProposalStatus) { this.put({ thread: this.s.thread.map((m) => (m.id === id ? { ...m, status } : m)) }); }
   async saveProfile(p: Partial<Profile>) {
     const { availability, ...rest } = p;
     this.put({ ...(availability !== undefined ? { availability } : {}), ...(Object.keys(rest).length ? { profile: { ...(this.s.profile ?? {}), ...rest } } : {}) });
@@ -139,9 +144,13 @@ export class SupabaseBackend implements Backend {
       this.sb.from("plan_state").select("*").eq("user_id", uid).maybeSingle(),
       this.sb.from("activities").select("*").eq("user_id", uid).order("date").order("start"),
       this.sb.from("body_metrics").select("*").eq("user_id", uid).order("date"),
-      this.sb.from("coach_messages").select("who, at, text, created_at").eq("user_id", uid).order("id"),
+      this.sb.from("coach_messages").select("id, who, at, text, created_at, proposal, status").eq("user_id", uid).order("id"),
     ]);
     void this.sb.rpc("touch_profile");
+    // before supabase/schema-coach.sql has been run the two coach columns do not exist: read the words only
+    const threadRows = thread.error && /proposal|status/.test(thread.error.message)
+      ? ((await this.sb.from("coach_messages").select("id, who, at, text, created_at").eq("user_id", uid).order("id")).data as Row[] | null)
+      : (thread.data as Row[] | null);
     const st = state.data as Row | null;
     return {
       profile: (profile.data as Profile | null) ?? null,
@@ -151,7 +160,7 @@ export class SupabaseBackend implements Backend {
       state: st ? { patches: (st.patches as PlanStateJson["patches"]) ?? {}, added: (st.added as AddedSession[]) ?? [], undone: !!st.undone, calendar: st.calendar !== false } : EMPTY_STATE,
       activities: ((acts.data as Row[]) ?? []).map(rowToActivity),
       body: ((body.data as Row[]) ?? []).map((b) => ({ date: String(b.date), rhr: b.rhr as number, hrv: b.hrv as number, sleep_h: b.sleep_h == null ? undefined : Number(b.sleep_h), sleep_score: b.sleep_score as number, stress: b.stress as number, vo2: b.vo2 == null ? undefined : Number(b.vo2) })),
-      thread: ((thread.data as Row[]) ?? []).map((m) => ({ who: m.who as ThreadMsg["who"], at: String(m.at ?? ""), text: String(m.text), day: m.created_at ? localYmd(new Date(String(m.created_at))) : undefined })),
+      thread: (threadRows ?? []).map((m) => ({ id: String(m.id), who: m.who as ThreadMsg["who"], at: String(m.at ?? ""), text: String(m.text), day: m.created_at ? localYmd(new Date(String(m.created_at))) : undefined, proposal: (m.proposal as Proposal | null) ?? null, status: (m.status as ProposalStatus | null) ?? null })),
     };
   }
   private fail(where: string, error: { message: string } | null) { if (error) console.error(`[velocity] ${where}: ${error.message}`); }
@@ -159,7 +168,19 @@ export class SupabaseBackend implements Backend {
   async upsertActivity(a: Activity) { const uid = await this.user(); const { error } = await this.sb.from("activities").upsert(activityToRow(uid, a)); this.fail("upsertActivity", error); }
   async deleteActivity(id: string) { const uid = await this.user(); const { error } = await this.sb.from("activities").delete().eq("user_id", uid).eq("id", id); this.fail("deleteActivity", error); }
   async setExcluded(id: string, excluded: boolean) { const uid = await this.user(); const { error } = await this.sb.from("activities").update({ excluded }).eq("user_id", uid).eq("id", id); this.fail("setExcluded", error); }
-  async appendThread(msgs: ThreadMsg[]) { const uid = await this.user(); const { error } = await this.sb.from("coach_messages").insert(msgs.map(({ day: _day, ...m }) => ({ user_id: uid, ...m }))); this.fail("appendThread", error); }
+  async appendThread(msgs: ThreadMsg[]) {
+    const uid = await this.user();
+    const rows = msgs.map(({ day: _day, id: _id, proposal, status, ...m }) => ({ user_id: uid, ...m, proposal: proposal ?? null, status: status ?? null }));
+    let { data, error } = await this.sb.from("coach_messages").insert(rows).select("id");
+    if (error && /proposal|status/.test(error.message)) {
+      // the database has not had supabase/schema-coach.sql yet: save the words, drop the proposal
+      ({ data, error } = await this.sb.from("coach_messages").insert(rows.map(({ proposal: _p, status: _s, ...r }) => r)).select("id"));
+    }
+    this.fail("appendThread", error);
+    const ids = ((data as Row[] | null) ?? []).map((r) => String(r.id));
+    return msgs.map((m, i) => ({ ...m, id: ids[i] ?? m.id }));
+  }
+  async setThreadStatus(id: string, status: ProposalStatus) { const uid = await this.user(); const { error } = await this.sb.from("coach_messages").update({ status }).eq("user_id", uid).eq("id", Number(id)); this.fail("setThreadStatus", error); }
   async saveProfile(p: Partial<Profile>) { const uid = await this.user(); const { data: u } = await this.sb.auth.getUser(); const { error } = await this.sb.from("profiles").upsert({ id: uid, email: u.user?.email ?? null, ...p }); this.fail("saveProfile", error); if (error) throw error; }
   async saveRace(r: Race | null) {
     const uid = await this.user();

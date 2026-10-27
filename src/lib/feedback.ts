@@ -1,5 +1,5 @@
 "use client";
-// Beta feedback: what the athlete says about the app, with the page it was said on. Rows go to Supabase
+// Feedback: what the athlete says about the app, with the page it was said on. Rows go to Supabase
 // (table `feedback`, own rows only; the admin reads everything through `admin_feedback`). In local mode they
 // stay in this browser.
 import { supabase } from "./supabase/client";
