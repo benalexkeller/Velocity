@@ -106,7 +106,9 @@ export interface PlanStore {
   deleteActivity: (id: string) => void;
   toggleExcluded: (id: string) => void;
   /** Ask the coach. The answer arrives a moment later (busy is true meanwhile). */
-  post: (text: string) => Promise<void>;
+  post: (text: string, opts?: { mode?: "chat" | "restructure" }) => Promise<void>;
+  /** The whole remaining plan reviewed by the stronger model; comes back as one proposal. */
+  reviewPlan: () => Promise<void>;
   busy: boolean;
   /** Whether the coach service (model) is on for this site; false = rule-based answers only. */
   coachOn: boolean;
@@ -213,37 +215,44 @@ export function PlanProvider({ children }: { children: ReactNode }) {
       logActivity: (m) => { const a = toActivity(m); setData((cur) => ({ ...cur, activities: [...cur.activities.filter((x) => x.id !== a.id), a] })); void be.upsertActivity(a); },
       deleteActivity: (id) => { setData((cur) => ({ ...cur, activities: cur.activities.filter((x) => x.id !== id) })); void be.deleteActivity(id); },
       toggleExcluded: (id) => { const cur = data.activities.find((a) => a.id === id); if (!cur) return; const excluded = !cur.excluded; setData((c) => ({ ...c, activities: c.activities.map((a) => (a.id === id ? { ...a, excluded: excluded || undefined } : a)) })); void be.setExcluded(id, excluded); },
-      post: async (text) => {
+      post: async (text, opts = {}) => {
         const day = ymd(today());
         const you: ThreadMsg = { who: "You", at: nowHM(), text, day };
         setData((cur) => ({ ...cur, thread: [...cur.thread, you] }));
         const [savedYou] = await be.appendThread([you]);
         setData((cur) => ({ ...cur, thread: cur.thread.map((m) => (m === you ? savedYou : m)) }));
         setBusy(true);
-        let reply: ThreadMsg;
+        const say = async (reply: ThreadMsg) => {
+          setData((cur) => ({ ...cur, thread: [...cur.thread, reply] }));
+          const [saved] = await be.appendThread([reply]);
+          setData((cur) => ({ ...cur, thread: cur.thread.map((m) => (m === reply ? saved : m)) }));
+        };
         try {
           const current = storeRef.current!;
           const base = current.thread.filter((m) => m.day === day && m.who !== "action");
           if (!base.some((m) => m === you || m === savedYou || (m.id != null && m.id === savedYou.id))) base.push(you);
           const history = base.slice(-12).map((m) => ({ role: m.who === "You" ? ("user" as const) : ("assistant" as const), content: m.text }));
-          const r = await askCoach(history, current);
-          if (r === "off") { setCoachOn(false); reply = { who: "Coach", at: nowHM(), text: coachReply(text, d, athlete), day }; }
-          else reply = { who: "Coach", at: nowHM(), text: r.text, day, proposal: r.proposal ?? null, status: r.proposal ? "open" : null };
+          const r = await askCoach(history, current, opts.mode ?? "chat");
+          if (r === "off") { setCoachOn(false); await say({ who: "Coach", at: nowHM(), text: coachReply(text, d, athlete), day, tier: "none" }); }
+          else {
+            // a pitch for a whole-plan review arrives as a proposal of kind "review"; Accept runs the review (decideProposal)
+            await say({ who: "Coach", at: nowHM(), text: r.text, day, proposal: r.proposal ?? null, status: r.proposal ? "open" : null, sources: r.sources ?? null, tier: r.tier ?? null });
+          }
         } catch {
-          reply = { who: "Coach", at: nowHM(), text: "No answer: the coach service did not respond. Try again in a minute.", day };
+          await say({ who: "Coach", at: nowHM(), text: "No answer: the coach service did not respond. Try again in a minute.", day, tier: "none" });
         }
         setBusy(false);
-        setData((cur) => ({ ...cur, thread: [...cur.thread, reply] }));
-        const [savedReply] = await be.appendThread([reply]);
-        setData((cur) => ({ ...cur, thread: cur.thread.map((m) => (m === reply ? savedReply : m)) }));
       },
+      reviewPlan: async () => storeRef.current!.post("Review my whole remaining plan against my recent training.", { mode: "restructure" }),
       busy, coachOn,
       decideProposal: async (id, status) => {
         const msg = data.thread.find((m) => m.id === id);
         if (!msg?.proposal || msg.status !== "open") return;
-        if (status === "accepted") applyProposal(msg.proposal);
         setData((cur) => ({ ...cur, thread: cur.thread.map((m) => (m.id === id ? { ...m, status } : m)) }));
         await be.setThreadStatus(id, status);
+        if (status !== "accepted") return;
+        if (msg.proposal.kind === "review") { await storeRef.current!.post("Run the full plan review.", { mode: "restructure" }); return; }
+        applyProposal(msg.proposal);
       },
       thread: data.thread, undone: st.undone,
       undoPlanUpdate: () => setState((s) => ({ ...s, undone: !s.undone })),
@@ -285,8 +294,8 @@ export function usePlan(): PlanStore {
 
 // Asks the coach service (/api/coach → OpenRouter). "off" when the site has no model key, so the
 // rule-based answers below take over.
-async function askCoach(history: { role: "user" | "assistant"; content: string }[], store: PlanStore): Promise<CoachReply | "off"> {
-  const res = await fetch("/api/coach", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: history, context: buildCoachContext(store) }) });
+async function askCoach(history: { role: "user" | "assistant"; content: string }[], store: PlanStore, mode: "chat" | "restructure"): Promise<CoachReply | "off"> {
+  const res = await fetch("/api/coach", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ messages: history, context: buildCoachContext(store, { whole: mode === "restructure" }), mode }) });
   if (res.status === 503) return "off";
   if (!res.ok) throw new Error(`coach ${res.status}`);
   return (await res.json()) as CoachReply;

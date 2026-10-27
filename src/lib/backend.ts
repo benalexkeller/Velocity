@@ -11,13 +11,13 @@ import type { Profile, Race } from "./athlete";
 import { ATHLETE } from "./config";
 import { supabase } from "./supabase/client";
 import { ymd as localYmd } from "./format";
-import type { Proposal, ProposalStatus } from "./coach/types";
+import type { Citation, Proposal, ProposalStatus } from "./coach/types";
 
 export interface SessionPatch { date?: string; start?: string; min?: number; intensity?: string; text?: string; sport?: Sport; deleted?: boolean; locked?: boolean }
 export interface AddedSession { id: string; date: string; start?: string; min: number; sport: Sport; intensity: string; text: string }
 /** `day` (YYYY-MM-DD, local) decides which messages the coach panel shows: only today's. A Coach message can
  *  carry a proposed plan change; `status` records what the athlete did with it. */
-export interface ThreadMsg { id?: string; who: "You" | "Coach" | "action"; at: string; text: string; day?: string; proposal?: Proposal | null; status?: ProposalStatus | null }
+export interface ThreadMsg { id?: string; who: "You" | "Coach" | "action"; at: string; text: string; day?: string; proposal?: Proposal | null; status?: ProposalStatus | null; sources?: Citation[] | null; tier?: "fast" | "strong" | "none" | null }
 export interface PlanStateJson { patches: Record<string, SessionPatch>; added: AddedSession[]; undone: boolean; calendar: boolean }
 export interface UserData { profile: Profile | null; race: Race | null; plan: PlanWeekJson[]; intake: Intake | null; state: PlanStateJson; activities: Activity[]; body: BodyDay[]; thread: ThreadMsg[]; availability?: Availability | null }
 
@@ -144,11 +144,11 @@ export class SupabaseBackend implements Backend {
       this.sb.from("plan_state").select("*").eq("user_id", uid).maybeSingle(),
       this.sb.from("activities").select("*").eq("user_id", uid).order("date").order("start"),
       this.sb.from("body_metrics").select("*").eq("user_id", uid).order("date"),
-      this.sb.from("coach_messages").select("id, who, at, text, created_at, proposal, status").eq("user_id", uid).order("id"),
+      this.sb.from("coach_messages").select("id, who, at, text, created_at, proposal, status, sources, tier").eq("user_id", uid).order("id"),
     ]);
     void this.sb.rpc("touch_profile");
     // before supabase/schema-coach.sql has been run the two coach columns do not exist: read the words only
-    const threadRows = thread.error && /proposal|status/.test(thread.error.message)
+    const threadRows = thread.error && /proposal|status|sources|tier/.test(thread.error.message)
       ? ((await this.sb.from("coach_messages").select("id, who, at, text, created_at").eq("user_id", uid).order("id")).data as Row[] | null)
       : (thread.data as Row[] | null);
     const st = state.data as Row | null;
@@ -160,7 +160,7 @@ export class SupabaseBackend implements Backend {
       state: st ? { patches: (st.patches as PlanStateJson["patches"]) ?? {}, added: (st.added as AddedSession[]) ?? [], undone: !!st.undone, calendar: st.calendar !== false } : EMPTY_STATE,
       activities: ((acts.data as Row[]) ?? []).map(rowToActivity),
       body: ((body.data as Row[]) ?? []).map((b) => ({ date: String(b.date), rhr: b.rhr as number, hrv: b.hrv as number, sleep_h: b.sleep_h == null ? undefined : Number(b.sleep_h), sleep_score: b.sleep_score as number, stress: b.stress as number, vo2: b.vo2 == null ? undefined : Number(b.vo2) })),
-      thread: (threadRows ?? []).map((m) => ({ id: String(m.id), who: m.who as ThreadMsg["who"], at: String(m.at ?? ""), text: String(m.text), day: m.created_at ? localYmd(new Date(String(m.created_at))) : undefined, proposal: (m.proposal as Proposal | null) ?? null, status: (m.status as ProposalStatus | null) ?? null })),
+      thread: (threadRows ?? []).map((m) => ({ id: String(m.id), who: m.who as ThreadMsg["who"], at: String(m.at ?? ""), text: String(m.text), day: m.created_at ? localYmd(new Date(String(m.created_at))) : undefined, proposal: (m.proposal as Proposal | null) ?? null, status: (m.status as ProposalStatus | null) ?? null, sources: (m.sources as Citation[] | null) ?? null, tier: (m.tier as ThreadMsg["tier"]) ?? null })),
     };
   }
   private fail(where: string, error: { message: string } | null) { if (error) console.error(`[velocity] ${where}: ${error.message}`); }
@@ -170,11 +170,11 @@ export class SupabaseBackend implements Backend {
   async setExcluded(id: string, excluded: boolean) { const uid = await this.user(); const { error } = await this.sb.from("activities").update({ excluded }).eq("user_id", uid).eq("id", id); this.fail("setExcluded", error); }
   async appendThread(msgs: ThreadMsg[]) {
     const uid = await this.user();
-    const rows = msgs.map(({ day: _day, id: _id, proposal, status, ...m }) => ({ user_id: uid, ...m, proposal: proposal ?? null, status: status ?? null }));
+    const rows = msgs.map(({ day: _day, id: _id, proposal, status, sources, tier, ...m }) => ({ user_id: uid, ...m, proposal: proposal ?? null, status: status ?? null, sources: sources ?? null, tier: tier ?? null }));
     let { data, error } = await this.sb.from("coach_messages").insert(rows).select("id");
-    if (error && /proposal|status/.test(error.message)) {
-      // the database has not had supabase/schema-coach.sql yet: save the words, drop the proposal
-      ({ data, error } = await this.sb.from("coach_messages").insert(rows.map(({ proposal: _p, status: _s, ...r }) => r)).select("id"));
+    if (error && /proposal|status|sources|tier/.test(error.message)) {
+      // the database has not had supabase/schema-coach.sql yet: save the words, drop the extras
+      ({ data, error } = await this.sb.from("coach_messages").insert(rows.map(({ proposal: _p, status: _s, sources: _c, tier: _t, ...r }) => r)).select("id"));
     }
     this.fail("appendThread", error);
     const ids = ((data as Row[] | null) ?? []).map((r) => String(r.id));

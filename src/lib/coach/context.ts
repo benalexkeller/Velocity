@@ -21,7 +21,7 @@ function paceOf(a: Activity) {
 }
 const hm = (d: Date) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 
-export function buildCoachContext(p: PlanStore): CoachContext {
+export function buildCoachContext(p: PlanStore, opts: { whole?: boolean } = {}): CoachContext {
   const t = today();
   const cur = p.hasPlan ? p.currentWeek() : undefined;
   const next = cur ? p.weeks[cur.week] : undefined; // weeks[] is 0-based; cur.week is 1-based → the next one
@@ -41,6 +41,11 @@ export function buildCoachContext(p: PlanStore): CoachContext {
     }
     return { week: w.week, start: w.start, phase: w.phaseShort, plannedH: r1(st.plannedH), doneH: r1(st.actualH), sessions: `${st.done}/${st.total}`, longest };
   });
+  // restructure mode: every remaining week, compact (today's week onward)
+  const plan_all = opts.whole && cur ? p.weeks.filter((w) => w.week >= cur.week).map((w) => ({
+    week: w.week, start: w.start, phase: w.phaseShort, recovery: w.recovery || undefined, race: w.race || undefined,
+    sessions: w.sessions.filter((s) => s.sport !== "rest").map((s) => ({ id: s.id, date: s.date, start: s.start, sport: s.sport, intensity: s.intensity, min: s.min, text: s.text.slice(0, 80), status: s.status, locked: s.locked || undefined })),
+  })) : undefined;
   const body = p.body.length ? p.body[p.body.length - 1] : null;
   const a = p.athlete;
   return {
@@ -51,7 +56,7 @@ export function buildCoachContext(p: PlanStore): CoachContext {
       lthr: a.lthr, ftp: a.ftp, zones: a.zones, availability: a.availability,
     },
     plan: cur && p.planRange ? { phase: cur.phase, week: cur.week, weeks: p.weeks.length, start: p.planRange.start, end: p.planRange.end } : null,
-    sessions, activities, weeks,
+    sessions, activities, weeks, ...(plan_all ? { plan_all } : {}),
     body: body ? { date: body.date, rhr: body.rhr, hrv: body.hrv, sleep_h: body.sleep_h, sleep_score: body.sleep_score, vo2: body.vo2 } : null,
   };
 }
