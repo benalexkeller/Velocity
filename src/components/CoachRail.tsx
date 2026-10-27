@@ -46,6 +46,7 @@ export function CoachRail({ onClose, drawer = false }: { onClose: () => void; dr
       <div className="head">
         <span className="eyebrow">Coach · today</span>
         <span className="coach-tools">
+          {plan.coachOn && plan.hasPlan && <button type="button" className="coach-ic wide" title="The whole remaining plan checked against your recent training; comes back as one proposal" disabled={plan.busy} onClick={() => void plan.reviewPlan()}>Review my plan</button>}
           {!plan.accounts && (
             <span style={{ position: "relative" }}>
               <button type="button" className="coach-ic" aria-label="Coach options" aria-expanded={menu} onClick={() => setMenu((m) => !m)}><Icon name="kebab" /></button>
@@ -64,9 +65,22 @@ export function CoachRail({ onClose, drawer = false }: { onClose: () => void; dr
           <div key={m.id ?? i} className={`msg ${m.who === "You" ? "user" : "coach-msg"}`}>
             <span className="who">{m.who} {m.at && <span style={{ marginLeft: 6 }}>{m.at}</span>}</span>
             {m.who === "Coach" ? <CoachNote text={m.text} /> : m.text}
-            {m.proposal && (
+            {m.proposal && m.proposal.kind === "review" && (
+              <div className={`proposal review ${m.status ?? "open"}`}>
+                <div className="p-head">{m.status === "accepted" ? "Full plan review run" : m.status === "declined" ? "Review not run" : "Pitch: full plan review"}</div>
+                <p>{m.proposal.summary}</p>
+                {m.proposal.reason && <p className="muted small">{m.proposal.reason}</p>}
+                {m.status === "open" && m.id && (
+                  <div className="p-actions">
+                    <button type="button" className="btn small" disabled={plan.busy} onClick={() => void plan.decideProposal(m.id!, "accepted")}>Run the full review</button>
+                    <button type="button" className="btn small ghost" disabled={plan.busy} onClick={() => void plan.decideProposal(m.id!, "declined")}>Not now</button>
+                  </div>
+                )}
+              </div>
+            )}
+            {m.proposal && m.proposal.kind !== "review" && (
               <div className={`proposal ${m.status ?? "open"}`}>
-                <div className="p-head">{m.status === "accepted" ? "Applied to the plan" : m.status === "declined" ? "Declined" : "Proposed change"}</div>
+                <div className="p-head">{m.status === "accepted" ? "Applied to the plan" : m.status === "declined" ? "Declined" : m.tier === "strong" || m.proposal.changes.length > 6 ? "Full plan review · proposed changes" : "Proposed change"}</div>
                 <b>{m.proposal.summary}</b>
                 <ul>{m.proposal.changes.map((c, j) => <li key={j}>{changeLine(c, name)}</li>)}</ul>
                 {m.proposal.reason && <p className="muted small">{m.proposal.reason}</p>}
@@ -77,6 +91,9 @@ export function CoachRail({ onClose, drawer = false }: { onClose: () => void; dr
                   </div>
                 )}
               </div>
+            )}
+            {m.sources && m.sources.length > 0 && (
+              <ol className="sources">{m.sources.map((c) => <li key={c.n} value={c.n}>{c.url ? <a href={c.url} target="_blank" rel="noreferrer">{c.title}</a> : c.title}<span className="muted"> · {c.source}</span></li>)}</ol>
             )}
           </div>
         ))}

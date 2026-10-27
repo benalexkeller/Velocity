@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePlan } from "@/lib/store";
 import { supabase } from "@/lib/supabase/client";
 import { FEEDBACK_KINDS, FEEDBACK_TABS, listFeedback, setFeedbackStatus, type FeedbackEntry } from "@/lib/feedback";
+import { LibraryAdmin } from "@/components/admin/Library";
 
 interface Conn { user_id: string; email: string | null; username: string | null; provider: string; via: string; status: string; connected_at: string | null; last_event_at: string | null; error: string | null }
 interface Hook { id: number; via: string; event_type: string | null; external_user_id: string | null; ok: boolean; note: string | null; created_at: string }
@@ -72,6 +73,7 @@ export default function AdminPage() {
             </tbody>
           </table>
         </div>
+        <LibraryAdmin />
         {hooks && hooks.length > 0 && (
           <>
             <div className="page-head" style={{ marginTop: 28 }}><div><h1>Webhook calls</h1><div className="muted sub">last {hooks.length}</div></div></div>
