@@ -40,6 +40,29 @@ export async function garminLinkUrl(junctionUserId: string, redirectUrl: string)
   return r.link_web_url;
 }
 
+/** Every workout Junction holds for this athlete between two dates (YYYY-MM-DD), Garmin only. */
+export async function listWorkouts(junctionUserId: string, startDate: string, endDate: string): Promise<JunctionWorkout[]> {
+  const r = await call<{ workouts?: JunctionWorkout[] }>("GET", `/v2/summary/workouts/${junctionUserId}?start_date=${startDate}&end_date=${endDate}&provider=garmin`);
+  return r.workouts ?? [];
+}
+
+/** Google's encoded polyline → [lat, lng] points, thinned to about 120 for the route map. */
+export function decodePolyline(str: string, keep = 120): [number, number][] {
+  const pts: [number, number][] = [];
+  let i = 0, lat = 0, lng = 0;
+  while (i < str.length) {
+    for (const which of [0, 1]) {
+      let shift = 0, result = 0, b: number;
+      do { b = str.charCodeAt(i++) - 63; result |= (b & 0x1f) << shift; shift += 5; } while (b >= 0x20 && i < str.length);
+      const d = result & 1 ? ~(result >> 1) : result >> 1;
+      if (which === 0) lat += d; else lng += d;
+    }
+    pts.push([lat / 1e5, lng / 1e5]);
+  }
+  const step = Math.max(1, Math.floor(pts.length / keep));
+  return pts.filter((_, k) => k % step === 0 || k === pts.length - 1);
+}
+
 /** Removes the Garmin connection at Junction (the athlete's data in Velocity stays). */
 export async function disconnectGarmin(junctionUserId: string): Promise<void> {
   await call("DELETE", `/v2/user/${junctionUserId}/garmin`);
@@ -80,7 +103,8 @@ export interface JunctionWorkout {
   time_start: string; time_end?: string; timezone_offset?: number | null;
   moving_time?: number | null; distance?: number | null; calories?: number | null;
   average_hr?: number | null; max_hr?: number | null; average_speed?: number | null; total_elevation_gain?: number | null;
-  source?: { slug?: string } | null;
+  map?: { polyline?: string | null; summary_polyline?: string | null } | null;
+  source?: { slug?: string; provider?: string } | null;
 }
 
 const M_PER_MI = 1609.344, M_PER_YD = 0.9144, FT_PER_M = 3.28084;
@@ -125,6 +149,8 @@ export function toActivity(w: JunctionWorkout): Activity | null {
       if (secs > 0) { if (sport === "bike") a.mph = Math.round((a.mi / (secs / 3600)) * 10) / 10; else a.pace_s = Math.round(secs / a.mi); }
     }
   }
+  const poly = w.map?.summary_polyline || w.map?.polyline;
+  if (poly) { try { const r = decodePolyline(poly); if (r.length > 1) a.route = r; } catch { /* bad polyline: no route */ } }
   return a;
 }
 

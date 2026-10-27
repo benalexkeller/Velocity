@@ -5,6 +5,8 @@ import { usePlan } from "@/lib/store";
 import { supabase } from "@/lib/supabase/client";
 import { FEEDBACK_KINDS, FEEDBACK_TABS, listFeedback, setFeedbackStatus, type FeedbackEntry } from "@/lib/feedback";
 
+interface Conn { user_id: string; email: string | null; username: string | null; provider: string; via: string; status: string; connected_at: string | null; last_event_at: string | null; error: string | null }
+interface Hook { id: number; via: string; event_type: string | null; external_user_id: string | null; ok: boolean; note: string | null; created_at: string }
 interface Row { id: string; email: string | null; username: string | null; name: string | null; created_at: string; last_seen: string | null; setup_done: boolean; race: string | null; race_date: string | null; activities: number }
 const when = (s: string | null) => (s ? new Date(s).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "—");
 
@@ -16,7 +18,15 @@ export default function AdminPage() {
   const [fb, setFb] = useState<FeedbackEntry[] | null>(null);
   const [fbErr, setFbErr] = useState<string | null>(null);
   const [showDone, setShowDone] = useState(false);
+  const [conns, setConns] = useState<Conn[] | null>(null);
+  const [hooks, setHooks] = useState<Hook[] | null>(null);
+  const [connErr, setConnErr] = useState<string | null>(null);
   useEffect(() => { const sb = supabase(); if (!sb) return; sb.rpc("admin_users").then(({ data, error }) => { if (error) setErr(error.message); else setRows((data as Row[]) ?? []); }); }, []);
+  useEffect(() => {
+    const sb = supabase(); if (!sb) return;
+    sb.rpc("admin_integrations").then(({ data, error }) => { if (error) setConnErr(error.message.includes("admin_integrations") ? "Run supabase/schema-integrations.sql to see connections." : error.message); else setConns((data as Conn[]) ?? []); });
+    sb.rpc("admin_webhook_log", { n: 50 }).then(({ data, error }) => { if (!error) setHooks((data as Hook[]) ?? []); });
+  }, []);
   useEffect(() => { listFeedback().then(setFb).catch((e) => setFbErr(e instanceof Error ? e.message : "Could not load feedback.")); }, []);
   const label = (list: { k: string; label: string }[], k: string) => list.find((x) => x.k === k)?.label ?? k;
   const flip = async (e: FeedbackEntry) => { const status = e.status === "done" ? "open" : "done"; setFb((cur) => (cur ?? []).map((x) => (x.id === e.id ? { ...x, status } : x))); try { await setFeedbackStatus(e.id, status); } catch (x) { setFbErr(x instanceof Error ? x.message : "Could not update."); } };
@@ -50,6 +60,29 @@ export default function AdminPage() {
             </tbody>
           </table>
         </div>
+
+        <div className="page-head" style={{ marginTop: 28 }}><div><h1>Connections</h1><div className="muted sub">{conns ? `${conns.filter((c) => c.status === "connected").length} connected · ${conns.length} total` : connErr ? "" : "Loading…"}</div></div></div>
+        {connErr && <div className="form"><div className="err">{connErr}</div></div>}
+        <div className="card" style={{ overflow: "auto" }}>
+          <table className="tbl small">
+            <thead><tr><th>Who</th><th>Device</th><th>Through</th><th>Status</th><th>Connected</th><th>Last data</th><th>Error</th></tr></thead>
+            <tbody>
+              {(conns ?? []).map((c) => <tr key={`${c.user_id}-${c.provider}`}><td>{c.username ? `@${c.username}` : c.email ?? c.user_id.slice(0, 8)}</td><td>{c.provider}</td><td>{c.via}</td><td>{c.status}</td><td>{when(c.connected_at)}</td><td>{when(c.last_event_at)}</td><td className="muted" style={{ fontSize: 11.5 }}>{c.error ?? ""}</td></tr>)}
+              {conns && !conns.length && <tr><td colSpan={7} className="muted" style={{ padding: 20 }}>No connections yet.</td></tr>}
+            </tbody>
+          </table>
+        </div>
+        {hooks && hooks.length > 0 && (
+          <>
+            <div className="page-head" style={{ marginTop: 28 }}><div><h1>Webhook calls</h1><div className="muted sub">last {hooks.length}</div></div></div>
+            <div className="card" style={{ overflow: "auto" }}>
+              <table className="tbl small">
+                <thead><tr><th>When</th><th>Event</th><th>Athlete id</th><th>Result</th></tr></thead>
+                <tbody>{hooks.map((h) => <tr key={h.id} className={h.ok ? "" : "muted"}><td style={{ whiteSpace: "nowrap" }}>{when(h.created_at)}</td><td>{h.event_type ?? "—"}</td><td className="muted" style={{ fontSize: 11.5 }}>{h.external_user_id?.slice(0, 8) ?? "—"}</td><td>{h.ok ? "ok" : "failed"}{h.note ? ` · ${h.note}` : ""}</td></tr>)}</tbody>
+              </table>
+            </div>
+          </>
+        )}
       </div>
     </main>
   );

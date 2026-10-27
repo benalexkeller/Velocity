@@ -3,7 +3,7 @@
 .lp h1, .lp h2, .lp h3 { font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; margin: 0; }
 .lp h1 { font-size: clamp(36px, 5.2vw, 64px); letter-spacing: -0.035em; line-height: 1.02; max-width: 15ch; }
 .lp h2 { font-size: clamp(26px, 3vw, 36px); letter-spacing: -0.025em; max-width: 24ch; }
-.lp h3 { font-size: 18px; }
+.lp h3 { font-size: 17px; }
 .lp p { margin: 0; }
 .lp .btn { text-decoration: none; }
 .lp-link { color: var(--ink); text-decoration: none; font-weight: 600; font-size: 14px; padding: 10px 6px; }
@@ -14,7 +14,7 @@
 .lp-top nav { display: flex; align-items: center; gap: 14px; }
 
 .lp-hero { padding: 56px 0 0; }
-.lp-lead { font-size: 19px; line-height: 1.5; max-width: 58ch; margin-top: 28px; color: var(--ink-2); }
+.lp-lead { font-size: 18px; line-height: 1.5; max-width: 52ch; margin-top: 32px; color: var(--ink-2); }
 .lp-cta { display: flex; align-items: center; gap: 18px; flex-wrap: wrap; margin-top: 32px; }
 .lp-note { font-size: 14px; color: var(--muted); }
 
@@ -30,9 +30,10 @@
 .lp-steps p { font-size: 15px; line-height: 1.5; color: var(--ink-2); }
 
 .lp-feature { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 56px; align-items: center; padding: 96px 0 0; }
+.lp-feature.lp-flip { grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); }
 .lp-feature.lp-flip .lp-text { order: 2; }
 .lp-text { display: grid; gap: 20px; }
-.lp-facts { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; font-size: 16px; line-height: 1.5; color: var(--ink-2); }
+.lp-facts { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; font-size: 16px; line-height: 1.5; color: var(--ink-2); }
 .lp-facts li { padding-left: 18px; position: relative; }
 .lp-facts li::before { content: ""; position: absolute; left: 0; top: 10px; width: 8px; height: 2px; background: var(--accent); }
 
@@ -59,6 +60,7 @@
 @media (max-width: 900px) {
   .lp-steps ol { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .lp-feature, .lp-coach { grid-template-columns: 1fr; gap: 28px; }
+  .lp-feature.lp-flip { grid-template-columns: 1fr; }
   .lp-feature.lp-flip .lp-text { order: 0; }
   .lp-shot-hero { max-height: 420px; }
 }
@@ -66,6 +68,8 @@
   .lp { --lp-gutter: 16px; }
   .lp-top { height: 64px; }
   .lp-hero { padding-top: 32px; }
+  .lp-lead { font-size: 16px; margin-top: 22px; }
+  .lp-cta { gap: 12px; margin-top: 24px; }
   .lp-steps, .lp-feature, .lp-coach, .lp-devices { padding-top: 64px; }
   .lp-steps ol { grid-template-columns: 1fr; gap: 24px; }
   .lp-shot-hero { max-height: 260px; margin-top: 36px; }

@@ -36,7 +36,12 @@ export function useConnections() {
   }, []);
   useEffect(() => { if (!statusCache) void refresh(); }, [refresh]);
   const garmin = status.connections.find((c) => c.provider === "garmin") ?? null;
-  return { status, garmin, garminLive: status.garmin, refresh, disconnectGarmin: async () => { await fetch("/api/connect/garmin/disconnect", { method: "POST" }); statusCache = null; await refresh(); } };
+  return {
+    status, garmin, garminLive: status.garmin, refresh,
+    disconnectGarmin: async () => { await fetch("/api/connect/garmin/disconnect", { method: "POST" }); statusCache = null; await refresh(); },
+    /** Pulls the last 90 days from Junction into the athlete's activities; returns how many were saved, or null on failure. */
+    syncGarmin: async (days = 90) => { try { const r = await fetch("/api/connect/garmin/sync", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ days }) }); if (!r.ok) return null; const j = (await r.json()) as { saved: number }; statusCache = null; await refresh(); return j.saved; } catch { return null; } },
+  };
 }
 
 /** The devices the athlete picked (until their connections are live, that is all there is). */
@@ -54,8 +59,9 @@ export function useWearables() {
 
 export function ConnectWearableSheet({ onClose, onPick }: { onClose: () => void; onPick?: (k: string, on: boolean) => void }) {
   const { saved, toggle } = useWearables();
-  const { garmin, garminLive, disconnectGarmin } = useConnections();
+  const { garmin, garminLive, disconnectGarmin, syncGarmin } = useConnections();
   const [busy, setBusy] = useState(false);
+  const [synced, setSynced] = useState<string | null>(null);
   useEffect(() => { const k = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); }; window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); }, [onClose]);
   const connected = garmin?.status === "connected";
   return createPortal(
@@ -71,9 +77,12 @@ export function ConnectWearableSheet({ onClose, onPick }: { onClose: () => void;
             if (w.k === "garmin" && garminLive) {
               return (
                 <li key={w.k} className={connected ? "on" : ""}>
-                  <div><b>{w.name}</b><span className="muted">{connected ? `Connected${garmin?.last_event_at ? ` · last data ${new Date(garmin.last_event_at).toLocaleDateString()}` : " · waiting for the first sync"}` : garmin?.status === "error" ? `Connection failed${garmin.error ? `: ${garmin.error}` : ""}. Try again.` : w.brings}</span></div>
+                  <div><b>{w.name}</b><span className="muted">{synced ?? (connected ? `Connected${garmin?.last_event_at ? ` · last data ${new Date(garmin.last_event_at).toLocaleDateString()}` : " · waiting for the first sync"}` : garmin?.status === "error" ? `Connection failed${garmin.error ? `: ${garmin.error}` : ""}. Try again.` : w.brings)}</span></div>
                   {connected
-                    ? <button type="button" className="btn small ghost" disabled={busy} onClick={async () => { setBusy(true); await disconnectGarmin(); setBusy(false); }}>{busy ? "…" : "Disconnect"}</button>
+                    ? <span className="cw-actions">
+                        <button type="button" className="btn small" disabled={busy} onClick={async () => { setBusy(true); setSynced(null); const n = await syncGarmin(); setSynced(n == null ? "Sync failed. Try again." : `${n} activit${n === 1 ? "y" : "ies"} saved.`); setBusy(false); }}>{busy ? "Syncing…" : "Sync now"}</button>
+                        <button type="button" className="btn small ghost" disabled={busy} onClick={async () => { setBusy(true); await disconnectGarmin(); setBusy(false); }}>Disconnect</button>
+                      </span>
                     : <a className="btn small" href="/api/connect/garmin">Connect</a>}
                 </li>
               );

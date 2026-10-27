@@ -8,16 +8,18 @@ import { GARMIN_ON } from "@/lib/integrations/config";
 import "./landing.css";
 
 export const metadata: Metadata = {
-  title: `${BRAND.name} — training plans that react to the training you did`,
+  title: `${BRAND.name} — a training plan that reacts to the training you did`,
   description: "A week-by-week plan for your race, every session from your watch, nutrition targets per day, and a coach that reviews the week against the plan.",
 };
 
 const STEPS = [
-  { t: "Set the race", d: "Event, date, goal time, the hours you have each week and the days you can't train." },
-  { t: "Get the plan", d: "Built in about 30 seconds from published coaching rules. Every session has a zone, a target pace and numbered steps." },
-  { t: "Train", d: "Sessions come in from your watch or get logged by hand. Each one is matched to the session it was meant to be." },
-  { t: "Weekly review", d: "The coach compares the week with the plan and proposes changes. You accept or decline each one." },
+  { t: "Set the race", d: "Event, date, goal time, hours per week." },
+  { t: "Get the plan", d: "Built in 30 seconds. Every session has a zone, a pace and the steps." },
+  { t: "Train", d: "Sessions arrive from your watch or get logged by hand." },
+  { t: "Review weekly", d: "The coach proposes changes. You accept or decline." },
 ];
+
+const SHOT = { width: 1440, height: 940 };
 
 export default function Landing() {
   const start = ACCOUNTS_ON ? { href: "/login?mode=up", label: "Create account" } : { href: "/dashboard", label: "Open the app" };
@@ -33,16 +35,13 @@ export default function Landing() {
 
       <section className="lp-hero">
         <h1>A training plan that reacts to the training you did.</h1>
-        <p className="lp-lead">
-          {BRAND.name} builds a week-by-week plan for your race, takes every session from your watch, and reviews the week against the plan.
-          Load is counted from work done. There is no readiness score and nothing to keep a streak for.
-        </p>
+        <p className="lp-lead">A week-by-week plan for your race. Every session from your watch. A weekly review against the plan. No readiness score, no streaks.</p>
         <div className="lp-cta">
           <Link href={start.href} className="btn lp-big">{start.label}</Link>
-          <span className="lp-note">Run, bike, triathlon. Marathon to full-distance Ironman.</span>
+          <span className="lp-note">Run, bike, triathlon. 5K to full-distance Ironman.</span>
         </div>
         <figure className="lp-shot lp-shot-hero">
-          <img src="/landing/dashboard.webp" width={1440} height={940} alt="The dashboard: today's session as a black card with duration, intensity and target pace; the next two days; this week's sessions, hours and load; the last activity with its route." />
+          <img src="/landing/dashboard.webp" {...SHOT} alt="The dashboard: today's session, the next two days, this week's totals and the last activity with its route." />
         </figure>
       </section>
 
@@ -61,62 +60,60 @@ export default function Landing() {
 
       <section className="lp-feature" aria-labelledby="plan">
         <div className="lp-text">
-          <h2 id="plan">The plan is a calendar you can move things in.</h2>
+          <h2 id="plan">A calendar you can move things in.</h2>
           <ul className="lp-facts">
-            <li>Week and month views. Drag a session to another day or time.</li>
-            <li>Lock a session and the coach&apos;s changes go around it.</li>
-            <li>Each session: zone, target pace, planned load, and the steps in order.</li>
-            <li>The whole plan as one chart: phases, weekly hours and where you are now.</li>
+            <li>Drag a session to another day or time.</li>
+            <li>Lock the ones that can&apos;t move.</li>
+            <li>Each session: zone, target pace, load, steps in order.</li>
           </ul>
         </div>
         <figure className="lp-shot">
-          <img src="/landing/plan.webp" width={1440} height={940} loading="lazy" alt="The Plan page: a week grid from 06:00 to 20:00 with sessions placed at their times, and a session panel showing duration, zone, target pace and seven numbered steps." />
+          <img src="/landing/plan.webp" {...SHOT} loading="lazy" alt="The Plan page: a week grid with sessions at their times and a session panel with duration, zone, target pace and numbered steps." />
         </figure>
       </section>
 
       <section className="lp-feature lp-flip" aria-labelledby="nutrition">
         <div className="lp-text">
-          <h2 id="nutrition">Food is planned around the session, not the other way round.</h2>
+          <h2 id="nutrition">Food planned around the session.</h2>
           <ul className="lp-facts">
-            <li>Daily calories, carbohydrate, protein, fat and fluid targets from your weight and the day&apos;s training.</li>
-            <li>Carbohydrate split into before, during and after each session, with the clock times.</li>
-            <li>Staged weight targets along the plan&apos;s phases, not one number for the whole year.</li>
-            <li>Supplements graded by the evidence, with the studies attached.</li>
+            <li>Calories, carbs, protein, fat and fluid targets from your weight and the day&apos;s training.</li>
+            <li>Carbs timed before, during and after each session.</li>
+            <li>Weight targets per training phase.</li>
           </ul>
         </div>
         <figure className="lp-shot">
-          <img src="/landing/nutrition.webp" width={1440} height={940} loading="lazy" alt="The Nutrition page: calories, carbs, protein, fat and hydration against the day's targets; the daily timeline with the session and logged meals; carbohydrate timing before, during and after the session." />
+          <img src="/landing/nutrition.webp" {...SHOT} loading="lazy" alt="The Nutrition page: daily targets, the timeline with the session and meals, and carbohydrate timing around the session." />
         </figure>
       </section>
 
       <section className="lp-feature" aria-labelledby="analysis">
         <div className="lp-text">
-          <h2 id="analysis">The numbers a coach would look at, with the definitions.</h2>
+          <h2 id="analysis">The numbers a coach looks at.</h2>
           <ul className="lp-facts">
-            <li>Pace per sport over time, weekly volume against the plan, load and compliance.</li>
-            <li>Heart-rate zones from your own threshold tests, not from your age.</li>
-            <li>Every metric shows how it is measured when you hover over it.</li>
+            <li>Pace per sport over time, volume against the plan, load, compliance.</li>
+            <li>Zones from your own threshold tests.</li>
+            <li>Every number explains how it is measured.</li>
           </ul>
         </div>
         <figure className="lp-shot">
-          <img src="/landing/analysis.webp" width={1440} height={940} loading="lazy" alt="The Analysis page: key figures, pace trends per sport, weekly volume and zone tables." />
+          <img src="/landing/analysis.webp" {...SHOT} loading="lazy" alt="The Analysis page: key figures, pace trends per sport, weekly volume and zone tables." />
         </figure>
       </section>
 
       <section className="lp-coach" aria-labelledby="coach">
         <div className="lp-text">
-          <h2 id="coach">Ask the coach. It answers from your data and changes the plan only when you say so.</h2>
-          <p>The coach reads your plan, your logged sessions, your body data and your nutrition. It can move, shorten or swap sessions, but every change to the plan is a proposal until you accept it.</p>
+          <h2 id="coach">A coach that answers from your data.</h2>
+          <p>It reads your plan, your sessions and your body data. Changes to the plan are proposals until you accept them.</p>
         </div>
         <div className="lp-chat" aria-label="Example conversation with the coach">
           <div className="lp-msg lp-you">Move Thursday&apos;s ride to after work.</div>
-          <div className="lp-msg lp-them">Thursday&apos;s ride is now at 18:00. It was 06:30. Nothing else changed.</div>
+          <div className="lp-msg lp-them">Thursday&apos;s ride is now at 18:00. It was 06:30.</div>
           <div className="lp-msg lp-you">Was last week too light?</div>
-          <div className="lp-msg lp-them">3.0 h done of 6.7 h planned. Longest ride 1:10 against 2:15 planned. The run sessions were complete.</div>
+          <div className="lp-msg lp-them">3.0 h done of 6.7 h planned. Longest ride 1:10 against 2:15. Runs complete.</div>
           <div className="lp-proposal">
             <div className="lp-prop-head">Proposed change</div>
-            <b>Long rides restart at 1:30 on Saturday, then 15 minutes more each week.</b>
-            <p>Reason: the longest ride in the last 30 days is 1:10. The plan had 2:15 this week.</p>
+            <b>Long rides restart at 1:30, then 15 min more each week.</b>
+            <p>Longest ride in 30 days: 1:10. The plan had 2:15.</p>
             <div className="lp-prop-actions"><span className="btn small">Accept</span><span className="btn small ghost">Decline</span></div>
           </div>
         </div>
@@ -124,12 +121,8 @@ export default function Landing() {
 
       <section className="lp-devices" aria-labelledby="devices">
         <h2 id="devices">Devices</h2>
-        {GARMIN_ON ? (
-          <p>Garmin connects in one step and every activity arrives on its own, with the route and heart rate. Anything else is logged by hand in under a minute, or imported from a spreadsheet.</p>
-        ) : (
-          <p>Garmin sync is being set up. Until it is on, activities are logged by hand in under a minute or imported from a spreadsheet.</p>
-        )}
-        <p className="lp-muted">Apple Watch, COROS, Polar, Suunto, WHOOP and Wahoo are next. Tell us which one you use from inside the app.</p>
+        <p>{GARMIN_ON ? "Garmin connects in one step; activities arrive with route and heart rate." : "Garmin sync is being set up."} Anything else is logged by hand in under a minute or imported from a spreadsheet.</p>
+        <p className="lp-muted">Apple Watch, COROS, Polar, Suunto, WHOOP, Wahoo: next.</p>
       </section>
 
       <section className="lp-end">
@@ -142,7 +135,7 @@ export default function Landing() {
 
       <footer className="lp-foot">
         <span className="wordmark">{BRAND.name}</span>
-        <span>Only you can see your data. Your activities are never used to train models.</span>
+        <span>Only you can see your data. It is never used to train models.</span>
       </footer>
     </main>
   );
