@@ -103,9 +103,12 @@ export function WeekGrid({ week, selectedId, onPick }: { week: Week; selectedId?
           const date = addDays(start, i);
           const isT = date.getTime() === t.getTime();
           const sessions = week.sessions.filter((s) => s.dayIndex === i);
+          // blocks that would overlap on screen (a ride and the run straight after it, a short session under a
+          // tall minimum block) are nudged down so each stays full width and readable
+          const tops = topsOf(sessions, y);
           return (
             <div key={i} className={`wg-col${isT ? " today" : ""}${drag && drag.day === i ? " target" : ""}`}>
-              {sessions.map((s) => <Block key={s.id} s={s} y={y} selected={s.id === selectedId} drag={drag?.id === s.id ? drag : null} onDown={onDown(s)} onMove={onMove(s)} onUp={onUp(s)} onLock={() => plan.toggleLock(s.id)} onPick={onPick} />)}
+              {sessions.map((s) => <Block key={s.id} s={s} y={y} top={tops.get(s.id)} selected={s.id === selectedId} drag={drag?.id === s.id ? drag : null} onDown={onDown(s)} onMove={onMove(s)} onUp={onUp(s)} onLock={() => plan.toggleLock(s.id)} onPick={onPick} />)}
               {isT && nowH >= H0 && nowH <= H1 && (
                 <div className="wg-now" style={{ top: y(nowH) }}>
                   <span><b className="now-w">NOW </b>{hoursToClock(nowH)}</span>
@@ -154,7 +157,27 @@ function WeekList({ week, selectedId, onPick }: { week: Week; selectedId?: strin
   );
 }
 
-function Block({ s, y, selected, drag, onDown, onMove, onUp, onLock, onPick }: { s: Session; y: (h: number) => number; selected?: boolean; drag: Drag | null; onDown: (e: React.PointerEvent) => void; onMove: (e: React.PointerEvent) => void; onUp: (e: React.PointerEvent) => void; onLock: () => void; onPick?: (s: Session) => void }) {
+/** Screen box of a block: where it starts and how tall it is drawn (the minimum keeps short sessions readable). */
+function boxOf(s: Session, y: (h: number) => number) {
+  const a = s.status === "done" || s.status === "partial" ? s.actual : undefined;
+  const h0 = toH(a?.start ?? s.start), min = a?.min ?? s.min;
+  const top = s.sport === "rest" ? y(VIEW0) + 6 : y(h0) + 2;
+  return { top, bottom: top + Math.max(44, (min / 60) * ROW - 4) };
+}
+/** The top of each block on screen: its true time, or just under the previous block when they would overlap. */
+function topsOf(sessions: Session[], y: (h: number) => number) {
+  const out = new Map<string, number>();
+  const sorted = [...sessions].filter((s) => s.sport !== "rest").map((s) => ({ s, ...boxOf(s, y) })).sort((a, b) => a.top - b.top);
+  let floor = -Infinity;
+  for (const o of sorted) {
+    const top = Math.max(o.top, floor);
+    out.set(o.s.id, top);
+    floor = top + (o.bottom - o.top) + 3;
+  }
+  return out;
+}
+
+function Block({ s, y, top, selected, drag, onDown, onMove, onUp, onLock, onPick }: { s: Session; y: (h: number) => number; top?: number; selected?: boolean; drag: Drag | null; onDown: (e: React.PointerEvent) => void; onMove: (e: React.PointerEvent) => void; onUp: (e: React.PointerEvent) => void; onLock: () => void; onPick?: (s: Session) => void }) {
   const onKey = (e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onPick?.(s); } };
   const done = s.status === "done" || s.status === "partial";
   const a = done ? s.actual : undefined;
@@ -181,7 +204,7 @@ function Block({ s, y, selected, drag, onDown, onMove, onUp, onLock, onPick }: {
   const h1 = h0 + min / 60;
   const startLabel = drag ? clock(drag.h) : a?.start ?? s.start;
   return (
-    <div className={cls} style={{ top: y(h0) + 2, height: Math.max(44, (h1 - h0) * ROW - 4), ...style }} title={a ? `${a.name}, ${a.min} min${differs ? `, planned ${s.title} ${s.min} min` : ""}` : s.text} {...handlers} role="button" tabIndex={0} aria-label={`${s.title}, ${DAYS[s.dayIndex]} ${s.start ?? ""}, ${s.intensity}, ${s.min} minutes, ${s.status}`} onKeyDown={onKey}>
+    <div className={cls} style={{ top: top ?? y(h0) + 2, height: Math.max(44, (h1 - h0) * ROW - 4), ...style }} title={a ? `${a.name}, ${a.min} min${differs ? `, planned ${s.title} ${s.min} min` : ""}` : s.text} {...handlers} role="button" tabIndex={0} aria-label={`${s.title}, ${DAYS[s.dayIndex]} ${s.start ?? ""}, ${s.intensity}, ${s.min} minutes, ${s.status}`} onKeyDown={onKey}>
       <SportIcon sport={sport} size={20} />
       <div className="txt">
         {/* each line: the main fact, then a second one that shows only when it fits (it wraps below and is clipped) */}

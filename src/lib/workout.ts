@@ -212,3 +212,17 @@ function guessSport(t: string): Sport {
   return "other";
 }
 const fmtMin = (m: number) => (m < 1 ? `${Math.round(m * 60)} s` : m >= 60 ? `${Math.floor(m / 60)}:${String(Math.round(m % 60)).padStart(2, "0")} h` : `${Math.round(m)} min`);
+
+/** How a brick splits into its two sessions: the ride (text before the "+"), then the run off the bike. Minutes
+ *  come from "Run H:MM off the bike" when the text says so, otherwise 80/20 rounded to 5 minutes. */
+export function brickParts(s: Pick<Session, "text" | "min" | "intensity" | "start">): { bike: { min: number; text: string; intensity: string }; run: { min: number; text: string; intensity: string; start?: string } } {
+  const text = s.text.replace(/^brick:\s*/i, "");
+  const m = text.match(/\+\s*run\s*(\d+):(\d+)\s*off the bike(.*)$/i);
+  const runMin = m ? Math.min(s.min - 10, hmToMin(m[1], m[2])) : Math.max(10, Math.round((s.min * 0.2) / 5) * 5);
+  const bikeMin = Math.max(10, s.min - runMin);
+  const sim = /race (effort|pace)|race sim/i.test(text);
+  const bikeText = (m ? text.slice(0, m.index) : text).replace(/\s*\+\s*$/, "").trim() || `Ride ${fmtMin(bikeMin)}`;
+  const runText = `Run ${fmtMin(runMin)} off the bike${sim ? " at race effort" : ", easy"}`;
+  const start = s.start ? (() => { const [h, mm] = s.start.split(":").map(Number); const t = h * 60 + mm + bikeMin; return `${String(Math.floor(t / 60) % 24).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`; })() : undefined;
+  return { bike: { min: bikeMin, text: bikeText, intensity: s.intensity }, run: { min: runMin, text: runText, intensity: sim ? "Race pace" : "Zone 2", start } };
+}

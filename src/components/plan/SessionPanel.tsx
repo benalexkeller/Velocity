@@ -12,7 +12,7 @@ import { STATUS_LABEL, activityLoad, plannedLoad, type Session, type Sport } fro
 import { usePlan } from "@/lib/store";
 import { dateLabel, fmtDur, fmtHMS, fmtPace, today, ymd } from "@/lib/format";
 import { elev, fmtDist, fmtSpeed, runPace, swimDist, swimPace } from "@/lib/units";
-import { hardestStep, workoutFor, zoneName, zoneWord, type Segment, type Zone } from "@/lib/workout";
+import { brickParts, hardestStep, workoutFor, zoneName, zoneWord, type Segment, type Zone } from "@/lib/workout";
 
 const INTENSITIES = ["Zone 2", "Aerobic", "Technique", "Endurance", "Tempo", "Threshold", "Intervals", "Race"];
 const SPORTS: Sport[] = ["swim", "bike", "run", "brick", "strength", "hike", "other", "rest"];
@@ -214,6 +214,7 @@ export function SessionPanel({ id, onClose }: { id: string | null; onClose: () =
               {s.sport !== "rest" && acts.length === 0 && (s.date <= ymd(today()) ? <button type="button" className="btn" onClick={() => setMode("log")}><Icon name="plus" />Log activity</button> : <span className="sp-toast">Log it once it is done, {dateLabel(s.date)}</span>)}
               {!s.locked && s.status !== "done" && <button type="button" className="btn ghost" onClick={() => setMode("move")}>Move</button>}
               <button type="button" className="btn ghost" onClick={() => setMode("edit")}>Edit</button>
+              {s.sport === "brick" && !s.locked && s.status !== "done" && <button type="button" className="btn ghost" title="Two sessions on the calendar: the ride, then the run off the bike" onClick={() => { const b = brickParts(s); plan.splitBrick(s.id); setToast(`Split: bike ${b.bike.min} min, then run ${b.run.min} min`); }}>Split into bike and run</button>}
               {s.status !== "done" && <button type="button" className={`btn ghost${s.locked ? " on" : ""}`} onClick={() => { plan.toggleLock(s.id); setToast(s.locked ? "Unlocked, can be moved again" : "Locked, stays where it is"); }}><Icon name={s.locked ? "lock" : "unlock"} />{s.locked ? "Unlock" : "Lock"}</button>}
               {toast && <span className="sp-toast">✓ {toast}</span>}
             </div>

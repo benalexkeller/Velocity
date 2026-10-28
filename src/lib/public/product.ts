@@ -50,7 +50,7 @@ export const PRODUCT: ProductPage[] = [
           "The plan builder asks for the race (distance, date, goal time), the days and times you can train, and the longest swim, ride and run you have done recently. From that it writes every week to race day.",
           "Phases follow standard practice: base, build, peak, taper. Volume rises by about ten percent a week, a recovery week comes every third or fourth week, and the long ride and long run are never cut to make up for a missed week.",
         ],
-        facts: ["One long ride and one long run a week, hard days separated by easy days.", "Weekly hours per discipline on one chart, the race at the end.", "Every session has numbered steps: warm-up, main set, cool-down, with the zone and the target pace or power.", "Zones come from your own threshold tests (LTHR, FTP, pace), not from your age.", "A plan from another source can be imported from a spreadsheet template."],
+        facts: ["One long ride and one long run a week, hard days separated by easy days.", "Weekly hours per discipline on one chart, the race at the end.", "Every session has numbered steps: warm-up, main set, cool-down, with the zone and the target pace or power.", "Zones come from your own threshold tests (LTHR, FTP, pace), not from your age.", "A brick can be split into its ride and its run, two sessions back to back on the calendar, one at a time or all at once.", "A plan from another source can be imported from a spreadsheet template."],
         shot: shot("plan-week", "The Plan page: the week grid with sessions at their times, the weekly-hours chart with phases, and the phase table."),
       },
       {
