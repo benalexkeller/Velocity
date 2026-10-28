@@ -122,7 +122,7 @@ export function hrZone(sport: string, hr: number, lthr: number | null): 1 | 2 | 
   const cut = sport === "bike" || sport === "brick" ? [0.81, 0.9, 0.94, 1.0] : [0.85, 0.9, 0.95, 1.0];
   return r < cut[0] ? 1 : r < cut[1] ? 2 : r < cut[2] ? 3 : r < cut[3] ? 4 : 5;
 }
-/** Zone cut-offs in bpm for display ("Z2 · 132 – 138"). */
+/** Zone cut-offs in bpm for display ("Z2, 132 – 138"). */
 export function hrZoneRanges(sport: string, lthr: number): Record<1 | 2 | 3 | 4 | 5, [number, number]> {
   const c = sport === "bike" ? [0.81, 0.9, 0.94, 1.0] : [0.85, 0.9, 0.95, 1.0];
   const b = (x: number) => Math.round(lthr * x);

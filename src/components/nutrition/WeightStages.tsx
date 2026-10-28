@@ -71,7 +71,7 @@ export function WeightChart({ timeline, path, logged = [], proj = null, imperial
   return (
     <svg ref={svgRef} className="chart nu-wchart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Planned training hours per week with the weight path">
       {bands.map((b) => <g key={b.phase + b.from}><line x1={x(b.from) + 2} y1={15} x2={x(b.to) - 2} y2={15} stroke="var(--line)" strokeWidth={2}><title>{b.phase}</title></line>{x(b.to) - x(b.from) >= b.phase.length * 6.2 + 4 && <text x={(x(b.from) + x(b.to)) / 2} y={10} textAnchor="middle">{b.phase}</text>}</g>)}
-      {timeline.map((w) => { const x0 = x(ms(w.start)), x1 = x(ms(w.start) + 7 * DAY); return <rect key={w.start} x={x0 + 1} y={yH(w.hours)} width={Math.max(1, x1 - x0 - 2)} height={H - B - yH(w.hours)} rx={2} fill={w.race ? "var(--accent-soft)" : "var(--track)"}><title>{`Week ${w.week} · ${shortDate(w.start)} · ${fmt(w.hours, 1)} h planned`}</title></rect>; })}
+      {timeline.map((w) => { const x0 = x(ms(w.start)), x1 = x(ms(w.start) + 7 * DAY); return <rect key={w.start} x={x0 + 1} y={yH(w.hours)} width={Math.max(1, x1 - x0 - 2)} height={H - B - yH(w.hours)} rx={2} fill={w.race ? "var(--accent-soft)" : "var(--track)"}><title>{`Week ${w.week}, ${shortDate(w.start)}, ${fmt(w.hours, 1)} h planned`}</title></rect>; })}
       {timeline.map((w, i) => (i % step === 0 ? <text key={"t" + w.start} x={(x(ms(w.start)) + x(ms(w.start) + 7 * DAY)) / 2} y={H - 6} textAnchor="middle">W{w.week}</text> : null))}
       {[maxH, maxH / 2].map((h) => <text key={h} x={L - 4} y={yH(h) + 4} textAnchor="end">{fmt(h, 0)} h</text>)}
       {kgs.length > 0 && [hi - 1.5, (hi + lo) / 2, lo + 1.5].map((v) => <text key={v} x={W - R + 6} y={yW(v) + 4} textAnchor="start">{imperial ? fmt(kgToLb(v), 0) : fmt(v, 1)}</text>)}
@@ -80,9 +80,9 @@ export function WeightChart({ timeline, path, logged = [], proj = null, imperial
       {raceDate && <><line x1={x(ms(raceDate))} y1={T - 4} x2={x(ms(raceDate))} y2={H - B} stroke="var(--accent)" strokeDasharray="2 3" /><text x={x(ms(raceDate)) - 4} y={T - 7} textAnchor="end" fill="var(--accent)">Race</text></>}
       {sorted.length > 1 && <path d={sorted.map((p, i) => `${i ? "L" : "M"}${x(ms(p.date))} ${yW(p.kg)}`).join("")} fill="none" stroke="var(--accent)" strokeWidth={2} strokeDasharray="5 4" />}
       {logged.length > 1 && <path d={logged.map((l, i) => `${i ? "L" : "M"}${x(ms(l.date))} ${yW(l.kg)}`).join("")} fill="none" stroke="var(--run)" strokeWidth={2} />}
-      {logged.map((l) => <circle key={l.date} cx={x(ms(l.date))} cy={yW(l.kg)} r={3} fill="var(--run)"><title>{`${shortDate(l.date)} · ${showW(l.kg)} logged`}</title></circle>)}
+      {logged.map((l) => <circle key={l.date} cx={x(ms(l.date))} cy={yW(l.kg)} r={3} fill="var(--run)"><title>{`${shortDate(l.date)}, ${showW(l.kg)} logged`}</title></circle>)}
       {proj && <line x1={x(ms(proj.from.date))} y1={yW(proj.from.kg)} x2={x(ms(proj.to.date))} y2={yW(proj.to.kg)} stroke="var(--muted-2)" strokeDasharray="3 4" strokeWidth={1.5} />}
-      {sorted.map((p) => <g key={p.kind + p.date}><circle cx={x(ms(p.date))} cy={yW(p.kg)} r={p.kind === "stage" ? 5 : 4.5} fill={stroke(p)} stroke="var(--accent)" strokeWidth={2}><title>{`${p.label || "Stage"} · ${shortDate(p.date)} · ${showW(p.kg)}`}</title></circle><text x={x(ms(p.date))} y={yW(p.kg) - 10} textAnchor={x(ms(p.date)) > W - R - 34 ? "end" : x(ms(p.date)) < L + 34 ? "start" : "middle"} fontWeight={600} fill="var(--ink)">{showW(p.kg)}</text></g>)}
+      {sorted.map((p) => <g key={p.kind + p.date}><circle cx={x(ms(p.date))} cy={yW(p.kg)} r={p.kind === "stage" ? 5 : 4.5} fill={stroke(p)} stroke="var(--accent)" strokeWidth={2}><title>{`${p.label || "Stage"}, ${shortDate(p.date)}, ${showW(p.kg)}`}</title></circle><text x={x(ms(p.date))} y={yW(p.kg) - 10} textAnchor={x(ms(p.date)) > W - R - 34 ? "end" : x(ms(p.date)) < L + 34 ? "start" : "middle"} fontWeight={600} fill="var(--ink)">{showW(p.kg)}</text></g>)}
       {!timeline.length && !sorted.length && <text x={W / 2} y={H / 2} textAnchor="middle">No plan and no target yet</text>}
     </svg>
   );
@@ -106,7 +106,7 @@ export function StageEditor({ stages, onChange, nowKg, raceKg, imperial, raceDat
   const ordered = stages.map((s, i) => ({ s, i })).sort((a, b) => byDate(a.s, b.s));
   const nowPt = nowKg ? { date: tNow, kg: nowKg } : null;
   const prevOf = (i: number) => { const k = ordered.findIndex((o) => o.i === i); return k > 0 ? { date: ordered[k - 1].s.date, kg: ordered[k - 1].s.weight_kg } : nowPt; };
-  const rateText = (from: { date: string; kg: number } | null, to: { date: string; kg: number }) => { if (!from) return ""; const r = ratePerWeek(from, to); const v = imperial ? kgToLb(r) : r; return `${v > 0 ? "+" : ""}${fmt(v, 2)} ${unit}/week${r < -1 ? " · over 1 kg a week" : ""}`; };
+  const rateText = (from: { date: string; kg: number } | null, to: { date: string; kg: number }) => { if (!from) return ""; const r = ratePerWeek(from, to); const v = imperial ? kgToLb(r) : r; return `${v > 0 ? "+" : ""}${fmt(v, 2)} ${unit}/week${r < -1 ? ", over 1 kg a week" : ""}`; };
   const set = (i: number, patch: Partial<WeightStage>) => onChange(stages.map((s, j) => (j === i ? { ...s, ...patch } : s)));
   const add = () => {
     const last = ordered.length ? ordered[ordered.length - 1].s : null;
@@ -123,14 +123,14 @@ export function StageEditor({ stages, onChange, nowKg, raceKg, imperial, raceDat
 
   return (
     <div className="nu-stages">
-      <div className="row fixed"><span className="who">Now</span><input type="range" min={0} max={Math.max(0, n - 1)} value={todayIdx} disabled aria-hidden /><span className="when">Week {tl[todayIdx].week} · {shortDate(tNow)}</span><span className="w">{nowKg ? showW(nowKg) : "enter your weight above"}</span><span className="rate" /><span /></div>
+      <div className="row fixed"><span className="who">Now</span><input type="range" min={0} max={Math.max(0, n - 1)} value={todayIdx} disabled aria-hidden /><span className="when">Week {tl[todayIdx].week}, {shortDate(tNow)}</span><span className="w">{nowKg ? showW(nowKg) : "enter your weight above"}</span><span className="rate" /><span /></div>
       {stages.map((s, i) => {
         const idx = weekIndexOf(tl, s.date), w = tl[idx];
         return (
           <div className="row" key={i}>
             <span className="who">Stage {ordered.findIndex((o) => o.i === i) + 1}</span>
             <input type="range" min={minIdx} max={maxIdx} value={Math.min(maxIdx, Math.max(minIdx, idx))} onChange={(e) => { const k = +e.target.value; set(i, { date: tl[k].start, label: tl[k].phase }); }} aria-label={`Week for stage ${i + 1}`} />
-            <span className="when">Week {w.week} · {shortDate(w.start)}{w.phase ? ` · ${w.phase}` : ""}</span>
+            <span className="when">Week {w.week}, {shortDate(w.start)}{w.phase ? `, ${w.phase}` : ""}</span>
             <span className="unit-in small"><input value={drafts[i] ?? (s.weight_kg ? disp(s.weight_kg) : "")} onChange={(e) => { setDrafts((d) => ({ ...d, [i]: e.target.value })); const v = parseFloat(e.target.value); set(i, { weight_kg: v > 0 ? +(imperial ? lbToKg(v) : v).toFixed(2) : 0 }); }} onBlur={() => setDrafts((d) => { const c = { ...d }; delete c[i]; return c; })} inputMode="decimal" aria-label={`Target weight for stage ${i + 1}`} /><span className="units"><span>{unit}</span></span></span>
             <span className="rate">{s.weight_kg > 0 ? rateText(prevOf(i), { date: s.date, kg: s.weight_kg }) : ""}</span>
             <button type="button" className="x" onClick={() => remove(i)} aria-label="Remove stage">×</button>

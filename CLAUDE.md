@@ -11,6 +11,7 @@ Database + logins: Supabase project `hngrtoufmjauqdkhncbp`. Product decisions an
 - Explain everything in simple, non-technical language. PR is not a backend developer; he decides product, you run the commands.
 - Copy rule for the app AND for replies: cold facts and to-dos, no motivational, "impactful" or feel-good statements anywhere.
 - Design must match the approved mocks 1:1: white background, Inter (self-hosted), blue accent `#2459FE`, cards with soft shadow, no dark mode.
+- No separator glyphs in UI text: never "·", "•" or "|" between facts. Inside a component, put the second fact after a gap (`<span className="at">`, same size, normal weight, muted); inside a sentence, a comma. Nothing bold for emphasis. Chart units go on the tick labels ("4 h", "20 mi"), never as a lone letter near the axis.
 - Verify with a screenshot or a scripted click-through before saying something works. `scripts/snapshot.js` renders the review mirror.
 
 ## Stack

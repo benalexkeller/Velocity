@@ -53,7 +53,7 @@ export function LogActivity({ open, onClose, onSaved, initial, inline }: { open:
   const [date, setDate] = useState(initial?.date ?? ymd(now));
   const [time, setTime] = useState(initial?.time ?? `${String(now.getHours()).padStart(2, "0")}:00`);
   const [name, setName] = useState(initial?.name ?? "");
-  const [metric, setMetric] = useState(plan.athlete.units === "metric"); // km · m · km/h · /km · m — or mi · yd · mph · /mi · ft
+  const [metric, setMetric] = useState(plan.athlete.units === "metric"); // km, m, km/h, /km, m — or mi, yd, mph, /mi, ft
   const [dist, setDist] = useState(""); // in the unit shown
   const [dur, setDur] = useState(initial?.min ? `${initial.min}:00` : ""); // h:mm:ss
   const [pace, setPace] = useState(""); // m:ss per mi|km / per 100 yd|m, or mph|km/h for bike
@@ -183,7 +183,7 @@ export function LogActivity({ open, onClose, onSaved, initial, inline }: { open:
             {sec > 0 && err("dur")}
           </div>
         <div>
-          <div className="k">How hard · 1–10</div>
+          <div className="k">How hard, 1 to 10</div>
           <div className="lf-row effort">{Array.from({ length: 10 }, (_, i) => i + 1).map((n) => <button key={n} type="button" className={n <= effort ? "on" : ""} onClick={() => setEffort(n === effort ? 0 : n)} aria-label={`Effort ${n}`}>{n}</button>)}</div>
         </div>
         <div>
@@ -192,7 +192,7 @@ export function LogActivity({ open, onClose, onSaved, initial, inline }: { open:
         </div>
         <textarea className="lf-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Notes — what happened, pain, conditions" rows={2} />
         <div className="lf-actions">
-          <span className="muted">{valid ? `${SPORTS.find((s) => s.k === sport)?.label} · ${hms(sec)}${dist ? ` · ${dist} ${unit}` : ""}${pace ? ` · ${pace}${sport === "bike" ? (metric ? " km/h" : " mph") : sport === "swim" ? (metric ? "/100 m" : "/100 yd") : metric ? "/km" : "/mi"}` : ""}${num(hr) ? ` · ${hr} bpm` : ""}` : sec <= 0 ? "Duration is required" : "Check the fields marked in red"}</span>
+          <span className="muted">{valid ? `${SPORTS.find((s) => s.k === sport)?.label}, ${hms(sec)}${dist ? `, ${dist} ${unit}` : ""}${pace ? `, ${pace}${sport === "bike" ? (metric ? " km/h" : " mph") : sport === "swim" ? (metric ? "/100 m" : "/100 yd") : metric ? "/km" : "/mi"}` : ""}${num(hr) ? `, ${hr} bpm` : ""}` : sec <= 0 ? "Duration is required" : "Check the fields marked in red"}</span>
           <button type="button" className="btn ghost" onClick={onClose}>Cancel</button>
           <button type="submit" className="btn" disabled={!valid}>Save</button>
         </div>

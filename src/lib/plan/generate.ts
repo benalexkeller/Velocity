@@ -109,10 +109,10 @@ function raceDayText(intake: Intake, raceHours: number, imperial: boolean) {
     const legs = sp ?? { swim: raceHours * 0.12, bike: raceHours * 0.52, run: raceHours * 0.33, transitions: raceHours * 0.03 };
     const d = info.dist;
     const dist = (mi: number) => (imperial ? `${mi} mi` : `${(mi * 1.609).toFixed(0)} km`);
-    return `Race day — ${name} · Swim ${hm(legs.swim)} (${imperial ? `${d.swimYd.toLocaleString()} yd` : `${Math.round(d.swimYd * 0.9144).toLocaleString()} m`}) · Bike ${hm(legs.bike)} (${dist(d.bikeMi)}) · Run ${hm(legs.run)} (${dist(d.runMi)})`;
+    return `Race day — ${name}, Swim ${hm(legs.swim)} (${imperial ? `${d.swimYd.toLocaleString()} yd` : `${Math.round(d.swimYd * 0.9144).toLocaleString()} m`}), Bike ${hm(legs.bike)} (${dist(d.bikeMi)}), Run ${hm(legs.run)} (${dist(d.runMi)})`;
   }
   const leg = et.kind === "run" ? "Run" : et.kind === "bike" ? "Bike" : et.kind === "swim" ? "Swim" : "Session";
-  return `Race day — ${name} · ${leg} ${hm(raceHours)} at race effort`;
+  return `Race day — ${name}, ${leg} ${hm(raceHours)} at race effort`;
 }
 
 export function planStart(t: Date = today()) {
@@ -289,7 +289,7 @@ export function generatePlan(intakeIn: Partial<Intake>, t: Date = today(), imper
     for (const d of days7) { const m = d.text.match(/(?:Long )?[Ss]wim (\d+):(\d+)/); if (m && !/^Race day/.test(d.text)) longest.swim = Math.max(longest.swim, +m[1] + +m[2] / 60); }
     const long1 = slots.find((s) => s.role === "long1"), long2 = slots.find((s) => s.role === "long2");
     const dayName = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-    const focus = isRaceWeek ? `Race ${raceDate} · ${hm(raceHours)} planned · short openers, then rest` : `${names[i].split(" — ")[0]}${isRec ? " · recovery week" : ""} · ${scheduledH.toFixed(1)} h${long1 ? ` · long ${long1.sport === "bike" ? "ride" : long1.sport === "run" ? "run" : long1.sport === "swim" ? "swim" : "session"} ${dayName[long1.day]}` : ""}${long2 ? ` · long run ${dayName[long2.day]}` : ""}`;
+    const focus = isRaceWeek ? `Race ${raceDate}, ${hm(raceHours)} planned, short openers, then rest` : `${names[i].split(" — ")[0]}${isRec ? ", recovery week" : ""}, ${scheduledH.toFixed(1)} h${long1 ? `, long ${long1.sport === "bike" ? "ride" : long1.sport === "run" ? "run" : long1.sport === "swim" ? "swim" : "session"} ${dayName[long1.day]}` : ""}${long2 ? `, long run ${dayName[long2.day]}` : ""}`;
     weeks.push({ week: i + 1, start: ymd(wkStart), phase: names[i], focus, recovery: isRec, race: isRaceWeek, days: days7 });
   }
 

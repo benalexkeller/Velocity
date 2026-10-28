@@ -67,7 +67,7 @@ function RaceTime() {
   );
 }
 
-// ---------- 2. Pace · distance · time ----------
+// ---------- 2. Pace, distance, time ----------
 function PaceCalc() {
   const [dist, setDist] = useState("6.2"); const [time, setTime] = useState("58:00"); const [pc, setPc] = useState("");
   const [solve, setSolve] = useState<"pace" | "time" | "distance">("pace");
@@ -216,7 +216,7 @@ function Cost() {
   const [reg, setReg] = useState("875"); const [flights, setFlights] = useState("900"); const [nights, setNights] = useState("5"); const [rate, setRate] = useState("190"); const [bike, setBike] = useState("350"); const [car, setCar] = useState("300"); const [food, setFood] = useState("60"); const [gear, setGear] = useState("400");
   const hotel = num(nights) * num(rate), meals = num(nights) * num(food);
   const total = num(reg) + num(flights) + hotel + num(bike) + num(car) + meals + num(gear);
-  const rows: [string, number][] = [["Registration", num(reg)], ["Flights", num(flights)], [`Hotel · ${nights} nights`, hotel], ["Bike transport / rental", num(bike)], ["Car and transfers", num(car)], [`Food · ${nights} days`, meals], ["Race gear and nutrition", num(gear)]];
+  const rows: [string, number][] = [["Registration", num(reg)], ["Flights", num(flights)], [`Hotel, ${nights} nights`, hotel], ["Bike transport / rental", num(bike)], ["Car and transfers", num(car)], [`Food, ${nights} days`, meals], ["Race gear and nutrition", num(gear)]];
   return (
     <div className="calc">
       <div className="inputs">
@@ -265,12 +265,12 @@ function Distances() {
   return (
     <>
       <table><thead><tr><th>Race</th><th>Swim</th><th>Bike</th><th>Run</th><th>Typical finish (age-group median)</th></tr></thead><tbody>
-        <tr><td>Sprint</td><td>750 m · 820 yd</td><td>20 km · 12.4 mi</td><td>5 km · 3.1 mi</td><td>1:20–1:40</td></tr>
-        <tr><td>Olympic</td><td>1.5 km · 1,640 yd</td><td>40 km · 24.9 mi</td><td>10 km · 6.2 mi</td><td>2:40–3:10</td></tr>
-        <tr><td>Ironman 70.3</td><td>1.9 km · 2,112 yd</td><td>90 km · 56 mi</td><td>21.1 km · 13.1 mi</td><td>5:45–6:30</td></tr>
-        <tr><td>Ironman 140.6</td><td>3.8 km · 4,224 yd</td><td>180 km · 112 mi</td><td>42.2 km · 26.2 mi</td><td>12:30–13:30</td></tr>
-        <tr><td>Marathon</td><td>—</td><td>—</td><td>42.2 km · 26.2 mi</td><td>4:20–4:40</td></tr>
-        <tr><td>Half marathon</td><td>—</td><td>—</td><td>21.1 km · 13.1 mi</td><td>2:00–2:10</td></tr>
+        <tr><td>Sprint</td><td>750 m, 820 yd</td><td>20 km, 12.4 mi</td><td>5 km, 3.1 mi</td><td>1:20–1:40</td></tr>
+        <tr><td>Olympic</td><td>1.5 km, 1,640 yd</td><td>40 km, 24.9 mi</td><td>10 km, 6.2 mi</td><td>2:40–3:10</td></tr>
+        <tr><td>Ironman 70.3</td><td>1.9 km, 2,112 yd</td><td>90 km, 56 mi</td><td>21.1 km, 13.1 mi</td><td>5:45–6:30</td></tr>
+        <tr><td>Ironman 140.6</td><td>3.8 km, 4,224 yd</td><td>180 km, 112 mi</td><td>42.2 km, 26.2 mi</td><td>12:30–13:30</td></tr>
+        <tr><td>Marathon</td><td>—</td><td>—</td><td>42.2 km, 26.2 mi</td><td>4:20–4:40</td></tr>
+        <tr><td>Half marathon</td><td>—</td><td>—</td><td>21.1 km, 13.1 mi</td><td>2:00–2:10</td></tr>
       </tbody></table>
       <p>Cut-offs at Ironman Texas: swim 2:20 after the last wave start, bike 10:30 after your start, total 17:00. Wetsuit legal below 76.1 °F (24.5 °C) water temperature.</p>
     </>
@@ -279,7 +279,7 @@ function Distances() {
 
 export const CALCULATORS: Cube[] = [
   { id: "race-time", tag: "Race", title: "Race time", summary: "Paces and transitions in, finish time and splits out. Ironman, 70.3, Olympic, Sprint, Marathon.", render: () => <RaceTime /> },
-  { id: "pace", tag: "Training", title: "Pace · time · distance", summary: "Enter any two, get the third. Plus speed and per-km pace.", render: () => <PaceCalc /> },
+  { id: "pace", tag: "Training", title: "Pace, time, distance", summary: "Enter any two, get the third. Plus speed and per-km pace.", render: () => <PaceCalc /> },
   { id: "predict", tag: "Race", title: "Race predictor", summary: "One recent result predicts 5k to marathon. Riegel formula, exponent 1.06.", render: () => <Predictor /> },
   { id: "zones", tag: "Training", title: "Training zones", summary: "Threshold heart rate, run pace and FTP in. Five zones out for each.", render: () => <Zones /> },
   { id: "sweat", tag: "Nutrition", title: "Sweat rate", summary: "Weight before and after a session. Litres per hour and what to drink.", render: () => <Sweat /> },

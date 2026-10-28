@@ -28,9 +28,9 @@ export function ImportPlan({ onBack, onDone }: { onBack: () => void; onDone: () 
     <div className="pb">
       <div className="pb-head"><div><div className="eyebrow muted">Your plan</div><h1>Upload your own plan</h1></div></div>
       <section className="card pb-card form pb-import">
-        <div className="pb-q"><h2>1 · Get the template</h2><span className="hint">Columns: Date, Sport, Minutes, Description; Intensity and Phase optional. Days without a row are rest days.</span></div>
+        <div className="pb-q"><h2>1. Get the template</h2><span className="hint">Columns: Date, Sport, Minutes, Description; Intensity and Phase optional. Days without a row are rest days.</span></div>
         <div className="row"><button type="button" className="btn ghost" onClick={download}>Download the template (.csv)</button></div>
-        <div className="pb-q"><h2>2 · Upload it</h2></div>
+        <div className="pb-q"><h2>2. Upload it</h2></div>
         <label className={`pb-drop${drag ? " over" : ""}`} onDragOver={(e) => { e.preventDefault(); setDrag(true); }} onDragLeave={() => setDrag(false)} onDrop={(e) => { e.preventDefault(); setDrag(false); void read(e.dataTransfer.files[0]); }}>
           <input type="file" accept=".xlsx,.xls,.csv" onChange={(e) => void read(e.target.files?.[0])} />
           <Icon name="note" /><b>{name || "Drop the file here or click to choose"}</b><span className="hint">.xlsx, .xls or .csv</span>
@@ -39,13 +39,13 @@ export function ImportPlan({ onBack, onDone }: { onBack: () => void; onDone: () 
         {err && <div className="err">{err}</div>}
         {res && (
           <>
-            <div className="pb-q"><h2>3 · Check it</h2></div>
-            {res.issues.length > 0 && <div className="err">{res.issues.slice(0, 5).join(" · ")}{res.issues.length > 5 ? ` · +${res.issues.length - 5} more` : ""}</div>}
+            <div className="pb-q"><h2>3. Check it</h2></div>
+            {res.issues.length > 0 && <div className="err">{res.issues.slice(0, 5).join(", ")}{res.issues.length > 5 ? `, +${res.issues.length - 5} more` : ""}</div>}
             {res.weeks.length > 0 && (
               <>
                 <div className="pb-recap"><ul>
-                  <li><b>{res.weeks.length} weeks</b> · {dateLabel(res.weeks[0].start)} → {dateLabel(res.weeks[res.weeks.length - 1].start)} · {res.days} days with a session · {total.toFixed(1)} h in total</li>
-                  <li>Phases: {[...new Set(res.weeks.map((w) => w.phase))].join(" · ")}{res.weeks.some((w) => w.race) ? " · race week found" : " · no race day row (add one with Sport = Race)"}</li>
+                  <li><b>{res.weeks.length} weeks</b>, {dateLabel(res.weeks[0].start)} → {dateLabel(res.weeks[res.weeks.length - 1].start)}, {res.days} days with a session, {total.toFixed(1)} h in total</li>
+                  <li>Phases: {[...new Set(res.weeks.map((w) => w.phase))].join(", ")}{res.weeks.some((w) => w.race) ? ", race week found" : ", no race day row (add one with Sport = Race)"}</li>
                 </ul></div>
                 <table className="tbl small pb-preview">
                   <thead><tr><th>Week</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th></tr></thead>

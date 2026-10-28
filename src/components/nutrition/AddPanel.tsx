@@ -65,7 +65,7 @@ function Search({ date, meal, onDone, onCustom }: { date: string; meal: Meal; on
         {busy && !results.length && <div className="muted small">Searching…</div>}
         {results.map((f) => (
           <button key={f.id} type="button" className={`nu-result${sel?.id === f.id ? " on" : ""}`} onClick={() => setSel(f)}>
-            <span className="t"><b>{f.name}</b><small>{f.brand ? `${f.brand} · ` : ""}{fmt(f.per100.kcal)} kcal per 100 g{f.source === "custom" ? " · yours" : ""}</small></span>
+            <span className="t"><b>{f.name}</b><small>{f.brand ? `${f.brand}, ` : ""}{fmt(f.per100.kcal)} kcal per 100 g{f.source === "custom" ? ", yours" : ""}</small></span>
             <span className="plus"><Icon name="plus" /></span>
           </button>
         ))}

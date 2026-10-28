@@ -50,7 +50,7 @@ export function LoadChart({ range }: { range: Range }) {
   return (
     <section className="card chartcard an-load" aria-label="Fitness, fatigue and form">
       <div className="head">
-        <span className="eyebrow">Fitness · Fatigue · Form</span>
+        <span className="eyebrow">Fitness, fatigue, form</span>
         <span className="lgd"><span><i style={{ background: "var(--accent)" }} />Fitness</span><span><i style={{ background: "var(--run)" }} />Fatigue</span><span><i style={{ background: "var(--swim)" }} />Form</span><span><i style={{ background: "var(--track)" }} />Daily load</span></span>
       </div>
       <div>
@@ -86,7 +86,7 @@ export function VolumeStack({ range }: { range: Range }) {
   return (
     <section className="card chartcard" aria-label="Weekly volume">
       <div className="head">
-        <span className="eyebrow">Weekly volume · hours</span>
+        <span className="eyebrow">Weekly volume<span className="at">hours</span></span>
         <div className="pill-group">{(["all", "swim", "bike", "run"] as const).map((k) => <button key={k} type="button" className={sp === k ? "on" : ""} onClick={() => setSp(k)}>{k === "all" ? "Tri" : k[0].toUpperCase() + k.slice(1)}</button>)}</div>
       </div>
       <div>
@@ -138,21 +138,21 @@ export function PaceCorridor({ range, onPick }: { range: Range; onPick: (id: str
   return (
     <section className="card chartcard" aria-label="Pace trend">
       <div className="head">
-        <span className="eyebrow">Pace trend · target corridor</span>
+        <span className="eyebrow">Pace trend<span className="at">with target corridor</span></span>
         <div className="pill-group">{(["swim", "bike", "run"] as Sp[]).map((k) => <button key={k} type="button" className={sp === k ? "on" : ""} onClick={() => setSp(k)}>{k[0].toUpperCase() + k.slice(1)}</button>)}</div>
       </div>
       <div>
-        <div className="muted" style={{ fontSize: 12, marginBottom: 2 }}>{UNIT[sp]} · faster is higher · band = coach target for that date</div>
+        <div className="muted" style={{ fontSize: 12, marginBottom: 2 }}>{UNIT[sp]}, faster is higher, band = coach target for that date</div>
         <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${sp} pace with target corridor`}>
           {Array.from({ length: ticks + 1 }, (_, k) => lo + ((hi - lo) * k) / ticks).map((v, k) => <g key={k}><line x1={L} y1={y(v)} x2={W - R} y2={y(v)} stroke="var(--grid)" /><text x={L - 8} y={y(v) + 4} textAnchor="end">{fmtV(sp, v)}</text></g>)}
           <path d={band} fill="var(--accent-soft)" />
-          {pts.map((p) => <circle key={p.id} cx={x(p.date)} cy={y(p.v)} r={4.5} fill="var(--accent)" stroke="var(--surface)" strokeWidth={2} style={{ cursor: "pointer" }} onClick={() => onPick(p.id)}><title>{`${dateLabel(p.date)} · ${fmtV(sp, p.v)}`}</title></circle>)}
+          {pts.map((p) => <circle key={p.id} cx={x(p.date)} cy={y(p.v)} r={4.5} fill="var(--accent)" stroke="var(--surface)" strokeWidth={2} style={{ cursor: "pointer" }} onClick={() => onPick(p.id)}><title>{`${dateLabel(p.date)}, ${fmtV(sp, p.v)}`}</title></circle>)}
           {avg != null && <line x1={L} y1={y(avg)} x2={W - R} y2={y(avg)} stroke="var(--ink)" strokeDasharray="4 4" strokeWidth={1} />}
           {pts.length ? [pts[0], pts[pts.length - 1]].map((p, i) => <text key={i} x={x(p.date)} y={H - 8} textAnchor={i ? "end" : "start"}>{shortDate(p.date)}</text>) : <text x={W / 2} y={H / 2} textAnchor="middle">No {sp} activities in range</text>}
         </svg>
       </div>
       <div className="side">
-        <div><div className="k">4-week avg</div><div className="v">{avg != null ? fmtV(sp, avg) : "—"}</div><div className="u">{UNIT[sp]} · dashed line</div></div>
+        <div><div className="k">4-week avg</div><div className="v">{avg != null ? fmtV(sp, avg) : "—"}</div><div className="u">{UNIT[sp]}, dashed line</div></div>
         <div><div className="k">Target now</div><div className="v">{fmtV(sp, now.lo)}–{fmtV(sp, now.hi)}</div><div className="u">{UNIT[sp]}</div></div>
         <div><div className="k">Race-day target</div><div className="v">{fmtV(sp, corridorAt(sp, fromYmd(ATHLETE.race.date)).lo)}–{fmtV(sp, corridorAt(sp, fromYmd(ATHLETE.race.date)).hi)}</div><div className="u">{UNIT[sp]}</div></div>
       </div>
@@ -168,13 +168,13 @@ export function BodyPanel() {
   const d = (a: number | null, b: number | null, digits = 0) => (a != null && b != null ? sign(a - b, digits) : "—");
   return (
     <section className="card an-body" aria-label="Body metrics">
-      <div className="head"><span className="eyebrow">Body · Garmin</span><span className="muted">7-day average vs the 7 days before</span></div>
+      <div className="head"><span className="eyebrow">Body<span className="at">from Garmin</span></span><span className="muted">7-day average vs the 7 days before</span></div>
       <div className="an-body-grid">
-        <div><div className="k">Resting HR</div><div className="v">{w7.rhr?.toFixed(0) ?? "—"}<small> bpm</small></div><div className="u">{d(w7.rhr, prev.rhr)} · target 38</div></div>
-        <div><div className="k">HRV</div><div className="v">{w7.hrv?.toFixed(0) ?? "—"}<small> ms</small></div><div className="u">{d(w7.hrv, prev.hrv)} · target 96</div></div>
+        <div><div className="k">Resting HR</div><div className="v">{w7.rhr?.toFixed(0) ?? "—"}<small> bpm</small></div><div className="u">{d(w7.rhr, prev.rhr)}, target 38</div></div>
+        <div><div className="k">HRV</div><div className="v">{w7.hrv?.toFixed(0) ?? "—"}<small> ms</small></div><div className="u">{d(w7.hrv, prev.hrv)}, target 96</div></div>
         <div><div className="k">VO2max</div><div className="v">{w7.vo2 ?? "—"}</div><div className="u">target 60</div></div>
-        <div><div className="k">Sleep</div><div className="v">{w7.sleep?.toFixed(1) ?? "—"}<small> h</small></div><div className="u">{d(w7.sleep, prev.sleep, 1)} h · score {w7.sleepScore?.toFixed(0) ?? "—"}</div></div>
-        <div><div className="k">Stress</div><div className="v">{w7.stress?.toFixed(0) ?? "—"}</div><div className="u">{d(w7.stress, prev.stress)} · Garmin 0–100</div></div>
+        <div><div className="k">Sleep</div><div className="v">{w7.sleep?.toFixed(1) ?? "—"}<small> h</small></div><div className="u">{d(w7.sleep, prev.sleep, 1)} h, score {w7.sleepScore?.toFixed(0) ?? "—"}</div></div>
+        <div><div className="k">Stress</div><div className="v">{w7.stress?.toFixed(0) ?? "—"}</div><div className="u">{d(w7.stress, prev.stress)}, Garmin 0–100</div></div>
       </div>
       <table className="tbl small">
         <thead><tr><th>Date</th><th>Resting HR</th><th>HRV</th><th>Sleep</th><th>Sleep score</th><th>Stress</th><th>VO2max</th></tr></thead>
@@ -194,9 +194,9 @@ export function TotalsPanel() {
   return (
     <div className="an-two">
       <section className="card an-totals" aria-label="Totals since plan start">
-        <div className="head"><span className="eyebrow">Since plan start · {dateLabel(ATHLETE.planStart)}</span></div>
+        <div className="head"><span className="eyebrow">Since plan start<span className="at">{dateLabel(ATHLETE.planStart)}</span></span></div>
         <div className="an-body-grid five">
-          <div><div className="k">Sessions</div><div className="v">{t.sessions}</div><div className="u">{t.swim} swim · {t.bike} bike · {t.run} run</div></div>
+          <div><div className="k">Sessions</div><div className="v">{t.sessions}</div><div className="u">{t.swim} swim, {t.bike} bike, {t.run} run</div></div>
           <div><div className="k">Hours</div><div className="v">{t.hours.toFixed(1)}</div><div className="u">total</div></div>
           <div><div className="k">Swim</div><div className="v">{swimDist(t.swimYd).v.toLocaleString()}<small> {swimDist(0).u}</small></div></div>
           <div><div className="k">Bike</div><div className="v">{fmtDist(t.bikeMi, 0)}</div></div>
@@ -204,16 +204,16 @@ export function TotalsPanel() {
         </div>
         <table className="tbl small">
           <tbody>
-            <tr><td>Longest ride</td><td>{t.bests.longestRide ? `${fmtDist(t.bests.longestRide.mi)} · ${dateLabel(t.bests.longestRide.date)}` : "—"}</td></tr>
-            <tr><td>Longest run</td><td>{t.bests.longestRun ? `${fmtDist(t.bests.longestRun.mi)} · ${dateLabel(t.bests.longestRun.date)}` : "—"}</td></tr>
-            <tr><td>Longest swim</td><td>{t.bests.longestSwim ? `${swimDist(t.bests.longestSwim.yd ?? 0).v.toLocaleString()} ${swimDist(0).u} · ${dateLabel(t.bests.longestSwim.date)}` : "—"}</td></tr>
-            <tr><td>Fastest run (≥ 3 mi)</td><td>{t.bests.fastestRun ? `${fmtPace(runPace(t.bests.fastestRun.pace_s ?? 0).s)} ${runPace(0).u} · ${dateLabel(t.bests.fastestRun.date)}` : "—"}</td></tr>
-            <tr><td>Longest session</td><td>{t.bests.longestSession ? `${fmtHMS(t.bests.longestSession.min)} · ${t.bests.longestSession.name}` : "—"}</td></tr>
+            <tr><td>Longest ride</td><td>{t.bests.longestRide ? `${fmtDist(t.bests.longestRide.mi)}, ${dateLabel(t.bests.longestRide.date)}` : "—"}</td></tr>
+            <tr><td>Longest run</td><td>{t.bests.longestRun ? `${fmtDist(t.bests.longestRun.mi)}, ${dateLabel(t.bests.longestRun.date)}` : "—"}</td></tr>
+            <tr><td>Longest swim</td><td>{t.bests.longestSwim ? `${swimDist(t.bests.longestSwim.yd ?? 0).v.toLocaleString()} ${swimDist(0).u}, ${dateLabel(t.bests.longestSwim.date)}` : "—"}</td></tr>
+            <tr><td>Fastest run (≥ 3 mi)</td><td>{t.bests.fastestRun ? `${fmtPace(runPace(t.bests.fastestRun.pace_s ?? 0).s)} ${runPace(0).u}, ${dateLabel(t.bests.fastestRun.date)}` : "—"}</td></tr>
+            <tr><td>Longest session</td><td>{t.bests.longestSession ? `${fmtHMS(t.bests.longestSession.min)}, ${t.bests.longestSession.name}` : "—"}</td></tr>
           </tbody>
         </table>
       </section>
       <section className="card an-proj" aria-label="Race projection">
-        <div className="head"><span className="eyebrow">Race projection · {ATHLETE.race.name}</span><span className="muted">at current 4-week average pace, no fatigue adjustment</span></div>
+        <div className="head"><span className="eyebrow">Race projection<span className="at">{ATHLETE.race.name}</span></span><span className="muted">at current 4-week average pace, no fatigue adjustment</span></div>
         <table className="tbl small">
           <thead><tr><th>Leg</th><th>Projected</th><th>{ATHLETE.race.goal} goal</th><th>Gap</th></tr></thead>
           <tbody>
@@ -239,7 +239,7 @@ export function ActivityAnalyzer({ selectedId, onSelect }: { selectedId: string 
         <button type="button" className="btn ghost plus" onClick={() => setOpen((o) => !o)} aria-expanded={open}><Icon name="plus" /> Analyze activity</button>
         {open && (
           <select className="an-select" size={8} value={selectedId ?? ""} onChange={(e) => { onSelect(e.target.value || null); setOpen(false); }} aria-label="Pick an activity">
-            {list.map((x) => <option key={x.id} value={x.id}>{dateLabel(x.date)} · {x.name} · {fmtHMS(x.min)}</option>)}
+            {list.map((x) => <option key={x.id} value={x.id}>{dateLabel(x.date)}, {x.name}, {fmtHMS(x.min)}</option>)}
           </select>
         )}
       </div>
@@ -263,15 +263,15 @@ export function ActivityPanel({ id, onClose }: { id: string | null; onClose: () 
         <div>
           <div className="eyebrow muted">Activity analysis</div>
           <h2>{a.name}</h2>
-          <div className="muted">{dateLabel(a.date)}{a.start ? ` · ${a.start}` : ""} · {a.source === "garmin" ? "Garmin" : "Manual"}{r.planned ? (r.planned.sport === a.sport || r.planned.sport === "brick" ? ` · matches plan: ${r.planned.title} ${r.planned.intensity} ${r.planned.min} min` : ` · planned that day: ${r.planned.title} ${r.planned.intensity} ${r.planned.min} min (different sport)`) : r.restDay ? " · rest day in the plan" : " · no planned session that day"}</div>
+          <div className="muted">{dateLabel(a.date)}{a.start ? `, ${a.start}` : ""}, {a.source === "garmin" ? "Garmin" : "Manual"}{r.planned ? (r.planned.sport === a.sport || r.planned.sport === "brick" ? `, matches plan: ${r.planned.title} ${r.planned.intensity} ${r.planned.min} min` : `, planned that day: ${r.planned.title} ${r.planned.intensity} ${r.planned.min} min (different sport)`) : r.restDay ? ", rest day in the plan" : ", no planned session that day"}</div>
         </div>
       </div>
       <div className="an-activity-grid">
         <div className="blk">
           <div className="eyebrow">Planned vs actual</div>
           <table className="tbl small"><tbody>
-            <tr><td>Duration</td><td>{fmtHMS(a.min)}</td><td className="muted">{r.planned ? `plan ${r.planned.min} min · ${sign(r.durDelta)} min` : "—"}</td></tr>
-            <tr><td>{sp === "bike" ? "Speed" : "Pace"}</td><td>{paceStr}</td><td className={`muted ${r.verdict === "in range" ? "pos" : r.verdict ? "neg" : ""}`}>{r.range ? `target ${rangeStr} · ${r.verdict}` : "no target"}</td></tr>
+            <tr><td>Duration</td><td>{fmtHMS(a.min)}</td><td className="muted">{r.planned ? `plan ${r.planned.min} min, ${sign(r.durDelta)} min` : "—"}</td></tr>
+            <tr><td>{sp === "bike" ? "Speed" : "Pace"}</td><td>{paceStr}</td><td className={`muted ${r.verdict === "in range" ? "pos" : r.verdict ? "neg" : ""}`}>{r.range ? `target ${rangeStr}, ${r.verdict}` : "no target"}</td></tr>
             <tr><td>Distance</td><td>{a.sport === "swim" ? (a.yd ? `${swimDist(a.yd).v.toLocaleString()} ${swimDist(0).u}` : "—") : fmtDist(a.mi)}</td><td className="muted">{a.elev_ft ? `${elev(a.elev_ft).v.toLocaleString()} ${elev(0).u} climbed` : ""}</td></tr>
             <tr><td>Avg heart rate</td><td>{a.hr ? `${a.hr} bpm` : "—"}</td><td className="muted">{r.planned?.intensity ?? ""}</td></tr>
           </tbody></table>

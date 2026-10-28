@@ -32,7 +32,7 @@ export function LibraryAdmin() {
   return (
     <>
       <div className="page-head" style={{ marginTop: 28 }}>
-        <div><h1>Library</h1><div className="muted sub">{all.length} passages · {PASSAGES.length} bundled · {(rows ?? []).length} in the database</div></div>
+        <div><h1>Library</h1><div className="muted sub">{all.length} passages, {PASSAGES.length} bundled, {(rows ?? []).length} in the database</div></div>
         <span className="grow" />
         <input value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search passages" aria-label="Search passages" style={{ marginRight: 8 }} />
         <button type="button" className="btn small" onClick={() => setEdit({ ...EMPTY })}>Add passage</button>
@@ -65,7 +65,7 @@ export function LibraryAdmin() {
           <tbody>
             {shown.map((p) => (
               <tr key={p.id} className={p.db && p.published === false ? "muted" : ""}>
-                <td style={{ whiteSpace: "nowrap" }}>{p.id}{p.db && <span className="muted"> · db</span>}</td>
+                <td style={{ whiteSpace: "nowrap" }}>{p.id}{p.db && <span className="muted"> (db)</span>}</td>
                 <td style={{ minWidth: 180 }}>{p.title}</td><td>{p.topic}</td><td>{p.grade}</td>
                 <td className="muted" style={{ fontSize: 11.5, maxWidth: 260 }}>{p.tags.slice(0, 8).join(", ")}{p.tags.length > 8 ? "…" : ""}</td>
                 <td className="muted" style={{ fontSize: 11.5, maxWidth: 260 }}>{p.source}</td>

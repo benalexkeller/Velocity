@@ -27,7 +27,7 @@ export function buildCoachContext(p: PlanStore, opts: { whole?: boolean } = {}):
   const next = cur ? p.weeks[cur.week] : undefined; // weeks[] is 0-based; cur.week is 1-based → the next one
   const sessions = [cur, next].filter((w): w is NonNullable<typeof w> => !!w).flatMap((w) => w.sessions).map((s) => ({
     id: s.id, date: s.date, start: s.start, sport: s.sport, intensity: s.intensity, min: s.min, text: s.text, status: s.status, locked: s.locked || undefined,
-    actual: s.actual ? `${s.actual.min} min${distOf(s.actual) ? ` · ${distOf(s.actual)}` : ""}${s.actual.hr ? ` · ${s.actual.hr} bpm` : ""}` : undefined,
+    actual: s.actual ? `${s.actual.min} min${distOf(s.actual) ? `, ${distOf(s.actual)}` : ""}${s.actual.hr ? `, ${s.actual.hr} bpm` : ""}` : undefined,
   }));
   const since = ymd(addDays(t, -14));
   const activities = p.counted.filter((a) => a.date >= since && a.date <= ymd(t)).map((a) => ({

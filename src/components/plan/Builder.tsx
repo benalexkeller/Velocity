@@ -98,7 +98,7 @@ export function Builder({ edit, importFirst = false }: { edit: boolean; importFi
   );
 }
 
-// ---------- 1 · goal ----------
+// ---------- 1, goal ----------
 function GoalStep({ intake, set, imperial, weeks }: { intake: Intake; set: <K extends keyof Intake>(k: K, p: Patch<Intake[K]>) => void; imperial: boolean; weeks: number | null }) {
   const g = intake.goal;
   const et = eventType(g.type);
@@ -129,7 +129,7 @@ function GoalStep({ intake, set, imperial, weeks }: { intake: Intake; set: <K ex
       <div className="pb-q"><h2>Which race?</h2></div>
       <div className="pb-search" ref={box}>
         <label><b>Find an event</b><span className="pb-searchin"><Icon name="search" /><input value={q} onChange={(e) => { setQ(e.target.value); setOpen(true); }} onFocus={() => setOpen(true)} placeholder="IRONMAN, Berlin, 70.3, marathon…" /></span></label>
-        {open && hits.length > 0 && <ul className="pb-hits" role="listbox">{hits.map((ev) => <li key={ev.name}><button type="button" onClick={() => pickEvent(ev)}><b>{ev.name}</b><span>{ev.location} · {eventType(ev.type).label} · usually {usualMonth(ev.month)}</span></button></li>)}</ul>}
+        {open && hits.length > 0 && <ul className="pb-hits" role="listbox">{hits.map((ev) => <li key={ev.name}><button type="button" onClick={() => pickEvent(ev)}><b>{ev.name}</b><span>{ev.location}, {eventType(ev.type).label}, usually {usualMonth(ev.month)}</span></button></li>)}</ul>}
         {open && q.trim().length > 1 && !hits.length && <div className="hint">Not in the list — type the name below.</div>}
       </div>
       <div className="three">
@@ -153,14 +153,14 @@ function GoalStep({ intake, set, imperial, weeks }: { intake: Intake; set: <K ex
         <div className="pb-splits">
           {(["swim", "bike", "run", "transitions"] as const).map((k) => <label key={k}><b>{k === "transitions" ? "T1 + T2" : k[0].toUpperCase() + k.slice(1)}</b><TimeInput hours={g.splits![k]} onChange={(h) => { if (h != null) set("goal", (cur) => ({ splits: { ...cur.splits!, [k]: h } })); }} /></label>)}
           <div className="sum"><span className="k">Adds up to</span><b>{hoursToText(splitSum)}</b>{g.target_hours && Math.abs(splitSum - g.target_hours) > 0.02 ? <span className="hint bad">target is {hoursToText(g.target_hours)}</span> : <span className="hint ok">matches the target</span>}</div>
-          <span className="hint">{imperial ? `${info.dist.swimYd.toLocaleString()} yd · ${info.dist.bikeMi} mi · ${info.dist.runMi} mi` : `${Math.round(info.dist.swimYd * 0.9144).toLocaleString()} m · ${(info.dist.bikeMi * 1.609).toFixed(0)} km · ${(info.dist.runMi * 1.609).toFixed(1)} km`}</span>
+          <span className="hint">{imperial ? `${info.dist.swimYd.toLocaleString()} yd, ${info.dist.bikeMi} mi, ${info.dist.runMi} mi` : `${Math.round(info.dist.swimYd * 0.9144).toLocaleString()} m, ${(info.dist.bikeMi * 1.609).toFixed(0)} km, ${(info.dist.runMi * 1.609).toFixed(1)} km`}</span>
         </div>
       )}
     </>
   );
 }
 
-// ---------- 2 · history ----------
+// ---------- 2, history ----------
 function HistoryStep({ intake, set, kind }: { intake: Intake; set: <K extends keyof Intake>(k: K, p: Patch<Intake[K]>) => void; kind: Kind }) {
   const h = intake.history;
   const sports: { k: Kind; label: string }[] = kind === "tri" ? [{ k: "tri", label: "Triathlon" }, { k: "run", label: "Run" }, { k: "bike", label: "Bike" }, { k: "swim", label: "Swim" }] : kind === "run" ? [{ k: "run", label: "Run" }, { k: "tri", label: "Triathlon" }, { k: "other", label: "Other" }] : kind === "bike" ? [{ k: "bike", label: "Bike" }, { k: "tri", label: "Triathlon" }, { k: "other", label: "Other" }] : kind === "swim" ? [{ k: "swim", label: "Swim" }, { k: "tri", label: "Triathlon" }, { k: "other", label: "Other" }] : [{ k: "other", label: "Other" }, { k: "run", label: "Run" }, { k: "bike", label: "Bike" }, { k: "swim", label: "Swim" }];
@@ -196,7 +196,7 @@ function HistoryStep({ intake, set, kind }: { intake: Intake; set: <K extends ke
   );
 }
 
-// ---------- 3 · fitness ----------
+// ---------- 3, fitness ----------
 function FitnessStep({ intake, set, kind, imperial }: { intake: Intake; set: <K extends keyof Intake>(k: K, p: Patch<Intake[K]>) => void; kind: Kind; imperial: boolean }) {
   const f = intake.fitness;
   const swim = kind === "tri" || kind === "swim", bike = kind === "tri" || kind === "bike", run = kind === "tri" || kind === "run";
@@ -216,7 +216,7 @@ function FitnessStep({ intake, set, kind, imperial }: { intake: Intake; set: <K 
         <label><b>Easy pace per {imperial ? "mile" : "km"} (m:ss)</b><input value={f.run_pace} onChange={(e) => set("fitness", { run_pace: e.target.value })} placeholder={imperial ? "9:30" : "5:55"} inputMode="numeric" /></label>
         <label><b>Longest run, last 8 weeks ({imperial ? "mi" : "km"})</b><NumInput value={f.run_longest} onChange={(v) => set("fitness", { run_longest: v })} placeholder={imperial ? "8" : "13"} inputMode="decimal" /></label>
       </div></div>}
-      <div className="pb-sport"><span className="k">Physiology · optional</span>
+      <div className="pb-sport"><span className="k">Physiology, optional</span>
         <div className="three">
           <label><b>VO2max</b><NumInput value={f.vo2max} onChange={(v) => set("fitness", { vo2max: v })} placeholder="48" inputMode="decimal" disabled={f.garmin_later} /></label>
           <label><b>Resting heart rate</b><NumInput value={f.rhr} onChange={(v) => set("fitness", { rhr: v })} placeholder="52" inputMode="numeric" disabled={f.garmin_later} /></label>
@@ -228,7 +228,7 @@ function FitnessStep({ intake, set, kind, imperial }: { intake: Intake; set: <K 
   );
 }
 
-// ---------- 4 · time ----------
+// ---------- 4, time ----------
 function TimeStep({ intake, set, kind, plan }: { intake: Intake; set: <K extends keyof Intake>(k: K, p: Patch<Intake[K]>) => void; kind: Kind; plan: ReturnType<typeof usePlan> }) {
   const t = intake.time;
   const toggleDay = (n: number) => set("time", (cur) => ({ days: cur.days.includes(n) ? cur.days.filter((x) => x !== n) : [...cur.days, n] }));
@@ -266,7 +266,7 @@ function TimeStep({ intake, set, kind, plan }: { intake: Intake; set: <K extends
   );
 }
 
-// ---------- 5 · devices + strength ----------
+// ---------- 5, devices + strength ----------
 function DevicesStep({ intake, set, setIntake, edit, hasPlan }: { intake: Intake; set: <K extends keyof Intake>(k: K, p: Patch<Intake[K]>) => void; setIntake: React.Dispatch<React.SetStateAction<Intake>>; edit: boolean; hasPlan: boolean }) {
   const toggle = (k: string) => setIntake((cur) => ({ ...cur, devices: k === "none" ? ["none"] : cur.devices.includes(k) ? cur.devices.filter((x) => x !== k) : [...cur.devices.filter((x) => x !== "none"), k] }));
   const et = eventType(intake.goal.type);
@@ -282,11 +282,11 @@ function DevicesStep({ intake, set, setIntake, edit, hasPlan }: { intake: Intake
       <div className="pb-recap">
         <span className="k">Summary</span>
         <ul>
-          <li><b>{intake.goal.event || intake.goal.custom_label || et.label}</b> · {et.label} · {intake.goal.date ? dateFull(intake.goal.date) : "no date"} · {weeks} weeks</li>
-          <li>Goal: {intake.goal.kind === "finish" ? "finish" : intake.goal.kind === "time" ? `${hoursToText(intake.goal.target_hours)}` : "podium / qualify"}{intake.goal.splits ? ` (swim ${hoursToText(intake.goal.splits.swim)} · bike ${hoursToText(intake.goal.splits.bike)} · run ${hoursToText(intake.goal.splits.run)})` : ""}</li>
-          <li>Now: {intake.history.sessions_per_week} sessions · {(intake.history.hours.swim + intake.history.hours.bike + intake.history.hours.run + intake.history.hours.strength).toFixed(1)} h per week · up to {intake.time.max_hours} h at the peak</li>
-          <li>{intake.time.days.length} days · {TOD.find((o) => o.k === intake.time.time_of_day)?.label} on weekdays · long sessions {intake.time.long_weekend ? "on the weekend" : "on a weekday"} · {intake.time.blackouts.filter((b) => b.from && b.to).length} blackout period{intake.time.blackouts.filter((b) => b.from && b.to).length === 1 ? "" : "s"}</li>
-          <li>Strength {intake.strength ? "on" : "off"} · {intake.devices.length && !intake.devices.includes("none") ? intake.devices.map((d) => DEVICES.find((x) => x.k === d)?.label).join(", ") : "no devices"}</li>
+          <li><b>{intake.goal.event || intake.goal.custom_label || et.label}</b>, {et.label}, {intake.goal.date ? dateFull(intake.goal.date) : "no date"}, {weeks} weeks</li>
+          <li>Goal: {intake.goal.kind === "finish" ? "finish" : intake.goal.kind === "time" ? `${hoursToText(intake.goal.target_hours)}` : "podium / qualify"}{intake.goal.splits ? ` (swim ${hoursToText(intake.goal.splits.swim)}, bike ${hoursToText(intake.goal.splits.bike)}, run ${hoursToText(intake.goal.splits.run)})` : ""}</li>
+          <li>Now: {intake.history.sessions_per_week} sessions, {(intake.history.hours.swim + intake.history.hours.bike + intake.history.hours.run + intake.history.hours.strength).toFixed(1)} h per week, up to {intake.time.max_hours} h at the peak</li>
+          <li>{intake.time.days.length} days, {TOD.find((o) => o.k === intake.time.time_of_day)?.label} on weekdays, long sessions {intake.time.long_weekend ? "on the weekend" : "on a weekday"}, {intake.time.blackouts.filter((b) => b.from && b.to).length} blackout period{intake.time.blackouts.filter((b) => b.from && b.to).length === 1 ? "" : "s"}</li>
+          <li>Strength {intake.strength ? "on" : "off"}, {intake.devices.length && !intake.devices.includes("none") ? intake.devices.map((d) => DEVICES.find((x) => x.k === d)?.label).join(", ") : "no devices"}</li>
         </ul>
         {(edit || hasPlan) && <span className="hint bad">{edit ? "Rebuilding replaces the plan from this week on. Moves, edits and locks are reset." : "This replaces your current plan. Moves, edits and locks are reset."}</span>}
       </div>

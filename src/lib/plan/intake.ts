@@ -9,10 +9,10 @@ export type TimeOfDay = "morning" | "midday" | "evening";
 export interface EventType { k: RaceDistance; kind: Kind; label: string; group: string; hint: string }
 /** Event types the builder knows, grouped for the picker. */
 export const EVENT_TYPES: EventType[] = [
-  { k: "sprint", kind: "tri", group: "Triathlon", label: "Sprint", hint: "750 m · 20 km · 5 km" },
-  { k: "olympic", kind: "tri", group: "Triathlon", label: "Olympic", hint: "1.5 km · 40 km · 10 km" },
-  { k: "70.3", kind: "tri", group: "Triathlon", label: "Half (70.3)", hint: "1.9 km · 90 km · 21.1 km" },
-  { k: "140.6", kind: "tri", group: "Triathlon", label: "Full (140.6)", hint: "3.8 km · 180 km · 42.2 km" },
+  { k: "sprint", kind: "tri", group: "Triathlon", label: "Sprint", hint: "750 m, 20 km, 5 km" },
+  { k: "olympic", kind: "tri", group: "Triathlon", label: "Olympic", hint: "1.5 km, 40 km, 10 km" },
+  { k: "70.3", kind: "tri", group: "Triathlon", label: "Half (70.3)", hint: "1.9 km, 90 km, 21.1 km" },
+  { k: "140.6", kind: "tri", group: "Triathlon", label: "Full (140.6)", hint: "3.8 km, 180 km, 42.2 km" },
   { k: "5k", kind: "run", group: "Running", label: "5 km", hint: "" },
   { k: "10k", kind: "run", group: "Running", label: "10 km", hint: "" },
   { k: "half", kind: "run", group: "Running", label: "Half marathon", hint: "21.1 km" },

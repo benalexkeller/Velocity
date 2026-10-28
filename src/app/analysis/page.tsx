@@ -15,13 +15,13 @@ function NeedsData() {
   const rows: [string, string, string | null, string | null][] = [
     ["Plan", plan.hasPlan ? `✓ ${plan.weeks.length} weeks` : "No plan", plan.hasPlan ? null : "Build a plan", plan.hasPlan ? null : "/plan/new"],
     ["Sessions", `${plan.activities.length} logged`, "Log one", "/dashboard"],
-    ["Thresholds", a.lthr ? `LTHR ${a.lthr}${a.ftp ? ` · FTP ${a.ftp}` : ""}` : "Not set · load uses a default", a.lthr ? null : "Set in Plan settings", a.lthr ? null : "/plan/new?edit=1"],
+    ["Thresholds", a.lthr ? `LTHR ${a.lthr}${a.ftp ? `, FTP ${a.ftp}` : ""}` : "Not set, load uses a default", a.lthr ? null : "Set in Plan settings", a.lthr ? null : "/plan/new?edit=1"],
     ["Body data", plan.body.length ? `${plan.body.length} days` : "Not connected", null, null],
   ];
   return (
     <section className="card ax-panel ax-empty" aria-label="Analysis needs data">
       <div className="ax-head"><div><h2>Analysis needs data</h2><p>Charts appear after the first logged session.</p></div></div>
-      <dl>{rows.map(([k, v, cta, href]) => <div key={k}><dt>{k}</dt><dd>{v}{cta && href && <> · <Link href={href}>{cta} →</Link></>}</dd></div>)}</dl>
+      <dl>{rows.map(([k, v, cta, href]) => <div key={k}><dt>{k}</dt><dd>{v}{cta && href && <>, <Link href={href}>{cta} →</Link></>}</dd></div>)}</dl>
     </section>
   );
 }

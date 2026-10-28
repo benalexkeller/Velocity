@@ -119,7 +119,7 @@ export function PhaseDetail({ selected, onSelect, onOpenWeek }: { selected: stri
       </div>
       <div className="phd-head">
         <b>{p.short}</b>
-        <span className="muted">Weeks {p.from}{p.to !== p.from ? `–${p.to}` : ""} · {short(first.start)} – {short(ymd(addDays(fromYmd(last.start), 6)))}{isNow ? ` · week ${cur - p.from + 1} of ${p.to - p.from + 1}` : ""}</span>
+        <span className="muted">Weeks {p.from}{p.to !== p.from ? `–${p.to}` : ""}, {short(first.start)} – {short(ymd(addDays(fromYmd(last.start), 6)))}{isNow ? `, week ${cur - p.from + 1} of ${p.to - p.from + 1}` : ""}</span>
         <button type="button" className="linkbtn" onClick={() => onOpenWeek(isNow ? cur : p.from)}>Open week {isNow ? cur : p.from} →</button>
       </div>
       {p.purpose && <p className="phd-purpose">{p.purpose}</p>}

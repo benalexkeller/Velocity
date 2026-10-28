@@ -62,7 +62,7 @@ export function PaceChart() {
       </div>
       <div className="side">
         <div><div className="k">This week</div><div className="v">{tw != null ? fmt(tw) : "—"}</div><div className="u">{UNIT[sp]}</div></div>
-        <div><div className="k">Best · 4 weeks</div><div className="v">{best != null ? fmt(best) : "—"}</div><div className="u">{UNIT[sp]} · {last4.length} sessions</div></div>
+        <div><div className="k">Best in 4 weeks</div><div className="v">{best != null ? fmt(best) : "—"}</div><div className="u">{UNIT[sp]}, {last4.length} sessions</div></div>
         <div><div className="k">4-week avg</div><div className="v">{m4 != null ? fmt(m4) : "—"}</div><div className="u">{UNIT[sp]}</div></div>
       </div>
     </div>

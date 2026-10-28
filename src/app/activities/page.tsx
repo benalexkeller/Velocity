@@ -167,10 +167,10 @@ function Drawer({ a, onDeleted }: { a: Activity; onDeleted: () => void }) {
   useEffect(() => { setConfirm(false); setBig(false); setMenu(false); }, [a.id]);
   return (
     <aside className="card drawer" aria-label="Activity detail">
-      {big && a.route && <MapModal route={a.route} title={a.name} sub={`${w.l1} · ${distance(a)} · ${fmtHMS(a.min)}`} onClose={() => setBig(false)} />}
+      {big && a.route && <MapModal route={a.route} title={a.name} sub={`${w.l1}, ${distance(a)}, ${fmtHMS(a.min)}`} onClose={() => setBig(false)} />}
       <div className="hd">
         <SportIcon sport={a.sport} size={40} />
-        <div><b>{a.name}</b><small>{w.l1}{w.l2 ? ` · ${w.l2}` : ""}</small><small>{subtitle(a)}{a.excluded ? " · excluded from analysis" : ""}</small></div>
+        <div><b>{a.name}</b><small>{w.l1}{w.l2 ? `, ${w.l2}` : ""}</small><small>{subtitle(a)}{a.excluded ? ", excluded from analysis" : ""}</small></div>
         <span className="act-more">
           <button type="button" className="iconbtn more" aria-label="More options" aria-haspopup="menu" aria-expanded={menu} onClick={() => { setMenu((m) => !m); setConfirm(false); }}><Icon name="kebab" /></button>
           {menu && (

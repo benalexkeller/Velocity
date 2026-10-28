@@ -77,7 +77,7 @@ export function ConnectWearableSheet({ onClose, onPick }: { onClose: () => void;
             if (w.k === "garmin" && garminLive) {
               return (
                 <li key={w.k} className={connected ? "on" : ""}>
-                  <div><b>{w.name}</b><span className="muted">{synced ?? (connected ? `Connected${garmin?.last_event_at ? ` · last data ${new Date(garmin.last_event_at).toLocaleDateString()}` : " · waiting for the first sync"}` : garmin?.status === "error" ? `Connection failed${garmin.error ? `: ${garmin.error}` : ""}. Try again.` : w.brings)}</span></div>
+                  <div><b>{w.name}</b><span className="muted">{synced ?? (connected ? `Connected${garmin?.last_event_at ? `, last data ${new Date(garmin.last_event_at).toLocaleDateString()}` : ", waiting for the first sync"}` : garmin?.status === "error" ? `Connection failed${garmin.error ? `: ${garmin.error}` : ""}. Try again.` : w.brings)}</span></div>
                   {connected
                     ? <span className="cw-actions">
                         <button type="button" className="btn small" disabled={busy} onClick={async () => { setBusy(true); setSynced(null); const n = await syncGarmin(); setSynced(n == null ? "Sync failed. Try again." : `${n} activit${n === 1 ? "y" : "ies"} saved.`); setBusy(false); }}>{busy ? "Syncing…" : "Sync now"}</button>

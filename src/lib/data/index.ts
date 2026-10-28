@@ -6,7 +6,7 @@ import { addDays, fromYmd, today, ymd } from "../format";
 import { ATHLETE } from "../config";
 
 export type Sport = "swim" | "bike" | "run" | "strength" | "rest" | "hike" | "other" | "brick";
-/** planned · done (same sport, ≥ 70 % of the planned time) · partial (same sport, less) · substituted (another sport, ≥ 30 min) · missed */
+/** planned, done (same sport, ≥ 70 % of the planned time), partial (same sport, less), substituted (another sport, ≥ 30 min), missed */
 export type Status = "planned" | "done" | "partial" | "substituted" | "missed";
 export const STATUS_LABEL: Record<Status, string> = { planned: "Planned", done: "Completed", partial: "Partial", substituted: "Substituted", missed: "Missed" };
 
@@ -18,7 +18,7 @@ export interface Session {
   min: number;
   sport: Sport;
   title: string; // "Run"
-  detail: string; // "Aerobic · 50 min"
+  detail: string; // "Aerobic, 50 min"
   text: string; // original plan text
   intensity: string; // "Zone 2" / "Tempo" / ...
   why: string;
@@ -175,7 +175,7 @@ export function buildWeeks(plan: PlanWeekJson[], acts: Activity[] = [], av: Avai
         start: timeFor(d.text, i, sport, av),
         min: d.min, sport,
         title: isRaceDay(d.text) ? "Race day" : SPORT_LABEL[sport],
-        detail: sport === "rest" ? "No session" : `${intensity} · ${d.min} min`,
+        detail: sport === "rest" ? "No session" : `${intensity}, ${d.min} min`,
         text: cleanText(d.text), intensity, why: whyOf(d.text, sport), status: sessionStatus(sport, d.min, date, activitiesOn(date, acts)),
       };
     });
@@ -320,13 +320,13 @@ export function sundayReview() {
   const parts: string[] = [];
   if (prev) {
     const st = weekStatus(prev);
-    parts.push(`Last week: ${st.done}/${st.total} sessions · ${st.actualH.toFixed(1)} of ${st.plannedH.toFixed(1)} h`);
+    parts.push(`Last week: ${st.done}/${st.total} sessions, ${st.actualH.toFixed(1)} of ${st.plannedH.toFixed(1)} h`);
   }
   const sessions = cur.sessions.filter((x) => x.sport !== "rest");
   const key = sessions.reduce<Session | null>((m, x) => (!m || x.min > m.min ? x : m), null);
   const D = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
-  parts.push(`This week: ${sessions.length} sessions · ${(cur.plannedMin / 60).toFixed(1)} h${key ? ` · Key session ${D[key.dayIndex]} ${key.title} ${key.min} min` : ""}`);
-  return parts.join("  ·  ");
+  parts.push(`This week: ${sessions.length} sessions, ${(cur.plannedMin / 60).toFixed(1)} h${key ? `, Key session ${D[key.dayIndex]} ${key.title} ${key.min} min` : ""}`);
+  return parts.join(". ");
 }
 export const SUNDAY_REVIEW = sundayReview();
 export const RACE = ATHLETE.race;

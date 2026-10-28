@@ -8,8 +8,10 @@ export type Zone = 1 | 2 | 3 | 4 | 5;
 export interface Segment { label: string; min: number; zone: Zone; target: string; kind: "warmup" | "main" | "interval" | "recovery" | "cooldown" | "drill" | "test" | "strength"; part?: "AM" | "PM" }
 export interface Workout { segments: Segment[]; steps: string[]; sport: Sport; note?: string }
 
-const ZONE_LABEL: Record<Zone, string> = { 1: "Z1 · very easy", 2: "Z2 · easy", 3: "Z3 · tempo", 4: "Z4 · threshold", 5: "Z5 · max" };
-export const zoneName = (z: Zone) => ZONE_LABEL[z];
+const ZONE_WORD: Record<Zone, string> = { 1: "very easy", 2: "easy", 3: "tempo", 4: "threshold", 5: "max" };
+/** "Z2 easy" */
+export const zoneName = (z: Zone) => `Z${z} ${ZONE_WORD[z]}`;
+export const zoneWord = (z: Zone) => ZONE_WORD[z];
 
 /** Target pace / speed text for a zone in a sport, from the athlete's provisional zones. */
 export function targetFor(sport: Sport, z: Zone, zonesAll: Zones = ATHLETE.zones): string {
@@ -176,11 +178,11 @@ export function workoutFor(s: Session, zones: Zones = ATHLETE.zones): Workout {
     if (g.kind === "interval" || g.kind === "drill") {
       let reps = 1, j = i + 1;
       while (j < segments.length && (segments[j].kind === "recovery" || segments[j].kind === g.kind)) { if (segments[j].kind === g.kind) reps++; j++; }
-      const rec = segments[i + 1]?.kind === "recovery" ? ` · ${fmtMin(segments[i + 1].min)} easy between` : "";
-      steps.push(`${g.part ? g.part + " · " : ""}${g.label}${reps > 1 && !/×/.test(g.label) ? ` × ${reps}` : ""} — ${fmtMin(g.min)} each at ${g.target}${rec}`);
+      const rec = segments[i + 1]?.kind === "recovery" ? `, ${fmtMin(segments[i + 1].min)} easy between` : "";
+      steps.push(`${g.part ? g.part + ": " : ""}${g.label}${reps > 1 && !/×/.test(g.label) ? ` × ${reps}` : ""}, ${fmtMin(g.min)} each at ${g.target}${rec}`);
       i = j;
     } else {
-      steps.push(`${g.part ? g.part + " · " : ""}${g.label} — ${fmtMin(g.min)} at ${g.target}`);
+      steps.push(`${g.part ? g.part + ": " : ""}${g.label}, ${fmtMin(g.min)} at ${g.target}`);
       i++;
     }
   }

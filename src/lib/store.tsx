@@ -34,14 +34,14 @@ function derive(data: UserData, athlete: Athlete) {
     const text = p?.text ?? s.text;
     const sport = p?.sport ?? (p?.text ? sportOf(text) : s.sport);
     const intensity = p?.intensity ?? (p?.text ? intensityOf(text) : s.intensity);
-    base.push({ ...s, date: p?.date ?? s.date, start: p?.start ?? s.start, min: p?.min ?? s.min, sport, intensity, text, title: SPORT_LABEL[sport], detail: sport === "rest" ? "No session" : `${intensity} · ${p?.min ?? s.min} min`, why: whyOf(text, sport), locked: !!p?.locked });
+    base.push({ ...s, date: p?.date ?? s.date, start: p?.start ?? s.start, min: p?.min ?? s.min, sport, intensity, text, title: SPORT_LABEL[sport], detail: sport === "rest" ? "No session" : `${intensity}, ${p?.min ?? s.min} min`, why: whyOf(text, sport), locked: !!p?.locked });
   }
   for (const a of st.added) {
     // sessions added by hand take the same patches (move, edit, lock) as plan sessions
     const p = st.patches[a.id];
     if (p?.deleted) continue;
     const sport = p?.sport ?? a.sport, min = p?.min ?? a.min, intensity = p?.intensity ?? a.intensity, text = p?.text ?? a.text;
-    base.push({ id: a.id, date: p?.date ?? a.date, dayIndex: 0, start: p?.start ?? a.start, min, sport, title: SPORT_LABEL[sport], detail: `${intensity} · ${min} min`, text, intensity, why: whyOf(text, sport), status: "planned", locked: !!p?.locked });
+    base.push({ id: a.id, date: p?.date ?? a.date, dayIndex: 0, start: p?.start ?? a.start, min, sport, title: SPORT_LABEL[sport], detail: `${intensity}, ${min} min`, text, intensity, why: whyOf(text, sport), status: "planned", locked: !!p?.locked });
   }
   const weeks: Week[] = baseWeeks.map((w) => {
     const start = fromYmd(w.start);
@@ -318,7 +318,7 @@ function coachReply(text: string, d: ReturnType<typeof derive>, athlete: Athlete
   const todayS = wk.sessions.find((s) => s.date === ymd(t));
   const tomorrow = ymd(addDays(t, 1));
   const tom = d.weeks.flatMap((w) => w.sessions).find((s) => s.date === tomorrow);
-  const say = (s: Session) => (s.sport === "rest" ? "rest day. " + s.text : `${s.title} · ${s.intensity} · ${s.min} min${s.start ? ` at ${s.start}` : ""}. ${s.text}`);
+  const say = (s: Session) => (s.sport === "rest" ? "rest day. " + s.text : `${s.title}, ${s.intensity}, ${s.min} min${s.start ? ` at ${s.start}` : ""}. ${s.text}`);
   if (/today/.test(q)) return todayS ? `Today: ${say(todayS)}` : "Nothing planned today.";
   if (/tomorrow/.test(q)) return tom ? `Tomorrow: ${say(tom)}` : "Nothing planned tomorrow.";
   if (/this week|week/.test(q)) return `Week ${wk.week}${wk.phaseShort !== "No plan" ? ` (${wk.phaseShort})` : ""}: ${done} of ${total} sessions done, ${(wk.plannedMin / 60).toFixed(1)} h planned.${wk.focus ? ` Focus: ${wk.focus}.` : ""}`;

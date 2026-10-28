@@ -103,6 +103,9 @@ h1, h2, h3, h4 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
 /* ---------- Primitives ---------- */
 .card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); }
 .eyebrow { font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-2); font-weight: 600; }
+/* A second fact after the first, separated by space alone (no dot, no bar): "Week 4  Base", "Tempo  60 min". Same size, normal weight, quieter colour. */
+.at { margin-left: 8px; font-weight: 400; color: var(--muted); }
+h2 .at { font-size: 0.72em; letter-spacing: 0; margin-left: 10px; }
 .eyebrow.muted { color: var(--muted); }
 .muted { color: var(--muted); }
 .btn {

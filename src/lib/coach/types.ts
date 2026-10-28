@@ -6,7 +6,7 @@ export interface PlanChange {
   kind: "move" | "edit" | "delete" | "add";
   /** Required for move / edit / delete: the session's id as listed in the context. */
   sessionId?: string;
-  /** Filled in by the server: the session as it was when proposed, e.g. "run · 2026-10-27 · 06:30". */
+  /** Filled in by the server: the session as it was when proposed, in the internal form "run · 2026-10-27 · 06:30" (the rail splits on " · " and never shows the dots). */
   from?: string;
   date?: string; // YYYY-MM-DD
   start?: string; // HH:MM

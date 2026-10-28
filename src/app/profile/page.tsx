@@ -19,15 +19,15 @@ export default function ProfilePage() {
         <section className="card">
           <div className="head">
             <span className="avatar">{a.avatarUrl ? <img src={a.avatarUrl} alt="" /> : initials}</span>
-            <div><b>{a.name}</b><small>{a.username ? `@${a.username} · ` : ""}{a.email ?? "no email"}{a.isAdmin ? " · admin" : ""}</small></div>
+            <div><b>{a.name}</b><small>{a.username ? `@${a.username}, ` : ""}{a.email ?? "no email"}{a.isAdmin ? ", admin" : ""}</small></div>
           </div>
           {plan.accounts ? <ProfileForm mode="edit" /> : <p className="muted" style={{ fontSize: 14 }}>Profile editing arrives with accounts.</p>}
         </section>
         <section className="card">
           <h2>Plan</h2>
           <div className="kv">
-            <span>Weeks</span><span>{plan.hasPlan ? `${plan.planJson.length} · starts ${dateLabel(plan.planJson[0].start)}` : "No plan yet"}</span>
-            <span>Race</span><span>{a.hasRace ? `${a.race.name} · ${dateFull(a.race.date)}${a.race.goal ? ` · ${a.race.goal}` : ""}` : "Not set"}</span>
+            <span>Weeks</span><span>{plan.hasPlan ? `${plan.planJson.length}, starts ${dateLabel(plan.planJson[0].start)}` : "No plan yet"}</span>
+            <span>Race</span><span>{a.hasRace ? `${a.race.name}, ${dateFull(a.race.date)}${a.race.goal ? `, ${a.race.goal}` : ""}` : "Not set"}</span>
             <span>Activities</span><span>{plan.activities.length}</span>
             {!plan.accounts && <><span>Changes on this device</span><span>{plan.changes}</span></>}
           </div>
@@ -37,7 +37,7 @@ export default function ProfilePage() {
           <h2>Connections</h2>
           <ProfileConnections />
         </section>
-        {plan.accounts && a.isAdmin && <Link href="/admin" className="link">Admin · user list →</Link>}
+        {plan.accounts && a.isAdmin && <Link href="/admin" className="link">Admin →</Link>}
       </div>
     </main>
   );
@@ -52,8 +52,8 @@ function ProfileConnections() {
     <>
       {note && <p className="small" style={{ margin: "0 0 10px" }}>{note}</p>}
       <div className="kv">
-        {garminLive && <><span>Garmin</span><span>{garmin?.status === "connected" ? `Connected${garmin.last_event_at ? ` · last data ${new Date(garmin.last_event_at).toLocaleDateString()}` : ""}` : garmin?.status === "error" ? "Connection failed" : "Not connected"}</span></>}
-        {WEARABLES.filter((w) => picked.includes(w.k) && !(w.k === "garmin" && garminLive)).map((w) => <Fragment key={w.k}><span>{w.name}</span><span>Picked · connects when live</span></Fragment>)}
+        {garminLive && <><span>Garmin</span><span>{garmin?.status === "connected" ? `Connected${garmin.last_event_at ? `, last data ${new Date(garmin.last_event_at).toLocaleDateString()}` : ""}` : garmin?.status === "error" ? "Connection failed" : "Not connected"}</span></>}
+        {WEARABLES.filter((w) => picked.includes(w.k) && !(w.k === "garmin" && garminLive)).map((w) => <Fragment key={w.k}><span>{w.name}</span><span>Picked, connects when live</span></Fragment>)}
         {!picked.length && !garminLive && <><span>Wearable</span><span>None picked</span></>}
         <span>Google Calendar</span><span>Not available yet</span>
       </div>
