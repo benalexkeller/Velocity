@@ -217,14 +217,20 @@ export function PlanProvider({ children }: { children: ReactNode }) {
       toggleExcluded: (id) => { const cur = data.activities.find((a) => a.id === id); if (!cur) return; const excluded = !cur.excluded; setData((c) => ({ ...c, activities: c.activities.map((a) => (a.id === id ? { ...a, excluded: excluded || undefined } : a)) })); void be.setExcluded(id, excluded); },
       post: async (text, opts = {}) => {
         const day = ymd(today());
+        // saving a message must never break the conversation: a failed save (offline, database not migrated)
+        // keeps the message on screen with a local id and the chat goes on
+        const save = async (m: ThreadMsg): Promise<ThreadMsg> => {
+          try { const [saved] = await be.appendThread([m]); return saved?.id ? saved : { ...m, id: m.id ?? `local-${Date.now()}` }; }
+          catch (e) { console.error("[velocity] save message", e); return { ...m, id: m.id ?? `local-${Date.now()}` }; }
+        };
         const you: ThreadMsg = { who: "You", at: nowHM(), text, day };
         setData((cur) => ({ ...cur, thread: [...cur.thread, you] }));
-        const [savedYou] = await be.appendThread([you]);
-        setData((cur) => ({ ...cur, thread: cur.thread.map((m) => (m === you ? savedYou : m)) }));
         setBusy(true);
+        const savedYou = await save(you);
+        setData((cur) => ({ ...cur, thread: cur.thread.map((m) => (m === you ? savedYou : m)) }));
         const say = async (reply: ThreadMsg) => {
           setData((cur) => ({ ...cur, thread: [...cur.thread, reply] }));
-          const [saved] = await be.appendThread([reply]);
+          const saved = await save(reply);
           setData((cur) => ({ ...cur, thread: cur.thread.map((m) => (m === reply ? saved : m)) }));
         };
         try {
@@ -249,7 +255,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
         const msg = data.thread.find((m) => m.id === id);
         if (!msg?.proposal || msg.status !== "open") return;
         setData((cur) => ({ ...cur, thread: cur.thread.map((m) => (m.id === id ? { ...m, status } : m)) }));
-        await be.setThreadStatus(id, status);
+        if (!id.startsWith("local-")) { try { await be.setThreadStatus(id, status); } catch (e) { console.error("[velocity] save decision", e); } }
         if (status !== "accepted") return;
         if (msg.proposal.kind === "review") { await storeRef.current!.post("Run the full plan review.", { mode: "restructure" }); return; }
         applyProposal(msg.proposal);
