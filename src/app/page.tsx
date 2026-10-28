@@ -1,7 +1,8 @@
 // The public front page at "/", built on PR's design (2026-10-27): full-screen dark hero, then Train, Plan,
 // Nutrition, Coach and Analysis, each text left and product right. Signed-in athletes never see it: proxy.ts
 // sends them to /dashboard. In local mode (no accounts) the buttons open the app directly.
-// Photos are not in yet: the hero is a dark panel and the three food shots are placeholders (see landing.css).
+// Photos (PR, 2026-10-28): /landing/hero.webp (rider at sunrise; hero-tall.webp is the phone crop), /landing/trainer.webp
+// (closing band), /food/*.webp (the meal library, shared with the Nutrition tab).
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BRAND } from "@/lib/config";
@@ -19,23 +20,23 @@ const SHOT = { width: 1440, height: 940 };
 const DAYS = ["Mon 26", "Tue 27", "Wed 28", "Thu 29", "Fri 30", "Sat 31", "Sun 1"];
 type Block = { d: number; from: number; to: number; t: string; sub?: string; kind: "train" | "life" };
 const BLOCKS: Block[] = [
-  { d: 0, from: 6, to: 7.5, t: "Long run", sub: "90 min · Z2", kind: "train" },
+  { d: 0, from: 6, to: 7.5, t: "Long run", sub: "90 min, Z2", kind: "train" },
   { d: 0, from: 9, to: 10, t: "Stand-up", kind: "life" },
   { d: 0, from: 14, to: 15.5, t: "Design review", kind: "life" },
-  { d: 1, from: 6.5, to: 7.75, t: "Swim", sub: "60 min · Tech", kind: "train" },
+  { d: 1, from: 6.5, to: 7.75, t: "Swim", sub: "60 min, technique", kind: "train" },
   { d: 1, from: 10.5, to: 11.5, t: "Dentist", kind: "life" },
-  { d: 1, from: 13, to: 14, t: "Lunch · Anna", kind: "life" },
+  { d: 1, from: 13, to: 14, t: "Lunch with Anna", kind: "life" },
   { d: 2, from: 8, to: 12, t: "Client workshop", kind: "life" },
-  { d: 2, from: 18, to: 19.25, t: "Easy run", sub: "45 min · Z2", kind: "train" },
-  { d: 3, from: 6.5, to: 7.9, t: "Threshold ride", sub: "75 min · Z4", kind: "train" },
+  { d: 2, from: 18, to: 19.25, t: "Easy run", sub: "45 min, Z2", kind: "train" },
+  { d: 3, from: 6.5, to: 7.9, t: "Threshold ride", sub: "75 min, Z4", kind: "train" },
   { d: 3, from: 11, to: 12, t: "Budget call", kind: "life" },
   { d: 3, from: 16.5, to: 17.5, t: "Kids pick-up", kind: "life" },
-  { d: 4, from: 6.5, to: 7.75, t: "Swim", sub: "60 min · Z2", kind: "train" },
+  { d: 4, from: 6.5, to: 7.75, t: "Swim", sub: "60 min, Z2", kind: "train" },
   { d: 4, from: 12, to: 13, t: "Lunch", kind: "life" },
   { d: 4, from: 17, to: 19, t: "Flight BER", kind: "life" },
-  { d: 5, from: 8, to: 10.5, t: "Long ride", sub: "2:30 h · Z2", kind: "train" },
-  { d: 5, from: 19, to: 20, t: "Dinner · Jonas", kind: "life" },
-  { d: 6, from: 8, to: 9.25, t: "Run", sub: "65 min · Z2", kind: "train" },
+  { d: 5, from: 8, to: 10.5, t: "Long ride", sub: "2:30 h, Z2", kind: "train" },
+  { d: 5, from: 19, to: 20, t: "Dinner with Jonas", kind: "life" },
+  { d: 6, from: 8, to: 9.25, t: "Run", sub: "65 min, Z2", kind: "train" },
   { d: 6, from: 11, to: 13, t: "Family", kind: "life" },
 ];
 const H0 = 6, H1 = 20;
@@ -75,11 +76,11 @@ export default function Landing() {
             <div className="lp-phone-hero">
               <div className="k">Today</div>
               <div className="big">Run</div>
-              <div className="sub">Tempo · 60 min</div>
+              <div className="sub">Tempo, 60 min</div>
               <div className="row"><span>Pace</span><b>10:15–11:15 /mi</b></div>
               <div className="row"><span>Garmin</span><b>connected</b></div>
             </div>
-            <div className="lp-phone-next"><div><b>Tomorrow</b><span>Swim · 1:30 h</span></div><div><b>Thursday</b><span>Brick · 1:25 h</span></div></div>
+            <div className="lp-phone-next"><div><b>Tomorrow</b><span>Swim, 1:30 h</span></div><div><b>Thursday</b><span>Brick, 1:25 h</span></div></div>
             <div className="lp-phone-btn">Start session</div>
           </div>
         </div>
@@ -92,7 +93,7 @@ export default function Landing() {
           <p>Training, work and the rest of the week on one calendar. Sessions move around meetings; locked ones stay put.</p>
         </div>
         <div className="lp-cal" role="img" aria-label="A week calendar with training sessions in blue beside meetings, a dentist appointment, a flight and family time.">
-          <div className="lp-cal-head"><b>26 Oct – 1 Nov</b><span className="lp-cal-src">Google Calendar · Outlook<i>Preview</i></span></div>
+          <div className="lp-cal-head"><b>26 Oct – 1 Nov</b><span className="lp-cal-src">Google Calendar and Outlook<i>Preview</i></span></div>
           <div className="lp-cal-grid">
             <div className="lp-cal-hours">{[6, 8, 10, 12, 14, 16, 18, 20].map((h) => <span key={h} style={{ top: pct(h) }}>{h}:00</span>)}</div>
             {DAYS.map((d, i) => (
@@ -118,9 +119,9 @@ export default function Landing() {
         <div className="lp-nutri">
           <figure className="lp-shot lp-shot-fuel"><img src="/landing/nutrition-fuel.webp" width={940} height={790} loading="lazy" alt="Carbohydrate panel: 404 g target for the day, split into before, during and after the session." /></figure>
           <div className="lp-fuel-cards">
-            <div className="lp-fuel"><span className="lp-food" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M6 22h36a18 18 0 0 1-36 0z" /><path d="M14 16c0-4 4-6 10-6s10 2 10 6" /></svg></span><b>Before</b><p>30 g carbs by 05:45. Low fibre, low fat.</p></div>
-            <div className="lp-fuel"><span className="lp-food" aria-hidden="true"><svg viewBox="0 0 48 48"><rect x="16" y="12" width="16" height="30" rx="5" /><path d="M20 12V7h8v5" /></svg></span><b>During</b><p>Water, 0.7 L per hour. Carbs only past 75 minutes.</p></div>
-            <div className="lp-fuel"><span className="lp-food" aria-hidden="true"><svg viewBox="0 0 48 48"><path d="M6 22h36a18 18 0 0 1-36 0z" /><circle cx="18" cy="17" r="3" /><circle cx="29" cy="15" r="3" /></svg></span><b>After</b><p>75 g carbs and 22 g protein within 2 hours.</p></div>
+            <div className="lp-fuel"><img className="lp-food" src="/food/oats-banana-s.webp" width={64} height={64} loading="lazy" alt="Oats with banana and honey" /><b>Before</b><p>30 g carbs by 05:45. Low fibre, low fat.</p></div>
+            <div className="lp-fuel"><img className="lp-food" src="/food/water-s.webp" width={64} height={64} loading="lazy" alt="A water bottle" /><b>During</b><p>Water, 0.7 L per hour. Carbs only past 75 minutes.</p></div>
+            <div className="lp-fuel"><img className="lp-food" src="/food/chicken-rice-s.webp" width={64} height={64} loading="lazy" alt="Chicken, rice and broccoli" /><b>After</b><p>75 g carbs and 22 g protein within 2 hours.</p></div>
           </div>
         </div>
       </section>
@@ -135,7 +136,7 @@ export default function Landing() {
           <div className="lp-chat">
             <div className="lp-msg lp-you">My calves cramped near the end of the long run.</div>
             <div className="lp-msg lp-them">That was the pace, not the salt. You ran the last 5 km at 9:50 /mi against a 10:15–11:15 target, on the longest run you&apos;ve done in 30 days. Next long run, hold the easy range. I&apos;ll add calf raises twice a week; if it happens again we look at sodium.<sup>1</sup></div>
-            <div className="lp-src">1 · Schwellnus, Br J Sports Med 2009</div>
+            <div className="lp-src"><span>1</span>Schwellnus, Br J Sports Med 2009</div>
           </div>
           <div className="lp-chat">
             <div className="lp-msg lp-you">Log chicken and rice for last night.</div>
@@ -159,14 +160,21 @@ export default function Landing() {
         <figure className="lp-shot"><img src="/landing/analysis-crop.webp" width={1280} height={605} loading="lazy" alt="The Analysis page: key figures, the Sunday review facts and the fitness, fatigue and form chart." /></figure>
       </section>
 
-      <footer className="lp-foot">
-        <div className="lp-foot-top">
-          <span className="wordmark">{BRAND.name}</span>
+      <section className="lp-close" aria-label="Create an account">
+        <img src="/landing/trainer.webp" width={2233} height={1026} loading="lazy" alt="" />
+        <div className="lp-close-text">
+          <h2><span>Create a plan.</span><span>Synchronise your nutrition.</span><span>Become the expert.</span></h2>
           <Link href={start.href} className="btn lp-big">{start.label}</Link>
         </div>
+      </section>
+
+      <footer className="lp-foot">
         <div className="lp-foot-row">
-          <span>Only you can see your data. It is never used to train models.</span>
+          <span className="wordmark">{BRAND.name}</span>
           <span className="lp-foot-links"><a href="/help">Help</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></span>
+        </div>
+        <div className="lp-foot-row lp-foot-note">
+          <span>Only you can see your data. It is never used to train models.</span>
         </div>
       </footer>
     </main>

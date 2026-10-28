@@ -1,5 +1,5 @@
 /* Public front page (PR's design, 2026-10-27). Same tokens as the app; nothing here changes the app's own styles.
-   Photos: .lp-hero gets the runner photo as a background once it exists (see the TODO); .lp-food gets the bowls. */
+   Photos: .lp-hero is the rider at sunrise (hero.webp, hero-tall.webp on phones), .lp-close the trainer silhouette, .lp-food the meals. */
 .lp { --lp-w: 1120px; --lp-gutter: 24px; color: var(--ink); overflow-x: clip; }
 .lp h1, .lp h2, .lp h3 { font-weight: 600; letter-spacing: -0.025em; line-height: 1.1; margin: 0; }
 .lp h2 { font-size: clamp(28px, 3.2vw, 40px); letter-spacing: -0.03em; max-width: 18ch; }
@@ -10,10 +10,11 @@
 .lp-feature, .lp-band, .lp-top, .lp-hero-text, .lp-foot { max-width: var(--lp-w); margin-left: auto; margin-right: auto; padding-left: var(--lp-gutter); padding-right: var(--lp-gutter); box-sizing: content-box; }
 
 /* ---------- hero: full screen, dark until the photo arrives ---------- */
-.lp-hero { position: relative; min-height: 100svh; display: flex; flex-direction: column; color: #FFFFFF;
-  /* TODO photo: background: #101114 url(/landing/hero.jpg) center / cover no-repeat; keep the gradient below as an overlay for legibility */
-  background: radial-gradient(900px 500px at 78% 38%, rgba(255, 176, 82, 0.18), transparent 60%), linear-gradient(180deg, #0C0E14 0%, #141824 55%, #0F1420 100%); }
-.lp-hero::after { content: ""; position: absolute; inset: auto 0 0 0; height: 40%; background: linear-gradient(180deg, transparent, rgba(8, 10, 16, 0.55)); pointer-events: none; }
+.lp-hero { position: relative; min-height: 100svh; display: flex; flex-direction: column; color: #FFFFFF; background: #101114 url(/landing/hero.webp) center 40% / cover no-repeat; }
+/* two overlays keep the white type legible: darker on the left where the headline sits, and a soft base */
+.lp-hero::before { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(8, 10, 16, 0.62) 0%, rgba(8, 10, 16, 0.34) 48%, rgba(8, 10, 16, 0.06) 100%); pointer-events: none; }
+.lp-hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(8, 10, 16, 0.35) 0%, transparent 28%, transparent 60%, rgba(8, 10, 16, 0.55) 100%); pointer-events: none; }
+.lp-hero-text h1 { text-shadow: 0 2px 24px rgba(8, 10, 16, 0.35); }
 .lp-top { position: relative; z-index: 2; width: 100%; box-sizing: border-box; max-width: calc(var(--lp-w) + 2 * var(--lp-gutter)); display: flex; align-items: center; justify-content: space-between; height: 76px; }
 .lp-top nav { display: flex; align-items: center; gap: 22px; }
 .lp-top nav a { color: #FFFFFF; text-decoration: none; font-size: 14px; font-weight: 500; }
@@ -87,9 +88,7 @@
 .lp-fuel .lp-food { grid-row: 1 / span 2; }
 .lp-fuel b { font-size: 14px; font-weight: 600; align-self: end; }
 .lp-fuel p { font-size: 13px; line-height: 1.45; color: var(--ink-2); max-width: none; align-self: start; }
-/* placeholder until the food photos arrive: a soft disc with a line icon; the photo will be a 64px round <img> */
-.lp-food { width: 64px; height: 64px; border-radius: 50%; background: var(--surface-2); display: inline-flex; align-items: center; justify-content: center; margin-bottom: 4px; }
-.lp-food svg { width: 30px; height: 30px; fill: none; stroke: var(--muted); stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; }
+.lp-food { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; display: block; background: var(--surface-2); }
 
 /* ---------- coach ---------- */
 .lp-chats { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; align-items: start; }
@@ -98,16 +97,24 @@
 .lp-msg.lp-you { justify-self: end; background: var(--bubble-user); border-radius: 14px 14px 4px 14px; padding: 9px 13px; }
 .lp-msg.lp-them { justify-self: start; padding: 2px 0; }
 .lp-msg sup { font-size: 10px; font-weight: 600; color: var(--accent); margin-left: 2px; }
-.lp-src { font-size: 11px; color: var(--muted); }
+.lp-src { font-size: 11px; color: var(--muted); display: flex; gap: 8px; }
+.lp-src span { color: var(--accent); font-weight: 600; }
 .lp-proposal { display: grid; gap: 6px; padding: 12px 14px; border-radius: var(--radius); background: var(--accent-soft); font-size: 13px; line-height: 1.4; }
 .lp-prop-head { font-size: 12px; font-weight: 600; color: var(--accent); }
 .lp-proposal p { color: var(--ink-2); }
 .lp-prop-actions { display: flex; gap: 8px; margin-top: 2px; }
 
+/* ---------- closing band: the trainer photo, headline repeated, one button ---------- */
+.lp-close { position: relative; margin-top: 88px; min-height: clamp(380px, 42vw, 580px); display: flex; align-items: center; overflow: hidden; background: #DADCE0; }
+.lp-close img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: right 58%; }
+.lp-close-text { position: relative; width: 100%; box-sizing: border-box; max-width: calc(var(--lp-w) + 2 * var(--lp-gutter)); margin: 0 auto; padding: 56px var(--lp-gutter); display: grid; gap: 28px; justify-items: start; }
+.lp-close h2 { font-size: clamp(26px, 3.4vw, 44px); letter-spacing: -0.035em; line-height: 1.05; display: grid; gap: 4px; max-width: 14ch; color: var(--ink); }
+.lp-close h2 span { display: block; }
+
 /* ---------- footer ---------- */
-.lp-foot { padding-top: 56px; padding-bottom: 40px; display: grid; gap: 28px; }
-.lp-foot-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-.lp-foot-row { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 18px; font-size: 13px; color: var(--muted); }
+.lp-foot { padding-top: 24px; padding-bottom: 40px; display: grid; gap: 14px; }
+.lp-foot-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; font-size: 13px; color: var(--muted); }
+.lp-foot-note { border-top: 1px solid var(--line); padding-top: 14px; }
 .lp-foot-links { display: inline-flex; gap: 18px; }
 .lp-foot-links a { color: inherit; text-decoration: none; }
 .lp-foot-links a:hover { color: var(--ink); }
@@ -120,6 +127,14 @@
   .lp-phone { right: 8px; bottom: 0; width: 176px; }
 }
 @media (max-width: 760px) {
+  /* phones: the rider stays in the upper part of the screen, the headline sits on the road below him */
+  .lp-hero { background-image: url(/landing/hero-tall.webp); background-position: 55% 30%; }
+  .lp-hero::before { background: linear-gradient(180deg, rgba(8, 10, 16, 0.40) 0%, rgba(8, 10, 16, 0.10) 35%, rgba(8, 10, 16, 0.55) 70%, rgba(8, 10, 16, 0.80) 100%); }
+  .lp-hero::after { display: none; }
+  .lp-hero-text { justify-content: flex-end; padding-bottom: 40px; gap: 24px; }
+  .lp-hero-text h1 { font-size: clamp(34px, 9.6vw, 44px); }
+  .lp-close { min-height: 420px; }
+  .lp-close img { object-position: 78% center; }
   .lp-top nav a:not(.btn):not(.lp-link) { display: none; }
   .lp-cal-grid { height: 330px; grid-template-columns: 36px repeat(7, minmax(0, 1fr)); gap: 0 2px; }
   .lp-ev span { display: none; }
@@ -138,7 +153,7 @@
   .lp-phone { width: 150px; font-size: 10px; padding: 10px 9px 9px; border-width: 6px; }
   .lp-phone-hero .big { font-size: 22px; }
   .lp-cal-dh { font-size: 10px; }
-  .lp-foot-top .btn { width: 100%; justify-content: center; }
+  .lp-close-text .btn { width: 100%; justify-content: center; }
 }
 @media (prefers-reduced-motion: no-preference) { .lp a.btn, .lp-link, .lp-top nav a { transition: background-color 120ms ease, color 120ms ease; } }
 .lp a:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 10px; }
