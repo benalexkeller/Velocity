@@ -11,6 +11,7 @@ import { addDays, dateLabel, fromYmd, shortDate, today, ymd } from "@/lib/format
 import { AddPanel } from "./AddPanel";
 import { PeriodStepper } from "../PeriodStepper";
 import { useWidth } from "@/lib/ticks";
+import { units } from "@/lib/units";
 
 const fmt = (n: number, d = 0) => n.toLocaleString(undefined, { maximumFractionDigits: d });
 /** Which logged meal is "before" and which is "after" a session, from its start time (entries carry no clock time yet). */
@@ -98,17 +99,12 @@ function DayView({ date, setDate, setView }: { date: string; setDate: (d: string
             <section className="card nu-carbgoal" aria-label="Carbohydrate goal">
               <div className="k">Carbohydrate<span className="at">{dateLabel(date)}</span></div>
               <div className="v"><b>{fmt(t.carbs)} g</b> target</div>
-              <div className="u">{nut.profile.weight_kg} kg, {t.dayType} day, {t.carbsPerKg} g/kg{d.basis === "done" ? ", from what you logged" : d.basis === "mixed" ? ", logged + planned" : ""}</div>
+              <div className="u">{t.dayType} day, {units === "imperial" ? `${(t.carbsPerKg / 2.2046).toFixed(1)} g per lb` : `${t.carbsPerKg} g per kg`}{d.basis === "done" ? ", from what you logged" : d.basis === "mixed" ? ", logged + planned" : ""}</div>
               <Bar v={d.estimateOnly ? 0 : d.totals.carbs} t={t.carbs} />
               <div className="u">{d.estimateOnly ? "Whole-day estimate, no carbohydrate breakdown" : `${fmt(d.totals.carbs)} g eaten, ${fmt(Math.max(0, t.carbs - d.totals.carbs))} g remaining`}</div>
-              <div className="k" style={{ marginTop: 12 }}>Timing</div>
-              <div className="nu-timing">
+              <div className="nu-timing" style={{ marginTop: 14 }}>
+                <div className="th"><span>Timing</span><span>Target</span><span /><span>Logged</span></div>
                 {timing.rows.map(([label, target, got, meal]) => <div key={label}><span>{label}{meal ? <small className="muted">, {meal}</small> : null}</span><span className="muted">{target ? `${fmt(target)} g` : "no target"}</span>{got == null ? <span className="muted small">log under Other</span> : <Bar v={got} t={target || 1} />}<b>{got == null ? "" : `${fmt(got)} g`}</b></div>)}
-              </div>
-              <div className="u" style={{ marginTop: 8 }}>
-                {timing.fuel.before ? `Before: ${fmt(timing.fuel.before)} g by ${timing.fuel.beforeAt}. ` : ""}
-                {timing.fuel.perHour ? `During: ${timing.fuel.perHour} g/h (${timing.fuel.form})${timing.fuel.fluidLh ? `, ${timing.fuel.fluidLh} L/h` : ""}${timing.fuel.naMgH ? `, ${timing.fuel.naMgH} mg sodium/h` : ""}. ` : timing.fuel.fluidLh ? `During: water, ${timing.fuel.fluidLh} L/h. ` : "During: water if thirsty. "}
-                After: {timing.fuel.after.carbs ? `${fmt(timing.fuel.after.carbs)} g carbs + ${fmt(timing.fuel.after.protein)} g protein ${timing.fuel.window}.` : `${fmt(timing.fuel.after.protein)} g protein at the next meal.`}
               </div>
             </section>
           )}
