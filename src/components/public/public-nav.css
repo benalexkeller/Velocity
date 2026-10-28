@@ -1,5 +1,6 @@
 /* Public top bar with product menus. Used on the front page (dark, over the photo) and the product pages (light). */
-.pn { position: relative; z-index: 20; width: 100%; box-sizing: border-box; max-width: calc(var(--lp-w, 1120px) + 2 * var(--lp-gutter, 24px)); margin: 0 auto; padding: 0 var(--lp-gutter, 24px); height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+/* the bar spans the wide column (--lp-wide), not the reading column, so on big screens the wordmark sits far left and the buttons far right */
+.pn { position: relative; z-index: 20; width: 100%; box-sizing: border-box; max-width: calc(var(--lp-wide, 1600px) + 2 * var(--lp-gutter, 24px)); margin: 0 auto; padding: 0 var(--lp-gutter, 24px); height: 80px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
 .pn-mark { text-decoration: none; color: inherit; }
 .pn-menus { display: flex; align-items: center; gap: 4px; }
 .pn-item { position: relative; }

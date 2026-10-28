@@ -73,7 +73,7 @@ export default function Landing() {
               <div className="k">Today</div>
               <div className="big">Run</div>
               <div className="sub">Tempo, 60 min</div>
-              <div className="row"><span>Pace</span><b>10:15–11:15 /mi</b></div>
+              <div className="row"><span>Pace /mi</span><b>10:15–11:15</b></div>
               <div className="row"><span>Garmin</span><b>connected</b></div>
             </div>
             <div className="lp-phone-next"><div><b>Tomorrow</b><span>Swim, 1:30 h</span></div><div><b>Thursday</b><span>Brick, 1:25 h</span></div></div>

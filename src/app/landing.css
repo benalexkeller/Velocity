@@ -1,6 +1,6 @@
 /* Public front page (PR's design, 2026-10-27). Same tokens as the app; nothing here changes the app's own styles.
    Photos: .lp-hero is the rider at sunrise (hero.webp, hero-tall.webp on phones), .lp-close the trainer silhouette, .lp-food the meals. */
-.lp { --lp-w: 1120px; --lp-gutter: 24px; color: var(--ink); overflow-x: clip; }
+.lp { --lp-w: 1120px; --lp-wide: 1600px; --lp-gutter: 40px; color: var(--ink); overflow-x: clip; }
 .lp h1, .lp h2, .lp h3 { font-weight: 600; letter-spacing: -0.025em; line-height: 1.1; margin: 0; }
 .lp h2 { font-size: clamp(28px, 3.2vw, 40px); letter-spacing: -0.03em; max-width: 18ch; }
 .lp p { margin: 0; }
@@ -15,7 +15,7 @@
 .lp-hero::before { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, rgba(8, 10, 16, 0.62) 0%, rgba(8, 10, 16, 0.34) 48%, rgba(8, 10, 16, 0.06) 100%); pointer-events: none; }
 .lp-hero::after { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(8, 10, 16, 0.35) 0%, transparent 28%, transparent 60%, rgba(8, 10, 16, 0.55) 100%); pointer-events: none; }
 .lp-hero-text h1 { text-shadow: 0 2px 24px rgba(8, 10, 16, 0.35); }
-.lp-hero-text { position: relative; z-index: 2; width: 100%; box-sizing: border-box; max-width: calc(var(--lp-w) + 2 * var(--lp-gutter)); flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 36px; padding-top: 24px; padding-bottom: 96px; }
+.lp-hero-text { position: relative; z-index: 2; width: 100%; box-sizing: border-box; max-width: calc(var(--lp-wide) + 2 * var(--lp-gutter)); margin: 0 auto; flex: 1; display: flex; flex-direction: column; justify-content: center; gap: 36px; padding-top: 24px; padding-bottom: 96px; }
 .lp-hero-text h1 { font-size: clamp(38px, 6vw, 76px); letter-spacing: -0.035em; line-height: 1.02; display: grid; gap: 6px; max-width: 14ch; }
 .lp-hero-text h1 span { display: block; }
 .lp-hero-text .btn { align-self: flex-start; }
@@ -43,7 +43,8 @@
 .lp-laptop .lp-screen img { display: block; width: 100%; height: auto; }
 .lp-laptop-base { height: 14px; margin: 0 -24px; border-radius: 0 0 14px 14px; background: linear-gradient(180deg, #D5D8DF, #B9BDC6); box-shadow: 0 10px 24px rgba(16, 17, 20, 0.15); }
 .lp-laptop-base::before { content: ""; display: block; width: 120px; height: 5px; margin: 0 auto; border-radius: 0 0 6px 6px; background: #A9ADB6; }
-.lp-phone { position: absolute; right: 0; bottom: -24px; width: 196px; box-sizing: border-box; border: 8px solid #141518; border-radius: 30px; background: #FFFFFF; box-shadow: 0 24px 60px rgba(16, 17, 20, 0.22); padding: 14px 12px 12px; display: grid; gap: 10px; font-size: 11px; line-height: 1.35; color: var(--ink); }
+.lp-phone { position: absolute; right: 0; bottom: -24px; width: 172px; aspect-ratio: 9 / 19.5; box-sizing: border-box; border: 7px solid #141518; border-radius: 34px; background: #FFFFFF; box-shadow: 0 24px 60px rgba(16, 17, 20, 0.22); padding: 30px 11px 12px; display: grid; grid-template-rows: auto auto 1fr auto; gap: 10px; font-size: 11px; line-height: 1.35; color: var(--ink); }
+.lp-phone::before { content: ""; position: absolute; top: 8px; left: 50%; width: 46px; height: 12px; transform: translateX(-50%); border-radius: 999px; background: #141518; }
 .lp-phone-top { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 10px; }
 .lp-phone-top .wordmark { font-size: 9px; color: var(--ink); }
 .lp-phone-hero { background: var(--hero); color: #fff; border-radius: 12px; padding: 12px; display: grid; gap: 2px; }
@@ -52,7 +53,7 @@
 .lp-phone-hero .sub { color: #DADCE3; margin-bottom: 6px; }
 .lp-phone-hero .row { display: flex; justify-content: space-between; gap: 8px; border-top: 1px solid rgba(255,255,255,0.14); padding-top: 5px; margin-top: 3px; color: #DADCE3; }
 .lp-phone-hero .row b { color: #fff; font-weight: 600; }
-.lp-phone-next { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.lp-phone-next { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; align-content: start; }
 .lp-phone-next > div { border: 1px solid var(--line); border-radius: 9px; padding: 7px 8px; display: grid; gap: 1px; min-width: 0; }
 .lp-phone-next b { font-weight: 600; font-size: 10.5px; }
 .lp-phone-next span { color: var(--muted); font-size: 10px; }
@@ -102,7 +103,7 @@
 /* ---------- closing band: the trainer photo, headline repeated, one button ---------- */
 .lp-close { position: relative; margin-top: 88px; min-height: clamp(380px, 42vw, 580px); display: flex; align-items: center; overflow: hidden; background: #DADCE0; }
 .lp-close img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: right 58%; }
-.lp-close-text { position: relative; width: 100%; box-sizing: border-box; max-width: calc(var(--lp-w) + 2 * var(--lp-gutter)); margin: 0 auto; padding: 56px var(--lp-gutter); display: grid; gap: 28px; justify-items: start; }
+.lp-close-text { position: relative; width: 100%; box-sizing: border-box; max-width: calc(var(--lp-wide) + 2 * var(--lp-gutter)); margin: 0 auto; padding: 56px var(--lp-gutter); display: grid; gap: 28px; justify-items: start; }
 .lp-close h2 { font-size: clamp(26px, 3.4vw, 44px); letter-spacing: -0.035em; line-height: 1.05; display: grid; gap: 4px; max-width: 14ch; color: var(--ink); }
 .lp-close h2 span { display: block; }
 
@@ -119,7 +120,7 @@
   .lp-feature { grid-template-columns: 1fr; gap: 28px; padding-top: 64px; padding-bottom: 64px; }
   .lp-text p { max-width: 60ch; }
   .lp-devices { padding-right: 0; padding-bottom: 150px; }
-  .lp-phone { right: 8px; bottom: 0; width: 176px; }
+  .lp-phone { right: 8px; bottom: 0; width: 160px; }
 }
 @media (max-width: 760px) {
   /* phones: the rider stays in the upper part of the screen, the headline sits on the road below him */
@@ -136,6 +137,7 @@
   .lp-nutri { grid-template-columns: 1fr; }
   .lp-chats { grid-template-columns: 1fr; }
 }
+@media (max-width: 1000px) { .lp { --lp-gutter: 24px; } }
 @media (max-width: 600px) {
   .lp { --lp-gutter: 16px; }
   .lp-hero-text { padding-bottom: 64px; gap: 28px; }
@@ -143,7 +145,7 @@
   .lp-feature { padding-top: 48px; padding-bottom: 48px; }
   .lp-devices { padding-bottom: 120px; }
   .lp-laptop-base { margin: 0 -8px; }
-  .lp-phone { width: 150px; font-size: 10px; padding: 10px 9px 9px; border-width: 6px; }
+  .lp-phone { width: 140px; font-size: 10px; padding: 26px 9px 9px; border-width: 6px; border-radius: 28px; }
   .lp-phone-hero .big { font-size: 22px; }
   .lp-cal-dh { font-size: 10px; }
   .lp-close-text .btn { width: 100%; justify-content: center; }
