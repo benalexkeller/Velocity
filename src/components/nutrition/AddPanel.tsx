@@ -4,15 +4,16 @@ import { Icon } from "../icons";
 import { useNutrition } from "@/lib/nutrition/store";
 import { searchFoods, usdaAvailable } from "@/lib/nutrition/foods";
 import { MEALS, scaleM, type Food, type Meal, type Serving } from "@/lib/nutrition/types";
+import { MEAL_LIBRARY, TAG_LABEL, mealMacros, mealPhoto, partLabel, type MealRecipe, type MealTag } from "@/lib/nutrition/meals";
 import { DatePicker } from "./DatePicker";
 
-type Mode = "search" | "manual" | "quick";
+type Mode = "meals" | "search" | "manual" | "quick";
 const fmt = (n: number, d = 0) => (Number.isFinite(n) ? n.toLocaleString(undefined, { maximumFractionDigits: d }) : "—");
 
-/** The add panel: search a food, type one in by hand, or give rough numbers for the whole day. */
+/** The add panel: pick a photographed meal, search a food, type one in by hand, or give rough numbers for the whole day. */
 export function AddPanel({ date, meal, onClose, onMeal, onDate }: { date: string; meal: Meal; onClose: () => void; onMeal: (m: Meal) => void; onDate: (d: string) => void }) {
   const nut = useNutrition();
-  const [mode, setMode] = useState<Mode>("search");
+  const [mode, setMode] = useState<Mode>("meals");
   const label = MEALS.find((m) => m.k === meal)?.label ?? "meal";
   useEffect(() => { const h = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); }; window.addEventListener("keydown", h); return () => window.removeEventListener("keydown", h); }, [onClose]);
   return (
@@ -23,14 +24,59 @@ export function AddPanel({ date, meal, onClose, onMeal, onDate }: { date: string
       </div>
       <div className="nu-panel-day"><span className="muted small">Day</span><DatePicker value={date} onChange={onDate} /></div>
       <div className="pill-group nu-modes" role="tablist">
+        <button type="button" role="tab" className={mode === "meals" ? "on" : ""} onClick={() => setMode("meals")}>Meals</button>
         <button type="button" role="tab" className={mode === "search" ? "on" : ""} onClick={() => setMode("search")}>Search</button>
         <button type="button" role="tab" className={mode === "manual" ? "on" : ""} onClick={() => setMode("manual")}>Type it in</button>
         <button type="button" role="tab" className={mode === "quick" ? "on" : ""} onClick={() => setMode("quick")}>Whole day</button>
       </div>
+      {mode === "meals" && <Meals date={date} meal={meal} onDone={onClose} onSearch={() => setMode("search")} />}
       {mode === "search" && <Search date={date} meal={meal} onDone={onClose} onCustom={() => setMode("manual")} />}
       {mode === "manual" && <Manual date={date} meal={meal} onDone={onClose} />}
       {mode === "quick" && <QuickDay date={date} onDone={onClose} />}
     </aside>
+  );
+}
+
+/** The meal library: photographed plates, one tap to log a whole meal. Macros come from the built-in foods. */
+const MEAL_FILTERS: (MealTag | "all")[] = ["all", "before", "after", "breakfast", "lunch", "dinner", "vegetarian"];
+function Meals({ date, meal, onDone, onSearch }: { date: string; meal: Meal; onDone: () => void; onSearch: () => void }) {
+  const nut = useNutrition();
+  const [filter, setFilter] = useState<MealTag | "all">("all");
+  const [sel, setSel] = useState<MealRecipe | null>(null);
+  const [portion, setPortion] = useState(1);
+  const list = MEAL_LIBRARY.filter((m) => filter === "all" || m.tags.includes(filter));
+  const macros = sel ? scaleM(mealMacros(sel), portion) : null;
+  return (
+    <div className="nu-meals">
+      <div className="pill-group small nu-meal-filters" role="tablist">{MEAL_FILTERS.map((f) => <button key={f} type="button" className={filter === f ? "on" : ""} onClick={() => { setFilter(f); setSel(null); }}>{f === "all" ? "All" : TAG_LABEL[f]}</button>)}</div>
+      {!sel && (
+        <div className="nu-meal-grid">
+          {list.map((m) => { const mm = mealMacros(m); return (
+            <button key={m.id} type="button" className="nu-meal-card" onClick={() => { setSel(m); setPortion(1); }}>
+              <img src={mealPhoto(m.id)} width={240} height={240} alt="" loading="lazy" />
+              <b>{m.name}</b>
+              <small>{fmt(mm.kcal)} kcal, {fmt(mm.carbs)} g carbs, {fmt(mm.protein)} g protein</small>
+            </button>
+          ); })}
+        </div>
+      )}
+      {sel && macros && (
+        <div className="nu-meal-pick card">
+          <img src={mealPhoto(sel.id, "l")} width={720} height={720} alt="" />
+          <div className="hd"><div><b>{sel.name}</b><small>{sel.plate}</small></div><button type="button" className="linkbtn" onClick={() => setSel(null)}>Back</button></div>
+          <div className="amt">
+            <span className="k">Portion</span>
+            <div className="pill-group small">{[0.5, 0.75, 1, 1.5, 2].map((x) => <button key={x} type="button" className={portion === x ? "on" : ""} onClick={() => setPortion(x)}>{x === 1 ? "1 serving" : `× ${x}`}</button>)}</div>
+          </div>
+          <div className="nums">
+            <div><b>{fmt(macros.kcal)}</b><span>kcal</span></div><div><b>{fmt(macros.carbs)} g</b><span>carbs</span></div><div><b>{fmt(macros.protein)} g</b><span>protein</span></div><div><b>{fmt(macros.fat)} g</b><span>fat</span></div><div><b>{fmt(macros.fibre)} g</b><span>fibre</span></div><div><b>{fmt(macros.sodium)} mg</b><span>sodium</span></div>
+          </div>
+          <div className="nu-meal-parts">{sel.parts.map((p) => partLabel(p, portion)).join(", ")}</div>
+          <button type="button" className="btn wide" onClick={() => { nut.addManual(date, meal, { name: sel.name, kcal: macros.kcal, carbs: macros.carbs, protein: macros.protein, fat: macros.fat, fibre: macros.fibre, sodium: macros.sodium, amount: portion === 1 ? "1 serving" : `${portion} servings` }); onDone(); }}>Add</button>
+        </div>
+      )}
+      <div className="hint">Standard portions, macros summed from the foods list. Something else? <button type="button" className="linkbtn" onClick={onSearch}>Search foods</button>.</div>
+    </div>
   );
 }
 
