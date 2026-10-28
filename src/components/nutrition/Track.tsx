@@ -53,10 +53,12 @@ function DayView({ date, setDate, setView }: { date: string; setDate: (d: string
     const first = [...active].sort((a, b) => b.min - a.min)[0], fuel = nut.fuelFor(first);
     const { before, after } = mealsAround(first.start ?? "06:30");
     const carbs = (m: Meal | null) => (m ? d.entries.filter((e) => e.meal === m).reduce((a, e) => a + e.carbs_g, 0) : 0);
-    const b = carbs(before), a = carbs(after);
+    const b = carbs(before), a = carbs(after), o = carbs("other");
     const during = active.reduce((x, s) => x + nut.fuelFor(s).during, 0);
     const rest = Math.max(0, t.carbs - fuel.before - during - fuel.after.carbs);
-    return { first, fuel, during, rows: [["Before session", fuel.before, b, before], ["During sessions", during, null, null], ["After session", fuel.after.carbs, a, after], ["Rest of the day", rest, Math.max(0, d.totals.carbs - b - a), null]] as [string, number, number | null, Meal | null][] };
+    // every row reads the same way: label, the meal it is counted from, target, bar, logged. Session fuel is logged under Other.
+    const restMeals = MEALS.filter((m) => m.k !== before && m.k !== after && m.k !== "other").map((m) => m.label.toLowerCase()).join(", ");
+    return { first, fuel, during, rows: [["Before session", fuel.before, b, before ?? ""], ["During session", during, o, "other"], ["After session", fuel.after.carbs, a, after ?? ""], ["Rest of the day", rest, Math.max(0, d.totals.carbs - b - a - o), restMeals]] as [string, number, number, string][] };
   }, [active, d, nut, t]);
 
   return (
@@ -104,7 +106,7 @@ function DayView({ date, setDate, setView }: { date: string; setDate: (d: string
               <div className="u">{d.estimateOnly ? "Whole-day estimate, no carbohydrate breakdown" : `${fmt(d.totals.carbs)} g eaten, ${fmt(Math.max(0, t.carbs - d.totals.carbs))} g remaining`}</div>
               <div className="nu-timing" style={{ marginTop: 14 }}>
                 <div className="th"><span>Timing</span><span>Target</span><span /><span>Logged</span></div>
-                {timing.rows.map(([label, target, got, meal]) => <div key={label}><span>{label}{meal ? <small className="muted">, {meal}</small> : null}</span><span className="muted">{target ? `${fmt(target)} g` : "no target"}</span>{got == null ? <span className="muted small">log under Other</span> : <Bar v={got} t={target || 1} />}<b>{got == null ? "" : `${fmt(got)} g`}</b></div>)}
+                {timing.rows.map(([label, target, got, meal]) => <div key={label}><span>{label}{meal ? <small className="muted">, {meal}</small> : null}</span><span className="muted">{fmt(target)} g</span><Bar v={got} t={target || 1} /><b>{fmt(got)} g</b></div>)}
               </div>
             </section>
           )}
