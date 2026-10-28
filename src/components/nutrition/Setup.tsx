@@ -95,7 +95,7 @@ export function NutritionSetup({ onDone, edit = false }: { onDone: () => void; e
 
       <section>
         <h3>Supplements you take</h3>
-        <p className="hint">Grades: A strong evidence · B some · C limited.</p>
+        <p className="hint">Grades: A strong evidence, B some, C limited.</p>
         <div className="nu-supp-pick">
           {SUPPLEMENTS.map((s) => {
             const on = picks.find((x) => x.id === s.id);

@@ -51,7 +51,7 @@ export function Guide() {
   const weekSessions = week.sessions.filter((s) => s.sport !== "rest");
   const age = p.birth_year ? new Date().getFullYear() - p.birth_year : null;
   const goalText = p.goal === "race_weight" ? (p.goal_weight_kg ? `${showW(p.goal_weight_kg)} by race day` : "target weight not set") : p.goal === "lose" ? "−400 kcal/day" : p.goal === "gain" ? "+300 kcal/day" : "no calorie adjustment";
-  const stageText = stages.filter((s) => s.date !== raceDate).map((s) => `${showW(s.weight_kg)} by ${shortDate(s.date)}`).join(" · ");
+  const stageText = stages.filter((s) => s.date !== raceDate).map((s) => `${showW(s.weight_kg)} by ${shortDate(s.date)}`).join(", ");
 
   return (
     <div className="nu-guide">
@@ -59,19 +59,19 @@ export function Guide() {
         <div className="hd"><div><div className="k">Your nutrition plan</div>{!p.setup_done && <div className="sub muted small">Add your weight to get daily targets.</div>}</div><button type="button" className="btn small" onClick={() => setEditing((e) => !e)}>{editing ? "Close" : "Edit plan"}</button></div>
         {editing ? <NutritionSetup edit onDone={() => setEditing(false)} /> : (
           <div className="grid">
-            <div><span className="k">Body</span><b>{p.weight_kg ? showW(p.weight_kg) : "—"}</b><span className="d">{[p.height_cm ? (imperial ? `${Math.round(p.height_cm / 2.54)} in` : `${p.height_cm} cm`) : null, age ? `${age} y` : null, p.sex === "male" ? "male" : p.sex === "female" ? "female" : null].filter(Boolean).join(" · ") || "height, age, sex not set"}</span></div>
-            <div><span className="k">Goal</span><b>{GOAL_LABEL[p.goal]}</b><span className="d">{goalText}{stageText ? ` · stages: ${stageText}` : ""}</span></div>
-            <div><span className="k">Rest-day calories</span><b>{todayTargets ? `${fmt(todayTargets.base)} kcal` : "—"}</b><span className="d">{!todayTargets ? "add your weight to calculate" : p.base_kcal != null ? "your own number" : `resting ${fmt(bmrOf(p))} kcal × 1.4`}{todayTargets?.goalAdj ? ` · ${todayTargets.goalAdj > 0 ? "+" : ""}${fmt(todayTargets.goalAdj)} kcal today for the goal` : ""}</span></div>
-            <div><span className="k">Today</span><b>{todayTargets ? `${fmt(todayTargets.kcal)} kcal` : "—"}</b><span className="d">{todayTargets ? `${fmt(todayTargets.carbs)} g carbs · ${fmt(todayTargets.protein)} g protein · ${fmt(todayTargets.fat)} g fat · ${(todayTargets.fluid_ml / 1000).toFixed(1)} L` : "no targets without a body weight"}</span></div>
+            <div><span className="k">Body</span><b>{p.weight_kg ? showW(p.weight_kg) : "—"}</b><span className="d">{[p.height_cm ? (imperial ? `${Math.round(p.height_cm / 2.54)} in` : `${p.height_cm} cm`) : null, age ? `${age} y` : null, p.sex === "male" ? "male" : p.sex === "female" ? "female" : null].filter(Boolean).join(", ") || "height, age, sex not set"}</span></div>
+            <div><span className="k">Goal</span><b>{GOAL_LABEL[p.goal]}</b><span className="d">{goalText}{stageText ? `, stages: ${stageText}` : ""}</span></div>
+            <div><span className="k">Rest-day calories</span><b>{todayTargets ? `${fmt(todayTargets.base)} kcal` : "—"}</b><span className="d">{!todayTargets ? "add your weight to calculate" : p.base_kcal != null ? "your own number" : `resting ${fmt(bmrOf(p))} kcal × 1.4`}{todayTargets?.goalAdj ? `, ${todayTargets.goalAdj > 0 ? "+" : ""}${fmt(todayTargets.goalAdj)} kcal today for the goal` : ""}</span></div>
+            <div><span className="k">Today</span><b>{todayTargets ? `${fmt(todayTargets.kcal)} kcal` : "—"}</b><span className="d">{todayTargets ? `${fmt(todayTargets.carbs)} g carbs, ${fmt(todayTargets.protein)} g protein, ${fmt(todayTargets.fat)} g fat, ${(todayTargets.fluid_ml / 1000).toFixed(1)} L` : "no targets without a body weight"}</span></div>
             <div><span className="k">Bottle</span><b>{p.bottle_ml >= 1000 ? `${p.bottle_ml / 1000} L` : `${p.bottle_ml} ml`}</b><span className="d" /></div>
-            <div><span className="k">Supplements</span><b>{p.supplements.length ? p.supplements.length : "none"}</b><span className="d">{p.supplements.map((s) => `${SUPPLEMENT_MAP[s.id]?.name ?? s.id} ${s.dose} ${s.time}`).join(" · ") || "add from the Supplements tab"}</span></div>
+            <div><span className="k">Supplements</span><b>{p.supplements.length ? p.supplements.length : "none"}</b><span className="d">{p.supplements.map((s) => `${SUPPLEMENT_MAP[s.id]?.name ?? s.id} ${s.dose} ${s.time}`).join(", ") || "add from the Supplements tab"}</span></div>
           </div>
         )}
       </section>
 
       <div className="nu-cols guide">
         <section className="card nu-weight" aria-label="Weight">
-          <div className="hd"><div><div className="k">Body weight</div><div className="v"><b>{current != null ? showW(current) : "—"}</b>{next ? <span className="muted"> · next {showW(next.weight_kg)} by {shortDate(next.date)}</span> : p.goal_weight_kg ? <span className="muted"> · target {showW(p.goal_weight_kg)}</span> : null}</div></div>
+          <div className="hd"><div><div className="k">Body weight</div><div className="v"><b>{current != null ? showW(current) : "—"}</b>{next ? <span className="muted">, next {showW(next.weight_kg)} by {shortDate(next.date)}</span> : p.goal_weight_kg ? <span className="muted">, target {showW(p.goal_weight_kg)}</span> : null}</div></div>
             <form className="logw" onSubmit={(e) => { e.preventDefault(); const v = parseFloat(wIn); if (!v) return; nut.logWeight(tNow, +(imperial ? v / 2.20462 : v).toFixed(1)); setWIn(""); }}><input value={wIn} onChange={(e) => setWIn(e.target.value)} inputMode="decimal" placeholder={imperial ? "lb" : "kg"} aria-label="Today's weight" /><button type="submit" className="btn small">Log today</button></form>
           </div>
           <WeightChart timeline={timeline} path={path} logged={weights.map((w) => ({ date: w.date, kg: w.weight_kg }))} proj={projLine} imperial={imperial} raceDate={raceDate} />
@@ -93,16 +93,16 @@ export function Guide() {
       </div>
 
       <section className="card nu-weekfuel" aria-label="This week's fuel">
-        <div className="hd"><div className="k">This week's fuel · Week {week.week}</div></div>
+        <div className="hd"><div className="k">This week's fuel, Week {week.week}</div></div>
         {weekSessions.length ? (
           <table className="tbl small">
             <thead><tr><th>Day</th><th>Session</th><th>Before</th><th>During</th><th>After</th></tr></thead>
-            <tbody>{weekSessions.map((s) => { const f = nut.fuelFor(s); return <tr key={s.id}><td>{DAYS[s.dayIndex]} {shortDate(s.date)}</td><td><span className="sess"><SportIcon sport={s.sport} size={16} />{s.title} · {s.intensity} · {s.min} min</span></td><td>{f.before ? `${f.before} g carbs, 1–2 h before` : "—"}</td><td>{f.perHour ? `${f.perHour} g/h · ${f.during} g total` : "water"}</td><td>{f.after.carbs ? `${f.after.carbs} g carbs + ${f.after.protein} g protein ${f.window}` : `${f.after.protein} g protein at the next meal`}</td></tr>; })}</tbody>
+            <tbody>{weekSessions.map((s) => { const f = nut.fuelFor(s); return <tr key={s.id}><td>{DAYS[s.dayIndex]} {shortDate(s.date)}</td><td><span className="sess"><SportIcon sport={s.sport} size={16} />{s.title}, {s.intensity}, {s.min} min</span></td><td>{f.before ? `${f.before} g carbs, 1–2 h before` : "—"}</td><td>{f.perHour ? `${f.perHour} g/h, ${f.during} g total` : "water"}</td><td>{f.after.carbs ? `${f.after.carbs} g carbs + ${f.after.protein} g protein ${f.window}` : `${f.after.protein} g protein at the next meal`}</td></tr>; })}</tbody>
           </table>
         ) : <div className="muted small">No sessions this week.</div>}
       </section>
 
-      <div className="section-head" style={{ marginTop: 8 }}><h2>Reference</h2><span className="sub">{NUTRITION.length} topics · the numbers behind the targets</span></div>
+      <div className="section-head" style={{ marginTop: 8 }}><h2>Reference</h2><span className="sub">{NUTRITION.length} topics, the numbers behind the targets</span></div>
       <Cubes items={NUTRITION} openId={open} onOpen={(id) => { setOpen(id); if (id) setTimeout(() => document.querySelector(".nu-guide .cube-open")?.scrollIntoView({ block: "start", behavior: "smooth" }), 0); }} columns={4} />
     </div>
   );

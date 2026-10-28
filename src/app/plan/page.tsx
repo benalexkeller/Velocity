@@ -45,7 +45,7 @@ function AddWorkout({ week, onDone }: { week: Week; onDone: (id: string | null) 
         <label>Intensity<select value={intensity} onChange={(e) => setIntensity(e.target.value)}>{INTENSITIES.map((k) => <option key={k}>{k}</option>)}</select></label>
       </div>
       <div className="two">
-        <label>Day<input type="date" value={date} min={plan.planRange?.start} max={plan.planRange?.end} onChange={(e) => setDate(e.target.value)} />{plan.planRange && (date < plan.planRange.start || date > plan.planRange.end) && <small className="err">Outside the plan · {dateLabel(plan.planRange.start)} – {dateLabel(plan.planRange.end)}</small>}</label>
+        <label>Day<input type="date" value={date} min={plan.planRange?.start} max={plan.planRange?.end} onChange={(e) => setDate(e.target.value)} />{plan.planRange && (date < plan.planRange.start || date > plan.planRange.end) && <small className="err">Outside the plan, {dateLabel(plan.planRange.start)} – {dateLabel(plan.planRange.end)}</small>}</label>
         <label>Start<input type="time" step={900} value={start} onChange={(e) => setStart(e.target.value)} /></label>
       </div>
       <div className="two">
@@ -74,14 +74,14 @@ function WeekOverview({ week, onClose, onOpenWeek }: { week: Week; onClose: () =
       <button className="close" type="button" onClick={onClose} aria-label="Close"><Icon name="close" /></button>
       <div className="wo-head">
         <div>
-          <div className="eyebrow">{phase?.short ?? week.phaseShort} · Week {week.week} of {plan.weeks.length}</div>
-          <h3>{dateLabel(week.start)} – {dateLabel(ymd(addDays(fromYmd(week.start), 6)))}{week.recovery ? " · recovery week" : ""}{week.race ? " · race week" : ""}</h3>
-          <p className="muted">{week.focus}{phase ? ` · ${phase.purpose}` : ""}</p>
+          <div className="eyebrow">{phase?.short ?? week.phaseShort}<span className="at">Week {week.week} of {plan.weeks.length}</span></div>
+          <h3>{dateLabel(week.start)} – {dateLabel(ymd(addDays(fromYmd(week.start), 6)))}{week.recovery ? ", recovery week" : ""}{week.race ? ", race week" : ""}</h3>
+          <p className="muted">{week.focus}{phase ? `, ${phase.purpose}` : ""}</p>
         </div>
         <button type="button" className="btn ghost" onClick={onOpenWeek}>Open week in calendar →</button>
       </div>
       <div className="wo-grid">
-        <div><div className="k">Sessions</div><div className="v">{sessions.length}</div><div className="u">{count("swim")} swim · {count("bike") + count("brick")} bike · {count("run")} run{count("strength") ? ` · ${count("strength")} strength` : ""}</div></div>
+        <div><div className="k">Sessions</div><div className="v">{sessions.length}</div><div className="u">{count("swim")} swim, {count("bike") + count("brick")} bike, {count("run")} run{count("strength") ? `, ${count("strength")} strength` : ""}</div></div>
         <div><div className="k">Planned hours</div><div className="v">{fmtHours(week.plannedMin / 60)}</div><div className="u">{past ? `${fmtHours(st.actualH)} done` : "planned"}</div></div>
         <div><SportIcon sport="swim" size={18} /><div className="k">Swim</div><div className="v">{fmtHours(p.swim)}</div><div className="u">{past ? `${fmtHours(st.bySport.swim)} done` : n(count("swim"))}</div></div>
         <div><SportIcon sport="bike" size={18} /><div className="k">Bike</div><div className="v">{fmtHours(p.bike)}</div><div className="u">{past ? `${fmtHours(st.bySport.bike)} done` : n(count("bike") + count("brick"))}</div></div>
@@ -160,7 +160,7 @@ function Plan() {
         <section className="section">
           <div className="section-head">
             <h2>Weekly hours</h2>
-            <span className="sub">{plan.hasPlan ? `${plan.weeks.length} weeks · ${plan.phases.length} phases · race ${dateFull(plan.athlete.race.date)}` : plan.athlete.hasRace ? `${plan.athlete.race.name} · ${dateLabel(plan.athlete.race.date)} ${plan.athlete.race.date.slice(0, 4)} · no plan yet` : "No race set · build a plan to add one"}</span>
+            <span className="sub">{plan.hasPlan ? `${plan.weeks.length} weeks, ${plan.phases.length} phases, race ${dateFull(plan.athlete.race.date)}` : plan.athlete.hasRace ? `${plan.athlete.race.name}, ${dateLabel(plan.athlete.race.date)} ${plan.athlete.race.date.slice(0, 4)}, no plan yet` : "No race set, build a plan to add one"}</span>
             <span className="legend">
               <span><i style={{ background: "var(--swim)" }} />Swim</span>
               <span><i style={{ background: "var(--bike)" }} />Bike</span>

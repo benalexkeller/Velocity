@@ -12,7 +12,7 @@ import { STATUS_LABEL, activityLoad, plannedLoad, type Session, type Sport } fro
 import { usePlan } from "@/lib/store";
 import { dateLabel, fmtDur, fmtHMS, fmtPace, today, ymd } from "@/lib/format";
 import { elev, fmtDist, fmtSpeed, runPace, swimDist, swimPace } from "@/lib/units";
-import { hardestStep, workoutFor, zoneName, type Segment, type Zone } from "@/lib/workout";
+import { hardestStep, workoutFor, zoneName, zoneWord, type Segment, type Zone } from "@/lib/workout";
 
 const INTENSITIES = ["Zone 2", "Aerobic", "Technique", "Endurance", "Tempo", "Threshold", "Intervals", "Race"];
 const SPORTS: Sport[] = ["swim", "bike", "run", "brick", "strength", "hike", "other", "rest"];
@@ -26,7 +26,7 @@ function MoveForm({ s, onDone }: { s: Session; onDone: () => void }) {
   const outside = !!r && (date < r.start || date > r.end);
   return (
     <form className="sp-form" onSubmit={(e) => { e.preventDefault(); if (outside) return; plan.moveSession(s.id, { date, start }); onDone(); }}>
-      <label>Day<input type="date" value={date} min={r?.start} max={r?.end} onChange={(e) => setDate(e.target.value)} />{outside && r && <small className="err">Outside the plan · {dateLabel(r.start)} – {dateLabel(r.end)}</small>}</label>
+      <label>Day<input type="date" value={date} min={r?.start} max={r?.end} onChange={(e) => setDate(e.target.value)} />{outside && r && <small className="err">Outside the plan, {dateLabel(r.start)} – {dateLabel(r.end)}</small>}</label>
       <label>Start<input type="time" step={900} value={start} onChange={(e) => setStart(e.target.value)} /></label>
       <div className="row"><button type="submit" className="btn" disabled={outside}>Move session</button><button type="button" className="btn ghost" onClick={onDone}>Cancel</button></div>
     </form>
@@ -98,7 +98,7 @@ function IntervalChart({ segments, fuel }: { segments: Segment[]; fuel: Fuel }) 
   const beforeText = roomy ? longB : fuel && fuel.before ? `${fuel.before} g` : "";
   const afterText = roomy ? longA : fuel ? (fuel.after.carbs ? `${fuel.after.carbs} g + ${fuel.after.protein} g` : `${fuel.after.protein} g`) : "";
   const beforeSub = fuel ? (roomy ? `by ${fuel.beforeAt}` : `before, by ${fuel.beforeAt}`) : "";
-  const afterSub = fuel ? (roomy ? fuel.window : `after · ${fuel.window}`) : "";
+  const afterSub = fuel ? (roomy ? fuel.window : `after, ${fuel.window}`) : "";
   const beforeEnd = x(0) + 10 + (beforeText ? textW(beforeText) : 0), afterStart = x(total) - 10 - textW(afterText);
   return (
     <svg ref={svgRef} className="chart sp-chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Session structure: time, target effort and fuel">
@@ -108,7 +108,7 @@ function IntervalChart({ segments, fuel }: { segments: Segment[]; fuel: Fuel }) 
         const work = g.segs.filter((q) => q.s.kind !== "recovery");
         const isSet = work.length > 1;
         const top = Math.min(...g.segs.map((q) => y(q.s.zone)));
-        const title = isSet ? `${g.label} · ${g.target}` : g.segs[0].s.kind === "recovery" ? "" : g.label;
+        const title = isSet ? `${g.label}, ${g.target}` : g.segs[0].s.kind === "recovery" ? "" : g.label;
         const titleFits = title && textW(title) <= span + 8;
         return (
           <g key={gi}>
@@ -171,11 +171,11 @@ export function SessionPanel({ id, onClose }: { id: string | null; onClose: () =
       <div className="sp-head">
         <SportIcon sport={s.sport} size={48} />
         <div>
-          <div className="eyebrow">{dateLabel(s.date)}{s.start ? ` · ${s.start}` : ""}<span className="sp-wk"> · Week {w.week} · {w.phaseShort}</span></div>
-          <h2>{raceDay ? "Race day" : s.title}{s.sport !== "rest" && !raceDay && <span className="dim"> · {s.intensity}</span>}</h2>
+          <div className="eyebrow">{dateLabel(s.date)}{s.start ? `, ${s.start}` : ""}<span className="sp-wk at">Week {w.week}, {w.phaseShort}</span></div>
+          <h2>{raceDay ? "Race day" : s.title}{s.sport !== "rest" && !raceDay && <span className="dim at">{s.intensity}</span>}</h2>
         </div>
         {s.locked && s.status !== "done" && <span className="status locked" title="Locked: drag and Move are off until you unlock it"><Icon name="lock" />Locked</span>}
-        <span className={`status ${s.status}`}>{s.status === "done" && "✓ "}{status}{s.status === "partial" && s.actual ? ` · ${Math.round(s.actual.min)} of ${s.min} min` : ""}</span>
+        <span className={`status ${s.status}`}>{s.status === "done" && "✓ "}{status}{s.status === "partial" && s.actual ? `, ${Math.round(s.actual.min)} of ${s.min} min` : ""}</span>
       </div>
 
       <div className="sp-grid">
@@ -183,8 +183,8 @@ export function SessionPanel({ id, onClose }: { id: string | null; onClose: () =
           {s.sport !== "rest" ? (
             <>
               <div className="stat"><div className="k">Duration</div><div className="v">{s.min >= 120 ? fmtDur(s.min) : `${s.min} min`}</div></div>
-              <div className="stat"><div className="k">Zone</div><div className="v">{zoneName(zoneOfIntensity).split(" · ")[0]}<small> · {zoneName(zoneOfIntensity).split(" · ")[1]}</small></div></div>
-              {tgt && <div className="stat"><div className="k">{tgt.k}</div><div className="v">{tgt.v}</div><div className="u">{tgt.u}{plan.athlete.zonesSource === "intake" ? `${tgt.u ? " · " : ""}from your answers` : plan.athlete.zonesSource === "default" ? `${tgt.u ? " · " : ""}default zones` : ""}</div></div>}
+              <div className="stat"><div className="k">Zone</div><div className="v">Z{zoneOfIntensity}<small className="at">{zoneWord(zoneOfIntensity)}</small></div></div>
+              {tgt && <div className="stat"><div className="k">{tgt.k}</div><div className="v">{tgt.v}</div><div className="u">{tgt.u}{plan.athlete.zonesSource === "intake" ? `${tgt.u ? ", " : ""}from your answers` : plan.athlete.zonesSource === "default" ? `${tgt.u ? ", " : ""}default zones` : ""}</div></div>}
               <div className="stat"><div className="k">Planned load</div><div className="v">{plannedLoad(s)}</div></div>
               {s.actual && (s.actual.sport !== s.sport || Math.abs(s.actual.min - s.min) >= 5) && <div className="stat actual"><div className="k">Done as</div><div className="v">{s.actual.sport[0].toUpperCase() + s.actual.sport.slice(1)} {s.actual.min} min</div><div className="u">planned {s.title} {s.min} min</div></div>}
             </>
@@ -203,7 +203,7 @@ export function SessionPanel({ id, onClose }: { id: string | null; onClose: () =
               {acts.map((a) => (
                 <Link key={a.id} href={`/activities?a=${a.id}`} className="sp-act">
                   <SportIcon sport={a.sport} size={22} />
-                  <div className="t"><b>{a.name}</b><small>{a.start ? `${a.start} · ` : ""}{fmtHMS(a.min)}{a.sport === "swim" && a.yd ? ` · ${swimDist(a.yd).v.toLocaleString()} ${swimDist(0).u}` : a.mi ? ` · ${fmtDist(a.mi)}` : ""}{a.sport === "run" && a.pace_s ? ` · ${fmtPace(runPace(a.pace_s).s)}${runPace(0).u}` : a.sport === "bike" && a.mph ? ` · ${fmtSpeed(a.mph)}` : a.sport === "swim" && a.p100_s ? ` · ${fmtPace(swimPace(a.p100_s).s)}${swimPace(0).u}` : ""}{a.hr ? ` · ${a.hr} bpm` : ""}{a.elev_ft ? ` · ${elev(a.elev_ft).v} ${elev(0).u}` : ""} · load {activityLoad(a, plan.athlete.lthr ?? undefined)}</small></div>
+                  <div className="t"><b>{a.name}</b><small>{a.start ? `${a.start}, ` : ""}{fmtHMS(a.min)}{a.sport === "swim" && a.yd ? `, ${swimDist(a.yd).v.toLocaleString()} ${swimDist(0).u}` : a.mi ? `, ${fmtDist(a.mi)}` : ""}{a.sport === "run" && a.pace_s ? `, ${fmtPace(runPace(a.pace_s).s)}${runPace(0).u}` : a.sport === "bike" && a.mph ? `, ${fmtSpeed(a.mph)}` : a.sport === "swim" && a.p100_s ? `, ${fmtPace(swimPace(a.p100_s).s)}${swimPace(0).u}` : ""}{a.hr ? `, ${a.hr} bpm` : ""}{a.elev_ft ? `, ${elev(a.elev_ft).v} ${elev(0).u}` : ""}, load {activityLoad(a, plan.athlete.lthr ?? undefined)}</small></div>
                   {a.route && <div className="thumb"><RouteMap route={a.route} height={40} bg="var(--surface-2)" pad={0.1} /></div>}
                 </Link>
               ))}
@@ -211,10 +211,10 @@ export function SessionPanel({ id, onClose }: { id: string | null; onClose: () =
           )}
           {mode === "view" && (
             <div className="sp-actions">
-              {s.sport !== "rest" && acts.length === 0 && (s.date <= ymd(today()) ? <button type="button" className="btn" onClick={() => setMode("log")}><Icon name="plus" />Log activity</button> : <span className="sp-toast">Log it once it is done · {dateLabel(s.date)}</span>)}
+              {s.sport !== "rest" && acts.length === 0 && (s.date <= ymd(today()) ? <button type="button" className="btn" onClick={() => setMode("log")}><Icon name="plus" />Log activity</button> : <span className="sp-toast">Log it once it is done, {dateLabel(s.date)}</span>)}
               {!s.locked && s.status !== "done" && <button type="button" className="btn ghost" onClick={() => setMode("move")}>Move</button>}
               <button type="button" className="btn ghost" onClick={() => setMode("edit")}>Edit</button>
-              {s.status !== "done" && <button type="button" className={`btn ghost${s.locked ? " on" : ""}`} onClick={() => { plan.toggleLock(s.id); setToast(s.locked ? "Unlocked · can be moved again" : "Locked · stays where it is"); }}><Icon name={s.locked ? "lock" : "unlock"} />{s.locked ? "Unlock" : "Lock"}</button>}
+              {s.status !== "done" && <button type="button" className={`btn ghost${s.locked ? " on" : ""}`} onClick={() => { plan.toggleLock(s.id); setToast(s.locked ? "Unlocked, can be moved again" : "Locked, stays where it is"); }}><Icon name={s.locked ? "lock" : "unlock"} />{s.locked ? "Unlock" : "Lock"}</button>}
               {toast && <span className="sp-toast">✓ {toast}</span>}
             </div>
           )}
@@ -222,7 +222,7 @@ export function SessionPanel({ id, onClose }: { id: string | null; onClose: () =
           {mode === "edit" && <EditForm s={s} onDone={() => { setMode("view"); setToast("Saved"); }} />}
           {mode === "log" && (
             <div className="sp-log">
-              <LogActivity inline open onClose={() => setMode("view")} initial={{ sport: s.sport === "brick" ? "bike" : s.sport === "rest" ? "other" : s.sport, date: s.date, time: s.start ?? "06:30", min: s.min, name: `${s.title} · ${s.intensity}` }} onSaved={(a) => { plan.logActivity(a); setMode("view"); setToast(`Logged · ${a.name}`); }} />
+              <LogActivity inline open onClose={() => setMode("view")} initial={{ sport: s.sport === "brick" ? "bike" : s.sport === "rest" ? "other" : s.sport, date: s.date, time: s.start ?? "06:30", min: s.min, name: `${s.title}, ${s.intensity}` }} onSaved={(a) => { plan.logActivity(a); setMode("view"); setToast(`Logged, ${a.name}`); }} />
             </div>
           )}
         </div>

@@ -34,14 +34,14 @@ function derive(data: UserData, athlete: Athlete) {
     const text = p?.text ?? s.text;
     const sport = p?.sport ?? (p?.text ? sportOf(text) : s.sport);
     const intensity = p?.intensity ?? (p?.text ? intensityOf(text) : s.intensity);
-    base.push({ ...s, date: p?.date ?? s.date, start: p?.start ?? s.start, min: p?.min ?? s.min, sport, intensity, text, title: SPORT_LABEL[sport], detail: sport === "rest" ? "No session" : `${intensity} · ${p?.min ?? s.min} min`, why: whyOf(text, sport), locked: !!p?.locked });
+    base.push({ ...s, date: p?.date ?? s.date, start: p?.start ?? s.start, min: p?.min ?? s.min, sport, intensity, text, title: SPORT_LABEL[sport], detail: sport === "rest" ? "No session" : `${intensity}, ${p?.min ?? s.min} min`, why: whyOf(text, sport), locked: !!p?.locked });
   }
   for (const a of st.added) {
     // sessions added by hand take the same patches (move, edit, lock) as plan sessions
     const p = st.patches[a.id];
     if (p?.deleted) continue;
     const sport = p?.sport ?? a.sport, min = p?.min ?? a.min, intensity = p?.intensity ?? a.intensity, text = p?.text ?? a.text;
-    base.push({ id: a.id, date: p?.date ?? a.date, dayIndex: 0, start: p?.start ?? a.start, min, sport, title: SPORT_LABEL[sport], detail: `${intensity} · ${min} min`, text, intensity, why: whyOf(text, sport), status: "planned", locked: !!p?.locked });
+    base.push({ id: a.id, date: p?.date ?? a.date, dayIndex: 0, start: p?.start ?? a.start, min, sport, title: SPORT_LABEL[sport], detail: `${intensity}, ${min} min`, text, intensity, why: whyOf(text, sport), status: "planned", locked: !!p?.locked });
   }
   const weeks: Week[] = baseWeeks.map((w) => {
     const start = fromYmd(w.start);
@@ -217,14 +217,20 @@ export function PlanProvider({ children }: { children: ReactNode }) {
       toggleExcluded: (id) => { const cur = data.activities.find((a) => a.id === id); if (!cur) return; const excluded = !cur.excluded; setData((c) => ({ ...c, activities: c.activities.map((a) => (a.id === id ? { ...a, excluded: excluded || undefined } : a)) })); void be.setExcluded(id, excluded); },
       post: async (text, opts = {}) => {
         const day = ymd(today());
+        // saving a message must never break the conversation: a failed save (offline, database not migrated)
+        // keeps the message on screen with a local id and the chat goes on
+        const save = async (m: ThreadMsg): Promise<ThreadMsg> => {
+          try { const [saved] = await be.appendThread([m]); return saved?.id ? saved : { ...m, id: m.id ?? `local-${Date.now()}` }; }
+          catch (e) { console.error("[velocity] save message", e); return { ...m, id: m.id ?? `local-${Date.now()}` }; }
+        };
         const you: ThreadMsg = { who: "You", at: nowHM(), text, day };
         setData((cur) => ({ ...cur, thread: [...cur.thread, you] }));
-        const [savedYou] = await be.appendThread([you]);
-        setData((cur) => ({ ...cur, thread: cur.thread.map((m) => (m === you ? savedYou : m)) }));
         setBusy(true);
+        const savedYou = await save(you);
+        setData((cur) => ({ ...cur, thread: cur.thread.map((m) => (m === you ? savedYou : m)) }));
         const say = async (reply: ThreadMsg) => {
           setData((cur) => ({ ...cur, thread: [...cur.thread, reply] }));
-          const [saved] = await be.appendThread([reply]);
+          const saved = await save(reply);
           setData((cur) => ({ ...cur, thread: cur.thread.map((m) => (m === reply ? saved : m)) }));
         };
         try {
@@ -249,7 +255,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
         const msg = data.thread.find((m) => m.id === id);
         if (!msg?.proposal || msg.status !== "open") return;
         setData((cur) => ({ ...cur, thread: cur.thread.map((m) => (m.id === id ? { ...m, status } : m)) }));
-        await be.setThreadStatus(id, status);
+        if (!id.startsWith("local-")) { try { await be.setThreadStatus(id, status); } catch (e) { console.error("[velocity] save decision", e); } }
         if (status !== "accepted") return;
         if (msg.proposal.kind === "review") { await storeRef.current!.post("Run the full plan review.", { mode: "restructure" }); return; }
         applyProposal(msg.proposal);
@@ -312,7 +318,7 @@ function coachReply(text: string, d: ReturnType<typeof derive>, athlete: Athlete
   const todayS = wk.sessions.find((s) => s.date === ymd(t));
   const tomorrow = ymd(addDays(t, 1));
   const tom = d.weeks.flatMap((w) => w.sessions).find((s) => s.date === tomorrow);
-  const say = (s: Session) => (s.sport === "rest" ? "rest day. " + s.text : `${s.title} · ${s.intensity} · ${s.min} min${s.start ? ` at ${s.start}` : ""}. ${s.text}`);
+  const say = (s: Session) => (s.sport === "rest" ? "rest day. " + s.text : `${s.title}, ${s.intensity}, ${s.min} min${s.start ? ` at ${s.start}` : ""}. ${s.text}`);
   if (/today/.test(q)) return todayS ? `Today: ${say(todayS)}` : "Nothing planned today.";
   if (/tomorrow/.test(q)) return tom ? `Tomorrow: ${say(tom)}` : "Nothing planned tomorrow.";
   if (/this week|week/.test(q)) return `Week ${wk.week}${wk.phaseShort !== "No plan" ? ` (${wk.phaseShort})` : ""}: ${done} of ${total} sessions done, ${(wk.plannedMin / 60).toFixed(1)} h planned.${wk.focus ? ` Focus: ${wk.focus}.` : ""}`;

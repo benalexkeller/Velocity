@@ -140,7 +140,7 @@ function WeekList({ week, selectedId, onPick }: { week: Week; selectedId?: strin
                 return (
                   <button key={s.id} type="button" className={`wl-s ${a?.sport ?? s.sport} ${s.status}${s.id === selectedId ? " sel" : ""}`} onClick={() => onPick?.(s)}>
                     <SportIcon sport={a?.sport ?? s.sport} size={20} />
-                    <span className="t"><b>{a ? SPORT_LABEL[a.sport] : s.title}{s.start ? ` · ${a?.start ?? s.start}` : ""}</b><small>{a ? `${a.min} min done` : `${s.intensity} · ${s.min} min`}</small></span>
+                    <span className="t"><b>{a ? SPORT_LABEL[a.sport] : s.title}{s.start && <span className="at">{a?.start ?? s.start}</span>}</b><small>{a ? `${a.min} min done` : <>{s.intensity}<span className="at">{s.min} min</span></>}</small></span>
                     {s.status !== "planned" && <span className={`wl-st ${s.status}`}>{s.status === "done" ? "✓" : STATUS_LABEL[s.status]}</span>}
                     {s.locked && s.status !== "done" && <span className="wl-lk" aria-label="Locked"><Icon name="lock" /></span>}
                   </button>
@@ -168,12 +168,12 @@ function Block({ s, y, selected, drag, onDown, onMove, onUp, onLock, onPick }: {
   const style: React.CSSProperties = drag ? { transform: `translate(${dx}px, ${dy}px)` } : {};
   const cls = `wg-ev ${sport}${done ? " done" : ""}${s.status === "partial" ? " partial" : ""}${s.status === "substituted" ? " substituted" : ""}${selected ? " sel" : ""}${s.locked ? " locked" : ""}${drag ? " drag" : ""}`;
   const handlers = { onPointerDown: onDown, onPointerMove: onMove, onPointerUp: onUp, onPointerCancel: onUp };
-  const lock = !done && <button type="button" className="lk" onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onLock(); }} aria-label={s.locked ? "Unlock session" : "Lock session"} title={s.locked ? "Locked · click to unlock" : "Lock in place"}><Icon name={s.locked ? "lock" : "unlock"} /></button>;
+  const lock = !done && <button type="button" className="lk" onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onLock(); }} aria-label={s.locked ? "Unlock session" : "Lock session"} title={s.locked ? "Locked, click to unlock" : "Lock in place"}><Icon name={s.locked ? "lock" : "unlock"} /></button>;
   if (s.sport === "rest") {
     return (
       <div className={cls} style={{ top: y(VIEW0) + 6, ...style }} {...handlers} role="button" tabIndex={0} aria-label={`Rest day, ${DAYS[s.dayIndex]}`} onKeyDown={onKey}>
         <SportIcon sport="rest" size={20} />
-        <div className="txt"><b>Rest day{done && <span className="ck"><Icon name="check" /></span>}</b><small>No session</small></div>
+        <div className="txt"><b><span className="t">Rest day</span>{done && <span className="ck"><Icon name="check" /></span>}</b><small><span className="t">No session</span></small></div>
         {lock}
       </div>
     );
@@ -181,18 +181,19 @@ function Block({ s, y, selected, drag, onDown, onMove, onUp, onLock, onPick }: {
   const h1 = h0 + min / 60;
   const startLabel = drag ? clock(drag.h) : a?.start ?? s.start;
   return (
-    <div className={cls} style={{ top: y(h0) + 2, height: Math.max(44, (h1 - h0) * ROW - 4), ...style }} title={a ? `${a.name} · ${a.min} min${differs ? ` · planned ${s.title} ${s.min} min` : ""}` : s.text} {...handlers} role="button" tabIndex={0} aria-label={`${s.title}, ${DAYS[s.dayIndex]} ${s.start ?? ""}, ${s.intensity}, ${s.min} minutes, ${s.status}`} onKeyDown={onKey}>
+    <div className={cls} style={{ top: y(h0) + 2, height: Math.max(44, (h1 - h0) * ROW - 4), ...style }} title={a ? `${a.name}, ${a.min} min${differs ? `, planned ${s.title} ${s.min} min` : ""}` : s.text} {...handlers} role="button" tabIndex={0} aria-label={`${s.title}, ${DAYS[s.dayIndex]} ${s.start ?? ""}, ${s.intensity}, ${s.min} minutes, ${s.status}`} onKeyDown={onKey}>
       <SportIcon sport={sport} size={20} />
       <div className="txt">
-        <b>{a ? SPORT_LABEL[a.sport] : s.title}{done && <span className="ck"><Icon name="check" /></span>}<span className="dot">·</span>{startLabel}</b>
-        <small>{a ? `${a.name} · ${a.min} min${differs ? ` · planned ${s.min}` : ""}` : `${s.intensity} · ${s.min} min`}</small>
+        {/* each line: the main fact, then a second one that shows only when it fits (it wraps below and is clipped) */}
+        <b><span className="t">{a ? SPORT_LABEL[a.sport] : s.title}</span>{done && <span className="ck"><Icon name="check" /></span>}<span className="at">{startLabel}</span></b>
+        <small><span className="t">{a ? a.name : s.intensity}</span><span className="at">{a ? `${a.min} min${differs ? `, planned ${s.min}` : ""}` : `${s.min} min`}</span></small>
       </div>
       {lock}
     </div>
   );
 }
 
-export function weekTitle(w: Week) { return `Week ${w.week} · ${weekRange(w)}`; }
+export function weekTitle(w: Week) { return `Week ${w.week}, ${weekRange(w)}`; }
 /** Date range of a week without the week number, e.g. "5 – 11 Oct". */
 export function weekRange(w: Week) { return rangeLabel(w.start, ymd(addDays(fromYmd(w.start), 6))); }
 export const isoToday = () => ymd(today());

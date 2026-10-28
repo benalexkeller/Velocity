@@ -38,8 +38,8 @@ function AccountMenu() {
           <div className="who"><b>{a.name}</b>{a.username ? `@${a.username}` : a.email ?? "saved on this device"}</div>
           <Link href="/profile" role="menuitem" onClick={() => setOpen(false)}>Profile</Link>
           <button type="button" role="menuitem" onClick={() => { setOpen(false); setFeedback(true); }}>Send feedback</button>
-          {plan.accounts && a.isAdmin && <Link href="/admin" role="menuitem" onClick={() => setOpen(false)}>Admin · users & feedback</Link>}
-          {plan.accounts ? <button type="button" role="menuitem" onClick={() => { setOpen(false); void plan.signOut(); }}>Sign out</button> : <div className="who" style={{ border: 0, margin: 0 }}>No account · saved in this browser</div>}
+          {plan.accounts && a.isAdmin && <Link href="/admin" role="menuitem" onClick={() => setOpen(false)}>Admin</Link>}
+          {plan.accounts ? <button type="button" role="menuitem" onClick={() => { setOpen(false); void plan.signOut(); }}>Sign out</button> : <div className="who" style={{ border: 0, margin: 0 }}>No account, saved in this browser</div>}
         </div>
       )}
       {feedback && <FeedbackModal onClose={() => setFeedback(false)} />}
@@ -53,7 +53,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const ATHLETE = plan.athlete;
   const hour = useNow().getHours();
   const greet = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-  if (path === "/" || path === "/login" || path.startsWith("/auth") || path === "/setup") return <>{children}</>;
+  if (path === "/" || path === "/login" || path.startsWith("/auth") || path.startsWith("/product") || path === "/setup") return <>{children}</>;
   return (
     <div className="shell">
       <header className="topbar">

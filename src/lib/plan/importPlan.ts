@@ -80,7 +80,7 @@ export function rowsToPlan(rows: Row[]): ImportResult {
     const phase = days.find((d) => d.phase)?.phase ?? lastPhase; lastPhase = phase;
     const race = days.some((d) => d.race);
     const hours = days.reduce((s, d) => s + (d.race ? 0 : d.min), 0) / 60;
-    weeks.push({ week: w + 1, start: ymd(start), phase, focus: `${phase} · ${hours.toFixed(1)} h · imported`, recovery: false, race, days: days.map((d) => ({ text: d.text, min: d.min })) });
+    weeks.push({ week: w + 1, start: ymd(start), phase, focus: `${phase}, ${hours.toFixed(1)} h, imported`, recovery: false, race, days: days.map((d) => ({ text: d.text, min: d.min })) });
   }
   return { weeks, rows: n, days: byDay.size, issues };
 }

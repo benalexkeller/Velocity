@@ -28,9 +28,12 @@
 .wg-now span { white-space: nowrap; position: absolute; right: 4px; top: -15px; font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: 0.06em; background: var(--surface); padding: 1px 4px; border-radius: 4px; }
 .wg-ev { position: absolute; left: 4px; right: 4px; border-radius: 8px; padding: 5px 6px 5px 7px; font-size: 12px; line-height: 1.25; overflow: hidden; z-index: 1; display: flex; align-items: center; gap: 7px; }
 .wg-ev .txt { min-width: 0; }
-.wg-ev b { display: flex; align-items: center; gap: 3px; font-size: 12px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.wg-ev b .dot { opacity: 0.6; font-weight: 400; }
-.wg-ev small { display: block; font-size: 12px; opacity: 0.8; margin-top: 2px; font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wg-ev b, .wg-ev small { display: flex; align-items: center; flex-wrap: wrap; column-gap: 6px; font-size: 12px; line-height: 15px; max-height: 15px; overflow: hidden; white-space: nowrap; }
+.wg-ev b { font-weight: 600; column-gap: 3px; }
+.wg-ev small { opacity: 0.8; margin-top: 2px; font-weight: 400; }
+.wg-ev .t { min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }
+.wg-ev .at { margin-left: 0; font-weight: 400; color: inherit; opacity: 0.8; }
+.wg-ev b .at { margin-left: 2px; }
 .wg-ev .ck { width: 14px; height: 14px; display: inline-flex; }
 .wg-ev .ck svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 /* status drives color: outstanding = light blue, completed = black */

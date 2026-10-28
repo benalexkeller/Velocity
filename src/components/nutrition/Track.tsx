@@ -72,7 +72,7 @@ function DayView({ date, setDate, setView }: { date: string; setDate: (d: string
         </section>
       ) : (
       <section className="card nu-targets" aria-label="Today's targets">
-        <div className="kcal" title={`${fmt(t.kcal)} kcal = ${nut.profile.base_kcal != null ? `${fmt(t.base)} (your rest-day number)` : `${fmt(t.bmr)} resting × 1.4`}${t.training ? ` + ${fmt(t.training)} training (${d.basis === "done" ? "from what you logged" : d.basis === "mixed" ? "logged + still planned" : "planned"})` : ""}${t.goalAdj ? ` ${t.goalAdj > 0 ? "+" : "−"} ${fmt(Math.abs(t.goalAdj))} goal` : ""}${t.goalNote ? ` · ${t.goalNote}` : ""}`}><div className="k">Calories</div><div className="v"><b>{fmt(d.totals.kcal)}</b> / {fmt(t.kcal)} kcal</div><Bar v={d.totals.kcal} t={t.kcal} /><div className="u">{d.totals.kcal <= t.kcal ? `${fmt(t.kcal - d.totals.kcal)} remaining` : `${fmt(d.totals.kcal - t.kcal)} over`}</div></div>
+        <div className="kcal" title={`${fmt(t.kcal)} kcal = ${nut.profile.base_kcal != null ? `${fmt(t.base)} (your rest-day number)` : `${fmt(t.bmr)} resting × 1.4`}${t.training ? ` + ${fmt(t.training)} training (${d.basis === "done" ? "from what you logged" : d.basis === "mixed" ? "logged + still planned" : "planned"})` : ""}${t.goalAdj ? ` ${t.goalAdj > 0 ? "+" : "−"} ${fmt(Math.abs(t.goalAdj))} goal` : ""}${t.goalNote ? `, ${t.goalNote}` : ""}`}><div className="k">Calories</div><div className="v"><b>{fmt(d.totals.kcal)}</b> / {fmt(t.kcal)} kcal</div><Bar v={d.totals.kcal} t={t.kcal} /><div className="u">{d.totals.kcal <= t.kcal ? `${fmt(t.kcal - d.totals.kcal)} remaining` : `${fmt(d.totals.kcal - t.kcal)} over`}</div></div>
         <div><div className="k">Carbs</div><div className="v"><b>{d.estimateOnly ? "—" : fmt(d.totals.carbs)}</b> / {fmt(t.carbs)} g</div><Bar v={d.estimateOnly ? 0 : d.totals.carbs} t={t.carbs} /><div className="u">{d.estimateOnly ? "estimate, no breakdown" : `${fmt(Math.max(0, t.carbs - d.totals.carbs))} g remaining`}</div></div>
         <div><div className="k">Protein</div><div className="v"><b>{d.estimateOnly ? "—" : fmt(d.totals.protein)}</b> / {fmt(t.protein)} g</div><Bar v={d.estimateOnly ? 0 : d.totals.protein} t={t.protein} color="var(--protein)" /><div className="u">{d.estimateOnly ? "estimate, no breakdown" : `${fmt(Math.max(0, t.protein - d.totals.protein))} g remaining`}</div></div>
         <div><div className="k">Fat</div><div className="v"><b>{d.estimateOnly ? "—" : fmt(d.totals.fat)}</b> / {fmt(t.fat)} g</div><Bar v={d.estimateOnly ? 0 : d.totals.fat} t={t.fat} color="var(--fat)" /><div className="u">{d.estimateOnly ? "estimate, no breakdown" : `${fmt(Math.max(0, t.fat - d.totals.fat))} g remaining`}</div></div>
@@ -86,7 +86,7 @@ function DayView({ date, setDate, setView }: { date: string; setDate: (d: string
           <div className="nu-tl">
             {active.map((s) => (
               <Link key={s.id} href={`/plan?session=${s.id}`} className="nu-tl-session">
-                <SportIcon sport={s.sport} size={20} /><b>{s.title} {s.intensity !== "Aerobic" ? s.intensity.toLowerCase() : ""}</b><span className="muted">{s.min} min · {s.text}</span><span className="grow" /><span className="link">View workout →</span>
+                <SportIcon sport={s.sport} size={20} /><b>{s.title} {s.intensity !== "Aerobic" ? s.intensity.toLowerCase() : ""}</b><span className="muted">{s.min} min, {s.text}</span><span className="grow" /><span className="link">View workout →</span>
               </Link>
             ))}
             {MEALS.map((m) => <MealCard key={m.k} meal={m.k} entries={nut.entriesFor(date, m.k)} onAdd={() => setAdding(m.k)} onRemove={nut.removeEntry} />)}
@@ -96,14 +96,14 @@ function DayView({ date, setDate, setView }: { date: string; setDate: (d: string
         <div className="nu-side">
           {timing && t && (
             <section className="card nu-carbgoal" aria-label="Carbohydrate goal">
-              <div className="k">{dateLabel(date)} · carbohydrate</div>
+              <div className="k">Carbohydrate<span className="at">{dateLabel(date)}</span></div>
               <div className="v"><b>{fmt(t.carbs)} g</b> target</div>
-              <div className="u">{nut.profile.weight_kg} kg · {t.dayType} day · {t.carbsPerKg} g/kg{d.basis === "done" ? " · from what you logged" : d.basis === "mixed" ? " · logged + planned" : ""}</div>
+              <div className="u">{nut.profile.weight_kg} kg, {t.dayType} day, {t.carbsPerKg} g/kg{d.basis === "done" ? ", from what you logged" : d.basis === "mixed" ? ", logged + planned" : ""}</div>
               <Bar v={d.estimateOnly ? 0 : d.totals.carbs} t={t.carbs} />
-              <div className="u">{d.estimateOnly ? "Whole-day estimate, no carbohydrate breakdown" : `${fmt(d.totals.carbs)} g eaten · ${fmt(Math.max(0, t.carbs - d.totals.carbs))} g remaining`}</div>
+              <div className="u">{d.estimateOnly ? "Whole-day estimate, no carbohydrate breakdown" : `${fmt(d.totals.carbs)} g eaten, ${fmt(Math.max(0, t.carbs - d.totals.carbs))} g remaining`}</div>
               <div className="k" style={{ marginTop: 12 }}>Timing</div>
               <div className="nu-timing">
-                {timing.rows.map(([label, target, got, meal]) => <div key={label}><span>{label}{meal ? <small className="muted"> · {meal}</small> : null}</span><span className="muted">{target ? `${fmt(target)} g` : "no target"}</span>{got == null ? <span className="muted small">log under Other</span> : <Bar v={got} t={target || 1} />}<b>{got == null ? "" : `${fmt(got)} g`}</b></div>)}
+                {timing.rows.map(([label, target, got, meal]) => <div key={label}><span>{label}{meal ? <small className="muted">, {meal}</small> : null}</span><span className="muted">{target ? `${fmt(target)} g` : "no target"}</span>{got == null ? <span className="muted small">log under Other</span> : <Bar v={got} t={target || 1} />}<b>{got == null ? "" : `${fmt(got)} g`}</b></div>)}
               </div>
               <div className="u" style={{ marginTop: 8 }}>
                 {timing.fuel.before ? `Before: ${fmt(timing.fuel.before)} g by ${timing.fuel.beforeAt}. ` : ""}
@@ -148,7 +148,7 @@ function MealCard({ meal, entries, onAdd, onRemove }: { meal: Meal; entries: Log
         <div className="mh"><b>{label}</b>{entries.length > 0 && <span className="tot"><b>{fmt(tot.kcal)} kcal</b><span>{fmt(tot.c)} g carbs</span><span>{fmt(tot.p)} g protein</span><span>{fmt(tot.f)} g fat</span></span>}</div>
         {entries.map((e) => (
           <div key={e.id} className="row">
-            <span className="n">{e.name}{e.brand ? <small> · {e.brand}</small> : null}{e.source === "quick" && <small> · estimate</small>}</span>
+            <span className="n">{e.name}{e.brand ? <small>, {e.brand}</small> : null}{e.source === "quick" && <small>, estimate</small>}</span>
             <span className="a muted">{e.unit ?? (e.amount ? `${fmt(e.amount)} g` : "")}</span>
             <span className="num">{fmt(e.kcal)}</span><span className="num">{e.source === "quick" ? "—" : fmt(e.carbs_g)}</span><span className="num">{e.source === "quick" ? "—" : fmt(e.protein_g)}</span><span className="num">{e.source === "quick" ? "—" : fmt(e.fat_g)}</span>
             <button type="button" className="x" aria-label="Remove" onClick={() => onRemove(e.id)}>×</button>
@@ -214,7 +214,7 @@ function WeekView({ date, setDate, setView }: { date: string; setDate: (d: strin
           <div className="lgd"><span><i style={{ background: "var(--accent)" }} />Carbohydrate (kcal)</span><span><i style={{ background: "var(--protein)" }} />Protein (kcal)</span><span><i style={{ background: "var(--fat)" }} />Fat (kcal)</span><span><i style={{ background: "var(--track)" }} />Estimate, no breakdown</span><span><i className="dash" />Target (kcal)</span></div>
         </section>
         <section className="card nu-weekside" aria-label="Week summary">
-          <div className="k">Average</div><div className="v"><b>{fmt(avg)} kcal</b> · target {fmt(avgT)}</div><div className="u">{logged.length} of 7 days logged</div>
+          <div className="k">Average</div><div className="v"><b>{fmt(avg)} kcal</b>, target {fmt(avgT)}</div><div className="u">{logged.length} of 7 days logged</div>
           {[["Carbs", macroK.c, "var(--carb)"], ["Protein", macroK.p, "var(--protein)"], ["Fat", macroK.f, "var(--fat)"]].map(([k, v, col]) => <div key={k as string} className="pct"><span>{k}</span><b>{macroDays ? `${Math.round(((v as number) / macroTot) * 100)}%` : "—"}</b><Bar v={v as number} t={macroTot} color={col as string} /></div>)}
           <div className="k" style={{ marginTop: 14 }}>Days on target</div><div className="v"><b>{onTarget} of {logged.length}</b></div><div className="u">within ±10 % of target</div>
         </section>

@@ -25,7 +25,7 @@ export function Supplements() {
       {openS && (
         <section className="card nu-supp-open" aria-label={openS.name}>
           <button className="close" type="button" onClick={() => setOpen(null)} aria-label="Close"><Icon name="close" /></button>
-          <div className="top"><h2>{openS.name}</h2><span className={`grade g${openS.grade}`}>{openS.grade} · {GRADE_LABEL[openS.grade]}</span><button type="button" className={`btn small${mine(openS.id) ? " ghost" : ""}`} onClick={() => toggle(openS)}>{mine(openS.id) ? "✓ In my daily list · remove" : "+ Add to my daily list"}</button></div>
+          <div className="top"><h2>{openS.name}</h2><span className={`grade g${openS.grade}`}>{openS.grade}, {GRADE_LABEL[openS.grade]}</span><button type="button" className={`btn small${mine(openS.id) ? " ghost" : ""}`} onClick={() => toggle(openS)}>{mine(openS.id) ? "✓ In my daily list, remove" : "+ Add to my daily list"}</button></div>
           <div className="cols">
             <div>
               <h3>Background</h3><p>{openS.background}</p>
@@ -45,7 +45,7 @@ export function Supplements() {
       <div className="nu-supp-grid">
         {list.map((s) => (
           <article key={s.id} className={`card nu-supp${open === s.id ? " on" : ""}`}>
-            <div className="top"><h3>{s.name}</h3><span className={`grade g${s.grade}`}>{s.grade} · {GRADE_LABEL[s.grade]}</span></div>
+            <div className="top"><h3>{s.name}</h3><span className={`grade g${s.grade}`}>{s.grade}, {GRADE_LABEL[s.grade]}</span></div>
             <div className="kv"><span>What it does</span><span>{s.what}</span><span>Dose</span><span>{s.dose}</span><span>When</span><span>{s.when}</span><span>Who</span><span>{s.who}</span></div>
             <div className="acts">
               <button type="button" className="linkbtn" onClick={() => { setOpen(s.id); window.scrollTo({ top: 0, behavior: "smooth" }); }}>Full explanation and studies →</button>
@@ -55,7 +55,7 @@ export function Supplements() {
         ))}
         {(filter === "all" || filter === "C") && (
           <article className="card nu-supp none">
-            <div className="top"><h3>{NO_EVIDENCE.title}</h3><span className="grade gC">C · No evidence</span></div>
+            <div className="top"><h3>{NO_EVIDENCE.title}</h3><span className="grade gC">C, No evidence</span></div>
             <div className="kv">{NO_EVIDENCE.items.map(([k, v]) => <span key={k} style={{ display: "contents" }}><span>{k}</span><span>{v}</span></span>)}</div>
           </article>
         )}

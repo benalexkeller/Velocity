@@ -23,7 +23,7 @@ export default function StorePage() {
         <div className="products">
           {list.map((p) => (
             <a key={p.id} className="card product" href={p.url} target="_blank" rel="noopener noreferrer">
-              <span className="top"><span className="eyebrow muted">{p.category} · {p.brand}</span><span className="t">{p.name}</span></span>
+              <span className="top"><span className="eyebrow muted">{p.category}, {p.brand}</span><span className="t">{p.name}</span></span>
               <span className="s">{p.what}</span>
               <span className="foot">{p.plan ? <span className="use">{p.plan}</span> : <span />}<span className="buy">Buy at {p.brand} <Icon name="arrow" /></span></span>
             </a>

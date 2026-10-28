@@ -18,7 +18,7 @@ export const PRODUCTS: Product[] = [
   { id: "aerobars", category: "Bike", brand: "Profile Design", name: "Sonic Ergo aerobars", what: "Clip-on aerobars for a road bike. The cheapest route to an aero position.", url: "https://www.profile-design.com" },
   { id: "clifton", category: "Run", brand: "HOKA", name: "Clifton 10", what: "Cushioned daily trainer. Most of the plan's easy miles.", url: "https://www.hoka.com", plan: "Easy runs" },
   { id: "novablast", category: "Run", brand: "ASICS", name: "Novablast 5", what: "Bouncy daily trainer for easy and long runs.", url: "https://www.asics.com", plan: "Long runs" },
-  { id: "speed4", category: "Run", brand: "Saucony", name: "Endorphin Speed 4", what: "Nylon-plated tempo shoe. Intervals and tempo sessions.", url: "https://www.saucony.com", plan: "Tempo · intervals" },
+  { id: "speed4", category: "Run", brand: "Saucony", name: "Endorphin Speed 4", what: "Nylon-plated tempo shoe. Intervals and tempo sessions.", url: "https://www.saucony.com", plan: "Tempo and intervals" },
   { id: "vaporfly", category: "Run", brand: "Nike", name: "Vaporfly 4", what: "Carbon-plated race shoe. Race day and race simulations only.", url: "https://www.nike.com", plan: "Race day" },
   { id: "maverick", category: "Swim", brand: "ROKA", name: "Maverick wetsuit", what: "Full-sleeve triathlon wetsuit. Legal below 76.1 °F water temperature.", url: "https://www.roka.com", plan: "Race day if wetsuit-legal" },
   { id: "athlex", category: "Swim", brand: "Orca", name: "Athlex Flex wetsuit", what: "Flexible-shoulder triathlon wetsuit for swimmers who want less restriction.", url: "https://www.orca.com" },

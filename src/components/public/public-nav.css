@@ -1,0 +1,42 @@
+/* Public top bar with product menus. Used on the front page (dark, over the photo) and the product pages (light). */
+.pn { position: relative; z-index: 20; width: 100%; box-sizing: border-box; max-width: calc(var(--lp-w, 1120px) + 2 * var(--lp-gutter, 24px)); margin: 0 auto; padding: 0 var(--lp-gutter, 24px); height: 76px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.pn-mark { text-decoration: none; color: inherit; }
+.pn-menus { display: flex; align-items: center; gap: 4px; }
+.pn-item { position: relative; }
+.pn-item > button { display: inline-flex; align-items: center; gap: 5px; border: 0; background: none; font: inherit; font-size: 14px; font-weight: 500; color: inherit; padding: 10px 12px; border-radius: 10px; cursor: pointer; }
+.pn-item > button svg { width: 12px; height: 12px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; transition: transform 120ms ease; }
+.pn-item.on > button svg { transform: rotate(180deg); }
+.pn-panel { position: absolute; left: 50%; top: calc(100% + 6px); transform: translateX(-50%) translateY(-4px); width: 560px; box-sizing: border-box; padding: 10px; border-radius: 14px; background: var(--surface); color: var(--ink); box-shadow: 0 0 0 1px var(--line), 0 24px 60px rgba(16, 17, 20, 0.16); display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 8px; opacity: 0; visibility: hidden; transition: opacity 120ms ease, transform 120ms ease, visibility 0s linear 120ms; }
+.pn-item.on .pn-panel { opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); transition-delay: 0s; }
+.pn-panel a { text-decoration: none; color: inherit; display: grid; gap: 3px; padding: 10px 12px; border-radius: 10px; }
+.pn-panel a b { font-size: 14px; font-weight: 600; }
+.pn-panel a span { font-size: 12.5px; line-height: 1.4; color: var(--muted); }
+.pn-panel a:hover, .pn-panel a:focus-visible { background: var(--surface-2); }
+.pn-overview { background: var(--accent-soft); align-content: start; }
+.pn-overview b { color: var(--accent); }
+.pn-overview:hover, .pn-overview:focus-visible { background: var(--accent-soft); }
+.pn-links { display: grid; align-content: start; }
+.pn-actions { display: flex; align-items: center; gap: 16px; }
+.pn-signin { text-decoration: none; color: inherit; font-size: 14px; font-weight: 500; }
+.pn .btn { text-decoration: none; }
+.pn-burger { display: none; width: 40px; height: 40px; border: 0; background: none; color: inherit; border-radius: 10px; cursor: pointer; align-items: center; justify-content: center; }
+.pn-burger svg { width: 22px; height: 22px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; }
+
+/* tones */
+.pn-dark { color: #FFFFFF; }
+.pn-dark .pn-item > button:hover, .pn-dark .pn-item.on > button { background: rgba(255, 255, 255, 0.12); }
+.pn-dark .pn-signin:hover { color: #C9D6FF; }
+.pn-light { color: var(--ink); }
+.pn-light .pn-item > button:hover, .pn-light .pn-item.on > button { background: var(--surface-2); }
+
+/* narrow: one stacked list under the bar */
+@media (max-width: 860px) {
+  .pn { height: 64px; }
+  .pn-burger { display: inline-flex; }
+  .pn-signin { display: none; }
+  .pn-menus { display: none; }
+  .pn.pn-open .pn-menus { display: grid; position: absolute; left: var(--lp-gutter, 16px); right: var(--lp-gutter, 16px); top: calc(100% + 4px); background: var(--surface); color: var(--ink); border-radius: 14px; box-shadow: 0 0 0 1px var(--line), 0 24px 60px rgba(16, 17, 20, 0.16); padding: 8px; gap: 2px; max-height: calc(100vh - 90px); overflow: auto; }
+  .pn.pn-open .pn-item > button { width: 100%; justify-content: space-between; font-size: 15px; padding: 12px; }
+  .pn-panel { position: static; transform: none; width: auto; box-shadow: none; padding: 0 4px 8px; grid-template-columns: 1fr; display: none; }
+  .pn-item.on .pn-panel { display: grid; transform: none; }
+}

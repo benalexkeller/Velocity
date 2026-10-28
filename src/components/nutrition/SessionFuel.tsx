@@ -24,10 +24,10 @@ export function FuelLine({ s }: { s: Session }) {
   const f = nut.fuelFor(s);
   const parts = [
     f.before ? `before ${f.before} g carbs by ${f.beforeAt}` : null,
-    `during ${f.perHour ? `${f.perHour} g/h` : "water"}${f.fluidLh ? ` · ${f.fluidLh} L/h` : ""}${f.naMgH ? ` · ${f.naMgH} mg sodium/h` : ""}`,
+    `during ${f.perHour ? `${f.perHour} g/h` : "water"}${f.fluidLh ? `, ${f.fluidLh} L/h` : ""}${f.naMgH ? `, ${f.naMgH} mg sodium/h` : ""}`,
     f.after.carbs ? `after ${f.after.carbs} g carbs + ${f.after.protein} g protein ${f.window}` : `after ${f.after.protein} g protein at the next meal`,
   ].filter(Boolean);
-  return <div className="fuel-line"><b>Fuel</b> {parts.join(" · ")}</div>;
+  return <div className="fuel-line"><b>Fuel</b> {parts.join(", ")}</div>;
 }
 
 export function FuelBlock({ s }: { s: Session }) {
@@ -40,7 +40,7 @@ export function FuelBlock({ s }: { s: Session }) {
       <div className="eyebrow muted">Fuel</div>
       <dl>
         <dt>Before</dt><dd>{f.before ? `${f.before} g carbs by ${f.beforeAt}, low fibre and fat` : "Nothing needed beyond your normal meal"}</dd>
-        <dt>During</dt><dd>{perHourInProducts(f.perHour, f.fluidLh)}{f.naMgH ? ` · ${f.naMgH} mg sodium per hour` : ""}{f.perHour > 60 ? " · glucose:fructose mix" : ""}</dd>
+        <dt>During</dt><dd>{perHourInProducts(f.perHour, f.fluidLh)}{f.naMgH ? `, ${f.naMgH} mg sodium per hour` : ""}{f.perHour > 60 ? ", glucose:fructose mix" : ""}</dd>
         <dt>After</dt><dd>{f.after.carbs ? `${f.after.carbs} g carbs + ${f.after.protein} g protein ${f.window}` : `${f.after.protein} g protein at the next meal`}</dd>
       </dl>
     </div>

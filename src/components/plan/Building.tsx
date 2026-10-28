@@ -41,30 +41,30 @@ export function Building({ intake, edit, onOpen }: { intake: Intake; edit: boole
   const long1 = weeks.find((w) => w.days.some((d) => /^Long|^Brick|^Race sim/.test(d.text)));
   const longDay = (re: RegExp) => { const w = weeks[Math.min(weeks.length - 1, 8)] ?? long1; const i = w?.days.findIndex((d) => re.test(d.text)) ?? -1; return i >= 0 ? DAY[i] : null; };
   const rideDay = longDay(/Long ride|Brick|Race sim/), runDay = longDay(/Long run/), swimDay = longDay(/Long swim/), sessDay = longDay(/Long session/);
-  const phaseText = summary.phases.map((p) => `${p.name.split(" — ")[0]} ${p.to - p.from + 1} wk`).join(" · ");
+  const phaseText = summary.phases.map((p) => `${p.name.split(" — ")[0]} ${p.to - p.from + 1} wk`).join(", ");
   const blackouts = intake.time.blackouts.filter((b) => b.from && b.to).length;
   const steps: { at: number; text: string }[] = [
     { at: 0.4, text: "Reading your answers" },
-    { at: 2.5, text: `${N} weeks to race week · plan starts ${dateLabel(summary.start)}` },
+    { at: 2.5, text: `${N} weeks to race week, plan starts ${dateLabel(summary.start)}` },
     { at: 5.5, text: `Phases: ${phaseText}` },
-    { at: 9.5, text: `Hours: ${fmtH(summary.startHours)} a week now → ${fmtH(summary.peakHours)} in the biggest week · at most +10 % a week · every 4th week lighter${summary.peakHours < summary.targetPeak * 0.9 ? ` · your days fit ${fmtH(summary.peakHours)}, not ${fmtH(summary.targetPeak)}: add a day to train more` : ""}` },
-    { at: 14, text: kind === "tri" ? `Long ride ${rideDay ?? "—"} · long run ${runDay ?? "—"} · brick sessions from the build phase` : kind === "run" ? `Long run ${runDay ?? "—"} · one tempo and one interval session a week from the build phase` : kind === "bike" ? `Long ride ${rideDay ?? "—"} · tempo and intervals from the build phase` : kind === "swim" ? `Long swim ${swimDay ?? "—"} · threshold sets from the build phase` : `Long session ${sessDay ?? "—"} · quality mid-week from the build phase` },
-    { at: 19, text: `${summary.sessions} sessions placed on your ${intake.time.days.length} days${intake.strength ? " · strength twice a week" : ""}` },
+    { at: 9.5, text: `Hours: ${fmtH(summary.startHours)} a week now → ${fmtH(summary.peakHours)} in the biggest week, at most +10 % a week, every 4th week lighter${summary.peakHours < summary.targetPeak * 0.9 ? `, your days fit ${fmtH(summary.peakHours)}, not ${fmtH(summary.targetPeak)}: add a day to train more` : ""}` },
+    { at: 14, text: kind === "tri" ? `Long ride ${rideDay ?? "—"}, long run ${runDay ?? "—"}, brick sessions from the build phase` : kind === "run" ? `Long run ${runDay ?? "—"}, one tempo and one interval session a week from the build phase` : kind === "bike" ? `Long ride ${rideDay ?? "—"}, tempo and intervals from the build phase` : kind === "swim" ? `Long swim ${swimDay ?? "—"}, threshold sets from the build phase` : `Long session ${sessDay ?? "—"}, quality mid-week from the build phase` },
+    { at: 19, text: `${summary.sessions} sessions placed on your ${intake.time.days.length} days${intake.strength ? ", strength twice a week" : ""}` },
     { at: 23.5, text: blackouts ? `${blackouts} blackout period${blackouts === 1 ? "" : "s"} turned into rest days` : `Race week: short openers, rest the day before, ${intake.goal.event || et.label} on ${dateLabel(intake.goal.date)}` },
-    { at: 27.5, text: "Rules: 80 / 20 easy-hard · no long session +10 % over the last 30 days · 41–60 % taper with intensity kept" },
+    { at: 27.5, text: "Rules: 80 / 20 easy-hard, no long session +10 % over the last 30 days, 41–60 % taper with intensity kept" },
   ];
   const ready = t >= TOTAL && saved;
   const pct = Math.min(100, Math.round((t / TOTAL) * 100));
 
   return (
     <div className="pb pb-building" aria-live="polite">
-      <div className="pb-head"><div><div className="eyebrow muted">{edit ? "Rebuilding" : "Building"}</div><h1>{ready ? `Plan built · ${N} weeks` : `${intake.goal.event || et.label} · ${N} weeks`}</h1></div></div>
+      <div className="pb-head"><div><div className="eyebrow muted">{edit ? "Rebuilding" : "Building"}</div><h1>{ready ? `Plan built, ${N} weeks` : `${intake.goal.event || et.label}, ${N} weeks`}</h1></div></div>
       <section className="card pb-card pb-build">
         <div className="pb-build-left">
           <ol className="pb-log">{steps.map((s) => <li key={s.at} className={t >= s.at ? "on" : ""}><span className="ck">{t >= s.at ? "✓" : ""}</span>{s.text}</li>)}
             <li className={saved && t >= 30 ? "on" : ""}><span className="ck">{saved && t >= 30 ? "✓" : ""}</span>{err ? `Not saved: ${err}` : "Plan saved"}</li>
           </ol>
-          {!ready && <div className="pb-progress"><div className="bar"><i style={{ width: `${pct}%` }} /></div><span className="muted small">{shown < N ? `Placing week ${Math.max(1, shown)} of ${N}` : "Checking the ramp"} · {pct}%</span></div>}
+          {!ready && <div className="pb-progress"><div className="bar"><i style={{ width: `${pct}%` }} /></div><span className="muted small">{shown < N ? `Placing week ${Math.max(1, shown)} of ${N}` : "Checking the ramp"}, {pct}%</span></div>}
           {ready && (
             <div className="pb-ready">
               <div className="tiles">
@@ -107,7 +107,7 @@ function RampBuild({ summary, shown }: { summary: PlanSummary; shown: number }) 
         if (i >= shown) return null;
         const last = i === N - 1;
         const fill = last ? "var(--accent)" : i + 1 >= summary.phases.find((p) => p.name.startsWith("Taper"))!.from ? "var(--swim)" : "var(--bike)";
-        return <rect key={i} className="bar" x={x(i) + 1} y={y(h)} width={Math.max(1, bw - 2)} height={y(0) - y(h)} rx={2} fill={fill} opacity={i === shown - 1 ? 1 : 0.85}><title>{`Week ${i + 1} · ${h.toFixed(1)} h`}</title></rect>;
+        return <rect key={i} className="bar" x={x(i) + 1} y={y(h)} width={Math.max(1, bw - 2)} height={y(0) - y(h)} rx={2} fill={fill} opacity={i === shown - 1 ? 1 : 0.85}><title>{`Week ${i + 1}, ${h.toFixed(1)} h`}</title></rect>;
       })}
       {shown >= N && <g><line x1={x(N - 0.5)} y1={y(0) + 4} x2={x(N - 0.5)} y2={T - 6} stroke="var(--accent)" strokeDasharray="3 3" /><text x={x(N - 0.5) - 6} y={y(0) - 6} textAnchor="end" fontWeight={700} fill="var(--accent)">RACE</text></g>}
       {Array.from({ length: N }, (_, i) => i).filter((i) => i % Math.max(1, Math.ceil(N / 10)) === 0).map((i) => <text key={i} x={x(i) + bw / 2} y={H - 10} textAnchor="middle">W{i + 1}</text>)}

@@ -79,7 +79,7 @@ function Dashboard() {
             <div className="top"><span>Today&apos;s session{done ? <span className="donetag">✓ Completed</span> : null}</span><span>{DAYS[(t.getDay() + 6) % 7]} {t.getDate()} {MONTHS[t.getMonth()]}</span></div>
             <div>
               <div className="title">{todayS ? todayS.title : plan.hasPlan ? "Rest" : "No session"}</div>
-              <div className="sub">{todayS ? heroSub(todayS) : plan.hasPlan ? "No plan for today" : "No plan yet · build one in Plan"}</div>
+              <div className="sub">{todayS ? heroSub(todayS) : plan.hasPlan ? "No plan for today" : "No plan yet. Build one in Plan"}</div>
             </div>
             <div className="stats">
               {todayS && todayS.sport !== "rest" ? (
@@ -92,7 +92,7 @@ function Dashboard() {
                 <>
                   <div className="stat"><div className="k">Duration</div><div className="v">0 min</div></div>
                   <div className="stat"><div className="k">Intensity</div><div className="v">{plan.hasPlan || todayS ? "Rest" : "—"}</div></div>
-                  <div className="stat"><div className="k">Next session</div><div className="v">{next[0].s ? `${next[0].s.title} ${next[0].s.min} min` : "—"}</div><div className="u">{next[0].s ? `${DAYS[(addDays(t, 1).getDay() + 6) % 7]}${next[0].s.start ? ` · ${next[0].s.start}` : ""}` : ""}</div></div>
+                  <div className="stat"><div className="k">Next session</div><div className="v">{next[0].s ? `${next[0].s.title} ${next[0].s.min} min` : "—"}</div><div className="u">{next[0].s ? `${DAYS[(addDays(t, 1).getDay() + 6) % 7]}${next[0].s.start ? `, ${next[0].s.start}` : ""}` : ""}</div></div>
                 </>
               )}
               <div className="stat gm">{garmin && <div className="garmin" aria-hidden="true"><Watch width={116} time={last ? fmtHMS(last.min) : ""} dist={last?.mi ? `${last.mi.toFixed(1)} mi` : last?.yd ? `${last.yd.toLocaleString()} yd` : ""} hr={last?.hr} /></div>}<div className="k"><i className={`gm-dot${garmin ? " on" : ""}`} aria-label={garmin ? "connected" : "not connected"} />{garmin ? "Garmin" : "Wearable"}<ConnectWearable variant="dark" label="Connect" /></div><div className="v">{garminLive ? <span className="garmin-date">{lastGarmin ? `Synced ${shortDate(lastGarmin.date)}` : "Connected"}</span> : garmin ? <span className="garmin-date">Imported {shortDate(lastGarmin!.date)}</span> : <span className="dim">Not connected</span>}</div></div>
@@ -104,7 +104,7 @@ function Dashboard() {
             <button type="button" className="plus" aria-label="Log activity" aria-expanded={logging} onClick={() => setLogging((o) => !o)}><Icon name="plus" /></button>
             <b>Add manually</b>
           </section>
-          <LogActivity open={logging} onClose={() => setLogging(false)} onSaved={(a) => { plan.logActivity(a); setLogging(false); setToast(`Saved · ${a.name} · ${fmtHMS(a.min)}`); }} />
+          <LogActivity open={logging} onClose={() => setLogging(false)} onSaved={(a) => { plan.logActivity(a); setLogging(false); setToast(`Saved: ${a.name}, ${fmtHMS(a.min)}`); }} />
           </div>
           <div className="dash-row2">
           {next.map(({ off, s }) => {
@@ -144,7 +144,7 @@ function Dashboard() {
             {last ? (
               <>
                 <Link href={`/activities?a=${last.id}`} className="name">{last.name}</Link>
-                <div className="date">{dateLabel(last.date)}{last.start ? ` · ${last.start}` : ""}</div>
+                <div className="date">{dateLabel(last.date)}{last.start ? `, ${last.start}` : ""}</div>
                 <div className="stats">
                   <div><div className="k">{last.sport === "swim" ? "Distance" : "Distance"}</div><div className="v">{last.sport === "swim" ? `${swimDist(last.yd ?? 0).v} ${swimDist(0).u}` : fmtDist(last.mi)}</div></div>
                   <div><div className="k">Time</div><div className="v">{fmtHMS(last.min)}</div></div>
@@ -157,7 +157,7 @@ function Dashboard() {
                   <RouteMap route={last.route} height={140} />
                   {last.route && <button className="exp" type="button" onClick={() => setMapOpen(true)} aria-label="Expand map" title="Whole route, zoom and drag"><Icon name="expand" /></button>}
                   {last.route && plan.athlete.city && <span className="loc">{plan.athlete.city}</span>}
-                  {mapOpen && last.route && <MapModal route={last.route} title={last.name} sub={`${dateLabel(last.date)}${last.start ? ` · ${last.start}` : ""} · ${fmtHMS(last.min)}`} onClose={() => setMapOpen(false)} />}
+                  {mapOpen && last.route && <MapModal route={last.route} title={last.name} sub={`${dateLabel(last.date)}${last.start ? `, ${last.start}` : ""}, ${fmtHMS(last.min)}`} onClose={() => setMapOpen(false)} />}
                 </div>
               </>
             ) : <div className="muted">No activities yet.</div>}
@@ -166,7 +166,7 @@ function Dashboard() {
         </div>
 
         <section className="card phase" aria-label="Training phase">
-          <div><div className="eyebrow">Training phase</div><div className="pos">{plan.hasPlan ? `${phase?.short ?? cur.phaseShort} · Week ${cur.week} of ${WEEKS.length}` : "No plan yet"}</div></div>
+          <div><div className="eyebrow">Training phase</div><div className="pos">{plan.hasPlan ? <>{phase?.short ?? cur.phaseShort}<span className="at">Week {cur.week} of {WEEKS.length}</span></> : "No plan yet"}</div></div>
           {plan.hasPlan && <div className="track">
             <div className="line" /><div className="fill" style={{ width: `${pos * 100}%` }} />
             {stops.map((k) => { const f = stopAt(k); return (<span key={k}><span className="lbl" style={{ left: `${f * 100}%` }}>{k}</span><span className={`stop${pos >= f ? " on" : ""}`} style={{ left: `${f * 100}%` }} /></span>); })}

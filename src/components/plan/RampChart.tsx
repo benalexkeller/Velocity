@@ -29,11 +29,10 @@ export function RampChart({ selected, phase, onPick, onPhase }: { selected?: num
     <div className="ramp-wrap">
     <svg ref={svgRef} className="chart ramp" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Planned weekly training hours by discipline across the plan, ending in the race">
       {/* y axis */}
-      <text x={L - 6} y={T - 6} textAnchor="end">Hours</text>
       {[5, 10, 15].map((h) => (
         <g key={h}>
           <line x1={L} y1={y(h)} x2={W - R} y2={y(h)} stroke="var(--grid)" />
-          <text x={L - 8} y={y(h) + 4} textAnchor="end">{h}</text>
+          <text x={L - 8} y={y(h) + 4} textAnchor="end">{h} h</text>
         </g>
       ))}
       {/* phase brackets */}
@@ -47,7 +46,7 @@ export function RampChart({ selected, phase, onPick, onPhase }: { selected?: num
             <line x1={x0} y1={T - 26} x2={x0} y2={T - 20} stroke={on ? "var(--accent)" : "var(--line)"} />
             {x1 - x0 >= p.short.length * 6.5 && <text x={(x0 + x1) / 2} y={T - 30} textAnchor="middle" className={on ? "accent" : "ink"} fontWeight={600} fontSize="12">{p.short}</text>}
             {x1 - x0 >= 60 && <text x={(x0 + x1) / 2} y={T - 17 + 12} textAnchor="middle">Weeks {p.from}{p.to !== p.from ? ` – ${p.to}` : ""}</text>}
-            <title>{`${p.name} · weeks ${p.from}${p.to !== p.from ? `–${p.to}` : ""}`}</title>
+            <title>{`${p.name}, weeks ${p.from}${p.to !== p.from ? `–${p.to}` : ""}`}</title>
           </g>
         );
       })}
