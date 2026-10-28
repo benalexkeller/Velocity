@@ -73,7 +73,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
       </section>
 
       <section className="pp-cta">
-        <h2><span>Create a plan.</span><span>Synchronise your nutrition.</span><span>Become the expert.</span></h2>
+        <h2><span>Create a plan</span><span>Strategize nutrition</span><span>Become the expert</span></h2>
         <Link href={START.href} className="btn lp-big">{START.label}</Link>
       </section>
       <PublicFooter />
