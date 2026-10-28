@@ -7,6 +7,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { BRAND } from "@/lib/config";
 import { ACCOUNTS_ON } from "@/lib/supabase/env";
+import { PublicNav } from "@/components/public/PublicNav";
+import { PublicFooter } from "@/components/public/PublicFooter";
+import { START } from "@/components/public/start";
 import "./landing.css";
 
 export const metadata: Metadata = {
@@ -42,19 +45,12 @@ const BLOCKS: Block[] = [
 const H0 = 6, H1 = 20;
 
 export default function Landing() {
-  const start = ACCOUNTS_ON ? { href: "/login?mode=up", label: "Create account" } : { href: "/dashboard", label: "Open the app" };
+  const start = START;
   const pct = (h: number) => `${((h - H0) / (H1 - H0)) * 100}%`;
   return (
     <main className="lp">
       <section className="lp-hero" aria-label="Velocity">
-        <header className="lp-top">
-          <span className="wordmark">{BRAND.name}</span>
-          <nav aria-label="Sections">
-            <a href="#train">Train</a><a href="#plan">Plan</a><a href="#nutrition">Nutrition</a><a href="#coach">Coach</a><a href="#analysis">Analysis</a>
-            {ACCOUNTS_ON && <Link href="/login" className="lp-link">Sign in</Link>}
-            <Link href={start.href} className="btn">{start.label}</Link>
-          </nav>
-        </header>
+        <PublicNav tone="dark" start={start} accountsOn={ACCOUNTS_ON} />
         <div className="lp-hero-text">
           <h1><span>Create a plan.</span><span>Synchronise your nutrition.</span><span>Become the expert.</span></h1>
           <Link href={start.href} className="btn lp-big">{start.label}</Link>
@@ -168,15 +164,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <footer className="lp-foot">
-        <div className="lp-foot-row">
-          <span className="wordmark">{BRAND.name}</span>
-          <span className="lp-foot-links"><a href="/help">Help</a><a href="/privacy">Privacy</a><a href="/terms">Terms</a></span>
-        </div>
-        <div className="lp-foot-row lp-foot-note">
-          <span>Only you can see your data. It is never used to train models.</span>
-        </div>
-      </footer>
+      <PublicFooter />
     </main>
   );
 }

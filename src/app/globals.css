@@ -155,7 +155,8 @@ h2 .at { font-size: 0.72em; letter-spacing: 0; margin-left: 10px; }
 .msg .proposal.declined .p-head { color: var(--muted); }
 .msg .proposal ul { margin: 0; padding-left: 16px; display: grid; gap: 2px; }
 .msg .proposal p { margin: 0; }
-.msg .proposal .p-actions { display: flex; gap: 8px; margin-top: 4px; }
+.msg .proposal .p-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
+.msg .proposal .p-actions .btn { white-space: nowrap; }
 .msg .proposal.review { background: var(--surface-2); }
 .msg .proposal.review .p-head { color: var(--ink-2); }
 .msg .proposal.review.accepted { background: var(--ok-soft); }

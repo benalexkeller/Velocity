@@ -1,0 +1,53 @@
+/* Product pages (/product/*). Builds on landing.css for the shot frames, facts list and footer. */
+.pp { padding-bottom: 0; }
+.pp-head { max-width: var(--lp-w); margin: 0 auto; padding: 56px var(--lp-gutter) 0; box-sizing: content-box; display: grid; gap: 18px; justify-items: start; }
+.pp-head h1 { font-size: clamp(40px, 6vw, 72px); letter-spacing: -0.035em; line-height: 1; }
+.pp-lead { font-size: 19px; line-height: 1.5; color: var(--ink-2); max-width: 56ch; }
+.pp-head .btn { margin-top: 6px; }
+.pp-hero { max-width: var(--lp-w); margin: 48px auto 0; box-sizing: content-box; }
+.pp-toc { max-width: var(--lp-w); margin: 40px auto 0; padding: 0 var(--lp-gutter); box-sizing: content-box; display: flex; flex-wrap: wrap; gap: 4px 18px; font-size: 14px; border-bottom: 1px solid var(--line); padding-bottom: 14px; }
+.pp-toc a { color: var(--ink-2); text-decoration: none; font-weight: 500; padding: 4px 0; }
+.pp-toc a:hover { color: var(--accent); }
+.pp-sec { max-width: var(--lp-w); margin: 0 auto; padding: 72px var(--lp-gutter) 0; box-sizing: content-box; display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: 48px; align-items: center; scroll-margin-top: 24px; }
+.pp-sec.pp-flip { grid-template-columns: minmax(0, 8fr) minmax(0, 4fr); }
+.pp-sec.pp-flip .pp-sec-text { order: 2; }
+.pp-sec-text-only { grid-template-columns: minmax(0, 1fr); }
+.pp-sec-text-only .pp-sec-text { max-width: 64ch; }
+.pp-sec-text { display: grid; gap: 16px; align-content: start; }
+.pp-sec-text h2 { font-size: clamp(24px, 2.6vw, 32px); }
+.pp-sec-text p { font-size: 16px; line-height: 1.55; color: var(--ink-2); max-width: 46ch; }
+.pp-sec-text .lp-facts { margin-top: 2px; }
+.pp-sec .pp-portrait { max-width: 400px; justify-self: center; }
+.pp-sec .lp-shot:not(.pp-portrait) { max-width: 940px; }
+.pp-notyet { max-width: var(--lp-w); margin: 72px auto 0; padding: 20px var(--lp-gutter); box-sizing: content-box; }
+.pp-notyet > * { max-width: 64ch; }
+.pp-notyet h2 { font-size: 18px; margin-bottom: 10px; }
+.pp-notyet ul { margin: 0; padding: 0 0 0 18px; font-size: 15px; line-height: 1.6; color: var(--ink-2); }
+.pp-gallery { max-width: var(--lp-w); margin: 72px auto 0; padding: 0 var(--lp-gutter); box-sizing: content-box; display: grid; gap: 28px; scroll-margin-top: 24px; }
+.pp-gallery h2 { font-size: clamp(24px, 2.6vw, 32px); }
+.pp-gallery-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 40px 32px; }
+.pp-frame { margin: 0; display: grid; gap: 12px; }
+.pp-frame .lp-laptop-base { margin: 0 -10px; }
+.pp-frame figcaption { font-size: 13px; color: var(--muted); }
+.pp-more { max-width: var(--lp-w); margin: 72px auto 0; padding: 0 var(--lp-gutter); box-sizing: content-box; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.pp-more-card { text-decoration: none; color: inherit; display: grid; gap: 6px; padding: 22px 24px; border: 1px solid var(--line); border-radius: var(--radius-lg); }
+.pp-more-card b { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
+.pp-more-card > span:last-child { font-size: 14px; line-height: 1.45; color: var(--ink-2); }
+.pp-more-card:hover { border-color: var(--accent); }
+.pp-cta { max-width: var(--lp-w); margin: 88px auto 0; padding: 0 var(--lp-gutter); box-sizing: content-box; display: grid; gap: 24px; justify-items: start; }
+.pp-cta h2 { font-size: clamp(26px, 3.4vw, 40px); display: grid; gap: 4px; }
+.pp-cta h2 span { display: block; }
+.pp .lp-foot { max-width: var(--lp-w); margin: 56px auto 0; padding-left: var(--lp-gutter); padding-right: var(--lp-gutter); box-sizing: content-box; }
+@media (max-width: 1000px) {
+  .pp-sec { grid-template-columns: 1fr; gap: 24px; padding-top: 56px; }
+  .pp-sec.pp-flip { grid-template-columns: 1fr; }
+  .pp-sec.pp-flip .pp-sec-text { order: 0; }
+  .pp-sec-text p { max-width: 60ch; }
+  .pp-gallery-grid, .pp-more { grid-template-columns: 1fr; }
+}
+@media (max-width: 600px) {
+  .pp-head { padding-top: 28px; }
+  .pp-hero { margin-top: 28px; }
+  .pp-toc { display: none; }
+  .pp-cta .btn, .pp-head .btn { width: 100%; justify-content: center; }
+}
