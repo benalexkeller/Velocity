@@ -1,6 +1,6 @@
 /* Public front page (PR's design, 2026-10-27). Same tokens as the app; nothing here changes the app's own styles.
    Photos: .lp-hero is the rider at sunrise (hero.webp, hero-tall.webp on phones), .lp-close the trainer silhouette, .lp-food the meals. */
-.lp { --lp-w: 1120px; --lp-wide: 1600px; --lp-gutter: 40px; color: var(--ink); overflow-x: clip; }
+.lp { --lp-w: 1400px; --lp-wide: 1600px; --lp-gutter: 40px; color: var(--ink); overflow-x: clip; }
 .lp h1, .lp h2, .lp h3 { font-weight: 600; letter-spacing: -0.025em; line-height: 1.1; margin: 0; }
 .lp h2 { font-size: clamp(28px, 3.2vw, 40px); letter-spacing: -0.03em; max-width: 18ch; }
 .lp p { margin: 0; }
@@ -21,15 +21,15 @@
 .lp-hero-text .btn { align-self: flex-start; }
 
 /* ---------- band ---------- */
-.lp-band { padding-top: 56px; padding-bottom: 8px; }
-.lp-band h2 { font-size: clamp(22px, 2.4vw, 30px); max-width: none; padding-bottom: 28px; border-bottom: 1px solid var(--line); }
+.lp-band { padding-top: 72px; padding-bottom: 8px; }
+.lp-band h2 { font-size: clamp(24px, 2.6vw, 34px); max-width: none; text-align: center; padding-bottom: 36px; border-bottom: 1px solid var(--line); }
 
 /* ---------- feature sections ---------- */
-.lp-feature { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: 56px; align-items: center; padding-top: 88px; padding-bottom: 88px; border-bottom: 1px solid var(--line); scroll-margin-top: 24px; }
+.lp-feature { display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: 72px; align-items: center; padding-top: 112px; padding-bottom: 112px; border-bottom: 1px solid var(--line); scroll-margin-top: 24px; }
 .lp-feature:last-of-type { border-bottom: 0; }
 .lp-text { display: grid; gap: 18px; }
 .lp-eyebrow { font-size: 12px; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
-.lp-text p { font-size: 17px; line-height: 1.5; color: var(--ink-2); max-width: 36ch; }
+.lp-text p { font-size: 18px; line-height: 1.5; color: var(--ink-2); max-width: 38ch; }
 .lp-facts { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; font-size: 15px; line-height: 1.5; color: var(--ink-2); }
 .lp-facts li { padding-left: 18px; position: relative; }
 .lp-facts li::before { content: ""; position: absolute; left: 0; top: 10px; width: 8px; height: 2px; background: var(--accent); }
@@ -37,27 +37,52 @@
 .lp-shot img { display: block; width: 100%; height: auto; }
 
 /* ---------- devices ---------- */
-.lp-devices { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); padding-right: 80px; }
+.lp-devices { position: relative; display: grid; grid-template-columns: minmax(0, 1fr); padding-right: 96px; padding-left: 72px; }
 .lp-laptop { position: relative; }
 .lp-laptop .lp-screen { border: 10px solid #1B1C20; border-bottom-width: 14px; border-radius: 18px 18px 4px 4px; background: #000; overflow: hidden; box-shadow: 0 30px 70px rgba(16, 17, 20, 0.18); }
 .lp-laptop .lp-screen img { display: block; width: 100%; height: auto; }
 .lp-laptop-base { height: 14px; margin: 0 -24px; border-radius: 0 0 14px 14px; background: linear-gradient(180deg, #D5D8DF, #B9BDC6); box-shadow: 0 10px 24px rgba(16, 17, 20, 0.15); }
 .lp-laptop-base::before { content: ""; display: block; width: 120px; height: 5px; margin: 0 auto; border-radius: 0 0 6px 6px; background: #A9ADB6; }
-.lp-phone { position: absolute; right: 0; bottom: -24px; width: 172px; aspect-ratio: 9 / 19.5; box-sizing: border-box; border: 7px solid #141518; border-radius: 34px; background: #FFFFFF; box-shadow: 0 24px 60px rgba(16, 17, 20, 0.22); padding: 30px 11px 12px; display: grid; grid-template-rows: auto auto 1fr auto; gap: 10px; font-size: 11px; line-height: 1.35; color: var(--ink); }
-.lp-phone::before { content: ""; position: absolute; top: 8px; left: 50%; width: 46px; height: 12px; transform: translateX(-50%); border-radius: 999px; background: #141518; }
+/* the phone: a real screen at 9:19.5, status bar, session card, steps, next sessions, the button and a tab bar */
+.lp-phone { position: absolute; right: 0; bottom: -28px; width: 196px; aspect-ratio: 9 / 19.5; box-sizing: border-box; border: 7px solid #141518; border-radius: 38px; background: #FFFFFF; box-shadow: 0 24px 60px rgba(16, 17, 20, 0.22); padding: 10px 12px 8px; display: grid; grid-template-rows: auto auto auto auto 1fr auto auto; gap: 8px; font-size: 11px; line-height: 1.35; color: var(--ink); overflow: hidden; }
+.lp-phone::before { content: ""; position: absolute; top: 9px; left: 50%; width: 50px; height: 13px; transform: translateX(-50%); border-radius: 999px; background: #141518; }
+.lp-phone-status { display: flex; justify-content: space-between; align-items: center; font-size: 10px; font-weight: 600; padding: 2px 4px 0; }
+.lp-phone-sig { display: inline-flex; align-items: flex-end; gap: 1.5px; height: 9px; }
+.lp-phone-sig i { width: 2.5px; background: var(--ink); border-radius: 1px; }
+.lp-phone-sig i:nth-child(1) { height: 3px; } .lp-phone-sig i:nth-child(2) { height: 5px; } .lp-phone-sig i:nth-child(3) { height: 7px; } .lp-phone-sig i:nth-child(4) { height: 9px; }
+.lp-phone-sig b { width: 16px; height: 8px; margin-left: 4px; border: 1.2px solid var(--ink); border-radius: 2.5px; position: relative; }
+.lp-phone-sig b::after { content: ""; position: absolute; inset: 1.5px; right: 3px; background: var(--ink); border-radius: 1px; }
 .lp-phone-top { display: flex; justify-content: space-between; align-items: center; color: var(--muted); font-size: 10px; }
 .lp-phone-top .wordmark { font-size: 9px; color: var(--ink); }
-.lp-phone-hero { background: var(--hero); color: #fff; border-radius: 12px; padding: 12px; display: grid; gap: 2px; }
+.lp-phone-hero { background: var(--hero); color: #fff; border-radius: 14px; padding: 12px; display: grid; gap: 2px; }
 .lp-phone-hero .k { font-size: 9px; letter-spacing: 0.06em; text-transform: uppercase; color: #B9BCC6; }
-.lp-phone-hero .big { font-size: 28px; font-weight: 600; letter-spacing: -0.03em; line-height: 1.05; }
-.lp-phone-hero .sub { color: #DADCE3; margin-bottom: 6px; }
-.lp-phone-hero .row { display: flex; justify-content: space-between; gap: 8px; border-top: 1px solid rgba(255,255,255,0.14); padding-top: 5px; margin-top: 3px; color: #DADCE3; }
-.lp-phone-hero .row b { color: #fff; font-weight: 600; }
+.lp-phone-hero .big { font-size: 24px; font-weight: 600; letter-spacing: -0.03em; line-height: 1.05; display: flex; align-items: center; gap: 8px; }
+.lp-phone-hero .big .sport-icon { color: #fff; }
+.lp-phone-hero .sub { color: #DADCE3; margin-bottom: 8px; }
+.lp-phone-stats { display: grid; grid-template-columns: 1.4fr 1fr 1fr; gap: 6px; border-top: 1px solid rgba(255,255,255,0.14); padding-top: 8px; }
+.lp-phone-stats span { display: block; font-size: 8.5px; color: #B9BCC6; text-transform: uppercase; letter-spacing: 0.05em; }
+.lp-phone-stats b { display: block; font-size: 11px; font-weight: 600; color: #fff; white-space: nowrap; }
+.lp-phone-steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 5px; font-size: 10.5px; }
+.lp-phone-steps li { display: flex; align-items: center; gap: 7px; }
+.lp-phone-steps i { width: 16px; height: 16px; border-radius: 50%; background: var(--accent-soft); color: var(--accent); font-style: normal; font-size: 9px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; flex: 0 0 auto; }
+.lp-phone-steps span { margin-left: auto; color: var(--muted); }
 .lp-phone-next { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; align-content: start; }
-.lp-phone-next > div { border: 1px solid var(--line); border-radius: 9px; padding: 7px 8px; display: grid; gap: 1px; min-width: 0; }
+.lp-phone-next > div { border: 1px solid var(--line); border-radius: 10px; padding: 7px 8px; display: grid; gap: 1px; min-width: 0; }
 .lp-phone-next b { font-weight: 600; font-size: 10.5px; }
 .lp-phone-next span { color: var(--muted); font-size: 10px; }
-.lp-phone-btn { background: var(--accent); color: #fff; border-radius: 10px; text-align: center; padding: 10px; font-weight: 600; font-size: 12px; }
+.lp-phone-btn { background: var(--accent); color: #fff; border-radius: 12px; text-align: center; padding: 11px; font-weight: 600; font-size: 12px; }
+.lp-phone-tabs { display: grid; grid-template-columns: repeat(4, 1fr); border-top: 1px solid var(--line); padding-top: 7px; margin: 0 -4px; font-size: 8.5px; color: var(--muted); text-align: center; }
+.lp-phone-tabs span::before { content: ""; display: block; width: 14px; height: 14px; margin: 0 auto 3px; border-radius: 4px; background: var(--line); }
+.lp-phone-tabs .on { color: var(--accent); font-weight: 600; }
+.lp-phone-tabs .on::before { background: var(--accent); }
+/* the watch over the Connected card, bottom left of the laptop */
+.lp-watch { position: absolute; left: -8px; bottom: -20px; width: 168px; display: grid; justify-items: center; }
+.lp-watch-img { width: 118px; height: auto; filter: drop-shadow(0 18px 30px rgba(16, 17, 20, 0.28)); margin-bottom: -26px; position: relative; z-index: 1; }
+.lp-watch-card { width: 100%; box-sizing: border-box; background: var(--surface); border-radius: 14px; box-shadow: 0 0 0 1px var(--line), 0 20px 50px rgba(16, 17, 20, 0.14); padding: 32px 14px 13px; display: grid; gap: 3px; text-align: center; }
+.lp-watch-card b { font-size: 13px; font-weight: 600; }
+.lp-watch-card span { font-size: 12px; color: var(--ink-2); display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.lp-watch-card span i { width: 8px; height: 8px; border-radius: 50%; background: var(--ok, #16A34A); }
+.lp-watch-card small { font-size: 11px; color: var(--muted); }
 
 /* ---------- calendar mock-up ---------- */
 .lp-cal { border-radius: var(--radius-lg); box-shadow: var(--shadow); background: var(--surface); padding: 16px 18px 18px; font-size: 11px; }
@@ -93,6 +118,12 @@
 .lp-msg.lp-you { justify-self: end; background: var(--bubble-user); border-radius: 14px 14px 4px 14px; padding: 9px 13px; }
 .lp-msg.lp-them { justify-self: start; padding: 2px 0; }
 .lp-msg sup { font-size: 10px; font-weight: 600; color: var(--accent); margin-left: 2px; }
+.lp-meal { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 12px; align-items: center; padding: 10px 12px 10px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+.lp-meal img { width: 56px; height: 56px; border-radius: 10px; object-fit: cover; display: block; }
+.lp-meal > div { display: grid; gap: 1px; min-width: 0; }
+.lp-meal b { font-size: 13px; font-weight: 600; }
+.lp-meal span { font-size: 12px; color: var(--muted); }
+.lp-meal em { font-style: normal; font-size: 11px; font-weight: 600; color: var(--ok, #16A34A); background: var(--ok-soft, #E8F7EE); border-radius: 999px; padding: 3px 9px; }
 .lp-src { font-size: 11px; color: var(--muted); display: flex; gap: 8px; }
 .lp-src span { color: var(--accent); font-weight: 600; }
 .lp-proposal { display: grid; gap: 6px; padding: 12px 14px; border-radius: var(--radius); background: var(--accent-soft); font-size: 13px; line-height: 1.4; }
@@ -119,8 +150,9 @@
 @media (max-width: 1000px) {
   .lp-feature { grid-template-columns: 1fr; gap: 28px; padding-top: 64px; padding-bottom: 64px; }
   .lp-text p { max-width: 60ch; }
-  .lp-devices { padding-right: 0; padding-bottom: 150px; }
-  .lp-phone { right: 8px; bottom: 0; width: 160px; }
+  .lp-devices { padding-right: 0; padding-left: 0; padding-bottom: 170px; }
+  .lp-phone { right: 8px; bottom: 0; width: 176px; }
+  .lp-watch { left: 8px; bottom: 0; }
 }
 @media (max-width: 760px) {
   /* phones: the rider stays in the upper part of the screen, the headline sits on the road below him */
@@ -145,7 +177,10 @@
   .lp-feature { padding-top: 48px; padding-bottom: 48px; }
   .lp-devices { padding-bottom: 120px; }
   .lp-laptop-base { margin: 0 -8px; }
-  .lp-phone { width: 140px; font-size: 10px; padding: 26px 9px 9px; border-width: 6px; border-radius: 28px; }
+  .lp-phone { width: 150px; font-size: 10px; padding: 8px 9px 7px; border-width: 6px; border-radius: 30px; gap: 7px; }
+  .lp-phone-steps, .lp-phone-tabs { display: none; }
+  .lp-watch { width: 120px; }
+  .lp-watch-img { width: 76px; }
   .lp-phone-hero .big { font-size: 22px; }
   .lp-cal-dh { font-size: 10px; }
   .lp-close-text .btn { width: 100%; justify-content: center; }
