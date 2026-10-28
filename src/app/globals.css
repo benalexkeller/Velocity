@@ -82,7 +82,9 @@ h1, h2, h3, h4 { margin: 0; font-weight: 600; letter-spacing: -0.01em; }
   background: var(--bg);
   position: sticky; top: 0; z-index: 9;
 }
-.wordmark { font-weight: 700; letter-spacing: 0.18em; font-size: 13px; text-transform: uppercase; }
+.wordmark { font-weight: 700; letter-spacing: 0.18em; font-size: 13px; text-transform: uppercase; display: inline-flex; align-items: center; gap: 9px; }
+/* the medal mark before the name; the wordmark keeps its own colour, the mark is always the accent blue */
+.wordmark::before { content: ""; width: 18px; height: 18px; flex: 0 0 auto; background: url(/brand/mark.svg) center / contain no-repeat; }
 .topbar .crumb { color: var(--muted-2); font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; }
 .topbar .greet { margin-left: auto; font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
 .topbar .meta { color: var(--muted); font-size: 13px; display: flex; align-items: center; gap: 10px; }

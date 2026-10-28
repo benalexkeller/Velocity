@@ -1,6 +1,7 @@
 "use client";
 // The athlete's data, live in the app. Loads once from the backend (browser or account), keeps the
 // working copy in memory, writes every change straight back. Everything the pages read comes from here.
+import { brickParts } from "@/lib/workout";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { ACTIVITIES as SEED_ACTIVITIES, PLAN_SEED, SPORT_LABEL, STATUS_CREDIT, buildWeeks, fitsSession, intensityOf, isRaceDay, phasesOf, sportOf, statusOf, sumH, virtualWeeks, whyOf, type Activity, type Phase, type PlanWeekJson, type Session, type Sport, type Week } from "./data";
@@ -100,6 +101,10 @@ export interface PlanStore {
   moveSession: (id: string, to: { date: string; start?: string }) => void;
   editSession: (id: string, patch: SessionPatch) => void;
   toggleLock: (id: string) => void;
+  /** A brick becomes two sessions on the calendar: the ride, then the run off the bike. Returns the run's id. */
+  splitBrick: (id: string) => string | null;
+  /** Every upcoming, unlocked, not-done brick, split. Returns how many. */
+  splitAllBricks: () => number;
   deleteSession: (id: string) => void;
   addSession: (s: Omit<AddedSession, "id">) => string;
   logActivity: (a: ManualActivity) => void;
@@ -210,6 +215,25 @@ export function PlanProvider({ children }: { children: ReactNode }) {
       moveSession: (id, to) => { if (!inPlan(to.date)) return; setState((s) => ({ ...s, patches: { ...s.patches, [id]: { ...s.patches[id], date: to.date, ...(to.start ? { start: to.start } : {}) } } })); },
       editSession: (id, patch) => setState((s) => ({ ...s, patches: { ...s.patches, [id]: { ...s.patches[id], ...patch } } })),
       toggleLock: (id) => setState((s) => ({ ...s, patches: { ...s.patches, [id]: { ...s.patches[id], locked: !s.patches[id]?.locked } } })),
+      splitBrick: (id) => {
+        const found = findSession(id); if (!found) return null;
+        const { s } = found; if (s.sport !== "brick" || s.locked || s.status === "done") return null;
+        const parts = brickParts(s);
+        const runId = `add-${Date.now()}`;
+        setState((st) => ({ ...st, patches: { ...st.patches, [id]: { ...st.patches[id], sport: "bike", min: parts.bike.min, text: parts.bike.text, intensity: parts.bike.intensity } }, added: [...st.added, { id: runId, date: s.date, start: parts.run.start, min: parts.run.min, sport: "run", intensity: parts.run.intensity, text: parts.run.text }] }));
+        return runId;
+      },
+      splitAllBricks: () => {
+        const t = ymd(today());
+        const bricks = d.weeks.flatMap((w) => w.sessions).filter((s) => s.sport === "brick" && !s.locked && s.status !== "done" && s.date >= t);
+        if (!bricks.length) return 0;
+        setState((st) => {
+          const patches = { ...st.patches }, added = [...st.added];
+          bricks.forEach((s, i) => { const parts = brickParts(s); patches[s.id] = { ...patches[s.id], sport: "bike", min: parts.bike.min, text: parts.bike.text, intensity: parts.bike.intensity }; added.push({ id: `add-${Date.now()}-${i}`, date: s.date, start: parts.run.start, min: parts.run.min, sport: "run", intensity: parts.run.intensity, text: parts.run.text }); });
+          return { ...st, patches, added };
+        });
+        return bricks.length;
+      },
       deleteSession: (id) => setState((s) => ({ ...s, patches: { ...s.patches, [id]: { ...s.patches[id], deleted: true } }, added: s.added.filter((a) => a.id !== id) })),
       addSession: (a) => { if (!inPlan(a.date)) return ""; const id = `add-${Date.now()}`; setState((s) => ({ ...s, added: [...s.added, { ...a, id }] })); return id; },
       logActivity: (m) => { const a = toActivity(m); setData((cur) => ({ ...cur, activities: [...cur.activities.filter((x) => x.id !== a.id), a] })); void be.upsertActivity(a); },

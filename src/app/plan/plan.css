@@ -26,7 +26,7 @@
 @media (max-width: 600px) { .wg-now span .now-w { display: none; } }
 .wg-now::before { content: ""; position: absolute; left: -1px; top: -5px; width: 8px; height: 8px; border-radius: 50%; background: var(--accent); }
 .wg-now span { white-space: nowrap; position: absolute; right: 4px; top: -15px; font-size: 12px; font-weight: 700; color: var(--accent); letter-spacing: 0.06em; background: var(--surface); padding: 1px 4px; border-radius: 4px; }
-.wg-ev { position: absolute; left: 4px; right: 4px; border-radius: 8px; padding: 5px 6px 5px 7px; font-size: 12px; line-height: 1.25; overflow: hidden; z-index: 1; display: flex; align-items: center; gap: 7px; }
+.wg-ev { position: absolute; left: 4px; right: 4px; border-radius: 8px; padding: 5px 6px 5px 6px; font-size: 12px; line-height: 1.25; overflow: hidden; z-index: 1; display: flex; align-items: center; gap: 7px; }
 .wg-ev .txt { min-width: 0; }
 .wg-ev b, .wg-ev small { display: flex; align-items: center; flex-wrap: wrap; column-gap: 6px; font-size: 12px; line-height: 15px; max-height: 15px; overflow: hidden; white-space: nowrap; }
 .wg-ev b { font-weight: 600; column-gap: 3px; }
@@ -37,21 +37,23 @@
 .wg-ev .ck { width: 14px; height: 14px; display: inline-flex; }
 .wg-ev .ck svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 /* status drives color: outstanding = light blue, completed = black */
-.wg-ev { background: var(--swim-soft); color: var(--ink); }
+/* like the front-page mock-up: a thin accent bar on the left and a faint outline */
+.wg-ev { background: var(--swim-soft); color: var(--ink); border-left: 3px solid var(--accent); box-shadow: 0 0 0 1px rgba(36, 89, 254, 0.16); }
 .wg-ev .sport-icon, .wg-ev .ck { color: var(--accent); }
-.wg-ev.done { background: var(--run-soft); color: #fff; }
+.wg-ev.done { background: var(--run-soft); color: #fff; border-left-color: rgba(255, 255, 255, 0.55); box-shadow: none; }
 .wg-ev.done .sport-icon, .wg-ev.done .ck { color: #fff; }
 .wg-ev.done small { opacity: 0.75; }
-.wg-ev.partial { background: var(--muted); }
-.wg-ev.substituted { border: 1px dashed var(--muted); background: var(--surface); color: var(--ink); }
-.wg-ev.rest { background: var(--strength-soft); }
+.wg-ev.partial { background: var(--muted); border-left-color: rgba(255, 255, 255, 0.55); box-shadow: none; }
+.wg-ev.substituted { border: 1px dashed var(--muted); border-left: 3px solid var(--muted); background: var(--surface); color: var(--ink); box-shadow: none; }
+.wg-ev.rest { background: var(--strength-soft); border-left-color: var(--muted-2, #B9BDC6); box-shadow: 0 0 0 1px rgba(16, 17, 20, 0.08); }
 .wg-ev.rest .sport-icon { color: var(--ink-2); }
-.wg-ev.rest.done { background: var(--run-soft); color: #fff; }
+.wg-ev.rest.done { background: var(--run-soft); color: #fff; border-left-color: rgba(255, 255, 255, 0.55); box-shadow: none; }
 .wg-ev.rest.done .sport-icon { color: #fff; }
 
 .wg-ev { cursor: grab; touch-action: none; user-select: none; }
 .wg-ev.done, .wg-ev.locked { cursor: pointer; }
 .wg-ev.sel { box-shadow: 0 0 0 2px var(--accent); }
+.wg-ev.done.sel, .wg-ev.partial.sel { box-shadow: 0 0 0 2px var(--accent), 0 0 0 4px var(--surface); }
 .wg-ev.drag { z-index: 5; box-shadow: 0 10px 28px rgba(16,17,20,0.22), 0 0 0 2px var(--accent); cursor: grabbing; opacity: 0.96; transition: none; }
 .wg.dragging .wg-ev:not(.drag) { pointer-events: none; }
 .wg-col.target { background-color: var(--surface-2); } .wg-col.today.target { background-color: var(--accent-soft); }
@@ -117,10 +119,10 @@
 .mg-c.dim { opacity: 0.4; }
 .mg-c.today { border-color: var(--accent); background: var(--accent-soft); }
 .mg-c.today .n { color: var(--accent); }
-.mg-s { display: flex; align-items: center; gap: 5px; width: 100%; min-width: 0; border: 0; font: inherit; text-align: left; color: var(--ink); font-size: 12px; border-radius: 5px; padding: 2px 5px; background: var(--swim-soft); }
+.mg-s { display: flex; align-items: center; gap: 5px; width: 100%; min-width: 0; border: 0; border-left: 3px solid var(--accent); box-shadow: 0 0 0 1px rgba(36, 89, 254, 0.16); font: inherit; text-align: left; color: var(--ink); font-size: 12px; border-radius: 5px; padding: 2px 5px 2px 4px; background: var(--swim-soft); }
 .mg-s .sport-icon { color: var(--accent); }
-.mg-s.rest { background: var(--strength-soft); } .mg-s.rest .sport-icon { color: var(--ink-2); }
-.mg-c.done .mg-s { background: var(--run-soft); color: #fff; } .mg-c.done .mg-s .sport-icon { color: #fff; }
+.mg-s.rest { background: var(--strength-soft); border-left-color: var(--muted-2); box-shadow: 0 0 0 1px rgba(16, 17, 20, 0.08); } .mg-s.rest .sport-icon { color: var(--ink-2); }
+.mg-c.done .mg-s { background: var(--run-soft); color: #fff; border-left-color: rgba(255, 255, 255, 0.55); box-shadow: none; } .mg-c.done .mg-s .sport-icon { color: #fff; }
 .mg-s em { margin-left: auto; font-style: normal; opacity: 0.7; }
 
 /* road to race */
@@ -265,12 +267,12 @@ svg.ramp { width: 100%; height: auto; display: block; }
   .wl li.today .wl-d span, .wl li.today .wl-d b { color: var(--accent); }
   .wl-ss { display: grid; gap: 6px; min-width: 0; }
   .wl-rest { font-size: 14px; color: var(--muted); padding: 10px 0; }
-  .wl-s { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; text-align: left; border: 0; border-radius: 10px; padding: 6px 10px; background: var(--swim-soft); color: var(--ink); font: inherit; cursor: pointer; }
+  .wl-s { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 48px; text-align: left; border: 0; border-left: 3px solid var(--accent); box-shadow: 0 0 0 1px rgba(36, 89, 254, 0.16); border-radius: 10px; padding: 6px 10px 6px 8px; background: var(--swim-soft); color: var(--ink); font: inherit; cursor: pointer; }
   .wl-s .sport-icon { color: var(--accent); flex: 0 0 auto; }
   .wl-s .t { display: grid; min-width: 0; flex: 1; }
   .wl-s .t b { font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .wl-s .t small { font-size: 12px; color: var(--ink-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .wl-s.done { background: var(--run-soft); color: #fff; } .wl-s.done .sport-icon, .wl-s.done .t small { color: #fff; }
+  .wl-s.done { background: var(--run-soft); color: #fff; border-left-color: rgba(255, 255, 255, 0.55); box-shadow: none; } .wl-s.done .sport-icon, .wl-s.done .t small { color: #fff; }
   .wl-s.sel { box-shadow: 0 0 0 2px var(--accent); }
   .wl-st { font-size: 12px; font-weight: 600; white-space: nowrap; }
   .wl-st.missed { color: var(--danger); } .wl-st.partial, .wl-st.substituted { color: var(--ink-2); }

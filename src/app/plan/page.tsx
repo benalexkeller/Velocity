@@ -17,7 +17,7 @@ import { PhaseDetail } from "@/components/plan/PlanExplained";
 import { plannedByDiscipline, plannedLoad, type Sport, type Week } from "@/lib/data";
 import { usePlan } from "@/lib/store";
 import { NutritionProvider } from "@/lib/nutrition/store";
-import { dateFull, dateLabel, fromYmd, fmtHours, addDays, ymd } from "@/lib/format";
+import { dateFull, dateLabel, fromYmd, fmtHours, addDays, today, ymd } from "@/lib/format";
 import { METHOD } from "@/lib/plan/rules";
 
 const M = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -103,6 +103,8 @@ function Plan() {
   const [sel, setSel] = useState<string | null>(fromUrl);
   const [wk, setWk] = useState(plan.findSession(fromUrl)?.w.week ?? cur.week);
   const [view, setView] = useState<"week" | "month">("week");
+  const [brickNote, setBrickNote] = useState<string | null>(null);
+  const bricksAhead = plan.weeks.flatMap((w) => w.sessions).filter((s) => s.sport === "brick" && !s.locked && s.status !== "done" && s.date >= ymd(today())).length;
   const [adding, setAdding] = useState(false);
   const [overview, setOverview] = useState<number | null>(null);
   const [phaseSel, setPhaseSel] = useState<string | null>(null);
@@ -165,6 +167,8 @@ function Plan() {
               <span><i style={{ background: "var(--swim)" }} />Swim</span>
               <span><i style={{ background: "var(--bike)" }} />Bike</span>
               <span><i style={{ background: "var(--run)" }} />Run</span>
+              {bricksAhead > 0 && <button type="button" className="settings linkbtn" title="Every upcoming brick becomes two sessions on the calendar: the ride, then the run off the bike" onClick={() => { const n = plan.splitAllBricks(); setBrickNote(`${n} ${n === 1 ? "brick" : "bricks"} split into bike and run`); }}>Bricks as two sessions ({bricksAhead})</button>}
+              {brickNote && <span className="sub">✓ {brickNote}</span>}
               {plan.hasPlan && <Link href={plan.intake ? "/plan/new?edit=1" : "/plan/new"} className="settings" title={plan.intake ? "Change the answers and rebuild the plan" : "Build a new plan from a few questions"}>Plan settings →</Link>}
             </span>
           </div>

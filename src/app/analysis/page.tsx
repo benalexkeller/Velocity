@@ -55,8 +55,8 @@ export default function AnalysisPage() {
             {/* this week and the Sunday facts first, then trends, then each recent activity against the plan */}
             <KpiRow />
             <Observations />
-            <Overview range={range} />
             <Volume range={range} />
+            <Overview range={range} />
             <SportRow />
             <Progress range={range} onPick={pick} />
             <Quality onPick={pick} />

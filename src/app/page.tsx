@@ -6,6 +6,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { BRAND } from "@/lib/config";
+import { SportIcon } from "@/components/SportIcon";
 import { ACCOUNTS_ON } from "@/lib/supabase/env";
 import { PublicNav } from "@/components/public/PublicNav";
 import { PublicFooter } from "@/components/public/PublicFooter";
@@ -57,7 +58,7 @@ export default function Landing() {
         </div>
       </section>
 
-      <section className="lp-band"><h2>Built for athletes, like you.</h2></section>
+      <section className="lp-band"><h2>Built for athletes.</h2></section>
 
       <section className="lp-feature" id="train" aria-labelledby="train-h">
         <div className="lp-text">
@@ -68,16 +69,34 @@ export default function Landing() {
         <div className="lp-devices">
           <div className="lp-laptop"><div className="lp-screen"><img src="/landing/dashboard-crop.webp" width={1310} height={790} alt="The dashboard: today's session, the next two days, this week's totals and the last activity with its route." /></div><div className="lp-laptop-base" /></div>
           <div className="lp-phone" aria-label="Phone app: today's session">
+            <div className="lp-phone-status"><span>9:41</span><span className="lp-phone-sig"><i /><i /><i /><i /><b /></span></div>
             <div className="lp-phone-top"><span className="wordmark">{BRAND.name}</span><span>Tue 27 Oct</span></div>
             <div className="lp-phone-hero">
               <div className="k">Today</div>
-              <div className="big">Run</div>
+              <div className="big"><SportIcon sport="run" size={22} />Run</div>
               <div className="sub">Tempo, 60 min</div>
-              <div className="row"><span>Pace /mi</span><b>10:15–11:15</b></div>
-              <div className="row"><span>Garmin</span><b>connected</b></div>
+              <div className="lp-phone-stats"><div><span>Pace</span><b>10:15–11:15</b></div><div><span>Zone</span><b>Z3</b></div><div><span>Load</span><b>68</b></div></div>
             </div>
-            <div className="lp-phone-next"><div><b>Tomorrow</b><span>Swim, 1:30 h</span></div><div><b>Thursday</b><span>Brick, 1:25 h</span></div></div>
+            <ol className="lp-phone-steps">
+              <li><i>1</i>Warm-up<span>10 min</span></li>
+              <li><i>2</i>Tempo 3 × 10 min<span>40 min</span></li>
+              <li><i>3</i>Cool-down<span>10 min</span></li>
+            </ol>
+            <div className="lp-phone-next"><div><b>Tomorrow</b><span>Swim 1:30</span></div><div><b>Thursday</b><span>Brick 1:25</span></div></div>
             <div className="lp-phone-btn">Start session</div>
+            <div className="lp-phone-tabs"><span className="on">Today</span><span>Plan</span><span>Nutrition</span><span>Coach</span></div>
+          </div>
+          <div className="lp-watch" aria-label="Garmin connected">
+            <svg className="lp-watch-img" viewBox="0 0 120 150" aria-hidden="true">
+              <rect x="38" y="4" width="44" height="26" rx="6" fill="#1B1C20" /><rect x="38" y="120" width="44" height="26" rx="6" fill="#1B1C20" />
+              <circle cx="60" cy="75" r="54" fill="#1B1C20" /><circle cx="60" cy="75" r="46" fill="#0B0C10" stroke="#3A3C44" strokeWidth="2" />
+              <rect x="112" y="60" width="6" height="12" rx="2" fill="#2A2C33" /><rect x="112" y="82" width="6" height="12" rx="2" fill="#2A2C33" />
+              <text x="60" y="63" textAnchor="middle" fill="#9AA0AE" fontSize="9" fontWeight="600" letterSpacing="1">RUN</text>
+              <text x="60" y="88" textAnchor="middle" fill="#FFFFFF" fontSize="22" fontWeight="600" letterSpacing="-0.5">42:18</text>
+              <text x="60" y="104" textAnchor="middle" fill="#9AA0AE" fontSize="8">10:32 /mi</text>
+              <circle cx="60" cy="75" r="40" fill="none" stroke="#2459FE" strokeWidth="3" strokeDasharray="176 76" strokeLinecap="round" transform="rotate(-90 60 75)" />
+            </svg>
+            <div className="lp-watch-card"><b>Garmin</b><span><i />Connected</span><small>Last sync 07:42</small></div>
           </div>
         </div>
       </section>
@@ -136,7 +155,9 @@ export default function Landing() {
           </div>
           <div className="lp-chat">
             <div className="lp-msg lp-you">Log chicken and rice for last night.</div>
-            <div className="lp-msg lp-them">Logged. Dinner, chicken and rice, 620 kcal, 68 g carbs. That puts yesterday at 310 g of the 404 g carb target.</div>
+            <div className="lp-msg lp-them">Logged under dinner. That puts yesterday at 310 g of the 404 g carb target.</div>
+            <div className="lp-meal"><img src="/food/chicken-rice-s.webp" width={56} height={56} alt="Chicken, rice and broccoli" loading="lazy" /><div><b>Chicken, rice and broccoli</b><span>Dinner, 1 serving</span><span>550 kcal, 65 g carbs, 55 g protein</span></div><em>Logged</em></div>
+            <div className="lp-msg lp-you">Move Thursday&apos;s ride to after work.</div>
             <div className="lp-proposal"><div className="lp-prop-head">Proposed change</div><b>Thursday&apos;s ride to 18:00.</b><p>You asked for after work; your evening slot is 18:00.</p><div className="lp-prop-actions"><span className="btn small">Accept</span><span className="btn small ghost">Decline</span></div></div>
           </div>
         </div>

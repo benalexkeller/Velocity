@@ -6,7 +6,7 @@ import { CoachNote } from "../CoachNote";
 import { activityLoad, plannedLoad } from "@/lib/data";
 import { METRICS, type Metric } from "@/lib/analysis";
 import { useAnalysis } from "@/lib/useAnalysis";
-import { addDays, dateLabel, fmtHMS, fmtHours, fmtPace, fromYmd, shortDate, today } from "@/lib/format";
+import { addDays, dateLabel, fmtHMS, fmtHours, fmtPace, fromYmd, shortDate, today, ymd as ymdOf } from "@/lib/format";
 import { fmtDist, runPace, swimDist, swimPace } from "@/lib/units";
 import { niceTicks, useWidth } from "@/lib/ticks";
 
@@ -125,16 +125,40 @@ export function Overview({ range }: { range: Range }) {
 }
 
 // ---------- 3. Training volume ----------
+type Grain = "day" | "week" | "month";
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+/** Done against planned, per day of this week, per week of the range, or per month. */
 export function Volume({ range }: { range: Range }) {
   const an = useAnalysis();
   const [mode, setMode] = useState<"hours" | "distance" | "load">("hours");
+  const [grain, setGrain] = useState<Grain>("week");
   const [hov, setHov] = useState<number | null>(null);
   const cur = an.currentWeek();
   const n = range === 99 ? cur.week : Math.min(cur.week, range);
   const weeks = an.weeks.slice(cur.week - n, cur.week);
-  const per = (w: (typeof weeks)[number]) => {
-    const s = fromYmd(w.start), e = addDays(s, 7);
-    const acts = an.activities.filter((a) => { const d = fromYmd(a.date); return d >= s && d < e; });
+  type Sess = (typeof weeks)[number]["sessions"][number];
+  // one bucket per bar: its label, the planned sessions in it and the activities done in it
+  type Bucket = { key: string; label: string; title: string; sessions: Sess[]; from: Date; to: Date };
+  const buckets: Bucket[] = (() => {
+    if (grain === "day") {
+      const s0 = fromYmd(cur.start);
+      const DAY = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+      return Array.from({ length: 7 }, (_, i) => { const d = addDays(s0, i); const key = ymdOf(d); return { key, label: `${DAY[d.getDay()]} ${d.getDate()}`, title: dateLabel(key), sessions: cur.sessions.filter((x) => x.date === key), from: d, to: addDays(d, 1) }; });
+    }
+    if (grain === "month") {
+      const out: Bucket[] = [];
+      for (const w of weeks) for (const x of w.sessions) {
+        const d = fromYmd(x.date); const key = `${d.getFullYear()}-${d.getMonth()}`;
+        let b = out.find((o) => o.key === key);
+        if (!b) { const from = new Date(d.getFullYear(), d.getMonth(), 1); b = { key, label: `${MONTHS[d.getMonth()]} ${String(d.getFullYear()).slice(2)}`, title: `${MONTHS[d.getMonth()]} ${d.getFullYear()}`, sessions: [], from, to: new Date(d.getFullYear(), d.getMonth() + 1, 1) }; out.push(b); }
+        b.sessions.push(x);
+      }
+      return out;
+    }
+    return weeks.map((w) => ({ key: w.start, label: shortDate(w.start), title: `Week ${w.week}, ${dateLabel(w.start)}`, sessions: w.sessions, from: fromYmd(w.start), to: addDays(fromYmd(w.start), 7) }));
+  })();
+  const per = (b: Bucket) => {
+    const acts = an.activities.filter((a) => { const d = fromYmd(a.date); return d >= b.from && d < b.to; });
     const g = { swim: 0, bike: 0, run: 0, other: 0 };
     const hours = { swim: 0, bike: 0, run: 0, other: 0 }, count = { swim: 0, bike: 0, run: 0, other: 0 };
     for (const a of acts) {
@@ -142,11 +166,12 @@ export function Volume({ range }: { range: Range }) {
       g[k] += mode === "hours" ? a.min / 60 : mode === "load" ? activityLoad(a, an.athlete.lthr ?? undefined) : a.sport === "swim" ? (a.yd ?? 0) / 1760 : a.mi ?? 0;
       hours[k] += a.min / 60; count[k]++;
     }
-    const planned = mode === "hours" ? w.plannedMin / 60 : mode === "load" ? w.sessions.reduce((s2, x) => s2 + plannedLoad(x), 0) : null;
-    const plannedSessions = w.sessions.filter((x) => x.sport !== "rest").length;
-    return { w, g, planned, hours, count, activities: acts.length, hoursTotal: acts.reduce((t, a) => t + a.min, 0) / 60, plannedH: w.plannedMin / 60, plannedSessions };
+    const active = b.sessions.filter((x) => x.sport !== "rest");
+    const plannedMin = active.reduce((t, x) => t + x.min, 0);
+    const planned = mode === "hours" ? plannedMin / 60 : mode === "load" ? active.reduce((s2, x) => s2 + plannedLoad(x), 0) : null;
+    return { b, g, planned, hours, count, activities: acts.length, hoursTotal: acts.reduce((t, a) => t + a.min, 0) / 60, plannedH: plannedMin / 60, plannedSessions: active.length };
   };
-  const rows = weeks.map(per);
+  const rows = buckets.map(per);
   const [svgRef, W] = useWidth<SVGSVGElement>(760); const H = 230, L = mode === "hours" ? 40 : 48, R = 10, T = 16, B = 26;
   const max = Math.max(1, ...rows.map((r) => Math.max(r.g.swim + r.g.bike + r.g.run + r.g.other, r.planned ?? 0)));
   const nt = niceTicks(0, max, 4, mode === "hours" ? "hours" : "number");
@@ -159,25 +184,26 @@ export function Volume({ range }: { range: Range }) {
   return (
     <section className="card ax-panel" aria-label="Training volume">
       <div className="ax-head">
-        <div><h2>Training volume</h2></div>
+        <div><h2>Training volume</h2><p className="muted small">{grain === "day" ? "This week, day by day: done against planned" : grain === "month" ? "Per month, done against planned" : "Per week, done against planned"}</p></div>
         <div className="ax-tools">
+          <div className="pill-group">{(["day", "week", "month"] as const).map((g) => <button key={g} type="button" className={grain === g ? "on" : ""} onClick={() => { setGrain(g); setHov(null); }}>{g === "day" ? "Daily" : g === "week" ? "Weekly" : "Monthly"}</button>)}</div>
           <div className="pill-group">{(["hours", "distance", "load"] as const).map((m) => <button key={m} type="button" className={mode === m ? "on" : ""} onClick={() => setMode(m)}>{m === "hours" ? "Hours" : m === "distance" ? "Distance" : "Load"}</button>)}</div>
           <span className="lgd"><span><i style={{ background: "var(--swim)" }} />Swim</span><span><i style={{ background: "var(--bike)" }} />Bike</span><span><i style={{ background: "var(--run)" }} />Run</span><span><i style={{ background: "var(--strength-soft)", border: "1px solid var(--line)" }} />Other</span><span><i className="dash" />Planned</span></span>
         </div>
       </div>
       <div className="ax-volwrap" onMouseLeave={() => setHov(null)}>
-        <svg ref={svgRef} className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Weekly volume">
+        <svg ref={svgRef} className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Training volume, done against planned">
           {ticks.map((v) => <g key={v}><line x1={L} y1={y(v)} x2={W - R} y2={y(v)} stroke="var(--grid)" /><text x={L - 8} y={y(v) + 4} textAnchor="end">{tick(v)}</text></g>)}
           {rows.map((r, i) => {
             const cx = L + i * gw + gw / 2;
             const segs: [number, string][] = [[r.g.run, "var(--run)"], [r.g.bike, "var(--bike)"], [r.g.swim, "var(--swim)"], [r.g.other, "var(--strength-soft)"]];
             let acc = 0;
             return (
-              <g key={r.w.week} onMouseEnter={() => setHov(i)} opacity={hov == null || hov === i ? 1 : 0.6}>
+              <g key={r.b.key} onMouseEnter={() => setHov(i)} opacity={hov == null || hov === i ? 1 : 0.6}>
                 <rect x={L + i * gw} y={T} width={gw} height={H - T - B} fill="transparent" />
                 {r.planned != null && <rect x={cx - bw / 2 - 3} y={y(r.planned)} width={bw + 6} height={Math.max(0, y(0) - y(r.planned))} fill="none" stroke="var(--muted-2)" strokeDasharray="3 3" rx={3} />}
                 {segs.map(([v, c], k) => { const el = v > 0 ? <rect key={k} x={cx - bw / 2} y={y(acc + v)} width={bw} height={Math.max(0, y(0) - y(v))} fill={c} /> : null; acc += v; return el; })}
-                <text x={cx} y={H - 8} textAnchor="middle" fontWeight={hov === i ? 600 : undefined}>{shortDate(r.w.start)}</text>
+                <text x={cx} y={H - 8} textAnchor="middle" fontWeight={hov === i ? 600 : undefined}>{r.b.label}</text>
               </g>
             );
           })}
@@ -188,7 +214,7 @@ export function Volume({ range }: { range: Range }) {
           const line = (k: "swim" | "bike" | "run" | "other", label: string, col: string) => r.count[k] ? <div key={k}><span><i style={{ background: col }} />{label}</span><b>{fmtHours(r.hours[k])}</b><span className="n">{r.count[k]} {r.count[k] === 1 ? "activity" : "activities"}</span></div> : null;
           return (
             <div className="ax-vtip" style={{ left: `${cx * 100}%`, transform: cx > 0.75 ? "translateX(-100%)" : cx < 0.2 ? "none" : "translateX(-50%)" }}>
-              <div className="d">Week {r.w.week}, {dateLabel(r.w.start)}</div>
+              <div className="d">{r.b.title}</div>
               <div className="tot"><b>{fmtHours(r.hoursTotal)}</b> done, <b>{r.activities}</b> {r.activities === 1 ? "activity" : "activities"}</div>
               <div className="sub">plan {fmtHours(r.plannedH)}, {r.plannedSessions} sessions</div>
               {line("swim", "Swim", "var(--swim)")}{line("bike", "Bike", "var(--bike)")}{line("run", "Run", "var(--run)")}{line("other", "Other", "var(--strength-soft)")}
