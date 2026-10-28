@@ -68,58 +68,6 @@ function RaceTime() {
 }
 
 // ---------- 2. Pace, distance, time ----------
-function PaceCalc() {
-  const [dist, setDist] = useState("6.2"); const [time, setTime] = useState("58:00"); const [pc, setPc] = useState("");
-  const [solve, setSolve] = useState<"pace" | "time" | "distance">("pace");
-  const D = num(dist), T = toSec(time), P = toSec(pc);
-  const outPace = solve === "pace" ? (D ? T / D : 0) : P;
-  const outTime = solve === "time" ? D * P : T;
-  const outDist = solve === "distance" ? (P ? T / P : 0) : D;
-  return (
-    <div className="calc">
-      <div className="inputs">
-        <label>Solve for<select value={solve} onChange={(e) => setSolve(e.target.value as typeof solve)}><option value="pace">Pace</option><option value="time">Time</option><option value="distance">Distance</option></select></label>
-        {solve !== "distance" && <label>Distance (mi)<input value={dist} onChange={(e) => setDist(e.target.value)} /></label>}
-        {solve !== "time" && <label>Time (h:mm:ss)<input value={time} onChange={(e) => setTime(e.target.value)} /></label>}
-        {solve !== "pace" && <label>Pace per mile (m:ss)<input value={pc} onChange={(e) => setPc(e.target.value)} placeholder="9:20" /></label>}
-      </div>
-      <div className="out">
-        <div className="res">
-          <Res k="Pace" v={pace(outPace)} u="/mi" hero={solve === "pace"} />
-          <Res k="Time" v={hms(outTime)} hero={solve === "time"} />
-          <Res k="Distance" v={outDist ? outDist.toFixed(2) : "—"} u="mi" hero={solve === "distance"} />
-          <Res k="Speed" v={outPace ? (3600 / outPace).toFixed(1) : "—"} u="mph" />
-          <Res k="Pace per km" v={pace(outPace / 1.609344)} u="/km" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ---------- 3. Race predictor ----------
-function Predictor() {
-  const [dist, setDist] = useState("6.2"); const [time, setTime] = useState("58:00"); const [exp, setExp] = useState("1.06");
-  const D = num(dist), T = toSec(time), k = num(exp) || 1.06;
-  const pred = (d: number) => (D && T ? T * Math.pow(d / D, k) : 0);
-  const rows: [string, number][] = [["5k", 3.107], ["10k", 6.214], ["Half marathon", 13.109], ["Marathon", 26.219], ["Ironman run (after 112 mi)", 26.219]];
-  return (
-    <div className="calc">
-      <div className="inputs">
-        <label>Recent race or time-trial distance (mi)<input value={dist} onChange={(e) => setDist(e.target.value)} /></label>
-        <label>Time (h:mm:ss)<input value={time} onChange={(e) => setTime(e.target.value)} /></label>
-        <label>Fatigue exponent (Riegel, 1.06 default)<input value={exp} onChange={(e) => setExp(e.target.value)} /></label>
-      </div>
-      <div className="out">
-        <table><thead><tr><th>Distance</th><th>Predicted time</th><th>Pace</th></tr></thead><tbody>
-          {rows.map(([n, d], i) => { const t = pred(d) * (i === 4 ? 1.15 : 1); return <tr key={n}><td>{n}</td><td>{hms(t)}</td><td>{pace(t / d)} /mi</td></tr>; })}
-        </tbody></table>
-        <div className="note">Riegel: T2 = T1 × (D2 ÷ D1)^1.06. Ironman run row adds 15% for the bike leg before it; well-paced Ironman marathons run 10–20% slower than a fresh marathon.</div>
-      </div>
-    </div>
-  );
-}
-
-// ---------- 4. Zones ----------
 function Zones() {
   const [lthr, setLthr] = useState("168"); const [tp, setTp] = useState("8:45"); const [ftp, setFtp] = useState("230");
   const H = num(lthr), P = toSec(tp), F = num(ftp);
@@ -234,57 +182,10 @@ function Cost() {
 }
 
 // ---------- 8. Units ----------
-function Units() {
-  const [mi, setMi] = useState("26.2"); const [pc, setPc] = useState("10:00"); const [yd, setYd] = useState("4224"); const [mph, setMph] = useState("17.5"); const [lb, setLb] = useState("165"); const [ft, setFt] = useState("1000");
-  const P = toSec(pc);
-  return (
-    <div className="calc">
-      <div className="inputs">
-        <label>Miles<input value={mi} onChange={(e) => setMi(e.target.value)} /></label>
-        <label>Run pace per mile (m:ss)<input value={pc} onChange={(e) => setPc(e.target.value)} /></label>
-        <label>Yards<input value={yd} onChange={(e) => setYd(e.target.value)} /></label>
-        <label>mph<input value={mph} onChange={(e) => setMph(e.target.value)} /></label>
-        <div className="two"><label>Pounds<input value={lb} onChange={(e) => setLb(e.target.value)} /></label><label>Feet<input value={ft} onChange={(e) => setFt(e.target.value)} /></label></div>
-      </div>
-      <div className="out">
-        <div className="res">
-          <Res k="Kilometres" v={(num(mi) * 1.609344).toFixed(2)} u="km" />
-          <Res k="Pace per km" v={pace(P / 1.609344)} u="/km" />
-          <Res k="Metres" v={Math.round(num(yd) * 0.9144).toLocaleString()} u="m" />
-          <Res k="km/h" v={(num(mph) * 1.609344).toFixed(1)} u="km/h" />
-          <Res k="Kilograms" v={(num(lb) / 2.2046).toFixed(1)} u="kg" />
-          <Res k="Metres (elevation)" v={Math.round(num(ft) * 0.3048).toLocaleString()} u="m" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ---------- 9. Race distances ----------
-function Distances() {
-  return (
-    <>
-      <table><thead><tr><th>Race</th><th>Swim</th><th>Bike</th><th>Run</th><th>Typical finish (age-group median)</th></tr></thead><tbody>
-        <tr><td>Sprint</td><td>750 m, 820 yd</td><td>20 km, 12.4 mi</td><td>5 km, 3.1 mi</td><td>1:20–1:40</td></tr>
-        <tr><td>Olympic</td><td>1.5 km, 1,640 yd</td><td>40 km, 24.9 mi</td><td>10 km, 6.2 mi</td><td>2:40–3:10</td></tr>
-        <tr><td>Ironman 70.3</td><td>1.9 km, 2,112 yd</td><td>90 km, 56 mi</td><td>21.1 km, 13.1 mi</td><td>5:45–6:30</td></tr>
-        <tr><td>Ironman 140.6</td><td>3.8 km, 4,224 yd</td><td>180 km, 112 mi</td><td>42.2 km, 26.2 mi</td><td>12:30–13:30</td></tr>
-        <tr><td>Marathon</td><td>—</td><td>—</td><td>42.2 km, 26.2 mi</td><td>4:20–4:40</td></tr>
-        <tr><td>Half marathon</td><td>—</td><td>—</td><td>21.1 km, 13.1 mi</td><td>2:00–2:10</td></tr>
-      </tbody></table>
-      <p>Cut-offs at Ironman Texas: swim 2:20 after the last wave start, bike 10:30 after your start, total 17:00. Wetsuit legal below 76.1 °F (24.5 °C) water temperature.</p>
-    </>
-  );
-}
-
 export const CALCULATORS: Cube[] = [
   { id: "race-time", tag: "Race", title: "Race time", summary: "Paces and transitions in, finish time and splits out. Ironman, 70.3, Olympic, Sprint, Marathon.", render: () => <RaceTime /> },
-  { id: "pace", tag: "Training", title: "Pace, time, distance", summary: "Enter any two, get the third. Plus speed and per-km pace.", render: () => <PaceCalc /> },
-  { id: "predict", tag: "Race", title: "Race predictor", summary: "One recent result predicts 5k to marathon. Riegel formula, exponent 1.06.", render: () => <Predictor /> },
   { id: "zones", tag: "Training", title: "Training zones", summary: "Threshold heart rate, run pace and FTP in. Five zones out for each.", render: () => <Zones /> },
   { id: "sweat", tag: "Nutrition", title: "Sweat rate", summary: "Weight before and after a session. Litres per hour and what to drink.", render: () => <Sweat /> },
   { id: "carbs", tag: "Nutrition", title: "Carbs per hour", summary: "Session length and intensity. Grams per hour, gels and drink volume.", render: () => <Carbs /> },
   { id: "cost", tag: "Money", title: "Race cost", summary: "Registration, travel, hotel, bike transport, food, gear. Total and breakdown.", render: () => <Cost /> },
-  { id: "units", tag: "Reference", title: "Unit converter", summary: "Miles, pace, yards, mph, pounds, feet to metric.", render: () => <Units /> },
-  { id: "distances", tag: "Reference", title: "Race distances", summary: "Sprint to 140.6 in metric and imperial, typical finish times, Texas cut-offs.", render: () => <Distances /> },
 ];
