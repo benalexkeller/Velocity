@@ -13,7 +13,7 @@ import { START } from "@/components/public/start";
 import "./landing.css";
 
 export const metadata: Metadata = {
-  title: `${BRAND.name} — create a plan, synchronise your nutrition, become the expert`,
+  title: `${BRAND.name} — create a plan, strategize nutrition, become the expert`,
   description: "A week-by-week plan for your race, every session from your watch, nutrition targets per day, and a coach that reads all of it.",
 };
 
@@ -52,7 +52,7 @@ export default function Landing() {
       <section className="lp-hero" aria-label="Velocity">
         <PublicNav tone="dark" start={start} accountsOn={ACCOUNTS_ON} />
         <div className="lp-hero-text">
-          <h1><span>Create a plan.</span><span>Synchronise your nutrition.</span><span>Become the expert.</span></h1>
+          <h1><span>Create a plan</span><span>Strategize nutrition</span><span>Become the expert</span></h1>
           <Link href={start.href} className="btn lp-big">{start.label}</Link>
         </div>
       </section>
@@ -159,7 +159,7 @@ export default function Landing() {
       <section className="lp-close" aria-label="Create an account">
         <img src="/landing/trainer.webp" width={2233} height={1026} loading="lazy" alt="" />
         <div className="lp-close-text">
-          <h2><span>Create a plan.</span><span>Synchronise your nutrition.</span><span>Become the expert.</span></h2>
+          <h2><span>Create a plan</span><span>Strategize nutrition</span><span>Become the expert</span></h2>
           <Link href={start.href} className="btn lp-big">{start.label}</Link>
         </div>
       </section>
