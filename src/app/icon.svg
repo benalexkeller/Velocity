@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1254 1254" width="1254" height="1254">
+  <!-- Velocity mark: two ribbon bands forming a V, a medal below. Redrawn as geometry from PR's design (2026-10-28). -->
+  <defs>
+    <!-- the right band passes in front: the left band and the circle keep a gap of 22 around it; both bands keep a gap of 22 around the medal -->
+    <mask id="left-cut">
+      <rect width="1254" height="1254" fill="#fff"/>
+      <polygon points="839,108 1095,108 631,905 375,905" fill="#000" stroke="#000" stroke-width="44" stroke-linejoin="miter"/>
+      <circle cx="626" cy="905" r="272" fill="#000"/>
+    </mask>
+    <mask id="right-cut">
+      <rect width="1254" height="1254" fill="#fff"/>
+      <circle cx="626" cy="905" r="272" fill="#000"/>
+    </mask>
+  </defs>
+  <g fill="#2459FE">
+    <polygon points="155,108 411,108 874,905 618,905" mask="url(#left-cut)"/>
+    <polygon points="839,108 1095,108 631,905 375,905" mask="url(#right-cut)"/>
+    <circle cx="626" cy="905" r="250"/>
+  </g>
+</svg>
