@@ -28,10 +28,12 @@
 .pp-mock { min-width: 0; }
 .pp-side { display: grid; gap: 18px; align-content: center; padding: 28px 32px; border-radius: var(--radius-lg); background: var(--surface-2); }
 .pp-side .lp-facts { font-size: 16px; gap: 14px; }
-.pp-chips { list-style: none; margin: 4px 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
-.pp-chips li { font-size: 14px; font-weight: 600; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 6px 14px; display: inline-flex; align-items: center; gap: 8px; }
-.pp-chips li.on { color: var(--ink); border-color: var(--ink); }
-.pp-chips li em { font-style: normal; font-size: 11px; font-weight: 600; color: var(--accent); }
+.pp-chips { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; }
+.pp-chips li { display: grid; gap: 2px; padding: 14px 16px; border-radius: var(--radius); background: var(--surface); border: 1px solid var(--line); }
+.pp-chips li b { font-size: 17px; font-weight: 600; letter-spacing: -0.01em; color: var(--ink); }
+.pp-chips li em { font-style: normal; font-size: 12.5px; color: var(--muted); }
+.pp-chips li.on { border-color: var(--accent); }
+.pp-chips li.on em { color: var(--accent); }
 .pp-more { max-width: var(--lp-w); margin: 112px auto 0; padding: 0 var(--lp-gutter); box-sizing: content-box; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .pp-more-card { text-decoration: none; color: inherit; display: grid; gap: 6px; padding: 22px 24px; border: 1px solid var(--line); border-radius: var(--radius-lg); }
 .pp-more-card b { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }

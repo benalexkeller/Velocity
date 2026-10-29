@@ -122,6 +122,7 @@ export default function Landing() {
             <li>Reads your plan, your sessions, your body data and your nutrition before every decision and answer</li>
             <li>Reschedules activities, adjusts workout splits and redesigns your long-term plan around your life and status</li>
             <li>Recommendations drawn from the published work of coaches, sports scientists and sports doctors</li>
+            <li>Works across the leading AI models, and moves to the strongest as they are released</li>
           </ul>
         </div>
         <div className="lp-chats">

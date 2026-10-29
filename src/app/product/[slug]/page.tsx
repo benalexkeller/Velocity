@@ -50,7 +50,7 @@ export default async function ProductPage({ params }: { params: Promise<{ slug: 
 
       {page.sections.map((s, i) => {
         const facts = s.facts && <ul className="lp-facts">{s.facts.map((f) => <li key={f}>{f}</li>)}</ul>;
-        const chips = s.chips && <ul className="pp-chips" aria-label="Models">{s.chips.map((c, j) => <li key={c} className={j === 0 ? "on" : ""}>{c}{j === 0 && <em>In use</em>}</li>)}</ul>;
+        const chips = s.chips && <ul className="pp-chips" aria-label="Models">{s.chips.map((c) => <li key={c.name} className={/backup/.test(c.role) ? "" : "on"}><b>{c.name}</b><em>{c.role}</em></li>)}</ul>;
         const shot = s.mock === "calendar" ? <div className="pp-mock"><CalendarMock animate={false} /></div> : s.shot ? <Figure shot={s.shot} small={s.small} /> : null;
         // a section without a picture puts its facts (or chips) beside the text instead, so the page stays balanced
         const visual = shot ?? ((facts || chips) && <div className="pp-side">{chips}{facts}</div>);

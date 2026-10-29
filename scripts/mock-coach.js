@@ -10,6 +10,9 @@ http.createServer((req, res) => {
       const sys = j.messages.filter((m) => m.role === "system").map((m) => m.content);
       const ctx = JSON.parse(sys.find((c) => c.startsWith("Athlete data"))?.split("\n").slice(1).join("\n") || "{}");
       const tools = (j.tools || []).map((t) => t.function.name);
+      console.log("asked", j.model, j.models ? `(then ${j.models.slice(1).join(", ")})` : "");
+      // an unknown model id in the list gets a 400, the way OpenRouter answers it
+      if ((j.models || []).some((m) => m.startsWith("bad/"))) { res.statusCode = 400; res.end(JSON.stringify({ error: { message: "bad model" } })); return; }
       const tomorrow = (ctx.sessions || []).find((s) => s.date > ctx.today && s.sport !== "rest");
       let message;
       if (/today/.test(last)) {

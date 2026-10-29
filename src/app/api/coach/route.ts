@@ -3,14 +3,16 @@
 // passages, adds the instructions, calls the model through OpenRouter and returns the answer, its sources and
 // any proposed plan change. The model key never reaches the browser.
 //
-// One model (COACH_MODEL, default deepseek/deepseek-v4.1-flash) answers questions. A whole-plan review (mode
-// "restructure") runs only after the athlete accepts a pitch card, and uses COACH_MODEL_STRONG when set (default:
-// the same model). COACH_DAILY_CAP: questions per athlete per day (default 40).
+// The coach works across several models (src/lib/coach/models.ts): everyday questions go to the fast list
+// (DeepSeek first), a whole-plan review (mode "restructure", run only after the athlete accepts a pitch card) to
+// the strong list (newest Claude, then GPT, then Gemini). OpenRouter tries each list in order, so a model that is
+// down never stops the coach. COACH_DAILY_CAP: questions per athlete per day (default 40).
 import { NextResponse, type NextRequest } from "next/server";
 import { ACCOUNTS_ON } from "@/lib/supabase/env";
 import { supabaseServer } from "@/lib/supabase/server";
 import { LOG_MEAL_TOOL, RESTRUCTURE_PROMPT, RESTRUCTURE_TOOL, SYSTEM_PROMPT, TOOLS, contextMessage } from "@/lib/coach/prompt";
 import { MEAL_LIBRARY, mealMacros } from "@/lib/nutrition/meals";
+import { coachModels } from "@/lib/coach/models";
 import { PASSAGES } from "@/lib/coach/library-data";
 import { referenceBlock, searchLibrary, usedCitations, type Passage } from "@/lib/coach/library";
 import { RED_FLAG_REPLY, redFlag } from "@/lib/coach/safety";
@@ -19,8 +21,6 @@ import type { CoachContext, CoachReply, CoachRequest, MealLogItem, PlanChange, P
 export const runtime = "nodejs";
 // a whole-plan review sends the full remaining plan to the model and can take well over the 10 s default; Vercel allows 60 s here
 export const maxDuration = 60;
-const MODEL = process.env.COACH_MODEL || "deepseek/deepseek-v4.1-flash";
-const MODEL_STRONG = process.env.COACH_MODEL_STRONG || MODEL; // a stronger model for the whole-plan review is one setting away
 const CAP = Number(process.env.COACH_DAILY_CAP || 40);
 const KEY = process.env.OPENROUTER_API_KEY || "";
 const BASE = process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1";
@@ -71,9 +71,10 @@ export async function POST(req: NextRequest) {
     ? [{ role: "system", content: RESTRUCTURE_PROMPT }, { role: "system", content: contextMessage(trimContext(ctx, true)) }, ...(refs.text ? [{ role: "system", content: `Reference passages:\n${refs.text}` }] : []), ...history]
     : [{ role: "system", content: SYSTEM_PROMPT }, { role: "system", content: contextMessage(trimContext(ctx, false)) }, ...(refs.text ? [{ role: "system", content: `Reference passages:\n${refs.text}` }] : []), ...history];
 
-  const model = restructure ? MODEL_STRONG : MODEL;
-  const out = await callModel(model, messages, restructure ? TOOLS : [...TOOLS, RESTRUCTURE_TOOL, LOG_MEAL_TOOL], restructure ? 1800 : 700);
-  if (!out) return NextResponse.json({ error: "upstream" }, { status: 502 });
+  const models = restructure ? coachModels().strong : coachModels().fast;
+  const res = await callModel(models, messages, restructure ? TOOLS : [...TOOLS, RESTRUCTURE_TOOL, LOG_MEAL_TOOL], restructure ? 1800 : 700, restructure ? 55_000 : 30_000);
+  if (!res) return NextResponse.json({ error: "upstream" }, { status: 502 });
+  const { out, model } = res;
 
   let text = (out.content ?? "").trim();
   let proposal: Proposal | undefined;
@@ -98,19 +99,27 @@ export async function POST(req: NextRequest) {
   return NextResponse.json({ text, proposal, meals: meals.length ? meals : undefined, sources: sources.length ? sources : undefined, model, tier: restructure ? "strong" : "fast" } satisfies CoachReply);
 }
 
-async function callModel(model: string, messages: Msg[], tools: unknown[], maxTokens: number): Promise<ModelOut | null> {
-  let res: Response;
-  try {
-    res = await fetch(`${BASE}/chat/completions`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json", "HTTP-Referer": "https://velocity-smoky-three.vercel.app", "X-Title": "Velocity coach" },
-      body: JSON.stringify({ model, messages, tools, tool_choice: "auto", max_tokens: maxTokens, temperature: 0.3 }),
-      signal: AbortSignal.timeout(90_000),
-    });
-  } catch (e) { console.error("[coach] fetch", e); return null; }
-  if (!res.ok) { console.error("[coach] openrouter", model, res.status, (await res.text()).slice(0, 500)); return null; }
-  const data = (await res.json()) as { choices?: { message?: ModelOut }[] };
-  return data.choices?.[0]?.message ?? null;
+/** One request to OpenRouter with the whole model list: the first answers, the rest stand in when it fails.
+ *  If OpenRouter rejects the list itself (an unknown id in an override), the first model is tried alone.
+ *  Returns the answer and the model that actually gave it. */
+async function callModel(models: string[], messages: Msg[], tools: unknown[], maxTokens: number, timeoutMs: number): Promise<{ out: ModelOut; model: string } | null> {
+  const send = async (list: string[]) => {
+    try {
+      return await fetch(`${BASE}/chat/completions`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json", "HTTP-Referer": "https://velocityathletes.com", "X-Title": "Velocity coach" },
+        body: JSON.stringify({ model: list[0], ...(list.length > 1 ? { models: list } : {}), messages, tools, tool_choice: "auto", max_tokens: maxTokens, temperature: 0.3 }),
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+    } catch (e) { console.error("[coach] fetch", e); return null; }
+  };
+  let res = await send(models);
+  if (res && res.status === 400 && models.length > 1) { console.error("[coach] openrouter rejected the model list", (await res.text()).slice(0, 300)); res = await send(models.slice(0, 1)); }
+  if (!res) return null;
+  if (!res.ok) { console.error("[coach] openrouter", models[0], res.status, (await res.text()).slice(0, 500)); return null; }
+  const data = (await res.json()) as { model?: string; choices?: { message?: ModelOut }[] };
+  const out = data.choices?.[0]?.message;
+  return out ? { out, model: data.model ?? models[0] } : null;
 }
 
 /** Keeps the request small whatever the browser sends; the whole plan goes only in restructure mode. */

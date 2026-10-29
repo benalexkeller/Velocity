@@ -20,8 +20,8 @@ export interface Section {
   body: string[];
   /** Short facts, one per line. */
   facts?: string[];
-  /** Short labels shown as a row of chips (e.g. model names); the first is marked "in use". */
-  chips?: string[];
+  /** A row of labelled chips (the coach's models): name, and what it is used for. */
+  chips?: { name: string; role: string }[];
   shot?: Shot;
   /** A drawn mock-up instead of a screenshot. */
   mock?: "calendar";
@@ -115,7 +115,7 @@ export const PRODUCT: ProductPage[] = [
     slug: "coach",
     nav: "Coach",
     title: "Coach",
-    lead: "A coach that reads your plan, your activities, your body data and your meals before it answers, cites its sources, and changes the plan only through proposals you accept.",
+    lead: "A coach that reads your plan, your activities, your body data and your meals before it answers, cites its sources, and changes the plan only through proposals you accept. It works across the leading AI models.",
     hero: shot("coach-page", "The Plan page with the coach rail open: a question about last week answered with the figures from the plan and the logged activities."),
     sections: [
       {
@@ -143,9 +143,9 @@ export const PRODUCT: ProductPage[] = [
         shot: shot("coach-pitch", "A pitch card: what the full review would change and why, with Run the full review and Not now.", 339, 625),
       },
       {
-        id: "models", title: "The model", short: "One setting away from any leading model",
-        body: ["The coach runs on DeepSeek through OpenRouter, which serves the leading language models side by side. Moving the coach to another model is one setting: your data, the library and the way answers are checked stay the same."],
-        chips: ["DeepSeek", "GPT", "Claude", "Gemini", "Llama", "Mistral", "Qwen"],
+        id: "models", title: "Built across the leading models", short: "The right model for each job, and the newest as they arrive",
+        body: ["The coach works across the leading AI models. Everyday questions go to a fast model; whole-plan reviews go to the strongest one available. If a model is down, the next one in line answers.", "New versions are picked up as they are released, so the coach gets stronger without you changing anything. Your data, the library and the safety check stay the same whichever model answers."],
+        chips: [{ name: "DeepSeek", role: "Questions" }, { name: "Gemini Flash", role: "Questions, backup" }, { name: "Claude", role: "Plan reviews" }, { name: "GPT", role: "Plan reviews, backup" }, { name: "Gemini Pro", role: "Plan reviews, backup" }],
       },
       {
         id: "limits", title: "Limits", short: "What the coach will not do",

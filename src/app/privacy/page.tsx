@@ -41,7 +41,7 @@ export default function Privacy() {
         <tbody>
           <tr><th>Supabase</th><td>Database and sign-in. Stores everything listed above.</td></tr>
           <tr><th>Vercel</th><td>Hosts the website and runs the app&apos;s server code.</td></tr>
-          <tr><th>OpenRouter</th><td>Passes each coach question, with the compact copy of your data, to the language model that answers it (currently DeepSeek). It is used to answer that question only.</td></tr>
+          <tr><th>OpenRouter</th><td>Passes each coach question, with the compact copy of your data, to the AI model that answers it: DeepSeek or Google Gemini for everyday questions, Anthropic Claude, OpenAI GPT or Google Gemini for whole-plan reviews. It is used to answer that question only.</td></tr>
           <tr><th>Junction</th><td>Connects your watch (Garmin today) and sends your activities and body data to Velocity once you connect it. You can disconnect it at any time under Connect wearable; activities already imported stay until you delete them.</td></tr>
           <tr><th>USDA FoodData Central</th><td>Receives the words you type into food search, nothing else about you.</td></tr>
           <tr><th>CARTO</th><td>Serves the map tiles behind a route, so it sees which map area is shown.</td></tr>
