@@ -1,6 +1,12 @@
 /* Public top bar with product menus. Used on the front page (dark, over the photo) and the product pages (light). */
 /* the bar spans the wide column (--lp-wide), not the reading column, so on big screens the wordmark sits far left and the buttons far right */
-.pn { position: relative; z-index: 20; width: 100%; box-sizing: border-box; max-width: calc(var(--lp-wide, 1600px) + 2 * var(--lp-gutter, 24px)); margin: 0 auto; padding: 0 var(--lp-gutter, 24px); height: 80px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+.pn { position: relative; z-index: 20; width: 100%; box-sizing: border-box; margin: 0 auto; padding: 0 var(--lp-gutter, 24px); height: 80px; display: flex; align-items: center; justify-content: space-between; gap: 24px; }
+/* fixed over the front page: two stacked copies, each clipped to its side of the photo's edge (see PublicNav.tsx) */
+.pn-fixed { position: fixed; top: 0; left: 0; right: 0; height: 80px; z-index: 50; }
+.pn-fixed .pn { position: absolute; top: 0; left: 0; right: 0; }
+.pn-fixed .pn-clone { pointer-events: none; z-index: 21; }
+.pn-fixed.solid .pn-light, .pn-fixed.active .pn-light { background: #FFFFFF; box-shadow: 0 1px 0 var(--line); }
+.pn-fixed .pn-light, .pn-fixed .pn-clone { transition: none; }
 .pn-mark { text-decoration: none; color: inherit; }
 .pn-menus { display: flex; align-items: center; gap: 4px; }
 .pn-item { position: relative; }
