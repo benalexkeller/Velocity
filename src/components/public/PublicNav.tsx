@@ -4,9 +4,9 @@
 // clicks; on narrow screens the three menus collapse into one stacked list behind a Menu button.
 //
 // On the front page the bar is fixed over the photo (`sticky`). As the white page scrolls up under it, the text
-// turns black exactly where it meets the white: a non-interactive white-text copy sits on top, clipped to the part
-// still over the photo; the real, black-text bar underneath is clipped to the part over white. Once the photo is
-// fully gone the bar gets a white background.
+// turns black exactly where it meets the white: two non-interactive copies (white text over the photo, black text
+// over the page) are each clipped to their side of the edge, and the real bar on top takes the clicks. Once the
+// photo is fully gone, or a menu opens, the real bar shows itself with a white background.
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { BRAND } from "@/lib/config";
@@ -15,13 +15,13 @@ import "./public-nav.css";
 
 type Props = { tone?: "light" | "dark"; start: { href: string; label: string }; accountsOn: boolean; sticky?: boolean };
 
-function Bar({ tone, start, accountsOn, clone, open, mobile, setOpen, setMobile, enter, leave, innerRef, style }: Props & {
+function Bar({ tone, start, accountsOn, clone, open, mobile, setOpen, setMobile, enter, leave, innerRef, style, extra }: Props & {
   clone?: boolean; open: string | null; mobile: boolean; setOpen: (v: string | null) => void; setMobile: (v: boolean) => void;
-  enter: (slug: string) => void; leave: () => void; innerRef?: React.Ref<HTMLElement>; style?: React.CSSProperties;
+  enter: (slug: string) => void; leave: () => void; innerRef?: React.Ref<HTMLElement>; style?: React.CSSProperties; extra?: string;
 }) {
   const close = () => { setOpen(null); setMobile(false); };
   return (
-    <header ref={innerRef} className={`pn pn-${tone}${mobile ? " pn-open" : ""}${clone ? " pn-clone" : ""}`} aria-hidden={clone || undefined} style={style}>
+    <header ref={innerRef} className={`pn pn-${tone}${mobile ? " pn-open" : ""}${clone ? " pn-clone" : ""}${extra ? ` ${extra}` : ""}`} aria-hidden={clone || undefined} style={style}>
       <Link href="/" className="wordmark pn-mark" tabIndex={clone ? -1 : undefined}>{BRAND.name}</Link>
       <nav className="pn-menus" aria-label={clone ? undefined : "Product"}>
         {PRODUCT.map((p) => (
@@ -83,15 +83,17 @@ export function PublicNav({ tone = "light", start, accountsOn, sticky = false }:
 
   if (!sticky) return <div ref={ref}><Bar tone={tone} {...shared} /></div>;
 
-  const h = 80; // the bar's height
-  const over = Math.max(0, Math.min(h, edge)); // px of the bar still over the photo
+  const over = Math.max(0, Math.min(80, edge)); // px of the bar still over the photo
   const solid = edge <= 0;
+  // while the photo is under any part of the bar (and no menu is open) the text is drawn by two copies that take no
+  // clicks: white text clipped to the part over the photo, black text clipped to the part over the white page.
+  // The real bar sits on top, unclipped, so every link and menu works; its own text is see-through meanwhile.
+  const split = over > 0 && !mobile && !open;
   return (
     <div ref={ref} className={`pn-fixed${solid ? " solid" : ""}${mobile || open ? " active" : ""}`}>
-      {/* the real bar: black text, interactive; shown only where the page is white */}
-      <Bar tone="light" {...shared} style={{ clipPath: mobile || open ? "none" : `inset(${over}px 0 0 0)` }} />
-      {/* the white-text copy over the photo, not interactive */}
-      {over > 0 && !mobile && !open && <Bar tone="dark" clone {...shared} style={{ clipPath: `inset(0 0 ${h - over}px 0)` }} />}
+      <Bar tone="light" {...shared} extra={`pn-real${split ? " see-through" : ""}`} />
+      {split && <Bar tone="light" clone {...shared} style={{ clipPath: `inset(${over}px 0 0 0)` }} />}
+      {split && <Bar tone="dark" clone {...shared} style={{ clipPath: `inset(0 0 calc(100% - ${over}px) 0)` }} />}
     </div>
   );
 }

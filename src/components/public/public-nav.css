@@ -5,8 +5,11 @@
 .pn-fixed { position: fixed; top: 0; left: 0; right: 0; height: 80px; z-index: 50; }
 .pn-fixed .pn { position: absolute; top: 0; left: 0; right: 0; }
 .pn-fixed .pn-clone { pointer-events: none; z-index: 21; }
-.pn-fixed.solid .pn-light, .pn-fixed.active .pn-light { background: #FFFFFF; box-shadow: 0 1px 0 var(--line); }
-.pn-fixed .pn-light, .pn-fixed .pn-clone { transition: none; }
+.pn-fixed .pn-real { z-index: 22; }
+.pn-fixed.solid .pn-real, .pn-fixed.active .pn-real { background: #FFFFFF; box-shadow: 0 1px 0 var(--line); }
+/* while the copies draw the text, the real bar keeps its clicks but not its ink (the blue button looks the same on both) */
+.pn-real.see-through .pn-mark, .pn-real.see-through .pn-item > button, .pn-real.see-through .pn-signin, .pn-real.see-through .pn-burger { color: transparent; }
+.pn-real.see-through .pn-item > button:hover { background: transparent; }
 .pn-mark { text-decoration: none; color: inherit; }
 .pn-menus { display: flex; align-items: center; gap: 4px; }
 .pn-item { position: relative; }
