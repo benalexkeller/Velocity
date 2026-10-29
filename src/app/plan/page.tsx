@@ -17,7 +17,7 @@ import { PhaseDetail } from "@/components/plan/PlanExplained";
 import { plannedByDiscipline, plannedLoad, type Sport, type Week } from "@/lib/data";
 import { usePlan } from "@/lib/store";
 import { NutritionProvider } from "@/lib/nutrition/store";
-import { dateFull, dateLabel, fromYmd, fmtHours, addDays, today, ymd } from "@/lib/format";
+import { dateFull, dateLabel, fromYmd, fmtHours, addDays, ymd } from "@/lib/format";
 import { METHOD } from "@/lib/plan/rules";
 
 const M = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -45,7 +45,7 @@ function AddWorkout({ week, onDone }: { week: Week; onDone: (id: string | null) 
         <label>Intensity<select value={intensity} onChange={(e) => setIntensity(e.target.value)}>{INTENSITIES.map((k) => <option key={k}>{k}</option>)}</select></label>
       </div>
       <div className="two">
-        <label>Day<input type="date" value={date} min={plan.planRange?.start} max={plan.planRange?.end} onChange={(e) => setDate(e.target.value)} />{plan.planRange && (date < plan.planRange.start || date > plan.planRange.end) && <small className="err">Outside the plan, {dateLabel(plan.planRange.start)} – {dateLabel(plan.planRange.end)}</small>}</label>
+        <label>Day<input type="date" value={date} min={plan.planRange?.start} max={plan.planRange?.end} onChange={(e) => setDate(e.target.value)} />{plan.planRange && (date < plan.planRange.start || date > plan.planRange.end) && <small className="err">Outside the plan, {dateLabel(plan.planRange.start)} - {dateLabel(plan.planRange.end)}</small>}</label>
         <label>Start<input type="time" step={900} value={start} onChange={(e) => setStart(e.target.value)} /></label>
       </div>
       <div className="two">
@@ -75,7 +75,7 @@ function WeekOverview({ week, onClose, onOpenWeek }: { week: Week; onClose: () =
       <div className="wo-head">
         <div>
           <div className="eyebrow">{phase?.short ?? week.phaseShort}<span className="at">Week {week.week} of {plan.weeks.length}</span></div>
-          <h3>{dateLabel(week.start)} – {dateLabel(ymd(addDays(fromYmd(week.start), 6)))}{week.recovery ? ", recovery week" : ""}{week.race ? ", race week" : ""}</h3>
+          <h3>{dateLabel(week.start)} - {dateLabel(ymd(addDays(fromYmd(week.start), 6)))}{week.recovery ? ", recovery week" : ""}{week.race ? ", race week" : ""}</h3>
           <p className="muted">{week.focus}{phase ? `, ${phase.purpose}` : ""}</p>
         </div>
         <button type="button" className="btn ghost" onClick={onOpenWeek}>Open week in calendar →</button>
@@ -103,8 +103,6 @@ function Plan() {
   const [sel, setSel] = useState<string | null>(fromUrl);
   const [wk, setWk] = useState(plan.findSession(fromUrl)?.w.week ?? cur.week);
   const [view, setView] = useState<"week" | "month">("week");
-  const [brickNote, setBrickNote] = useState<string | null>(null);
-  const bricksAhead = plan.weeks.flatMap((w) => w.sessions).filter((s) => s.sport === "brick" && !s.locked && s.status !== "done" && s.date >= ymd(today())).length;
   const [adding, setAdding] = useState(false);
   const [overview, setOverview] = useState<number | null>(null);
   const [phaseSel, setPhaseSel] = useState<string | null>(null);
@@ -122,7 +120,7 @@ function Plan() {
     <main className={dock.docked && dock.open ? "main with-coach" : "main"}>
       <div className="plan">
         <div className="plan-head">
-          <PeriodStepper big width={view === "week" ? 118 : 150} label={view === "week" ? `Week ${week.week}` : M[mo.m]}
+          <PeriodStepper lead width={view === "week" ? 96 : 120} label={view === "week" ? `Week ${week.week}` : M[mo.m]}
             prevLabel={view === "week" ? "Previous week" : "Previous month"} nextLabel={view === "week" ? "Next week" : "Next month"}
             prevDisabled={view === "week" && wk <= 1} nextDisabled={view === "week" && wk >= plan.weeks.length}
             onPrev={() => (view === "week" ? setWk(Math.max(1, wk - 1)) : setMo(({ y, m }) => (m === 0 ? { y: y - 1, m: 11 } : { y, m: m - 1 })))}
@@ -135,7 +133,7 @@ function Plan() {
             <button type="button" className={view === "month" ? "on" : ""} onClick={() => setView("month")}>Month</button>
           </div>
           <span style={{ position: "relative" }}>
-            <button type="button" className="badge" aria-expanded={calInfo} onClick={() => setCalInfo((o) => !o)} title={`Google Calendar sync ${plan.calendar ? "on" : "off"}`}><span className={plan.calendar ? "ok" : "ok off"}>{plan.calendar ? "✓" : "–"}</span>Calendar</button>
+            <button type="button" className="badge" aria-expanded={calInfo} onClick={() => setCalInfo((o) => !o)} title={`Google Calendar sync ${plan.calendar ? "on" : "off"}`}><span className={plan.calendar ? "ok" : "ok off"}>{plan.calendar ? "✓" : "-"}</span>Calendar</button>
             {calInfo && (
               <div className="menu" role="dialog">
                 <div className="small"><b>Google Calendar</b><br />Not connected yet.</div>
@@ -167,8 +165,6 @@ function Plan() {
               <span><i style={{ background: "var(--swim)" }} />Swim</span>
               <span><i style={{ background: "var(--bike)" }} />Bike</span>
               <span><i style={{ background: "var(--run)" }} />Run</span>
-              {bricksAhead > 0 && <button type="button" className="settings linkbtn" title="Every upcoming brick becomes two sessions on the calendar: the ride, then the run off the bike" onClick={() => { const n = plan.splitAllBricks(); setBrickNote(`${n} ${n === 1 ? "brick" : "bricks"} split into bike and run`); }}>Bricks as two sessions ({bricksAhead})</button>}
-              {brickNote && <span className="sub">✓ {brickNote}</span>}
               {plan.hasPlan && <Link href={plan.intake ? "/plan/new?edit=1" : "/plan/new"} className="settings" title={plan.intake ? "Change the answers and rebuild the plan" : "Build a new plan from a few questions"}>Plan settings →</Link>}
             </span>
           </div>

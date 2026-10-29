@@ -13,7 +13,7 @@ export type Range = 4 | 12 | 99;
 type Sp = "swim" | "bike" | "run";
 const UNIT: Record<Sp, string> = { run: `min${runPace(0).u}`, swim: `min${swimPace(0).u}`, bike: "mph" };
 const fmtV = (sp: Sp, v: number) => (sp === "bike" ? fmtSpeed(v).replace(" mph", "") : sp === "run" ? fmtPace(runPace(v).s) : fmtPace(swimPace(v).s));
-const sign = (n: number | null, digits = 0) => (n == null ? "—" : `${n > 0 ? "+" : ""}${n.toFixed(digits)}`);
+const sign = (n: number | null, digits = 0) => (n == null ? "-" : `${n > 0 ? "+" : ""}${n.toFixed(digits)}`);
 
 // ---------- Row 1: scores ----------
 function Spark({ pts, w = 120, h = 34 }: { pts: (number | null)[]; w?: number; h?: number }) {
@@ -152,9 +152,9 @@ export function PaceCorridor({ range, onPick }: { range: Range; onPick: (id: str
         </svg>
       </div>
       <div className="side">
-        <div><div className="k">4-week avg</div><div className="v">{avg != null ? fmtV(sp, avg) : "—"}</div><div className="u">{UNIT[sp]}, dashed line</div></div>
-        <div><div className="k">Target now</div><div className="v">{fmtV(sp, now.lo)}–{fmtV(sp, now.hi)}</div><div className="u">{UNIT[sp]}</div></div>
-        <div><div className="k">Race-day target</div><div className="v">{fmtV(sp, corridorAt(sp, fromYmd(ATHLETE.race.date)).lo)}–{fmtV(sp, corridorAt(sp, fromYmd(ATHLETE.race.date)).hi)}</div><div className="u">{UNIT[sp]}</div></div>
+        <div><div className="k">4-week avg</div><div className="v">{avg != null ? fmtV(sp, avg) : "-"}</div><div className="u">{UNIT[sp]}, dashed line</div></div>
+        <div><div className="k">Target now</div><div className="v">{fmtV(sp, now.lo)}-{fmtV(sp, now.hi)}</div><div className="u">{UNIT[sp]}</div></div>
+        <div><div className="k">Race-day target</div><div className="v">{fmtV(sp, corridorAt(sp, fromYmd(ATHLETE.race.date)).lo)}-{fmtV(sp, corridorAt(sp, fromYmd(ATHLETE.race.date)).hi)}</div><div className="u">{UNIT[sp]}</div></div>
       </div>
     </section>
   );
@@ -165,20 +165,20 @@ export function BodyPanel() {
   const an = useAnalysis();
   const w7 = an.bodySummary(7), prev = an.bodySummary(7, 7);
   const rows = [...an.BODY].reverse().slice(0, 7);
-  const d = (a: number | null, b: number | null, digits = 0) => (a != null && b != null ? sign(a - b, digits) : "—");
+  const d = (a: number | null, b: number | null, digits = 0) => (a != null && b != null ? sign(a - b, digits) : "-");
   return (
     <section className="card an-body" aria-label="Body metrics">
       <div className="head"><span className="eyebrow">Body<span className="at">from Garmin</span></span><span className="muted">7-day average vs the 7 days before</span></div>
       <div className="an-body-grid">
-        <div><div className="k">Resting HR</div><div className="v">{w7.rhr?.toFixed(0) ?? "—"}<small> bpm</small></div><div className="u">{d(w7.rhr, prev.rhr)}, target 38</div></div>
-        <div><div className="k">HRV</div><div className="v">{w7.hrv?.toFixed(0) ?? "—"}<small> ms</small></div><div className="u">{d(w7.hrv, prev.hrv)}, target 96</div></div>
-        <div><div className="k">VO2max</div><div className="v">{w7.vo2 ?? "—"}</div><div className="u">target 60</div></div>
-        <div><div className="k">Sleep</div><div className="v">{w7.sleep?.toFixed(1) ?? "—"}<small> h</small></div><div className="u">{d(w7.sleep, prev.sleep, 1)} h, score {w7.sleepScore?.toFixed(0) ?? "—"}</div></div>
-        <div><div className="k">Stress</div><div className="v">{w7.stress?.toFixed(0) ?? "—"}</div><div className="u">{d(w7.stress, prev.stress)}, Garmin 0–100</div></div>
+        <div><div className="k">Resting HR</div><div className="v">{w7.rhr?.toFixed(0) ?? "-"}<small> bpm</small></div><div className="u">{d(w7.rhr, prev.rhr)}, target 38</div></div>
+        <div><div className="k">HRV</div><div className="v">{w7.hrv?.toFixed(0) ?? "-"}<small> ms</small></div><div className="u">{d(w7.hrv, prev.hrv)}, target 96</div></div>
+        <div><div className="k">VO2max</div><div className="v">{w7.vo2 ?? "-"}</div><div className="u">target 60</div></div>
+        <div><div className="k">Sleep</div><div className="v">{w7.sleep?.toFixed(1) ?? "-"}<small> h</small></div><div className="u">{d(w7.sleep, prev.sleep, 1)} h, score {w7.sleepScore?.toFixed(0) ?? "-"}</div></div>
+        <div><div className="k">Stress</div><div className="v">{w7.stress?.toFixed(0) ?? "-"}</div><div className="u">{d(w7.stress, prev.stress)}, Garmin 0-100</div></div>
       </div>
       <table className="tbl small">
         <thead><tr><th>Date</th><th>Resting HR</th><th>HRV</th><th>Sleep</th><th>Sleep score</th><th>Stress</th><th>VO2max</th></tr></thead>
-        <tbody>{rows.map((b) => <tr key={b.date}><td>{dateLabel(b.date)}</td><td>{b.rhr ?? "—"}</td><td>{b.hrv ?? "—"}</td><td>{b.sleep_h != null ? `${b.sleep_h.toFixed(1)} h` : "—"}</td><td>{b.sleep_score ?? "—"}</td><td>{b.stress ?? "—"}</td><td>{b.vo2 ?? "—"}</td></tr>)}</tbody>
+        <tbody>{rows.map((b) => <tr key={b.date}><td>{dateLabel(b.date)}</td><td>{b.rhr ?? "-"}</td><td>{b.hrv ?? "-"}</td><td>{b.sleep_h != null ? `${b.sleep_h.toFixed(1)} h` : "-"}</td><td>{b.sleep_score ?? "-"}</td><td>{b.stress ?? "-"}</td><td>{b.vo2 ?? "-"}</td></tr>)}</tbody>
       </table>
     </section>
   );
@@ -189,7 +189,7 @@ export function TotalsPanel() {
   const an = useAnalysis();
   const ATHLETE = an.athlete;
   const t = an.totals(), p = an.raceProjection();
-  const h = (x: number | null) => (x == null ? "—" : fmtHMS(x * 60));
+  const h = (x: number | null) => (x == null ? "-" : fmtHMS(x * 60));
   const goalTotal = ATHLETE.raceSplits.swim + ATHLETE.raceSplits.bike + ATHLETE.raceSplits.run + ATHLETE.raceSplits.transitions;
   return (
     <div className="an-two">
@@ -204,11 +204,11 @@ export function TotalsPanel() {
         </div>
         <table className="tbl small">
           <tbody>
-            <tr><td>Longest ride</td><td>{t.bests.longestRide ? `${fmtDist(t.bests.longestRide.mi)}, ${dateLabel(t.bests.longestRide.date)}` : "—"}</td></tr>
-            <tr><td>Longest run</td><td>{t.bests.longestRun ? `${fmtDist(t.bests.longestRun.mi)}, ${dateLabel(t.bests.longestRun.date)}` : "—"}</td></tr>
-            <tr><td>Longest swim</td><td>{t.bests.longestSwim ? `${swimDist(t.bests.longestSwim.yd ?? 0).v.toLocaleString()} ${swimDist(0).u}, ${dateLabel(t.bests.longestSwim.date)}` : "—"}</td></tr>
-            <tr><td>Fastest run (≥ 3 mi)</td><td>{t.bests.fastestRun ? `${fmtPace(runPace(t.bests.fastestRun.pace_s ?? 0).s)} ${runPace(0).u}, ${dateLabel(t.bests.fastestRun.date)}` : "—"}</td></tr>
-            <tr><td>Longest session</td><td>{t.bests.longestSession ? `${fmtHMS(t.bests.longestSession.min)}, ${t.bests.longestSession.name}` : "—"}</td></tr>
+            <tr><td>Longest ride</td><td>{t.bests.longestRide ? `${fmtDist(t.bests.longestRide.mi)}, ${dateLabel(t.bests.longestRide.date)}` : "-"}</td></tr>
+            <tr><td>Longest run</td><td>{t.bests.longestRun ? `${fmtDist(t.bests.longestRun.mi)}, ${dateLabel(t.bests.longestRun.date)}` : "-"}</td></tr>
+            <tr><td>Longest swim</td><td>{t.bests.longestSwim ? `${swimDist(t.bests.longestSwim.yd ?? 0).v.toLocaleString()} ${swimDist(0).u}, ${dateLabel(t.bests.longestSwim.date)}` : "-"}</td></tr>
+            <tr><td>Fastest run (≥ 3 mi)</td><td>{t.bests.fastestRun ? `${fmtPace(runPace(t.bests.fastestRun.pace_s ?? 0).s)} ${runPace(0).u}, ${dateLabel(t.bests.fastestRun.date)}` : "-"}</td></tr>
+            <tr><td>Longest session</td><td>{t.bests.longestSession ? `${fmtHMS(t.bests.longestSession.min)}, ${t.bests.longestSession.name}` : "-"}</td></tr>
           </tbody>
         </table>
       </section>
@@ -218,9 +218,9 @@ export function TotalsPanel() {
           <thead><tr><th>Leg</th><th>Projected</th><th>{ATHLETE.race.goal} goal</th><th>Gap</th></tr></thead>
           <tbody>
             {([["Swim 2.4 mi", p.swimH, ATHLETE.raceSplits.swim], ["Bike 112 mi", p.bikeH, ATHLETE.raceSplits.bike], ["Run 26.2 mi", p.runH, ATHLETE.raceSplits.run], ["Transitions", p.transitions, ATHLETE.raceSplits.transitions]] as const).map(([k, v, g]) => (
-              <tr key={k}><td>{k}</td><td>{h(v)}</td><td>{h(g)}</td><td className={v != null && v > g ? "neg" : "pos"}>{v != null ? sign((v - g) * 60) + " min" : "—"}</td></tr>
+              <tr key={k}><td>{k}</td><td>{h(v)}</td><td>{h(g)}</td><td className={v != null && v > g ? "neg" : "pos"}>{v != null ? sign((v - g) * 60) + " min" : "-"}</td></tr>
             ))}
-            <tr className="total"><td>Total</td><td>{h(p.total)}</td><td>{h(goalTotal)}</td><td className={p.total != null && p.total > goalTotal ? "neg" : "pos"}>{p.total != null ? sign((p.total - goalTotal) * 60) + " min" : "—"}</td></tr>
+            <tr className="total"><td>Total</td><td>{h(p.total)}</td><td>{h(goalTotal)}</td><td className={p.total != null && p.total > goalTotal ? "neg" : "pos"}>{p.total != null ? sign((p.total - goalTotal) * 60) + " min" : "-"}</td></tr>
           </tbody>
         </table>
       </section>
@@ -253,8 +253,8 @@ export function ActivityPanel({ id, onClose }: { id: string | null; onClose: () 
   if (!a) return null;
   const r = an.analyzeActivity(a);
   const sp = r.sport as Sp | null;
-  const paceStr = sp && r.pace != null ? `${fmtV(sp, r.pace)} ${UNIT[sp]}` : "—";
-  const rangeStr = sp && r.range ? `${fmtV(sp, r.range[0])}–${fmtV(sp, r.range[1])} ${UNIT[sp]}` : "—";
+  const paceStr = sp && r.pace != null ? `${fmtV(sp, r.pace)} ${UNIT[sp]}` : "-";
+  const rangeStr = sp && r.range ? `${fmtV(sp, r.range[0])}-${fmtV(sp, r.range[1])} ${UNIT[sp]}` : "-";
   return (
     <section className="card an-activity" aria-label="Activity analysis">
       <button className="close" type="button" onClick={onClose} aria-label="Close"><Icon name="close" /></button>
@@ -270,10 +270,10 @@ export function ActivityPanel({ id, onClose }: { id: string | null; onClose: () 
         <div className="blk">
           <div className="eyebrow">Planned vs actual</div>
           <table className="tbl small"><tbody>
-            <tr><td>Duration</td><td>{fmtHMS(a.min)}</td><td className="muted">{r.planned ? `plan ${r.planned.min} min, ${sign(r.durDelta)} min` : "—"}</td></tr>
+            <tr><td>Duration</td><td>{fmtHMS(a.min)}</td><td className="muted">{r.planned ? `plan ${r.planned.min} min, ${sign(r.durDelta)} min` : "-"}</td></tr>
             <tr><td>{sp === "bike" ? "Speed" : "Pace"}</td><td>{paceStr}</td><td className={`muted ${r.verdict === "in range" ? "pos" : r.verdict ? "neg" : ""}`}>{r.range ? `target ${rangeStr}, ${r.verdict}` : "no target"}</td></tr>
-            <tr><td>Distance</td><td>{a.sport === "swim" ? (a.yd ? `${swimDist(a.yd).v.toLocaleString()} ${swimDist(0).u}` : "—") : fmtDist(a.mi)}</td><td className="muted">{a.elev_ft ? `${elev(a.elev_ft).v.toLocaleString()} ${elev(0).u} climbed` : ""}</td></tr>
-            <tr><td>Avg heart rate</td><td>{a.hr ? `${a.hr} bpm` : "—"}</td><td className="muted">{r.planned?.intensity ?? ""}</td></tr>
+            <tr><td>Distance</td><td>{a.sport === "swim" ? (a.yd ? `${swimDist(a.yd).v.toLocaleString()} ${swimDist(0).u}` : "-") : fmtDist(a.mi)}</td><td className="muted">{a.elev_ft ? `${elev(a.elev_ft).v.toLocaleString()} ${elev(0).u} climbed` : ""}</td></tr>
+            <tr><td>Avg heart rate</td><td>{a.hr ? `${a.hr} bpm` : "-"}</td><td className="muted">{r.planned?.intensity ?? ""}</td></tr>
           </tbody></table>
         </div>
         <div className="blk">
@@ -282,15 +282,15 @@ export function ActivityPanel({ id, onClose }: { id: string | null; onClose: () 
             <tr><td>Session load</td><td>{r.load}</td><td className="muted">minutes × intensity factor</td></tr>
             <tr><td>Fitness effect</td><td>{sign(r.fitnessEffect, 1)}</td><td className="muted">load ÷ 42</td></tr>
             <tr><td>Fatigue effect</td><td>{sign(r.fatigueEffect, 1)}</td><td className="muted">load ÷ 7</td></tr>
-            <tr><td>Efficiency</td><td>{r.ef != null ? r.ef.toFixed(3) : "—"}</td><td className="muted">{r.efAvg != null ? `${sign(((r.ef as number) / r.efAvg - 1) * 100)}% vs ${r.efN} similar` : "speed ÷ heart rate"}</td></tr>
+            <tr><td>Efficiency</td><td>{r.ef != null ? r.ef.toFixed(3) : "-"}</td><td className="muted">{r.efAvg != null ? `${sign(((r.ef as number) / r.efAvg - 1) * 100)}% vs ${r.efN} similar` : "speed ÷ heart rate"}</td></tr>
           </tbody></table>
         </div>
         <div className="blk">
           <div className="eyebrow">Notes</div>
           <table className="tbl small"><tbody>
-            <tr><td>Exertion</td><td>{a.exertion ? `${a.exertion} / 10` : "—"}</td></tr>
-            <tr><td>Your note</td><td>{a.note ?? "—"}</td></tr>
-            <tr><td>Coach</td><td>{a.coachNote ? <CoachNote text={a.coachNote} /> : "—"}</td></tr>
+            <tr><td>Exertion</td><td>{a.exertion ? `${a.exertion} / 10` : "-"}</td></tr>
+            <tr><td>Your note</td><td>{a.note ?? "-"}</td></tr>
+            <tr><td>Coach</td><td>{a.coachNote ? <CoachNote text={a.coachNote} /> : "-"}</td></tr>
           </tbody></table>
         </div>
         <div className="blk map"><RouteMap route={a.route} height={150} bg="var(--surface-2)" /></div>

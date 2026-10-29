@@ -366,10 +366,10 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
     const ld = loadNow();
     out.push({ title: "Load", text: `Fitness ${ld.fitness.toFixed(0)}, fatigue ${ld.fatigue.toFixed(0)}, form ${ld.form > 0 ? "+" : ""}${ld.form.toFixed(0)}. This week ${ld.thisWeek} load vs ${ld.lastWeek} last week (${ld.ramp > 0 ? "+" : ""}${(ld.ramp * 100).toFixed(0)}%).` });
     const c = rollingCompliance(28);
-    out.push({ title: "Sessions", text: `${st.done} of ${st.total} sessions this week, ${fmtH(st.actualH)} of ${fmtH(st.plannedH)} planned. Completed sessions, 28 days: ${c.pct == null ? "—" : `${c.pct}%`} (${Math.round(c.done * 2) / 2} of ${c.planned}).` });
+    out.push({ title: "Sessions", text: `${st.done} of ${st.total} sessions this week, ${fmtH(st.actualH)} of ${fmtH(st.plannedH)} planned. Completed sessions, 28 days: ${c.pct == null ? "-" : `${c.pct}%`} (${Math.round(c.done * 2) / 2} of ${c.planned}).` });
     const tt = totals();
     const lr = tt.bests.longestRun, lb = tt.bests.longestRide, ls = tt.bests.longestSwim;
-    out.push({ title: "Long sessions", text: `Longest so far: run ${lr?.mi != null ? lr.mi.toFixed(1) + " mi" : "—"}, ride ${lb?.mi != null ? lb.mi.toFixed(1) + " mi" : "—"}, swim ${ls?.yd != null ? ls.yd.toLocaleString() + " yd" : "—"}. Race day: ${ATHLETE.raceDist.runMi ? ATHLETE.raceDist.runMi + " mi" : "—"}, ${ATHLETE.raceDist.bikeMi ? ATHLETE.raceDist.bikeMi + " mi" : "—"}, ${ATHLETE.raceDist.swimYd ? ATHLETE.raceDist.swimYd.toLocaleString() + " yd" : "—"}.` });
+    out.push({ title: "Long sessions", text: `Longest so far: run ${lr?.mi != null ? lr.mi.toFixed(1) + " mi" : "-"}, ride ${lb?.mi != null ? lb.mi.toFixed(1) + " mi" : "-"}, swim ${ls?.yd != null ? ls.yd.toLocaleString() + " yd" : "-"}. Race day: ${ATHLETE.raceDist.runMi ? ATHLETE.raceDist.runMi + " mi" : "-"}, ${ATHLETE.raceDist.bikeMi ? ATHLETE.raceDist.bikeMi + " mi" : "-"}, ${ATHLETE.raceDist.swimYd ? ATHLETE.raceDist.swimYd.toLocaleString() + " yd" : "-"}.` });
     return out;
   }
 

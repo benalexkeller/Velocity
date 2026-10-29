@@ -190,7 +190,7 @@ export function LogActivity({ open, onClose, onSaved, initial, inline }: { open:
           <div className="k">How it felt</div>
           <div className="lf-row feels">{FEELS.map((f) => <button key={f} type="button" className={feel === f ? "on" : ""} onClick={() => setFeel(feel === f ? "" : f)}>{f}</button>)}</div>
         </div>
-        <textarea className="lf-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Notes — what happened, pain, conditions" rows={2} />
+        <textarea className="lf-note" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Notes, what happened, pain, conditions" rows={2} />
         <div className="lf-actions">
           <span className="muted">{valid ? `${SPORTS.find((s) => s.k === sport)?.label}, ${hms(sec)}${dist ? `, ${dist} ${unit}` : ""}${pace ? `, ${pace}${sport === "bike" ? (metric ? " km/h" : " mph") : sport === "swim" ? (metric ? "/100 m" : "/100 yd") : metric ? "/km" : "/mi"}` : ""}${num(hr) ? `, ${hr} bpm` : ""}` : sec <= 0 ? "Duration is required" : "Check the fields marked in red"}</span>
           <button type="button" className="btn ghost" onClick={onClose}>Cancel</button>

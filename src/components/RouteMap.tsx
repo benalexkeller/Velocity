@@ -83,13 +83,18 @@ export function RouteMap({ route, height = 120, stroke = "var(--accent)", bg = "
   const credit = (base || tiles.length > 0) && (interactive || (typeof height === "number" && height >= 100));
   const lw = interactive ? Math.min(2, 1 + view.k * 0.15) : 1; // lines thicken a little when zoomed in
 
+  // panning stays around the route: the zoomed frame may leave at most a quarter of the box empty on each side
+  const clamp = (v: { k: number; px: number; py: number }) => {
+    const mx = ((v.k - 1) * W) / 2 + W * 0.25, my = ((v.k - 1) * H) / 2 + H * 0.25;
+    return { ...v, px: Math.max(-mx, Math.min(mx, v.px)), py: Math.max(-my, Math.min(my, v.py)) };
+  };
   function zoomAt(f: number, sx: number, sy: number) {
     setView((v) => {
       const k = Math.min(40, Math.max(1, v.k * f)); const real = k / v.k;
       if (real === 1) return v;
       // keep the point under the cursor still: move the centre towards/away from it
       const px = sx - (sx - (W / 2 + v.px)) * real - W / 2, py = sy - (sy - (H / 2 + v.py)) * real - H / 2;
-      return k === 1 ? { k: 1, px: 0, py: 0 } : { k, px, py };
+      return k === 1 ? { k: 1, px: 0, py: 0 } : clamp({ k, px, py });
     });
   }
   const onDown = (ev: React.PointerEvent) => {
@@ -110,7 +115,7 @@ export function RouteMap({ route, height = 120, stroke = "var(--accent)", bg = "
       return;
     }
     const g = drag.current; if (!g) return;
-    setView((v) => ({ ...v, px: g.px + ev.clientX - g.x, py: g.py + ev.clientY - g.y }));
+    setView((v) => clamp({ ...v, px: g.px + ev.clientX - g.x, py: g.py + ev.clientY - g.y }));
   };
   const onUp = (ev: React.PointerEvent) => {
     if (pointers.current.has(ev.pointerId)) (ev.currentTarget as HTMLElement).releasePointerCapture(ev.pointerId);

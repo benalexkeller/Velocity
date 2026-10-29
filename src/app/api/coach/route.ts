@@ -3,21 +3,24 @@
 // passages, adds the instructions, calls the model through OpenRouter and returns the answer, its sources and
 // any proposed plan change. The model key never reaches the browser.
 //
-// One model (COACH_MODEL, default deepseek/deepseek-v4.1-flash) answers questions. A whole-plan review (mode
-// "restructure") runs only after the athlete accepts a pitch card, and uses COACH_MODEL_STRONG when set (default:
-// the same model). COACH_DAILY_CAP: questions per athlete per day (default 40).
+// The coach works across several models (src/lib/coach/models.ts): everyday questions go to the fast list
+// (DeepSeek first), a whole-plan review (mode "restructure", run only after the athlete accepts a pitch card) to
+// the strong list (newest Claude, then GPT, then Gemini). OpenRouter tries each list in order, so a model that is
+// down never stops the coach. COACH_DAILY_CAP: questions per athlete per day (default 40).
 import { NextResponse, type NextRequest } from "next/server";
 import { ACCOUNTS_ON } from "@/lib/supabase/env";
 import { supabaseServer } from "@/lib/supabase/server";
-import { RESTRUCTURE_PROMPT, RESTRUCTURE_TOOL, SYSTEM_PROMPT, TOOLS, contextMessage } from "@/lib/coach/prompt";
+import { LOG_MEAL_TOOL, RESTRUCTURE_PROMPT, RESTRUCTURE_TOOL, SYSTEM_PROMPT, TOOLS, contextMessage } from "@/lib/coach/prompt";
+import { MEAL_LIBRARY, mealMacros } from "@/lib/nutrition/meals";
+import { coachModels } from "@/lib/coach/models";
 import { PASSAGES } from "@/lib/coach/library-data";
 import { referenceBlock, searchLibrary, usedCitations, type Passage } from "@/lib/coach/library";
 import { RED_FLAG_REPLY, redFlag } from "@/lib/coach/safety";
-import type { CoachContext, CoachReply, CoachRequest, PlanChange, Proposal } from "@/lib/coach/types";
+import type { CoachContext, CoachReply, CoachRequest, MealLogItem, PlanChange, Proposal } from "@/lib/coach/types";
 
 export const runtime = "nodejs";
-const MODEL = process.env.COACH_MODEL || "deepseek/deepseek-v4.1-flash";
-const MODEL_STRONG = process.env.COACH_MODEL_STRONG || MODEL; // a stronger model for the whole-plan review is one setting away
+// a whole-plan review sends the full remaining plan to the model and can take well over the 10 s default; Vercel allows 60 s here
+export const maxDuration = 60;
 const CAP = Number(process.env.COACH_DAILY_CAP || 40);
 const KEY = process.env.OPENROUTER_API_KEY || "";
 const BASE = process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1";
@@ -68,13 +71,19 @@ export async function POST(req: NextRequest) {
     ? [{ role: "system", content: RESTRUCTURE_PROMPT }, { role: "system", content: contextMessage(trimContext(ctx, true)) }, ...(refs.text ? [{ role: "system", content: `Reference passages:\n${refs.text}` }] : []), ...history]
     : [{ role: "system", content: SYSTEM_PROMPT }, { role: "system", content: contextMessage(trimContext(ctx, false)) }, ...(refs.text ? [{ role: "system", content: `Reference passages:\n${refs.text}` }] : []), ...history];
 
-  const model = restructure ? MODEL_STRONG : MODEL;
-  const out = await callModel(model, messages, restructure ? TOOLS : [...TOOLS, RESTRUCTURE_TOOL], restructure ? 1800 : 700);
-  if (!out) return NextResponse.json({ error: "upstream" }, { status: 502 });
+  const models = restructure ? coachModels().strong : coachModels().fast;
+  const res = await callModel(models, messages, restructure ? TOOLS : [...TOOLS, RESTRUCTURE_TOOL, LOG_MEAL_TOOL], restructure ? 1800 : 700, restructure ? 55_000 : 30_000);
+  if (!res) return NextResponse.json({ error: "upstream" }, { status: 502 });
+  const { out, model } = res;
 
   let text = (out.content ?? "").trim();
   let proposal: Proposal | undefined;
+  const meals: MealLogItem[] = [];
   for (const call of out.tool_calls ?? []) {
+    if (call.function?.name === "log_meal" && !restructure) {
+      try { meals.push(...validateMeals(JSON.parse(call.function.arguments || "{}"), ctx.today)); } catch { /* nothing logged */ }
+      continue;
+    }
     if (call.function?.name === "request_restructure" && !restructure) {
       let pitch = "", reason = "";
       try { const a = JSON.parse(call.function.arguments || "{}") as { pitch?: string; reason?: string }; pitch = String(a.pitch ?? ""); reason = String(a.reason ?? ""); } catch { /* no pitch */ }
@@ -82,28 +91,35 @@ export async function POST(req: NextRequest) {
       const review: Proposal = { kind: "review", summary: (pitch || text || "The whole remaining plan needs a review.").slice(0, 600), reason: reason.slice(0, 300), changes: [] };
       return NextResponse.json({ text: text || "More than the next two weeks need to change.", proposal: review, needs: "restructure", tier: "fast", model } satisfies CoachReply);
     }
-    if (call.function?.name !== "propose_plan_change") continue;
+    if (call.function?.name !== "propose_plan_change" || proposal) continue; // one proposal per answer
     try { proposal = validateProposal(JSON.parse(call.function.arguments || "{}"), ctx, restructure); } catch { proposal = undefined; }
-    if (proposal) break;
   }
-  if (!text) text = proposal ? proposal.summary : "No answer. Ask again in other words.";
+  if (!text) text = proposal ? proposal.summary : meals.length ? `Logged ${meals.map((m) => m.name.toLowerCase()).join(" and ")}.` : "No answer. Ask again in other words.";
   const sources = usedCitations(text, refs.citations);
-  return NextResponse.json({ text, proposal, sources: sources.length ? sources : undefined, model, tier: restructure ? "strong" : "fast" } satisfies CoachReply);
+  return NextResponse.json({ text, proposal, meals: meals.length ? meals : undefined, sources: sources.length ? sources : undefined, model, tier: restructure ? "strong" : "fast" } satisfies CoachReply);
 }
 
-async function callModel(model: string, messages: Msg[], tools: unknown[], maxTokens: number): Promise<ModelOut | null> {
-  let res: Response;
-  try {
-    res = await fetch(`${BASE}/chat/completions`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json", "HTTP-Referer": "https://velocity-smoky-three.vercel.app", "X-Title": "Velocity coach" },
-      body: JSON.stringify({ model, messages, tools, tool_choice: "auto", max_tokens: maxTokens, temperature: 0.3 }),
-      signal: AbortSignal.timeout(90_000),
-    });
-  } catch (e) { console.error("[coach] fetch", e); return null; }
-  if (!res.ok) { console.error("[coach] openrouter", model, res.status, (await res.text()).slice(0, 500)); return null; }
-  const data = (await res.json()) as { choices?: { message?: ModelOut }[] };
-  return data.choices?.[0]?.message ?? null;
+/** One request to OpenRouter with the whole model list: the first answers, the rest stand in when it fails.
+ *  If OpenRouter rejects the list itself (an unknown id in an override), the first model is tried alone.
+ *  Returns the answer and the model that actually gave it. */
+async function callModel(models: string[], messages: Msg[], tools: unknown[], maxTokens: number, timeoutMs: number): Promise<{ out: ModelOut; model: string } | null> {
+  const send = async (list: string[]) => {
+    try {
+      return await fetch(`${BASE}/chat/completions`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json", "HTTP-Referer": "https://velocityathletes.com", "X-Title": "Velocity coach" },
+        body: JSON.stringify({ model: list[0], ...(list.length > 1 ? { models: list } : {}), messages, tools, tool_choice: "auto", max_tokens: maxTokens, temperature: 0.3 }),
+        signal: AbortSignal.timeout(timeoutMs),
+      });
+    } catch (e) { console.error("[coach] fetch", e); return null; }
+  };
+  let res = await send(models);
+  if (res && res.status === 400 && models.length > 1) { console.error("[coach] openrouter rejected the model list", (await res.text()).slice(0, 300)); res = await send(models.slice(0, 1)); }
+  if (!res) return null;
+  if (!res.ok) { console.error("[coach] openrouter", models[0], res.status, (await res.text()).slice(0, 500)); return null; }
+  const data = (await res.json()) as { model?: string; choices?: { message?: ModelOut }[] };
+  const out = data.choices?.[0]?.message;
+  return out ? { out, model: data.model ?? models[0] } : null;
 }
 
 /** Keeps the request small whatever the browser sends; the whole plan goes only in restructure mode. */
@@ -111,6 +127,33 @@ function trimContext(c: CoachContext, whole: boolean): CoachContext {
   const base = { ...c, sessions: c.sessions.slice(0, 40), activities: c.activities.slice(-40), weeks: c.weeks.slice(-6) };
   if (!whole) { delete base.plan_all; return base; }
   return { ...base, plan_all: (c.plan_all ?? []).slice(0, 40) };
+}
+
+/** Food the model logged: library meals get the library's own name and macros, the rest are kept within sane bounds.
+ *  Dates more than a week from today are dropped. */
+function validateMeals(raw: unknown, todayYmd: string): MealLogItem[] {
+  const items = (raw as { items?: unknown[] })?.items;
+  if (!Array.isArray(items)) return [];
+  const t = Date.parse(todayYmd);
+  const num = (x: unknown, max: number) => { const n = Number(x); return Number.isFinite(n) ? Math.min(max, Math.max(0, Math.round(n))) : 0; };
+  const out: MealLogItem[] = [];
+  for (const it of items.slice(0, 8) as Record<string, unknown>[]) {
+    const date = typeof it?.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(it.date) ? it.date : todayYmd;
+    if (Math.abs(Date.parse(date) - t) > 7 * 86400000) continue;
+    const meal = (["breakfast", "lunch", "dinner", "other"] as const).find((m) => m === it.meal) ?? "other";
+    const lib = typeof it.library_id === "string" ? MEAL_LIBRARY.find((m) => m.id === it.library_id) : undefined;
+    if (lib) {
+      const servings = Math.min(4, Math.max(0.5, Math.round((Number(it.servings) || 1) * 2) / 2));
+      const x = mealMacros(lib);
+      out.push({ date, meal, name: lib.name, library_id: lib.id, servings, kcal: Math.round(x.kcal * servings), carbs_g: Math.round(x.carbs * servings), protein_g: Math.round(x.protein * servings), fat_g: Math.round(x.fat * servings) });
+      continue;
+    }
+    const name = typeof it.name === "string" ? it.name.trim().slice(0, 80) : "";
+    const kcal = num(it.kcal, 3000);
+    if (!name || !kcal) continue;
+    out.push({ date, meal, name: name[0].toUpperCase() + name.slice(1), kcal, carbs_g: num(it.carbs_g, 400), protein_g: num(it.protein_g, 200), fat_g: num(it.fat_g, 200) });
+  }
+  return out;
 }
 
 /** Drops changes that refer to unknown, locked or finished sessions; returns undefined when nothing is left. */

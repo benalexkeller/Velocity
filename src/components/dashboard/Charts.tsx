@@ -37,7 +37,7 @@ export function PaceChart() {
   const best = last4.length ? (sp === "bike" ? Math.max(...last4.map((p) => p.v)) : Math.min(...last4.map((p) => p.v))) : null;
 
   return (
-    <div className="card chartcard linked" role="link" tabIndex={0} onClick={() => router.push("/analysis")} onKeyDown={(e) => { if (e.key === "Enter") router.push("/analysis"); }} aria-label="Average pace — open analysis">
+    <div className="card chartcard linked" role="link" tabIndex={0} onClick={() => router.push("/analysis")} onKeyDown={(e) => { if (e.key === "Enter") router.push("/analysis"); }} aria-label="Average pace, open analysis">
       <div className="head">
         <span className="eyebrow">Average pace</span>
         <div className="pill-group" onClick={(e) => e.stopPropagation()}>
@@ -61,9 +61,9 @@ export function PaceChart() {
         </svg>
       </div>
       <div className="side">
-        <div><div className="k">This week</div><div className="v">{tw != null ? fmt(tw) : "—"}</div><div className="u">{UNIT[sp]}</div></div>
-        <div><div className="k">Best in 4 weeks</div><div className="v">{best != null ? fmt(best) : "—"}</div><div className="u">{UNIT[sp]}, {last4.length} sessions</div></div>
-        <div><div className="k">4-week avg</div><div className="v">{m4 != null ? fmt(m4) : "—"}</div><div className="u">{UNIT[sp]}</div></div>
+        <div><div className="k">This week</div><div className="v">{tw != null ? fmt(tw) : "-"}</div><div className="u">{UNIT[sp]}</div></div>
+        <div><div className="k">Best in 4 weeks</div><div className="v">{best != null ? fmt(best) : "-"}</div><div className="u">{UNIT[sp]}, {last4.length} sessions</div></div>
+        <div><div className="k">4-week avg</div><div className="v">{m4 != null ? fmt(m4) : "-"}</div><div className="u">{UNIT[sp]}</div></div>
       </div>
     </div>
   );
@@ -81,7 +81,7 @@ export function VolumeChart() {
   const gw = (W - L - R) / 3, bw = 40;
   const totalA = a.swim + a.bike + a.run + a.other, totalP = wk.plannedMin / 60;
   return (
-    <div className="card chartcard linked" role="link" tabIndex={0} onClick={() => router.push("/analysis")} onKeyDown={(e) => { if (e.key === "Enter") router.push("/analysis"); }} aria-label="Weekly volume — open analysis">
+    <div className="card chartcard linked" role="link" tabIndex={0} onClick={() => router.push("/analysis")} onKeyDown={(e) => { if (e.key === "Enter") router.push("/analysis"); }} aria-label="Weekly volume, open analysis">
       <div className="head">
         <span className="eyebrow">Weekly volume vs plan</span>
         <span className="lgd"><span><i style={{ background: "var(--accent)" }} />Actual</span><span><i className="hollow" />Planned</span></span>

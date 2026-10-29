@@ -35,8 +35,8 @@ export function dateFull(s: string) {
 export function rangeLabel(a: string, b: string) {
   const x = fromYmd(a), y = fromYmd(b);
   const yr = (d: Date) => (d.getFullYear() !== new Date().getFullYear() || x.getFullYear() !== y.getFullYear() ? ` ${d.getFullYear()}` : "");
-  if (x.getMonth() === y.getMonth() && x.getFullYear() === y.getFullYear()) return `${x.getDate()} – ${y.getDate()} ${MONTHS[y.getMonth()]}${yr(y)}`;
-  return `${x.getDate()} ${MONTHS[x.getMonth()]}${x.getFullYear() !== y.getFullYear() ? ` ${x.getFullYear()}` : ""} – ${y.getDate()} ${MONTHS[y.getMonth()]}${yr(y)}`;
+  if (x.getMonth() === y.getMonth() && x.getFullYear() === y.getFullYear()) return `${x.getDate()} - ${y.getDate()} ${MONTHS[y.getMonth()]}${yr(y)}`;
+  return `${x.getDate()} ${MONTHS[x.getMonth()]}${x.getFullYear() !== y.getFullYear() ? ` ${x.getFullYear()}` : ""} - ${y.getDate()} ${MONTHS[y.getMonth()]}${yr(y)}`;
 }
 export function shortDate(s: string) {
   const d = fromYmd(s);
@@ -44,7 +44,7 @@ export function shortDate(s: string) {
 }
 /** minutes → "50 min" / "1:15 h" */
 export function fmtDur(min: number) {
-  if (!min) return "—";
+  if (!min) return "-";
   if (min < 60) return `${Math.round(min)} min`;
   const h = Math.floor(min / 60), m = Math.round(min % 60);
   return m ? `${h}:${String(m).padStart(2, "0")} h` : `${h} h`;
@@ -61,7 +61,7 @@ export function fmtHours(h: number, digits = 1) {
 }
 /** seconds per unit → "5:28" */
 export function fmtPace(sec: number) {
-  if (!sec || !isFinite(sec)) return "—";
+  if (!sec || !isFinite(sec)) return "-";
   const m = Math.floor(sec / 60), s = Math.round(sec % 60);
   return `${m}:${String(s).padStart(2, "0")}`;
 }

@@ -49,7 +49,7 @@ export function ImportPlan({ onBack, onDone }: { onBack: () => void; onDone: () 
                 </ul></div>
                 <table className="tbl small pb-preview">
                   <thead><tr><th>Week</th><th>Mon</th><th>Tue</th><th>Wed</th><th>Thu</th><th>Fri</th><th>Sat</th><th>Sun</th></tr></thead>
-                  <tbody>{res.weeks.slice(0, 6).map((w) => <tr key={w.week}><td><b>W{w.week}</b><br /><span className="muted">{w.start.slice(5)}</span></td>{w.days.map((d, i) => <td key={i} className={d.min ? "" : "muted"}>{d.min ? `${d.text.split(" — ")[0].split(" (")[0]}` : "Rest"}</td>)}</tr>)}</tbody>
+                  <tbody>{res.weeks.slice(0, 6).map((w) => <tr key={w.week}><td><b>W{w.week}</b><br /><span className="muted">{w.start.slice(5)}</span></td>{w.days.map((d, i) => <td key={i} className={d.min ? "" : "muted"}>{d.min ? `${d.text.split(", ")[0].split(" (")[0]}` : "Rest"}</td>)}</tr>)}</tbody>
                 </table>
                 {res.weeks.length > 6 && <span className="hint">…and {res.weeks.length - 6} more weeks.</span>}
               </>

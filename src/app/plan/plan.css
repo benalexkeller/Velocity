@@ -14,7 +14,9 @@
 .wg-day b { display: block; font-size: 20px; font-weight: 600; margin-top: 1px; }
 .wg-day.today { background: var(--accent-soft); }
 .wg-day.today span, .wg-day.today b { color: var(--accent); }
-.wg-scroll { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: var(--line) transparent; }
+/* no visible scrollbar: it would narrow the body columns and knock them out of line with the day headers */
+.wg-scroll { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+.wg-scroll::-webkit-scrollbar { display: none; }
 .wg-body { display: grid; grid-template-columns: 52px repeat(7, 1fr); position: relative; }
 .wg-hours { position: relative; }
 .wg-hours span { position: absolute; right: 8px; transform: translateY(-50%); font-size: 12px; color: var(--muted); }

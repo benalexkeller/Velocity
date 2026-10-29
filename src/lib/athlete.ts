@@ -42,7 +42,7 @@ export const DISTANCES: { k: RaceDistance; label: string; short: string; hours: 
   { k: "half", label: "Half marathon", short: "13.1", hours: 2, dist: { swimYd: 0, bikeMi: 0, runMi: 13.1 }, frac: { swim: 0, bike: 0, run: 1, transitions: 0 } },
   { k: "10k", label: "10 km run", short: "10K", hours: 0.9, dist: { swimYd: 0, bikeMi: 0, runMi: 6.2 }, frac: { swim: 0, bike: 0, run: 1, transitions: 0 } },
   { k: "5k", label: "5 km run", short: "5K", hours: 0.45, dist: { swimYd: 0, bikeMi: 0, runMi: 3.1 }, frac: { swim: 0, bike: 0, run: 1, transitions: 0 } },
-  { k: "ultra", label: "Ultra run (50 km – 100 mi)", short: "Ultra", hours: 8, dist: { swimYd: 0, bikeMi: 0, runMi: 31 }, frac: { swim: 0, bike: 0, run: 1, transitions: 0 } },
+  { k: "ultra", label: "Ultra run (50 km - 100 mi)", short: "Ultra", hours: 8, dist: { swimYd: 0, bikeMi: 0, runMi: 31 }, frac: { swim: 0, bike: 0, run: 1, transitions: 0 } },
   { k: "century", label: "Century ride (100 mi)", short: "Century", hours: 6, dist: { swimYd: 0, bikeMi: 100, runMi: 0 }, frac: { swim: 0, bike: 1, run: 0, transitions: 0 } },
   { k: "gran_fondo", label: "Gran fondo / cycling race", short: "Gran fondo", hours: 5, dist: { swimYd: 0, bikeMi: 80, runMi: 0 }, frac: { swim: 0, bike: 1, run: 0, transitions: 0 } },
   { k: "swim_ow", label: "Open-water swim event", short: "Open water", hours: 1.5, dist: { swimYd: 3800, bikeMi: 0, runMi: 0 }, frac: { swim: 1, bike: 0, run: 0, transitions: 0 } },
@@ -104,7 +104,8 @@ export function athleteOf(profile: Profile | null, race: Race | null, planStart:
     raceDist: info.dist,
     raceSplits: splits,
     planStart: start,
-    zones: profile.zones ?? ATHLETE.zones,
+    // zones saved before the no-long-dash rule still read "10:15 – 11:15"; show them as "10:15-11:15"
+    zones: profile.zones ? Object.fromEntries(Object.entries(profile.zones).map(([k, v]) => [k, Object.fromEntries(Object.entries(v).map(([z, r]) => [z, typeof r === "string" ? r.replace(/(\S)\s*[–-]\s*(\d)/g, "$1-$2") : r]))])) : ATHLETE.zones,
     lthr: profile.zones?.meta?.lthr ? Number(profile.zones.meta.lthr) || null : null,
     ftp: profile.zones?.meta?.ftp ? Number(profile.zones.meta.ftp) || null : null,
     zonesSource: profile.zones ? "intake" : "default",

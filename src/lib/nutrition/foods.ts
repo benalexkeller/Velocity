@@ -99,7 +99,7 @@ export async function searchFoods(q: string, mine: Food[], signal?: AbortSignal)
   const own = mine.filter((f) => `${f.name} ${f.brand ?? ""}`.toLowerCase().includes(t));
   const builtin = searchBuiltin(q).filter((f) => !own.some((o) => o.id === f.id));
   let live = false, error: string | undefined, usda: Food[] = [];
-  if (USDA_KEY) { try { usda = await searchUsda(q, signal); live = true; } catch (e) { if ((e as Error).name !== "AbortError") error = "Food database not reachable — showing built-in foods only."; } }
+  if (USDA_KEY) { try { usda = await searchUsda(q, signal); live = true; } catch (e) { if ((e as Error).name !== "AbortError") error = "Food database not reachable, showing built-in foods only."; } }
   const ids = new Set([...own, ...builtin].map((f) => f.id));
   return { foods: [...own, ...builtin, ...usda.filter((f) => !ids.has(f.id))].slice(0, 30), live, error };
 }

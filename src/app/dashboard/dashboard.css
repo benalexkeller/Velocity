@@ -13,6 +13,9 @@
 .hero .top { display: flex; justify-content: space-between; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; opacity: 0.9; }
 .hero .title { font-size: 56px; font-weight: 600; letter-spacing: -0.03em; line-height: 0.95; }
 .hero .sub { font-size: 28px; font-weight: 400; opacity: 0.9; letter-spacing: -0.02em; margin-top: 4px; }
+/* a brick: both parts with their start times */
+.hero .sub.brick-parts { display: grid; gap: 2px; font-size: 20px; letter-spacing: -0.01em; margin-top: 8px; }
+.hero .sub.brick-parts b { font-weight: 600; opacity: 1; }
 .hero .stats { display: flex; align-items: flex-start; gap: 0; }
 .hero .stat { padding-right: 16px; margin-right: 16px; border-right: 1px solid rgba(255,255,255,0.18); }
 .hero .stat:last-child { padding-right: 0; margin-right: 0; border-right: 0; }
@@ -192,4 +195,4 @@ a.next:hover .date, a.next:hover .d, a.tw:hover .k { color: var(--muted); }
 .hero .stat.gm .v .dim { font-size: 20px; opacity: 0.7; }
 
 /* a narrow hero (laptop widths with the right column beside it): the wearable stat moves to its own line, the watch picture goes */
-@container hero (max-width: 700px) { .hero .stats { flex-wrap: wrap; row-gap: 14px; } .hero .garmin { display: none; } .hero .stat:has(+ .stat.gm) { border-right: 0; } }
+@container hero (max-width: 620px) { .hero .stats { flex-wrap: wrap; row-gap: 14px; } .hero .garmin { display: none; } .hero .stat:has(+ .stat.gm) { border-right: 0; } }

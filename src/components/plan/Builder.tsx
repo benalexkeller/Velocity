@@ -53,7 +53,7 @@ export function Builder({ edit, importFirst = false }: { edit: boolean; importFi
   function validate(s: number): string | null {
     if (s === 0) {
       if (!intake.goal.date) return "Pick the race date.";
-      if (weeks != null && weeks < MIN_WEEKS) return `That is ${weeks < 1 ? "less than a week" : `${weeks} week${weeks === 1 ? "" : "s"}`} away. The shortest plan is ${MIN_WEEKS} weeks — pick a later race or start with a later date.`;
+      if (weeks != null && weeks < MIN_WEEKS) return `That is ${weeks < 1 ? "less than a week" : `${weeks} week${weeks === 1 ? "" : "s"}`} away. The shortest plan is ${MIN_WEEKS} weeks, pick a later race or start with a later date.`;
       if (intake.goal.kind === "time" && !intake.goal.target_hours) return "Enter the target time (h:mm).";
       if (intake.goal.type === "other" && !intake.goal.custom_label?.trim()) return "Say what the event is.";
     }
@@ -130,14 +130,14 @@ function GoalStep({ intake, set, imperial, weeks }: { intake: Intake; set: <K ex
       <div className="pb-search" ref={box}>
         <label><b>Find an event</b><span className="pb-searchin"><Icon name="search" /><input value={q} onChange={(e) => { setQ(e.target.value); setOpen(true); }} onFocus={() => setOpen(true)} placeholder="IRONMAN, Berlin, 70.3, marathon…" /></span></label>
         {open && hits.length > 0 && <ul className="pb-hits" role="listbox">{hits.map((ev) => <li key={ev.name}><button type="button" onClick={() => pickEvent(ev)}><b>{ev.name}</b><span>{ev.location}, {eventType(ev.type).label}, usually {usualMonth(ev.month)}</span></button></li>)}</ul>}
-        {open && q.trim().length > 1 && !hits.length && <div className="hint">Not in the list — type the name below.</div>}
+        {open && q.trim().length > 1 && !hits.length && <div className="hint">Not in the list, type the name below.</div>}
       </div>
       <div className="three">
         <label><b>Race name</b><input value={g.event} onChange={(e) => set("goal", { event: e.target.value })} placeholder={`e.g. ${et.kind === "tri" ? "IRONMAN Texas" : et.kind === "run" ? "Berlin Marathon" : "Mallorca 312"}`} /></label>
         <label><b>Location</b><input value={g.location} onChange={(e) => set("goal", { location: e.target.value })} placeholder="City, country" /></label>
         <label><b>Race date</b><input type="date" value={g.date} min={ymd(addDays(today(), 1))} onChange={(e) => set("goal", { date: e.target.value })} required /></label>
       </div>
-      {g.date && weeks != null && <div className={`pb-weeks${weeks < MIN_WEEKS ? " bad" : ""}`}>{weeks < 1 ? "That date has passed or is this week." : `${weeks} weeks from ${dateLabel(ymd(startD))} to race week${weeks < MIN_WEEKS ? ` — under the ${MIN_WEEKS}-week minimum` : weeks < 8 ? " — short: mostly sharpening and taper, no base building" : weeks < 16 ? " — one base block, one build block, taper" : " — full base, build, peak and taper"}`}</div>}
+      {g.date && weeks != null && <div className={`pb-weeks${weeks < MIN_WEEKS ? " bad" : ""}`}>{weeks < 1 ? "That date has passed or is this week." : `${weeks} weeks from ${dateLabel(ymd(startD))} to race week${weeks < MIN_WEEKS ? `, under the ${MIN_WEEKS}-week minimum` : weeks < 8 ? ", short: mostly sharpening and taper, no base building" : weeks < 16 ? ", one base block, one build block, taper" : ", full base, build, peak and taper"}`}</div>}
 
       <div className="pb-q"><h2>What is the goal?</h2></div>
       <div className="days">
@@ -185,7 +185,7 @@ function HistoryStep({ intake, set, kind }: { intake: Intake; set: <K extends ke
         </div>
       )}
 
-      <div className="pb-q"><h2>The last 6–8 weeks</h2></div>
+      <div className="pb-q"><h2>The last 6-8 weeks</h2></div>
       <label><b>Sessions per week</b><Stepper value={h.sessions_per_week} min={0} max={14} onChange={(v) => set("history", { sessions_per_week: v })} unit={h.sessions_per_week === 1 ? "session" : "sessions"} /></label>
       <div className="pb-hours">
         <span className="k">Hours per week</span>

@@ -42,16 +42,26 @@
 .nu-tl { display: grid; gap: 8px; }
 .nu-meal .body { border: 1px solid var(--line-2); border-radius: 10px; padding: 10px 14px; display: flex; flex-direction: column; }
 .nu-meal .mh { display: flex; align-items: baseline; gap: 12px; margin-bottom: 4px; }
-.nu-meal .mh > b { font-size: 16px; font-weight: 600; }
-.nu-meal .mh .tot { margin-left: auto; display: flex; gap: 14px; font-size: 12px; color: var(--muted); }
-.nu-meal .mh .tot b { color: var(--ink); font-weight: 600; font-size: 13px; }
-.nu-meal .row { display: grid; grid-template-columns: minmax(0, 1fr) 110px 56px 56px 56px 56px 22px; gap: 8px; align-items: center; padding: 5px 0; border-top: 1px solid var(--line-2); font-size: 13px; }
-.nu-meal .row.head { border-top: 0; padding: 0 0 2px; font-size: 12px; color: var(--muted); letter-spacing: 0.04em; text-transform: uppercase; order: -1; }
+.nu-meal .mh > b { font-size: 18px; font-weight: 600; }
+.nu-meal .mh .tot { margin-left: auto; font-size: 13px; color: var(--muted); }
+/* name, then the serving right after it, then four macro columns of equal width */
+.nu-meal .row { display: grid; grid-template-columns: auto minmax(60px, 1fr) repeat(4, 72px) 22px; gap: 10px; align-items: center; padding: 5px 0; border-top: 1px solid var(--line-2); font-size: 13px; }
+.nu-meal .row .n { min-width: 0; max-width: 46ch; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.nu-meal .row .num { color: var(--muted); }
+.nu-meal .row.head { border-top: 0; padding: 2px 0; font-size: 13px; }
+.nu-meal .row.head .num { color: var(--ink); font-weight: 600; }
+.nu-meal .row.sum { font-weight: 600; } .nu-meal .row.sum .num { color: var(--ink); }
 .nu-meal .row .n small { color: var(--muted); }
 .nu-meal .row .num { text-align: right; font-variant-numeric: tabular-nums; }
 .nu-meal .row .x { border: 0; background: none; color: var(--muted-2); font-size: 16px; line-height: 1; cursor: pointer; padding: 0; text-align: right; }
 .nu-meal .row .x:hover { color: var(--danger); }
 .nu-meal .body > .linkbtn { margin-top: 6px; }
+.nu-add-meal { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; padding: 16px; border: 1px dashed var(--line); border-radius: 10px; background: var(--surface); color: var(--ink-2); font: inherit; font-size: 14px; font-weight: 500; cursor: pointer; }
+.nu-add-meal:hover { border-color: var(--accent); color: var(--accent); }
+.nu-add-meal svg { width: 18px; height: 18px; stroke: currentColor; fill: none; stroke-width: 2; }
+/* side-card titles: bold, normal case, the date after a gap */
+.nu-h { font-size: 15px; font-weight: 600; margin: 0; letter-spacing: -0.01em; }
+.nu-h .at { font-size: 13px; }
 .nu-tl-session { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 10px; background: var(--accent-soft); text-decoration: none; color: var(--ink); }
 .nu-tl-session .sport-icon { color: var(--accent); flex: 0 0 auto; }
 .nu-tl-session b { font-weight: 600; white-space: nowrap; }
@@ -233,6 +243,13 @@
 .nu-weight .logw { display: flex; gap: 6px; align-items: center; }
 .nu-weight .logw input { width: 80px; font: inherit; font-size: 14px; border: 1px solid var(--line); border-radius: 8px; padding: 7px 10px; }
 .nu-needs .tbl th.num, .nu-needs .tbl td.num, .nu-weekfuel .tbl td.num { text-align: right; }
+/* energy needs: six equal columns, day names bold with the hours grey beside them */
+.nu-needs-tbl { table-layout: fixed; }
+.nu-needs-tbl th, .nu-needs-tbl td { white-space: nowrap; }
+.nu-needs-tbl th { text-transform: none; letter-spacing: 0; font-weight: 600; color: var(--ink); font-size: 13px; }
+.nu-needs-tbl th:first-child, .nu-needs-tbl td:first-child { width: 24%; }
+.nu-needs-tbl td:first-child b { font-weight: 600; }
+.nu-needs-tbl td:first-child .muted { margin-left: 8px; white-space: nowrap; }
 .nu-weekfuel .sess { display: inline-flex; align-items: center; gap: 6px; } .nu-weekfuel .sport-icon { color: var(--accent); }
 .nu-guide .u { margin-top: 8px; }
 
