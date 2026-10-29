@@ -34,14 +34,14 @@ function subtitle(a: Activity) {
   return "Session";
 }
 function distance(a: Activity) {
-  if (a.sport === "swim") return a.yd ? `${swimDist(a.yd).v.toLocaleString()} ${swimDist(0).u}` : "—";
-  return a.mi ? fmtDist(a.mi) : "—";
+  if (a.sport === "swim") return a.yd ? `${swimDist(a.yd).v.toLocaleString()} ${swimDist(0).u}` : "-";
+  return a.mi ? fmtDist(a.mi) : "-";
 }
 function paceOrPower(a: Activity) {
   if (a.sport === "run" && a.pace_s) return { v: fmtPace(runPace(a.pace_s).s), u: runPace(0).u };
   if (a.sport === "swim" && a.p100_s) return { v: fmtPace(swimPace(a.p100_s).s), u: swimPace(0).u };
   if (a.sport === "bike" && a.mph) return { v: fmtSpeed(a.mph), u: "" };
-  return { v: "—", u: "" };
+  return { v: "-", u: "" };
 }
 function effortLevel(a: Activity, lthr: number | null) {
   if (a.exertion) return Math.min(5, Math.ceil(a.exertion / 2));
@@ -132,8 +132,8 @@ function Activities() {
                       <td className="num">{distance(a)}</td>
                       <td className="num">{fmtHMS(a.min)}</td>
                       <td className="num hide-sm">{pp.v}<small>{pp.u}</small></td>
-                      <td className="num hide-sm col-elev">{a.elev_ft ? `${elev(a.elev_ft).v.toLocaleString()} ${elev(0).u}` : "—"}</td>
-                      <td className="hide-sm">{effortLevel(a, plan.athlete.lthr) ? <Effort n={effortLevel(a, plan.athlete.lthr)} /> : "—"}</td>
+                      <td className="num hide-sm col-elev">{a.elev_ft ? `${elev(a.elev_ft).v.toLocaleString()} ${elev(0).u}` : "-"}</td>
+                      <td className="hide-sm">{effortLevel(a, plan.athlete.lthr) ? <Effort n={effortLevel(a, plan.athlete.lthr)} /> : "-"}</td>
                       <td>{a.route ? <div className="thumb"><RouteMap route={a.route} height={36} bg="var(--surface-2)" pad={0.1} /></div> : null}</td>
                       <td><span className="chev"><Icon name="chevron" /></span></td>
                     </tr>
@@ -214,7 +214,7 @@ function Drawer({ a, onDeleted }: { a: Activity; onDeleted: () => void }) {
         <div><span>Activity type</span><span>{a.sport === "bike" ? "Ride" : a.sport[0].toUpperCase() + a.sport.slice(1)}</span></div>
         <div><span>Source</span><span>{a.source === "garmin" ? "Garmin" : "Manual"}</span></div>
         {a.route && plan.athlete.city && <div><span>Location</span><span>{plan.athlete.city}</span></div>}
-        <div><span>Start</span><span>{w.l2 || "—"}</span></div>
+        <div><span>Start</span><span>{w.l2 || "-"}</span></div>
       </div>
     </aside>
   );

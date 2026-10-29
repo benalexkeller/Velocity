@@ -45,7 +45,7 @@ function AddWorkout({ week, onDone }: { week: Week; onDone: (id: string | null) 
         <label>Intensity<select value={intensity} onChange={(e) => setIntensity(e.target.value)}>{INTENSITIES.map((k) => <option key={k}>{k}</option>)}</select></label>
       </div>
       <div className="two">
-        <label>Day<input type="date" value={date} min={plan.planRange?.start} max={plan.planRange?.end} onChange={(e) => setDate(e.target.value)} />{plan.planRange && (date < plan.planRange.start || date > plan.planRange.end) && <small className="err">Outside the plan, {dateLabel(plan.planRange.start)} – {dateLabel(plan.planRange.end)}</small>}</label>
+        <label>Day<input type="date" value={date} min={plan.planRange?.start} max={plan.planRange?.end} onChange={(e) => setDate(e.target.value)} />{plan.planRange && (date < plan.planRange.start || date > plan.planRange.end) && <small className="err">Outside the plan, {dateLabel(plan.planRange.start)} - {dateLabel(plan.planRange.end)}</small>}</label>
         <label>Start<input type="time" step={900} value={start} onChange={(e) => setStart(e.target.value)} /></label>
       </div>
       <div className="two">
@@ -75,7 +75,7 @@ function WeekOverview({ week, onClose, onOpenWeek }: { week: Week; onClose: () =
       <div className="wo-head">
         <div>
           <div className="eyebrow">{phase?.short ?? week.phaseShort}<span className="at">Week {week.week} of {plan.weeks.length}</span></div>
-          <h3>{dateLabel(week.start)} – {dateLabel(ymd(addDays(fromYmd(week.start), 6)))}{week.recovery ? ", recovery week" : ""}{week.race ? ", race week" : ""}</h3>
+          <h3>{dateLabel(week.start)} - {dateLabel(ymd(addDays(fromYmd(week.start), 6)))}{week.recovery ? ", recovery week" : ""}{week.race ? ", race week" : ""}</h3>
           <p className="muted">{week.focus}{phase ? `, ${phase.purpose}` : ""}</p>
         </div>
         <button type="button" className="btn ghost" onClick={onOpenWeek}>Open week in calendar →</button>
@@ -133,7 +133,7 @@ function Plan() {
             <button type="button" className={view === "month" ? "on" : ""} onClick={() => setView("month")}>Month</button>
           </div>
           <span style={{ position: "relative" }}>
-            <button type="button" className="badge" aria-expanded={calInfo} onClick={() => setCalInfo((o) => !o)} title={`Google Calendar sync ${plan.calendar ? "on" : "off"}`}><span className={plan.calendar ? "ok" : "ok off"}>{plan.calendar ? "✓" : "–"}</span>Calendar</button>
+            <button type="button" className="badge" aria-expanded={calInfo} onClick={() => setCalInfo((o) => !o)} title={`Google Calendar sync ${plan.calendar ? "on" : "off"}`}><span className={plan.calendar ? "ok" : "ok off"}>{plan.calendar ? "✓" : "-"}</span>Calendar</button>
             {calInfo && (
               <div className="menu" role="dialog">
                 <div className="small"><b>Google Calendar</b><br />Not connected yet.</div>

@@ -14,6 +14,7 @@ import { ACCOUNTS_ON } from "./supabase/env";
 import { addDays, dateFull, fmtPace, fromYmd, today, ymd } from "./format";
 import type { CoachReply, Proposal, ProposalStatus } from "./coach/types";
 import { buildCoachContext } from "./coach/context";
+import { logMeals } from "./coach/nutrition-bridge";
 
 export type { AddedSession, SessionPatch, ThreadMsg } from "./backend";
 export interface ManualActivity { id: string; name: string; sport: Sport; date: string; start: string; min: number; mi?: number; yd?: number; pace_s?: number; mph?: number; p100_s?: number; hr?: number; elev_ft?: number; exertion?: number; feel?: string; note?: string; source: "manual" }
@@ -272,7 +273,11 @@ export function PlanProvider({ children }: { children: ReactNode }) {
           if (r === "off") { setCoachOn(false); await say({ who: "Coach", at: nowHM(), text: coachReply(text, d, athlete), day, tier: "none" }); }
           else {
             // a pitch for a whole-plan review arrives as a proposal of kind "review"; Accept runs the review (decideProposal)
-            await say({ who: "Coach", at: nowHM(), text: r.text, day, proposal: r.proposal ?? null, status: r.proposal ? "open" : null, sources: r.sources ?? null, tier: r.tier ?? null });
+            // food the coach logged goes into the nutrition log now and shows in the chat as a "Logged" card
+            // (kept in the proposal field so it is saved with the message; nothing to accept)
+            if (r.meals?.length) logMeals(r.meals);
+            const card = r.proposal ?? (r.meals?.length ? { kind: "meals" as const, summary: "", changes: [], meals: r.meals } : null);
+            await say({ who: "Coach", at: nowHM(), text: r.text, day, proposal: card, status: r.proposal ? "open" : null, sources: r.sources ?? null, tier: r.tier ?? null });
           }
         } catch {
           await say({ who: "Coach", at: nowHM(), text: "No answer: the coach service did not respond. Try again in a minute.", day, tier: "none" });

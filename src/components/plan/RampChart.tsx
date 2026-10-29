@@ -45,8 +45,8 @@ export function RampChart({ selected, phase, onPick, onPhase }: { selected?: num
             <line x1={x0} y1={T - 20} x2={x1} y2={T - 20} stroke={on ? "var(--accent)" : "var(--line)"} strokeWidth={on ? 2 : 1} />
             <line x1={x0} y1={T - 26} x2={x0} y2={T - 20} stroke={on ? "var(--accent)" : "var(--line)"} />
             {x1 - x0 >= p.short.length * 6.5 && <text x={(x0 + x1) / 2} y={T - 30} textAnchor="middle" className={on ? "accent" : "ink"} fontWeight={600} fontSize="12">{p.short}</text>}
-            {x1 - x0 >= 60 && <text x={(x0 + x1) / 2} y={T - 17 + 12} textAnchor="middle">Weeks {p.from}{p.to !== p.from ? ` – ${p.to}` : ""}</text>}
-            <title>{`${p.name}, weeks ${p.from}${p.to !== p.from ? `–${p.to}` : ""}`}</title>
+            {x1 - x0 >= 60 && <text x={(x0 + x1) / 2} y={T - 17 + 12} textAnchor="middle">Weeks {p.from}{p.to !== p.from ? ` - ${p.to}` : ""}</text>}
+            <title>{`${p.name}, weeks ${p.from}${p.to !== p.from ? `-${p.to}` : ""}`}</title>
           </g>
         );
       })}

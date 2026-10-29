@@ -8,6 +8,7 @@ import { makeNutritionBackend, type NutritionBackend } from "./backend";
 import { projectWeight, sessionFuel, targetsFor, type DayTargets } from "./targets";
 import { EMPTY_NUTRITION, ZERO, addM, entryMacros, scaleM, uid, nowHM, type Drink, type Food, type LogEntry, type Macros, type Meal, type NutritionData, type NutritionProfile, type Serving, type SupplementPick, type WeightEntry } from "./types";
 import type { Session } from "../data";
+import { registerNutrition, servingsLabel } from "../coach/nutrition-bridge";
 
 /** targets is null until a body weight is on file. sessions = what was done (activities) plus what is still planned. */
 export interface DaySummary { date: string; totals: Macros; targets: DayTargets | null; sessions: Session[]; basis: "planned" | "done" | "mixed" | "none"; drinks_ml: number; entries: LogEntry[]; logged: boolean; estimateOnly: boolean }
@@ -146,6 +147,24 @@ export function NutritionProvider({ children }: { children: ReactNode }) {
       hasWeight: !!p.weight_kg,
     };
   }, [data, ready, b, sessionsOn, plan.athlete, weightKg]);
+
+  // while this page has the nutrition data, the coach reads it and logs food into it (see coach/nutrition-bridge)
+  useEffect(() => registerNutrition({
+    days: () => {
+      const t = today();
+      const r = (x: number) => Math.round(x);
+      return [ymd(addDays(t, -1)), ymd(t)].map((date) => {
+        const d = store.day(date);
+        return {
+          date,
+          targets: d.targets ? { kcal: r(d.targets.kcal), carbs_g: r(d.targets.carbs), protein_g: r(d.targets.protein), fat_g: r(d.targets.fat) } : null,
+          eaten: { kcal: r(d.totals.kcal), carbs_g: r(d.totals.carbs), protein_g: r(d.totals.protein), fat_g: r(d.totals.fat) },
+          meals: d.entries.map((e) => ({ meal: e.meal, name: e.name, kcal: e.kcal })),
+        };
+      });
+    },
+    log: (items) => { for (const m of items) store.addManual(m.date, m.meal, { name: m.name, kcal: m.kcal, carbs: m.carbs_g, protein: m.protein_g, fat: m.fat_g, amount: servingsLabel(m.servings) }); },
+  }), [store]);
 
   return <Ctx.Provider value={store}>{children}</Ctx.Provider>;
 }

@@ -47,7 +47,7 @@ export function LibraryAdmin() {
             <label>Evidence<select value={edit.grade} onChange={(e) => setEdit({ ...edit, grade: e.target.value as Passage["grade"] })}><option value="A">A strong</option><option value="B">B some</option><option value="C">C limited</option></select></label>
           </div>
           <label>Tags (comma-separated: the words athletes use)<input value={edit.tags.join(", ")} onChange={(e) => setEdit({ ...edit, tags: e.target.value.split(",") })} /></label>
-          <label>Passage (80–250 words, facts only)<textarea rows={7} value={edit.body} onChange={(e) => setEdit({ ...edit, body: e.target.value })} /></label>
+          <label>Passage (80-250 words, facts only)<textarea rows={7} value={edit.body} onChange={(e) => setEdit({ ...edit, body: e.target.value })} /></label>
           <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr", gap: 8 }}>
             <label>Source (as it should be cited)<input value={edit.source} onChange={(e) => setEdit({ ...edit, source: e.target.value })} /></label>
             <label>Link (optional)<input value={edit.url ?? ""} onChange={(e) => setEdit({ ...edit, url: e.target.value || null })} /></label>

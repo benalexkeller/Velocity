@@ -192,7 +192,7 @@ export class SupabaseBackend implements Backend {
     const row: Row = { user_id: uid, weeks, updated_at: new Date().toISOString() };
     let { error } = await this.sb.from("plans").upsert(intake !== undefined ? { ...row, intake } : row);
     // until the `intake` column exists in the database, save the weeks alone rather than nothing
-    if (error && intake !== undefined && /intake/i.test(error.message)) { console.warn("[velocity] plans.intake column missing — run supabase/schema.sql; saving weeks only"); ({ error } = await this.sb.from("plans").upsert(row)); }
+    if (error && intake !== undefined && /intake/i.test(error.message)) { console.warn("[velocity] plans.intake column missing, run supabase/schema.sql; saving weeks only"); ({ error } = await this.sb.from("plans").upsert(row)); }
     this.fail("savePlan", error); if (error) throw error;
   }
   async saveBody(rows: BodyDay[]) { const uid = await this.user(); if (!rows.length) return; const { error } = await this.sb.from("body_metrics").upsert(rows.map((b) => ({ user_id: uid, ...b }))); this.fail("saveBody", error); if (error) throw error; }

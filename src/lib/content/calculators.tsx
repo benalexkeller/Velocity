@@ -9,8 +9,8 @@ import type { RaceDistance } from "@/lib/athlete";
 const num = (s: string) => { const n = parseFloat(s); return isNaN(n) ? 0 : n; };
 /** "m:ss" or "h:mm:ss" or plain minutes → seconds */
 const toSec = (s: string) => { const p = s.trim().split(":").map(Number); if (p.some(isNaN) || !s.trim()) return 0; return p.length === 3 ? p[0] * 3600 + p[1] * 60 + p[2] : p.length === 2 ? p[0] * 60 + p[1] : p[0] * 60; };
-const hms = (sec: number) => (sec > 0 && isFinite(sec) ? fmtHMS(sec / 60) : "—");
-const pace = (sec: number) => (sec > 0 && isFinite(sec) ? fmtPace(sec) : "—");
+const hms = (sec: number) => (sec > 0 && isFinite(sec) ? fmtHMS(sec / 60) : "-");
+const pace = (sec: number) => (sec > 0 && isFinite(sec) ? fmtPace(sec) : "-");
 
 const RACES = {
   "Ironman 140.6": { swimYd: 4224, bikeMi: 112, runMi: 26.2 },
@@ -71,7 +71,7 @@ function RaceTime() {
 function Zones() {
   const [lthr, setLthr] = useState("168"); const [tp, setTp] = useState("8:45"); const [ftp, setFtp] = useState("230");
   const H = num(lthr), P = toSec(tp), F = num(ftp);
-  const hr: [string, number, number, string][] = [["Z1 Recovery", 0, 0.81, "Easy, conversational"], ["Z2 Aerobic", 0.81, 0.89, "All-day pace; most of the plan"], ["Z3 Tempo", 0.90, 0.93, "Comfortably hard"], ["Z4 Threshold", 0.94, 0.99, "1-hour race effort"], ["Z5 VO2max", 1.0, 1.06, "3–8 min intervals"]];
+  const hr: [string, number, number, string][] = [["Z1 Recovery", 0, 0.81, "Easy, conversational"], ["Z2 Aerobic", 0.81, 0.89, "All-day pace; most of the plan"], ["Z3 Tempo", 0.90, 0.93, "Comfortably hard"], ["Z4 Threshold", 0.94, 0.99, "1-hour race effort"], ["Z5 VO2max", 1.0, 1.06, "3-8 min intervals"]];
   const rp: [string, number, number][] = [["Z1", 1.29, 1.5], ["Z2", 1.14, 1.29], ["Z3", 1.06, 1.13], ["Z4", 0.97, 1.05], ["Z5", 0.90, 0.97]];
   const pw: [string, number, number][] = [["Z1", 0, 0.55], ["Z2", 0.56, 0.75], ["Z3", 0.76, 0.90], ["Z4", 0.91, 1.05], ["Z5", 1.06, 1.20]];
   return (
@@ -86,15 +86,15 @@ function Zones() {
         <div className="cols">
           <div>
             <h3>Heart rate (% of LTHR)</h3>
-            <table><tbody>{hr.map(([z, a, b, d]) => <tr key={z}><td>{z}</td><td>{Math.round(H * a)}–{Math.round(H * b)}</td><td>{d}</td></tr>)}</tbody></table>
+            <table><tbody>{hr.map(([z, a, b, d]) => <tr key={z}><td>{z}</td><td>{Math.round(H * a)}-{Math.round(H * b)}</td><td>{d}</td></tr>)}</tbody></table>
           </div>
           <div>
             <h3>Run pace (per mile)</h3>
-            <table><tbody>{rp.map(([z, a, b]) => <tr key={z}><td>{z}</td><td>{pace(P * b)}–{pace(P * a)}</td></tr>)}</tbody></table>
+            <table><tbody>{rp.map(([z, a, b]) => <tr key={z}><td>{z}</td><td>{pace(P * b)}-{pace(P * a)}</td></tr>)}</tbody></table>
           </div>
           <div>
             <h3>Bike power (% of FTP)</h3>
-            <table><tbody>{pw.map(([z, a, b]) => <tr key={z}><td>{z}</td><td>{Math.round(F * a)}–{Math.round(F * b)} W</td></tr>)}</tbody></table>
+            <table><tbody>{pw.map(([z, a, b]) => <tr key={z}><td>{z}</td><td>{Math.round(F * a)}-{Math.round(F * b)} W</td></tr>)}</tbody></table>
           </div>
         </div>
       </div>
@@ -119,11 +119,11 @@ function Sweat() {
       </div>
       <div className="out">
         <div className="res">
-          <Res k="Sweat rate" v={rate ? rate.toFixed(2) : "—"} u="L/h" hero />
-          <Res k="Total loss" v={lossL ? lossL.toFixed(2) : "—"} u="L" />
-          <Res k="Body weight change" v={pct ? `${(-pct).toFixed(1)}%` : "—"} />
-          <Res k="Drink to replace 70%" v={rate ? Math.round(rate * 0.7 * 1000).toString() : "—"} u="ml/h" />
-          <Res k="Sodium at 900 mg/L" v={rate ? Math.round(rate * 0.7 * 900).toString() : "—"} u="mg/h" />
+          <Res k="Sweat rate" v={rate ? rate.toFixed(2) : "-"} u="L/h" hero />
+          <Res k="Total loss" v={lossL ? lossL.toFixed(2) : "-"} u="L" />
+          <Res k="Body weight change" v={pct ? `${(-pct).toFixed(1)}%` : "-"} />
+          <Res k="Drink to replace 70%" v={rate ? Math.round(rate * 0.7 * 1000).toString() : "-"} u="ml/h" />
+          <Res k="Sodium at 900 mg/L" v={rate ? Math.round(rate * 0.7 * 900).toString() : "-"} u="mg/h" />
         </div>
         <div className="note">{pct > 2 ? "Loss above 2%: increase fluid on similar sessions." : "Loss within 2%: fluid plan is adequate for these conditions."}</div>
       </div>
@@ -151,7 +151,7 @@ function Carbs() {
           <Res k="Target" v={target.toString()} u="g/h" hero />
           <Res k="Total carbs" v={Math.round(total).toString()} u="g" />
           <Res k="As gels only" v={gels.toString()} u="gels" />
-          <Res k="As drink only" v={drinkMl ? (drinkMl / 1000).toFixed(1) : "—"} u="L" />
+          <Res k="As drink only" v={drinkMl ? (drinkMl / 1000).toFixed(1) : "-"} u="L" />
         </div>
         <div className="note">Above 60 g/h use glucose + fructose products. Sessions under 60 minutes need no carbohydrate.</div>
       </div>

@@ -21,9 +21,9 @@ export function targetFor(sport: Sport, z: Zone, zonesAll: Zones = ATHLETE.zones
   const unit = sp === "bike" ? "" : sp === "swim" ? " /100 yd" : " /mi";
   const slow = (range: string) => { // Z1: 8% slower than Z2 for pace sports, 10% lower for bike
     const m = range.match(/(\d+):(\d+)\s*[–-]\s*(\d+):(\d+)/);
-    if (m) { const lo = (+m[1] * 60 + +m[2]) * 1.08, hi = (+m[3] * 60 + +m[4]) * 1.08; const f = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`; return `${f(lo)} – ${f(hi)}`; }
+    if (m) { const lo = (+m[1] * 60 + +m[2]) * 1.08, hi = (+m[3] * 60 + +m[4]) * 1.08; const f = (s: number) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, "0")}`; return `${f(lo)}-${f(hi)}`; }
     const b = range.match(/([\d.]+)\s*[–-]\s*([\d.]+)\s*mph/);
-    if (b) return `${(+b[1] * 0.9).toFixed(0)} – ${(+b[2] * 0.9).toFixed(0)} mph`;
+    if (b) return `${(+b[1] * 0.9).toFixed(0)}-${(+b[2] * 0.9).toFixed(0)} mph`;
     return range;
   };
   if (z === 1) return slow(zones["Zone 2"]) + unit;
@@ -33,7 +33,7 @@ export function targetFor(sport: Sport, z: Zone, zonesAll: Zones = ATHLETE.zones
   return sp === "bike" ? "max effort" : "max effort";
 }
 
-const swimSecPer100 = (zones: Zones = ATHLETE.zones) => { const m = (zones.swim?.["Aerobic"] ?? "2:00 – 2:10").match(/(\d+):(\d+)/); return m ? +m[1] * 60 + +m[2] : 125; };
+const swimSecPer100 = (zones: Zones = ATHLETE.zones) => { const m = (zones.swim?.["Aerobic"] ?? "2:00-2:10").match(/(\d+):(\d+)/); return m ? +m[1] * 60 + +m[2] : 125; };
 
 /** Effort zone from the words of a set (V-014): strides, threshold and hard / VO2 intervals Z4, all-out Z5, tempo and race pace or effort Z3. */
 function zoneOfWords(x: string): Zone {
@@ -58,7 +58,8 @@ function parsePart(text: string, sport: Sport, totalMin: number, part?: "AM" | "
   const t = text.toLowerCase();
   const seg = (label: string, min: number, zone: Zone, kind: Segment["kind"], yd?: number): Segment => {
     const target = kind === "strength" ? "bodyweight / light load" : kind === "drill" ? "technique focus" : targetFor(sport, zone, zones);
-    const o: Segment = { label, min: Math.max(1, Math.round(min)), zone, target, kind, part };
+    // rests keep their seconds ("20 s rest"); everything else is whole minutes
+    const o: Segment = { label, min: kind === "recovery" && min < 1 ? Math.max(0.25, Math.round(min * 60) / 60) : Math.max(1, Math.round(min)), zone, target, kind, part };
     if (sport === "swim" && kind !== "recovery" && kind !== "strength") o.yd = yd ?? ydOf(o.min, target, zones);
     return o;
   };
@@ -199,7 +200,7 @@ export function workoutFor(s: Session, zones: Zones = ATHLETE.zones): Workout {
       i++;
     }
   }
-  return { segments, steps, sport: s.sport, note: /fuel|eat|drink/i.test(text) ? text.match(/[—-]\s*([^—]*(?:fuel|eat|drink)[^—]*)$/i)?.[1]?.trim() : undefined };
+  return { segments, steps, sport: s.sport, note: /fuel|eat|drink/i.test(text) ? text.match(/(?:[—-]|,)\s*([^—,]*(?:fuel|eat|drink)[^—,]*)$/i)?.[1]?.trim() : undefined };
 }
 
 /** The key work of a session and its target: the hardest zone with at least 8 minutes in it (so strides do not

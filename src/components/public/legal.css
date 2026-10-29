@@ -1,0 +1,38 @@
+/* Privacy, Terms and Help: one readable column under the shared top bar. Builds on landing.css (.lp, footer). */
+.lg-head, .lg-body { max-width: 760px; margin: 0 auto; padding-left: var(--lp-gutter); padding-right: var(--lp-gutter); box-sizing: content-box; }
+.lg-head { padding-top: 64px; display: grid; gap: 14px; }
+.lg-head h1 { font-size: clamp(36px, 5vw, 56px); letter-spacing: -0.035em; line-height: 1.02; }
+.lg-lead { font-size: 18px; line-height: 1.55; color: var(--ink-2); }
+.lg-updated { font-size: 13px; color: var(--muted); }
+.lg-body { padding-top: 40px; padding-bottom: 32px; font-size: 16px; line-height: 1.65; color: var(--ink-2); }
+.lg-body h2 { font-size: 22px; letter-spacing: -0.02em; color: var(--ink); margin: 40px 0 12px; max-width: none; }
+.lg-body h2:first-child { margin-top: 0; }
+.lg-body p { margin: 0 0 14px; }
+.lg-body ul { margin: 0 0 14px; padding-left: 20px; display: grid; gap: 6px; }
+.lg-body b { color: var(--ink); font-weight: 600; }
+.lg-body a { color: var(--accent); }
+.lg-table { width: 100%; border-collapse: collapse; margin: 4px 0 18px; font-size: 14.5px; }
+.lg-table th, .lg-table td { text-align: left; vertical-align: top; padding: 10px 12px 10px 0; border-bottom: 1px solid var(--line); }
+.lg-table th { font-weight: 600; color: var(--ink); white-space: nowrap; }
+.lp.lg .lp-foot { max-width: 760px; margin-top: 48px; }
+
+/* the contact form on Help */
+.lg-form { display: grid; gap: 16px; margin: 8px 0 24px; padding: 28px; border: 1px solid var(--line); border-radius: var(--radius-lg); background: var(--surface); }
+.lg-form .two { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.lg-form label { display: grid; gap: 6px; font-size: 14px; }
+.lg-form label b { font-size: 14px; }
+.lg-form label small { color: var(--muted); font-weight: 400; }
+.lg-form input, .lg-form textarea { font: inherit; font-size: 15px; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; }
+.lg-form textarea { min-height: 140px; resize: vertical; }
+.lg-form input:focus, .lg-form textarea:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+.lg-form .hp { position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; }
+.lg-form .row { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.lg-form .err { color: var(--bad, #DC2626); font-size: 14px; }
+.lg-form .note { font-size: 13px; color: var(--muted); }
+.lg-sent { padding: 28px; border-radius: var(--radius-lg); background: var(--accent-soft); color: var(--ink); display: grid; gap: 6px; margin: 8px 0 24px; }
+.lg-sent b { font-size: 17px; }
+@media (max-width: 600px) {
+  .lg-head { padding-top: 32px; }
+  .lg-form { padding: 18px; }
+  .lg-form .two { grid-template-columns: 1fr; }
+}

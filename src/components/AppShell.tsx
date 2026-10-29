@@ -53,7 +53,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
   const ATHLETE = plan.athlete;
   const hour = useNow().getHours();
   const greet = hour < 12 ? "Good morning" : hour < 18 ? "Good afternoon" : "Good evening";
-  if (path === "/" || path === "/login" || path.startsWith("/auth") || path.startsWith("/product") || path === "/setup") return <>{children}</>;
+  if (path === "/" || path === "/login" || path.startsWith("/auth") || path.startsWith("/product") || path === "/help" || path === "/privacy" || path === "/terms" || path === "/setup") return <>{children}</>;
   return (
     <div className="shell">
       <header className="topbar">

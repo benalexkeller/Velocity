@@ -26,7 +26,7 @@ function MoveForm({ s, onDone }: { s: Session; onDone: () => void }) {
   const outside = !!r && (date < r.start || date > r.end);
   return (
     <form className="sp-form" onSubmit={(e) => { e.preventDefault(); if (outside) return; plan.moveSession(s.id, { date, start }); onDone(); }}>
-      <label>Day<input type="date" value={date} min={r?.start} max={r?.end} onChange={(e) => setDate(e.target.value)} />{outside && r && <small className="err">Outside the plan, {dateLabel(r.start)} – {dateLabel(r.end)}</small>}</label>
+      <label>Day<input type="date" value={date} min={r?.start} max={r?.end} onChange={(e) => setDate(e.target.value)} />{outside && r && <small className="err">Outside the plan, {dateLabel(r.start)} - {dateLabel(r.end)}</small>}</label>
       <label>Start<input type="time" step={900} value={start} onChange={(e) => setStart(e.target.value)} /></label>
       <div className="row"><button type="submit" className="btn" disabled={outside}>Move session</button><button type="button" className="btn ghost" onClick={onDone}>Cancel</button></div>
     </form>

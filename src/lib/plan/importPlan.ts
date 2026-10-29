@@ -61,7 +61,7 @@ export function rowsToPlan(rows: Row[]): ImportResult {
     const phase = String(pick(r, ["phase", "block"]) ?? "").trim();
     const isRace = sport === "Race" || /race day/i.test(desc);
     // the text must start with the sport so the app can classify it; the description follows
-    let text = isRace ? `Race day — ${desc || "race"}` : sport === "Rest" ? `Rest${desc ? ` — ${desc}` : ""}` : sport === "Brick" ? `Brick: bike + run ${hm(min)}${desc ? ` — ${desc}` : ""}` : `${sport} ${hm(min)}${desc ? ` ${/^[—-]/.test(desc) ? "" : "— "}${desc}` : ""}`;
+    let text = isRace ? `Race day, ${desc || "race"}` : sport === "Rest" ? `Rest${desc ? `, ${desc}` : ""}` : sport === "Brick" ? `Brick: bike + run ${hm(min)}${desc ? `, ${desc}` : ""}` : `${sport} ${hm(min)}${desc ? ` ${/^[--]/.test(desc) ? "" : "- "}${desc}` : ""}`;
     if (intensity && !new RegExp(intensity, "i").test(text)) text += ` (${intensity})`;
     const cur = byDay.get(date);
     if (cur) { if (cur.min === 0 && cur.text.startsWith("Rest")) byDay.set(date, { text, min, phase: phase || cur.phase, race: cur.race || isRace }); else if (min > 0) byDay.set(date, { text: `${cur.text} + ${text}`, min: cur.min + min, phase: phase || cur.phase, race: cur.race || isRace }); }

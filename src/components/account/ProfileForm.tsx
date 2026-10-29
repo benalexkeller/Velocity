@@ -43,7 +43,7 @@ export function ProfileForm({ mode, onSaved }: { mode: "setup" | "edit"; onSaved
     setErr(null); setSaved(false);
     const u = username.trim().toLowerCase();
     if (!name.trim()) return setErr("Name is required.");
-    if (!USERNAME.test(u)) return setErr("Username: 3–20 characters, lowercase letters, numbers or _.");
+    if (!USERNAME.test(u)) return setErr("Username: 3-20 characters, lowercase letters, numbers or _.");
     if (uState === "taken") return setErr("That username is taken.");
     setBusy(true);
     try {
@@ -59,7 +59,7 @@ export function ProfileForm({ mode, onSaved }: { mode: "setup" | "edit"; onSaved
       <div className="two">
         <label><b>Name</b><input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" required /></label>
         <label><b>Username</b><input value={username} onChange={(e) => setUsername(e.target.value.toLowerCase())} placeholder="e.g. pr_tri" aria-invalid={uState === "taken" || uState === "bad"} autoComplete="username" required />
-          <span className={`hint ${uState === "ok" ? "ok" : uState === "taken" || uState === "bad" ? "bad" : ""}`}>{uState === "checking" ? "Checking…" : uState === "ok" ? "Available" : uState === "taken" ? "Taken" : uState === "bad" ? "3–20 characters: a–z, 0–9, _" : "Shown instead of your name where you choose"}</span></label>
+          <span className={`hint ${uState === "ok" ? "ok" : uState === "taken" || uState === "bad" ? "bad" : ""}`}>{uState === "checking" ? "Checking…" : uState === "ok" ? "Available" : uState === "taken" ? "Taken" : uState === "bad" ? "3-20 characters: a-z, 0-9, _" : "Shown instead of your name where you choose"}</span></label>
       </div>
       <div className="three">
         <label><b>Units</b><select value={units} onChange={(e) => setUnits(e.target.value as "imperial" | "metric")}><option value="imperial">Miles, yards, feet</option><option value="metric">Kilometres, metres</option></select></label>

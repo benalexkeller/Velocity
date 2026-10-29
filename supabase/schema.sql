@@ -117,6 +117,10 @@ drop policy if exists "insert own feedback" on public.feedback;
 create policy "insert own feedback" on public.feedback for insert with check (auth.uid() = user_id);
 drop policy if exists "read own feedback" on public.feedback;
 create policy "read own feedback" on public.feedback for select using (auth.uid() = user_id);
+-- the contact form on /help: anyone, signed in or not, can send one message row (tab 'contact'); nobody but the
+-- admin can read it back (the read policy above only returns a signed-in athlete's own rows)
+drop policy if exists "contact form" on public.feedback;
+create policy "contact form" on public.feedback for insert with check (tab = 'contact' and (user_id is null or auth.uid() = user_id));
 create or replace function public.admin_feedback()
 returns setof public.feedback language sql security definer set search_path = public stable as $$
   select * from public.feedback

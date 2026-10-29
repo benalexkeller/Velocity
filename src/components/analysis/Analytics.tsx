@@ -12,13 +12,13 @@ import { niceTicks, useWidth } from "@/lib/ticks";
 
 type Sp = "swim" | "bike" | "run";
 export type Range = 4 | 12 | 99;
-const sign = (n: number | null | undefined, digits = 0, suffix = "") => (n == null ? "—" : `${n > 0 ? "+" : ""}${n.toFixed(digits)}${suffix}`);
+const sign = (n: number | null | undefined, digits = 0, suffix = "") => (n == null ? "-" : `${n > 0 ? "+" : ""}${n.toFixed(digits)}${suffix}`);
 const fmtV = (sp: Sp, v: number) => (sp === "bike" ? `${v.toFixed(1)}` : sp === "run" ? fmtPace(runPace(v).s) : fmtPace(swimPace(v).s));
 const unitOf = (sp: Sp) => (sp === "bike" ? "mph" : sp === "run" ? runPace(0).u : swimPace(0).u);
 
 // ---------- small marks ----------
 function Delta({ v, good = "up", suffix = "%", digits = 0 }: { v: number | null | undefined; good?: "up" | "down"; suffix?: string; digits?: number }) {
-  if (v == null || !isFinite(v)) return <span className="delta muted">—</span>;
+  if (v == null || !isFinite(v)) return <span className="delta muted">-</span>;
   const up = v > 0, positive = good === "up" ? up : !up;
   return <span className={`delta ${v === 0 ? "" : positive ? "pos" : "neg"}`}>{up ? "↑" : v < 0 ? "↓" : "→"} {Math.abs(v).toFixed(digits)}{suffix}</span>;
 }
@@ -48,13 +48,13 @@ export function Info({ title, text }: { title: string; text: string }) {
 }
 export const KPI_INFO = {
   week: { title: "This week", text: "Sessions completed and hours done in the current plan week (Monday to Sunday) against the plan. Bars: hours done in each of the last 8 plan weeks." },
-  load: { title: "Week load", text: "Load done this plan week against the load of the planned sessions. Load per session = minutes × (average HR ÷ threshold HR)², or from your 1–10 exertion when there is no heart rate. 'Last week' is the full previous plan week." },
+  load: { title: "Week load", text: "Load done this plan week against the load of the planned sessions. Load per session = minutes × (average HR ÷ threshold HR)², or from your 1-10 exertion when there is no heart rate. 'Last week' is the full previous plan week." },
   fitness: { title: "Fitness (chronic load)", text: "Exponentially weighted average of daily load with a 42-day time constant (CTL in the Banister model). Rises slowly with sustained work, falls slowly with rest. Change in points vs 7 days ago; shown only when there was training before that." },
   form: { title: "Form (training stress balance)", text: "Fitness minus Fatigue (7-day average, ATL). Below −30 very fatigued, −30 to −10 fatigued, −10 to +5 neutral, +5 to +25 fresh. Above +25 with Fitness falling: detraining." },
   compliance: { title: "Completed sessions, 28 days", text: "Sessions completed ÷ sessions planned in the last 28 days, rest days excluded. Completed = same sport, at least 70 % of the planned time; shorter or another sport counts half. Today's session is not counted until the day is over." },
   ef: { title: "Run efficiency", text: "Efficiency factor of steady runs (up to Z3, at least 20 min): speed in metres per minute ÷ average heart rate, weighted by duration, last 4 weeks. Higher = more speed for the same heart rate. Change vs the 4 weeks before." },
-  zones: { title: "Load by heart-rate zone", text: "Each session's load is assigned to a zone by its average heart rate: Z1 below 135 bpm, Z2 135–147, Z3 148–157, Z4 158–167, Z5 168 and above (provisional zones, recalibrated at the week-4 threshold test). Share = that zone's load ÷ all load with heart rate. Load = the sum, minutes × intensity factor. Sessions without heart rate are excluded from the split. Per-second heart-rate data from the Garmin connection will replace the per-session average." },
-  intensity: { title: "Intensity distribution", text: "Easy = Z1 + Z2 (below the first ventilatory threshold, conversational), Moderate = Z3 (between thresholds, tempo), Hard = Z4 + Z5 (above the second threshold). Polarized and pyramidal endurance programmes put 75–85% of load in the easy band; this plan targets 75–80% in the Base phases." },
+  zones: { title: "Load by heart-rate zone", text: "Each session's load is assigned to a zone by its average heart rate: Z1 below 135 bpm, Z2 135-147, Z3 148-157, Z4 158-167, Z5 168 and above (provisional zones, recalibrated at the week-4 threshold test). Share = that zone's load ÷ all load with heart rate. Load = the sum, minutes × intensity factor. Sessions without heart rate are excluded from the split. Per-second heart-rate data from the Garmin connection will replace the per-session average." },
+  intensity: { title: "Intensity distribution", text: "Easy = Z1 + Z2 (below the first ventilatory threshold, conversational), Moderate = Z3 (between thresholds, tempo), Hard = Z4 + Z5 (above the second threshold). Polarized and pyramidal endurance programmes put 75-85% of load in the easy band; this plan targets 75-80% in the Base phases." },
 } as const;
 
 // ---------- 1. KPI tiles ----------
@@ -68,8 +68,8 @@ export function KpiRow() {
       <div className="card kpi"><div className="k">Week load<Info {...KPI_INFO.load} /></div><div className="row"><div className="v">{k.load.v}<small> / {k.load.planned}</small></div></div><div className="u">{k.load.last != null ? `last week ${k.load.last}` : "first plan week"}</div><Bars pts={k.load.bars} /></div>
       <div className="card kpi"><div className="k">Fitness<Info {...KPI_INFO.fitness} /></div><div className="row"><div className="v">{k.fitness.v.toFixed(0)}</div>{pts(k.fitness.d)}</div><div className="u">42-day load</div><Spark pts={k.fitness.spark} /></div>
       <div className="card kpi"><div className="k">Form<Info {...KPI_INFO.form} /></div><div className="row"><div className="v">{sign(k.form.v)}</div><span className="delta">{k.form.word}</span></div><div className="u">fatigue {k.form.fatigue.toFixed(0)}, fitness {k.form.fitness.toFixed(0)}</div><Spark pts={k.form.spark} color="var(--swim)" /></div>
-      <div className="card kpi"><div className="k">Completed<span className="at">28 d</span><Info {...KPI_INFO.compliance} /></div><div className="row"><div className="v">{k.compliance.v ?? "—"}{k.compliance.v != null && <small>%</small>}</div></div><div className="u">{k.compliance.planned ? `${Math.round(k.compliance.done * 2) / 2} of ${k.compliance.planned} sessions` : "no sessions planned yet"}</div></div>
-      <div className="card kpi"><div className="k">Run efficiency<Info {...KPI_INFO.ef} /></div><div className="row"><div className="v">{k.ef.v != null ? k.ef.v.toFixed(2) : "—"}</div>{k.ef.v != null && (k.ef.d != null ? <span className="delta">{k.ef.d >= 0 ? "+" : "−"}{Math.abs(k.ef.d).toFixed(2)}, 4 wk</span> : <span className="delta muted">no baseline yet</span>)}</div><div className="u">{k.ef.v != null ? "m/min per bpm, 4 wk" : "no runs with heart rate"}</div></div>
+      <div className="card kpi"><div className="k">Completed<span className="at">28 d</span><Info {...KPI_INFO.compliance} /></div><div className="row"><div className="v">{k.compliance.v ?? "-"}{k.compliance.v != null && <small>%</small>}</div></div><div className="u">{k.compliance.planned ? `${Math.round(k.compliance.done * 2) / 2} of ${k.compliance.planned} sessions` : "no sessions planned yet"}</div></div>
+      <div className="card kpi"><div className="k">Run efficiency<Info {...KPI_INFO.ef} /></div><div className="row"><div className="v">{k.ef.v != null ? k.ef.v.toFixed(2) : "-"}</div>{k.ef.v != null && (k.ef.d != null ? <span className="delta">{k.ef.d >= 0 ? "+" : "−"}{Math.abs(k.ef.d).toFixed(2)}, 4 wk</span> : <span className="delta muted">no baseline yet</span>)}</div><div className="u">{k.ef.v != null ? "m/min per bpm, 4 wk" : "no runs with heart rate"}</div></div>
     </div>
   );
 }
@@ -251,11 +251,11 @@ export function LoadDistribution({ range }: { range: Range }) {
         <div className="intensity">
           <div className="k">Intensity distribution<Info {...KPI_INFO.intensity} /></div>
           <div className="ibar"><i style={{ width: `${z.easy}%`, background: "var(--z2)" }} /><i style={{ width: `${z.moderate}%`, background: "var(--accent)" }} /><i style={{ width: `${z.hard}%`, background: "var(--run)" }} /></div>
-          <div className="ilbl"><div><b>{z.easy}%</b><span>Easy (Z1–Z2)</span></div><div><b>{z.moderate}%</b><span>Moderate (Z3)</span></div><div><b>{z.hard}%</b><span>Hard (Z4–Z5)</span></div></div>
+          <div className="ilbl"><div><b>{z.easy}%</b><span>Easy (Z1-Z2)</span></div><div><b>{z.moderate}%</b><span>Moderate (Z3)</span></div><div><b>{z.hard}%</b><span>Hard (Z4-Z5)</span></div></div>
         </div>
         <div className={`note ${easyDelta != null && easyDelta >= 0 ? "ok" : ""}`}>
           <div className="t">Easy share {z.easy}%{easyDelta != null ? `, ${sign(easyDelta)} pts vs previous period` : ""}</div>
-          <div className="s">Base-phase target: 75–80 % easy.</div>
+          <div className="s">Base-phase target: 75-80 % easy.</div>
         </div>
       </div>
     </section>
@@ -266,7 +266,7 @@ export function LoadDistribution({ range }: { range: Range }) {
 function SportCard({ sp }: { sp: Sp }) {
   const an = useAnalysis();
   const p = an.sportPerformance(sp);
-  const fmtRow = (kind: string, v: number | null) => v == null ? "—" : kind === "pace" ? `${fmtV(sp, v)} ${unitOf(sp)}` : kind === "speed" ? `${v.toFixed(1)} mph` : kind === "hr" ? `${v.toFixed(0)} bpm` : sp === "swim" ? `${swimDist(v).v.toLocaleString()} ${swimDist(0).u}` : fmtDist(v);
+  const fmtRow = (kind: string, v: number | null) => v == null ? "-" : kind === "pace" ? `${fmtV(sp, v)} ${unitOf(sp)}` : kind === "speed" ? `${v.toFixed(1)} mph` : kind === "hr" ? `${v.toFixed(0)} bpm` : sp === "swim" ? `${swimDist(v).v.toLocaleString()} ${swimDist(0).u}` : fmtDist(v);
   const good = (kind: string) => (kind === "pace" || kind === "hr" ? "down" : "up");
   const [svgRef, W] = useWidth<SVGSVGElement>(240); const H = 92, L = 42, R = 8, T = 8, B = 18;
   const pts = p.trend;
@@ -360,14 +360,14 @@ export function Progress({ range, onPick }: { range: Range; onPick: (id: string)
           {single ? (
             <>
               <div className="k">Current value</div>
-              <div className="v">{single.cur != null ? fmtFor(single.k, single.cur) : "—"}<small> {unitFor(single.k)}</small></div>
+              <div className="v">{single.cur != null ? fmtFor(single.k, single.cur) : "-"}<small> {unitFor(single.k)}</small></div>
               <Delta v={single.delta} good={goodDir} />
               <div className="u">vs first session in range</div>
             </>
           ) : (
             <div className="ax-all">
               <div className="k">Latest per sport</div>
-              {series.map((s) => <div key={s.k} className="row"><i style={{ background: COLORS[s.k] }} /><span>{s.k[0].toUpperCase() + s.k.slice(1)}</span><b>{s.cur != null ? `${fmtFor(s.k, s.cur)} ${unitFor(s.k)}` : "—"}</b><Delta v={s.delta} good={m === "pace" ? (s.k === "bike" ? "up" : "down") : m === "hr" ? "down" : "up"} /></div>)}
+              {series.map((s) => <div key={s.k} className="row"><i style={{ background: COLORS[s.k] }} /><span>{s.k[0].toUpperCase() + s.k.slice(1)}</span><b>{s.cur != null ? `${fmtFor(s.k, s.cur)} ${unitFor(s.k)}` : "-"}</b><Delta v={s.delta} good={m === "pace" ? (s.k === "bike" ? "up" : "down") : m === "hr" ? "down" : "up"} /></div>)}
             </div>
           )}
         </div>
@@ -406,7 +406,7 @@ export function Recovery() {
   const lastOf = (k: "rhr" | "hrv" | "sleep_h" | "stress") => [...an.BODY].reverse().find((b) => b[k] != null)?.date;
   const bars = (k: "rhr" | "hrv" | "sleep_h" | "stress") => [...Array(14)].map((_, i) => { const day = bodySummary(1, 13 - i); return k === "rhr" ? day.rhr ?? 0 : k === "hrv" ? day.hrv ?? 0 : k === "sleep_h" ? day.sleep ?? 0 : day.stress ?? 0; }).map((v) => v ?? 0);
   const tile = (label: string, v: string | null, delta: number | null, good: "up" | "down", k: "rhr" | "hrv" | "sleep_h" | "stress", suffix = "", digits = 0) => (
-    <div className="rt"><div className="k">{label}</div><div className="v">{v ?? "—"}</div>{v != null && <Delta v={delta} good={good} suffix={suffix} digits={digits} />}<div className="u">{v != null ? "7-day average" : lastOf(k) ? `No data in 7 days, last ${dateLabel(lastOf(k) as string)}` : "No data yet"}</div>{v != null && <Bars pts={bars(k)} w={120} h={26} />}</div>
+    <div className="rt"><div className="k">{label}</div><div className="v">{v ?? "-"}</div>{v != null && <Delta v={delta} good={good} suffix={suffix} digits={digits} />}<div className="u">{v != null ? "7-day average" : lastOf(k) ? `No data in 7 days, last ${dateLabel(lastOf(k) as string)}` : "No data yet"}</div>{v != null && <Bars pts={bars(k)} w={120} h={26} />}</div>
   );
   const pct = (a: number | null, b: number | null) => (a != null && b ? ((a - b) / b) * 100 : null);
   return (
@@ -421,7 +421,7 @@ export function Recovery() {
         </div>
         <div className="score vo2">
           <div className="k">VO2max<span className="at">ml/kg/min, Garmin estimate</span></div>
-          <div className="vo2-now"><b>{vNow ? vNow.v : "—"}</b>{vNow && <span className="muted">{v4 ? `${vNow.v - v4.v >= 0 ? "+" : ""}${(vNow.v - v4.v).toFixed(0)} vs 4 weeks ago, ` : ""}last reading {dateLabel(vNow.date)}</span>}</div>
+          <div className="vo2-now"><b>{vNow ? vNow.v : "-"}</b>{vNow && <span className="muted">{v4 ? `${vNow.v - v4.v >= 0 ? "+" : ""}${(vNow.v - v4.v).toFixed(0)} vs 4 weeks ago, ` : ""}last reading {dateLabel(vNow.date)}</span>}</div>
           <Vo2Chart pts={vo2} />
         </div>
       </div>
@@ -443,7 +443,7 @@ export function Quality({ onPick }: { onPick: (id: string) => void }) {
             <tr key={r.a.id} className="row" onClick={() => onPick(r.a.id)}>
               <td className="nowrap">{dateLabel(r.a.date)}</td>
               <td><span className="sess"><SportIcon sport={r.a.sport} size={18} />{r.a.name}</span></td>
-              <td className="num">{r.planned ? `${r.planned.min} min` : "—"}</td>
+              <td className="num">{r.planned ? `${r.planned.min} min` : "-"}</td>
               <td className="num">{fmtHMS(r.a.min)}</td>
               <td className="num">{r.load}</td>
               <td><span className={`qstatus ${r.level}`}>{r.status}</span></td>
@@ -462,7 +462,7 @@ export function RaceReadiness() {
   const ATHLETE = an.athlete;
   const r = an.raceReadiness();
   const D = ATHLETE.raceDist;
-  const h = (x: number | null | undefined) => (x == null ? "—" : fmtHMS(x * 60));
+  const h = (x: number | null | undefined) => (x == null ? "-" : fmtHMS(x * 60));
   const swimLabel = D.swimYd >= 1760 ? `${(D.swimYd / 1760).toFixed(1)} mi` : `${D.swimYd.toLocaleString()} yd`;
   const legs = ([
     { k: "swim" as const, show: D.swimYd > 0, label: `Swim ${swimLabel}`, v: r.swimH },

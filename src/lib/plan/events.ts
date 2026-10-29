@@ -118,7 +118,7 @@ export const EVENTS: CatalogEvent[] = [
   e("Brooklyn Half", "Brooklyn, NY, USA", "half", "May"),
   e("Bay to Breakers", "San Francisco, CA, USA", "10k", "May"),
   e("Peachtree Road Race", "Atlanta, GA, USA", "10k", "Jul"),
-  e("Comrades Marathon", "Durban–Pietermaritzburg, South Africa", "ultra", "Jun"),
+  e("Comrades Marathon", "Durban-Pietermaritzburg, South Africa", "ultra", "Jun"),
   e("Western States 100", "Olympic Valley, CA, USA", "ultra", "Jun"),
   e("UTMB", "Chamonix, France", "ultra", "Aug"),
   // cycling

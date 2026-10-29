@@ -5,6 +5,7 @@ import type { CoachContext } from "./types";
 import { addDays, fromYmd, today, ymd } from "@/lib/format";
 import { fmtPace } from "@/lib/format";
 import type { Activity } from "@/lib/data";
+import { nutritionContext } from "./nutrition-bridge";
 
 const r1 = (x: number) => Math.round(x * 10) / 10;
 
@@ -47,6 +48,7 @@ export function buildCoachContext(p: PlanStore, opts: { whole?: boolean } = {}):
     sessions: w.sessions.filter((s) => s.sport !== "rest").map((s) => ({ id: s.id, date: s.date, start: s.start, sport: s.sport, intensity: s.intensity, min: s.min, text: s.text.slice(0, 80), status: s.status, locked: s.locked || undefined })),
   })) : undefined;
   const body = p.body.length ? p.body[p.body.length - 1] : null;
+  const nutrition = nutritionContext();
   const a = p.athlete;
   return {
     today: ymd(t), now: hm(new Date()),
@@ -58,5 +60,7 @@ export function buildCoachContext(p: PlanStore, opts: { whole?: boolean } = {}):
     plan: cur && p.planRange ? { phase: cur.phase, week: cur.week, weeks: p.weeks.length, start: p.planRange.start, end: p.planRange.end } : null,
     sessions, activities, weeks, ...(plan_all ? { plan_all } : {}),
     body: body ? { date: body.date, rhr: body.rhr, hrv: body.hrv, sleep_h: body.sleep_h, sleep_score: body.sleep_score, vo2: body.vo2 } : null,
+    // the meal library, plus food and targets for yesterday and today when this page has the nutrition data
+    ...(!opts.whole ? { nutrition } : {}),
   };
 }

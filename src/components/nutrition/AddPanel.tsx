@@ -8,7 +8,7 @@ import { MEAL_LIBRARY, TAG_LABEL, mealMacros, mealPhoto, partLabel, type MealRec
 import { DatePicker } from "./DatePicker";
 
 type Mode = "meals" | "search" | "manual" | "quick";
-const fmt = (n: number, d = 0) => (Number.isFinite(n) ? n.toLocaleString(undefined, { maximumFractionDigits: d }) : "—");
+const fmt = (n: number, d = 0) => (Number.isFinite(n) ? n.toLocaleString(undefined, { maximumFractionDigits: d }) : "-");
 
 /** The add panel: pick a photographed meal, search a food, type one in by hand, or give rough numbers for the whole day. */
 export function AddPanel({ date, meal, onClose, onMeal, onDate }: { date: string; meal: Meal; onClose: () => void; onMeal: (m: Meal) => void; onDate: (d: string) => void }) {

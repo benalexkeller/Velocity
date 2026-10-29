@@ -7,6 +7,7 @@ import { ActivityAnalyzer, ActivityPanel } from "@/components/analysis/Panels";
 import { KpiRow, Observations, Overview, Progress, Quality, RaceReadiness, Recovery, SportRow, Volume, type Range } from "@/components/analysis/Analytics";
 import { addDays, dateFull, rangeLabel, today, ymd } from "@/lib/format";
 import { usePlan } from "@/lib/store";
+import { NutritionProvider } from "@/lib/nutrition/store";
 
 // New athlete: one card that says what is missing, instead of ten panels of zeros (V-090).
 function NeedsData() {
@@ -26,7 +27,10 @@ function NeedsData() {
   );
 }
 
-export default function AnalysisPage() {
+// the NutritionProvider lets the coach on this page read and log food (coach/nutrition-bridge)
+export default function AnalysisPage() { return <NutritionProvider><Analysis /></NutritionProvider>; }
+
+function Analysis() {
   const plan = usePlan();
   const ATHLETE = plan.athlete;
   const empty = plan.ready && plan.activities.length === 0 && plan.body.length === 0;
@@ -54,10 +58,10 @@ export default function AnalysisPage() {
         <ActivityPanel id={sel} onClose={() => setSel(null)} />
         {empty ? <NeedsData /> : (
           <>
-            {/* this week and the Sunday facts first, then trends, then each recent activity against the plan */}
+            {/* the six key figures, then volume against the plan, the Sunday facts, trends, then each recent activity */}
             <KpiRow />
-            <Observations />
             <Volume range={range} />
+            <Observations />
             <Overview range={range} />
             <SportRow />
             <Progress range={range} onPick={pick} />

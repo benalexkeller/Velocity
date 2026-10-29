@@ -50,10 +50,12 @@ function Dashboard() {
   const cur = plan.currentWeek();
   const ws = { ...plan.weekStatus(cur), load: weekLoad(cur, plan.counted) };
   const todayS = plan.sessionOn(ds);
-  // a brick day: the ride and the run straight after it, shown as one "Brick" with both parts
+  // a brick day (the ride and the run straight after it) shows as one "Brick"; a double day (a morning and an
+  // evening session) as "Bike + Run"; either way each part is listed with its start time
   const todayAll = plan.weekOf(t)?.sessions.filter((s) => s.date === ds && s.sport !== "rest") ?? [];
-  const brickParts = todayS?.brick ? todayAll.filter((s) => s.brick === todayS.brick) : [];
-  const isBrick = brickParts.length === 2;
+  const brickParts = todayS?.brick ? todayAll.filter((s) => s.brick === todayS.brick) : todayAll.length >= 2 ? todayAll : [];
+  const isBrick = brickParts.length >= 2;
+  const multiTitle = todayS?.brick ? "Brick" : brickParts.map((s) => s.title).join(" + ");
   const next = [1, 2].map((n) => ({ off: n, s: plan.sessionOn(ymd(addDays(t, n))) }));
   const last = plan.counted[plan.counted.length - 1];
   // "Connected" only when the Garmin connection is live; otherwise say when the last import happened
@@ -79,10 +81,10 @@ function Dashboard() {
         <div className="dash-top">
           <div className="dash-left">
           <div className="dash-row1">
-          <Link href={todayS ? `/plan?session=${todayS.id}` : "/plan"} className={`hero${done ? " done" : ""}`} aria-label="Today's session — open in plan">
+          <Link href={todayS ? `/plan?session=${todayS.id}` : "/plan"} className={`hero${done ? " done" : ""}`} aria-label="Today's session, open in plan">
             <div className="top"><span>Today&apos;s session{done ? <span className="donetag">✓ Completed</span> : null}</span><span>{DAYS[(t.getDay() + 6) % 7]} {t.getDate()} {MONTHS[t.getMonth()]}</span></div>
             <div>
-              <div className="title">{isBrick ? "Brick" : todayS ? todayS.title : plan.hasPlan ? "Rest" : "No session"}</div>
+              <div className="title">{isBrick ? multiTitle : todayS ? todayS.title : plan.hasPlan ? "Rest" : "No session"}</div>
               {isBrick ? (
                 <div className="sub brick-parts">{brickParts.map((s) => <span key={s.id}><b>{s.start}</b> {s.title}, {s.min} min, {s.intensity}</span>)}</div>
               ) : (
@@ -99,8 +101,8 @@ function Dashboard() {
               ) : (
                 <>
                   <div className="stat"><div className="k">Duration</div><div className="v">0 min</div></div>
-                  <div className="stat"><div className="k">Intensity</div><div className="v">{plan.hasPlan || todayS ? "Rest" : "—"}</div></div>
-                  <div className="stat"><div className="k">Next session</div><div className="v">{next[0].s ? `${next[0].s.title} ${next[0].s.min} min` : "—"}</div><div className="u">{next[0].s ? `${DAYS[(addDays(t, 1).getDay() + 6) % 7]}${next[0].s.start ? `, ${next[0].s.start}` : ""}` : ""}</div></div>
+                  <div className="stat"><div className="k">Intensity</div><div className="v">{plan.hasPlan || todayS ? "Rest" : "-"}</div></div>
+                  <div className="stat"><div className="k">Next session</div><div className="v">{next[0].s ? `${next[0].s.title} ${next[0].s.min} min` : "-"}</div><div className="u">{next[0].s ? `${DAYS[(addDays(t, 1).getDay() + 6) % 7]}${next[0].s.start ? `, ${next[0].s.start}` : ""}` : ""}</div></div>
                 </>
               )}
               <div className="stat gm">{garmin && <div className="garmin" aria-hidden="true"><Watch width={116} time={last ? fmtHMS(last.min) : ""} dist={last?.mi ? `${last.mi.toFixed(1)} mi` : last?.yd ? `${last.yd.toLocaleString()} yd` : ""} hr={last?.hr} /></div>}<div className="k"><i className={`gm-dot${garmin ? " on" : ""}`} aria-label={garmin ? "connected" : "not connected"} />{garmin ? "Garmin" : "Wearable"}<ConnectWearable variant="dark" label="Connect" /></div><div className="v">{garminLive ? <span className="garmin-date">{lastGarmin ? `Synced ${shortDate(lastGarmin.date)}` : "Connected"}</span> : garmin ? <span className="garmin-date">Imported {shortDate(lastGarmin!.date)}</span> : <span className="dim">Not connected</span>}</div></div>
@@ -138,7 +140,7 @@ function Dashboard() {
           </div>
 
           <div className="dash-right">
-          <Link href="/analysis" className="card tw" aria-label="This week — open analysis">
+          <Link href="/analysis" className="card tw" aria-label="This week, open analysis">
             <div className="head"><span className="eyebrow">This week</span></div>
             <div className="cols">
               <div className="col"><div className="k">Sessions</div><div className="v">{ws.done}<span className="dim">/{ws.total}</span></div><div className="progress"><i style={{ width: `${ws.total ? Math.min(100, (ws.done / ws.total) * 100) : 0}%` }} /></div></div>
@@ -158,7 +160,7 @@ function Dashboard() {
                   <div><div className="k">Time</div><div className="v">{fmtHMS(last.min)}</div></div>
                   <div>
                     <div className="k">{last.sport === "bike" ? "Avg speed" : last.hr ? "Avg HR" : "Pace"}</div>
-                    <div className="v">{last.sport === "bike" ? fmtSpeed(last.mph) : last.hr ? `${Math.round(last.hr)} bpm` : last.pace_s ? fmtPace(runPace(last.pace_s).s) : last.p100_s ? fmtPace(swimPace(last.p100_s).s) : "—"}</div>
+                    <div className="v">{last.sport === "bike" ? fmtSpeed(last.mph) : last.hr ? `${Math.round(last.hr)} bpm` : last.pace_s ? fmtPace(runPace(last.pace_s).s) : last.p100_s ? fmtPace(swimPace(last.p100_s).s) : "-"}</div>
                   </div>
                 </div>
                 <div className="map">

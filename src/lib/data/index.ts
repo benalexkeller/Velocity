@@ -99,9 +99,13 @@ export function whyOf(text: string, sport: Sport) {
   if (/strength|core/.test(t)) return "Strength and core work to reduce injury risk.";
   return "Easy aerobic session to build endurance base.";
 }
+// "Base 2 — Aerobic Development" (older plans) or "Base 2: Aerobic development" → "Base 2"
 function shortPhase(p: string) {
-  return p.split("—")[0].trim();
+  return p.split(/\s+[—–]\s+|:\s/)[0].trim();
 }
+/** What the athlete reads never has a long dash: " — " becomes ", ", a range dash a plain hyphen. Stored plans
+ *  written before this rule still have them, so text is cleaned on the way out. */
+export const plain = (s: string) => s.replace(/\s+—\s+/g, ", ").replace(/—/g, "-").replace(/\s–\s/g, " - ").replace(/–/g, "-");
 export interface Availability { days?: number[]; weekday_am?: string; weekday_pm?: string; weekend?: string }
 export const DEFAULT_AVAILABILITY: Required<Availability> = { days: [1, 2, 3, 4, 5, 6, 0], weekday_am: "06:30", weekday_pm: "18:00", weekend: "08:00" };
 function timeFor(text: string, dayIndex: number, sport: Sport, av: Availability = DEFAULT_AVAILABILITY) {
@@ -113,7 +117,7 @@ function timeFor(text: string, dayIndex: number, sport: Sport, av: Availability 
   return av.weekday_am ?? DEFAULT_AVAILABILITY.weekday_am;
 }
 function cleanText(text: string) {
-  return text.replace(/^(AM|PM):\s*/i, "");
+  return plain(text.replace(/^(AM|PM):\s*/i, ""));
 }
 
 // ---------- activities ----------
@@ -130,7 +134,7 @@ export const ACTIVITIES: Activity[] = (actSeed as SeedDay[]).flatMap((d) =>
     min: e.min,
     mi: e.mi, pace_s: e.pace_s, mph: e.mph, yd: e.yd, p100_s: e.p100_s, hr: e.hr, elev_ft: e.elev_ft, route: e.route,
     source: e.source as Activity["source"],
-    note: e.note,
+    note: e.note ? plain(e.note) : undefined,
     exertion: e.exertion,
     coachNote: i === 0 ? d.note : undefined,
   }))
@@ -216,7 +220,7 @@ export function buildWeeks(plan: PlanWeekJson[], acts: Activity[] = [], av: Avai
       return [bike, run];
     });
     return {
-      week: w.week, start: w.start, phase: w.phase, phaseShort: shortPhase(w.phase), focus: w.focus,
+      week: w.week, start: w.start, phase: plain(w.phase.replace(/\s+—\s+/, ": ")), phaseShort: shortPhase(w.phase), focus: plain(w.focus),
       recovery: w.recovery, race: w.race, sessions,
       plannedMin: w.days.reduce((s, d) => s + (d.min || 0), 0) - (w.race ? raceDayMin(w.days) : 0),
     };

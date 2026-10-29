@@ -19,8 +19,19 @@ export interface Proposal {
   summary: string;
   reason?: string;
   changes: PlanChange[];
-  /** "review": a pitch for a whole-plan review; Accept runs it (no changes yet). Default: concrete changes. */
-  kind?: "changes" | "review";
+  /** "review": a pitch for a whole-plan review; Accept runs it (no changes yet). "meals": food the coach logged
+   *  (already in the nutrition log, shown as a card, nothing to accept). Default: concrete changes. */
+  kind?: "changes" | "review" | "meals";
+  meals?: MealLogItem[];
+}
+/** One food or meal the coach logged for the athlete. Library meals carry their id (and photo); the rest are the model's estimate. */
+export interface MealLogItem {
+  date: string; // YYYY-MM-DD
+  meal: "breakfast" | "lunch" | "dinner" | "other";
+  name: string;
+  library_id?: string;
+  servings?: number;
+  kcal: number; carbs_g: number; protein_g: number; fat_g: number;
 }
 export type ProposalStatus = "open" | "accepted" | "declined";
 
@@ -46,6 +57,8 @@ export interface CoachReply {
   /** The model thinks the whole plan needs reworking: the app shows a pitch card; Accept re-sends with mode "restructure". */
   needs?: "restructure";
   reason?: string;
+  /** Food the coach logged; the app writes it to the nutrition log. */
+  meals?: MealLogItem[];
 }
 
 export interface CoachContext {
@@ -68,4 +81,10 @@ export interface CoachContext {
   /** The last four weeks: planned vs done hours and sessions. */
   weeks: { week: number; start: string; phase: string; plannedH: number; doneH: number; sessions: string; longest: { bike?: number; run?: number; swim?: number } }[];
   body: { date: string; rhr?: number; hrv?: number; sleep_h?: number; sleep_score?: number; vo2?: number } | null;
+  /** Yesterday and today: targets, what was eaten, the meals logged; and the meal library the coach can log from.
+   *  Present when the page has the nutrition data loaded. */
+  nutrition?: {
+    days: { date: string; targets: { kcal: number; carbs_g: number; protein_g: number; fat_g: number } | null; eaten: { kcal: number; carbs_g: number; protein_g: number; fat_g: number }; meals: { meal: string; name: string; kcal: number }[] }[];
+    library: { id: string; name: string; kcal: number; carbs_g: number; protein_g: number; fat_g: number }[];
+  };
 }

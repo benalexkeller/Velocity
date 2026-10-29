@@ -41,17 +41,17 @@ export function Building({ intake, edit, onOpen }: { intake: Intake; edit: boole
   const long1 = weeks.find((w) => w.days.some((d) => /^Long|^Brick|^Race sim/.test(d.text)));
   const longDay = (re: RegExp) => { const w = weeks[Math.min(weeks.length - 1, 8)] ?? long1; const i = w?.days.findIndex((d) => re.test(d.text)) ?? -1; return i >= 0 ? DAY[i] : null; };
   const rideDay = longDay(/Long ride|Brick|Race sim/), runDay = longDay(/Long run/), swimDay = longDay(/Long swim/), sessDay = longDay(/Long session/);
-  const phaseText = summary.phases.map((p) => `${p.name.split(" — ")[0]} ${p.to - p.from + 1} wk`).join(", ");
+  const phaseText = summary.phases.map((p) => `${p.name.split(", ")[0]} ${p.to - p.from + 1} wk`).join(", ");
   const blackouts = intake.time.blackouts.filter((b) => b.from && b.to).length;
   const steps: { at: number; text: string }[] = [
     { at: 0.4, text: "Reading your answers" },
     { at: 2.5, text: `${N} weeks to race week, plan starts ${dateLabel(summary.start)}` },
     { at: 5.5, text: `Phases: ${phaseText}` },
     { at: 9.5, text: `Hours: ${fmtH(summary.startHours)} a week now → ${fmtH(summary.peakHours)} in the biggest week, at most +10 % a week, every 4th week lighter${summary.peakHours < summary.targetPeak * 0.9 ? `, your days fit ${fmtH(summary.peakHours)}, not ${fmtH(summary.targetPeak)}: add a day to train more` : ""}` },
-    { at: 14, text: kind === "tri" ? `Long ride ${rideDay ?? "—"}, long run ${runDay ?? "—"}, brick sessions from the build phase` : kind === "run" ? `Long run ${runDay ?? "—"}, one tempo and one interval session a week from the build phase` : kind === "bike" ? `Long ride ${rideDay ?? "—"}, tempo and intervals from the build phase` : kind === "swim" ? `Long swim ${swimDay ?? "—"}, threshold sets from the build phase` : `Long session ${sessDay ?? "—"}, quality mid-week from the build phase` },
+    { at: 14, text: kind === "tri" ? `Long ride ${rideDay ?? "-"}, long run ${runDay ?? "-"}, brick sessions from the build phase` : kind === "run" ? `Long run ${runDay ?? "-"}, one tempo and one interval session a week from the build phase` : kind === "bike" ? `Long ride ${rideDay ?? "-"}, tempo and intervals from the build phase` : kind === "swim" ? `Long swim ${swimDay ?? "-"}, threshold sets from the build phase` : `Long session ${sessDay ?? "-"}, quality mid-week from the build phase` },
     { at: 19, text: `${summary.sessions} sessions placed on your ${intake.time.days.length} days${intake.strength ? ", strength twice a week" : ""}` },
     { at: 23.5, text: blackouts ? `${blackouts} blackout period${blackouts === 1 ? "" : "s"} turned into rest days` : `Race week: short openers, rest the day before, ${intake.goal.event || et.label} on ${dateLabel(intake.goal.date)}` },
-    { at: 27.5, text: "Rules: 80 / 20 easy-hard, no long session +10 % over the last 30 days, 41–60 % taper with intensity kept" },
+    { at: 27.5, text: "Rules: 80 / 20 easy-hard, no long session +10 % over the last 30 days, 41-60 % taper with intensity kept" },
   ];
   const ready = t >= TOTAL && saved;
   const pct = Math.min(100, Math.round((t / TOTAL) * 100));
@@ -100,7 +100,7 @@ function RampBuild({ summary, shown }: { summary: PlanSummary; shown: number }) 
   const ticks = [maxH, maxH / 2];
   return (
     <svg ref={svgRef} className="chart pb-ramp" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Weekly hours being laid out">
-      {summary.phases.filter((p) => p.from <= shown).map((p) => { const label = p.name.split(" — ")[0]; const x0 = x(p.from - 1) + 2, x1 = x(p.to) - 2; return <g key={p.name} className="ph"><line x1={x0} y1={T - 22} x2={x(Math.min(p.to, shown)) - 2} y2={T - 22} stroke="var(--line)" strokeWidth={2} />{x1 - x0 >= label.length * 6.5 && <text x={(x0 + x1) / 2} y={T - 28} textAnchor="middle" fontWeight={600} fill="var(--ink-2)">{label}</text>}</g>; })}
+      {summary.phases.filter((p) => p.from <= shown).map((p) => { const label = p.name.split(", ")[0]; const x0 = x(p.from - 1) + 2, x1 = x(p.to) - 2; return <g key={p.name} className="ph"><line x1={x0} y1={T - 22} x2={x(Math.min(p.to, shown)) - 2} y2={T - 22} stroke="var(--line)" strokeWidth={2} />{x1 - x0 >= label.length * 6.5 && <text x={(x0 + x1) / 2} y={T - 28} textAnchor="middle" fontWeight={600} fill="var(--ink-2)">{label}</text>}</g>; })}
       {ticks.map((h) => <g key={h}><line x1={L} y1={y(h)} x2={W - R} y2={y(h)} stroke="var(--grid)" /><text x={L - 6} y={y(h) + 4} textAnchor="end">{h.toFixed(0)} h</text></g>)}
       <line x1={L} y1={y(0)} x2={W - R} y2={y(0)} stroke="var(--line)" />
       {summary.hours.map((h, i) => {

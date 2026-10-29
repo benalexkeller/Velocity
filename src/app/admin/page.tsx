@@ -9,7 +9,7 @@ import { LibraryAdmin } from "@/components/admin/Library";
 interface Conn { user_id: string; email: string | null; username: string | null; provider: string; via: string; status: string; connected_at: string | null; last_event_at: string | null; error: string | null }
 interface Hook { id: number; via: string; event_type: string | null; external_user_id: string | null; ok: boolean; note: string | null; created_at: string }
 interface Row { id: string; email: string | null; username: string | null; name: string | null; created_at: string; last_seen: string | null; setup_done: boolean; race: string | null; race_date: string | null; activities: number }
-const when = (s: string | null) => (s ? new Date(s).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "—");
+const when = (s: string | null) => (s ? new Date(s).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "-");
 
 // Only the admin gets rows back; everyone else sees an empty table (the database enforces it).
 export default function AdminPage() {
@@ -44,7 +44,7 @@ export default function AdminPage() {
           <table className="tbl small">
             <thead><tr><th>Name</th><th>Username</th><th>Email</th><th>Signed up</th><th>Last seen</th><th>Setup</th><th>Race</th><th>Activities</th></tr></thead>
             <tbody>
-              {(rows ?? []).map((r) => <tr key={r.id}><td>{r.name ?? "—"}</td><td>{r.username ? `@${r.username}` : "—"}</td><td>{r.email ?? "—"}</td><td>{when(r.created_at)}</td><td>{when(r.last_seen)}</td><td>{r.setup_done ? "done" : "not yet"}</td><td>{r.race ? `${r.race}${r.race_date ? `, ${r.race_date}` : ""}` : "—"}</td><td>{r.activities}</td></tr>)}
+              {(rows ?? []).map((r) => <tr key={r.id}><td>{r.name ?? "-"}</td><td>{r.username ? `@${r.username}` : "-"}</td><td>{r.email ?? "-"}</td><td>{when(r.created_at)}</td><td>{when(r.last_seen)}</td><td>{r.setup_done ? "done" : "not yet"}</td><td>{r.race ? `${r.race}${r.race_date ? `, ${r.race_date}` : ""}` : "-"}</td><td>{r.activities}</td></tr>)}
               {rows && !rows.length && <tr><td colSpan={8} className="muted" style={{ padding: 20 }}>No accounts yet.</td></tr>}
             </tbody>
           </table>
@@ -56,7 +56,7 @@ export default function AdminPage() {
           <table className="tbl small fb-table">
             <thead><tr><th>When</th><th>Who</th><th>Part</th><th>Kind</th><th>Comment</th><th>Page, browser</th><th></th></tr></thead>
             <tbody>
-              {shown.map((e) => <tr key={e.id} className={e.status === "done" ? "muted" : ""}><td style={{ whiteSpace: "nowrap" }}>{when(e.created_at)}</td><td>{e.username ? `@${e.username}` : e.email ?? "—"}</td><td>{label(FEEDBACK_TABS, e.tab)}</td><td>{label(FEEDBACK_KINDS, e.kind)}</td><td style={{ whiteSpace: "pre-wrap", minWidth: 260 }}>{e.message}</td><td className="muted" style={{ fontSize: 11.5 }}>{e.page ?? "—"}{e.viewport ? `, ${e.viewport}` : ""}{e.ua ? `, ${e.ua.replace(/^Mozilla\/5\.0 /, "").slice(0, 60)}` : ""}</td><td><button type="button" className="btn ghost small" onClick={() => flip(e)}>{e.status === "done" ? "Reopen" : "Mark done"}</button></td></tr>)}
+              {shown.map((e) => <tr key={e.id} className={e.status === "done" ? "muted" : ""}><td style={{ whiteSpace: "nowrap" }}>{when(e.created_at)}</td><td>{e.tab === "contact" ? <>{e.email ?? "-"}{e.username ? <><br />@{e.username}</> : null}</> : e.username ? `@${e.username}` : e.email ?? "-"}</td><td>{e.tab === "contact" ? "Contact form" : label(FEEDBACK_TABS, e.tab)}</td><td>{e.kind === "contact" ? "Message" : label(FEEDBACK_KINDS, e.kind)}</td><td style={{ whiteSpace: "pre-wrap", minWidth: 260 }}>{e.message}</td><td className="muted" style={{ fontSize: 11.5 }}>{e.page ?? "-"}{e.viewport ? `, ${e.viewport}` : ""}{e.ua ? `, ${e.ua.replace(/^Mozilla\/5\.0 /, "").slice(0, 60)}` : ""}</td><td><button type="button" className="btn ghost small" onClick={() => flip(e)}>{e.status === "done" ? "Reopen" : "Mark done"}</button></td></tr>)}
               {fb && !shown.length && <tr><td colSpan={7} className="muted" style={{ padding: 20 }}>{showDone ? "No feedback yet." : "Nothing open."}</td></tr>}
             </tbody>
           </table>
@@ -80,7 +80,7 @@ export default function AdminPage() {
             <div className="card" style={{ overflow: "auto" }}>
               <table className="tbl small">
                 <thead><tr><th>When</th><th>Event</th><th>Athlete id</th><th>Result</th></tr></thead>
-                <tbody>{hooks.map((h) => <tr key={h.id} className={h.ok ? "" : "muted"}><td style={{ whiteSpace: "nowrap" }}>{when(h.created_at)}</td><td>{h.event_type ?? "—"}</td><td className="muted" style={{ fontSize: 11.5 }}>{h.external_user_id?.slice(0, 8) ?? "—"}</td><td>{h.ok ? "ok" : "failed"}{h.note ? `, ${h.note}` : ""}</td></tr>)}</tbody>
+                <tbody>{hooks.map((h) => <tr key={h.id} className={h.ok ? "" : "muted"}><td style={{ whiteSpace: "nowrap" }}>{when(h.created_at)}</td><td>{h.event_type ?? "-"}</td><td className="muted" style={{ fontSize: 11.5 }}>{h.external_user_id?.slice(0, 8) ?? "-"}</td><td>{h.ok ? "ok" : "failed"}{h.note ? `, ${h.note}` : ""}</td></tr>)}</tbody>
               </table>
             </div>
           </>

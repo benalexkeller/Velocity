@@ -24,7 +24,7 @@ const short = (d: string) => { const x = fromYmd(d); return `${x.getDate()} ${MO
 const hm = (min: number) => `${Math.floor(min / 60)}:${String(Math.round(min % 60)).padStart(2, "0")}`;
 const real = (s: Session) => s.sport !== "rest" && !isRaceDay(s.text); // race day itself is not training
 const longest = (w: Week, sport: "bike" | "run" | "swim") => Math.max(0, ...w.sessions.filter(real).map((s) => (sport === "bike" ? bikeMin(s) : s.sport === sport ? s.min : 0)));
-const range = (a: string, b: string) => { const x = fromYmd(a), y = fromYmd(b); return x.getMonth() === y.getMonth() ? `${x.getDate()}–${y.getDate()} ${MON[y.getMonth()]}` : `${short(a)} – ${short(b)}`; };
+const range = (a: string, b: string) => { const x = fromYmd(a), y = fromYmd(b); return x.getMonth() === y.getMonth() ? `${x.getDate()}-${y.getDate()} ${MON[y.getMonth()]}` : `${short(a)} - ${short(b)}`; };
 
 const words = (x: string) => x.toLowerCase().replace(/^@\s*/, "").replace(/^at /, "").replace(/\bim\b/g, "IM").trim();
 /** The set of a quality session in a few words: "4×1 min tempo pickups", "15 min tempo", "race sim". */
@@ -72,9 +72,9 @@ function WeekRow({ w, prev, cur, open, onToggle, onOpenWeek }: { w: Week; prev: 
       <button type="button" className="phw-row" aria-expanded={open} onClick={onToggle}>
         <span className="c-wk"><b>Week {w.week}</b><small>{range(w.start, end)}</small></span>
         <span className="c-h"><b>{h.toFixed(1)} h</b><Delta v={h - ph} unit="h" /></span>
-        <span className="c-l">{L.ride ? <><b>{hm(L.ride)}</b><Delta v={L.ride - P.ride} /></> : <i>—</i>}</span>
-        <span className="c-l">{L.run ? <><b>{hm(L.run)}</b><Delta v={L.run - P.run} /></> : <i>—</i>}</span>
-        <span className="c-l">{L.swim ? <><b>{hm(L.swim)}</b><Delta v={L.swim - P.swim} /></> : <i>—</i>}</span>
+        <span className="c-l">{L.ride ? <><b>{hm(L.ride)}</b><Delta v={L.ride - P.ride} /></> : <i>-</i>}</span>
+        <span className="c-l">{L.run ? <><b>{hm(L.run)}</b><Delta v={L.run - P.run} /></> : <i>-</i>}</span>
+        <span className="c-l">{L.swim ? <><b>{hm(L.swim)}</b><Delta v={L.swim - P.swim} /></> : <i>-</i>}</span>
         <span className="c-q">{w.recovery && <em className="phw-tag">Recovery</em>}{q.length ? q.map((s) => <span key={s.id}>{DAYS[s.dayIndex]} {sportWord(s)} {setOf(s)}</span>) : !w.recovery && <i>all easy</i>}</span>
         <span className="c-st">{w.week === cur ? <em className="phw-tag now">This week</em> : st ? `${st.done} of ${st.total} done` : ""}<Icon name="chevron" /></span>
         {note && <span className="c-note">{note}</span>}
@@ -119,7 +119,7 @@ export function PhaseDetail({ selected, onSelect, onOpenWeek }: { selected: stri
       </div>
       <div className="phd-head">
         <b>{p.short}</b>
-        <span className="muted">Weeks {p.from}{p.to !== p.from ? `–${p.to}` : ""}, {short(first.start)} – {short(ymd(addDays(fromYmd(last.start), 6)))}{isNow ? `, week ${cur - p.from + 1} of ${p.to - p.from + 1}` : ""}</span>
+        <span className="muted">Weeks {p.from}{p.to !== p.from ? `-${p.to}` : ""}, {short(first.start)} - {short(ymd(addDays(fromYmd(last.start), 6)))}{isNow ? `, week ${cur - p.from + 1} of ${p.to - p.from + 1}` : ""}</span>
         <button type="button" className="linkbtn" onClick={() => onOpenWeek(isNow ? cur : p.from)}>Open week {isNow ? cur : p.from} →</button>
       </div>
       {p.purpose && <p className="phd-purpose">{p.purpose}</p>}

@@ -1,5 +1,7 @@
 // Renders a coach note with the facts emphasised: quantities (times, distances, heart rate, paces, %)
 // and outcome phrases ("no run recorded", "missed", "instead") come out bold; everything else stays regular.
+import { plain } from "@/lib/data";
+
 const QTY = String.raw`\d+(?:[.:]\d+)*\s?(?:-?\s?minutes?|-?\s?min\b|-?\s?hours?|\bh\b|mi\b|km\b|yd\b|m\b|bpm|mph|%|/mi|/100 ?yd|/km|/100 ?m|s/mi|ft|kg|lb|g/h|ml)`;
 const PHRASES = ["no (?:run|ride|bike|swim|session|strength) recorded", "not recorded", "instead", "missed", "skipped", "on target", "faster than (?:target|planned)", "slower than (?:target|planned)", "too fast", "too slow", "cramp", "pain"];
 const RE = new RegExp(`(${QTY}|${PHRASES.join("|")})`, "gi");
@@ -37,7 +39,8 @@ function inline(text: string, keyBase: string) {
 /** A coach answer as blocks: short paragraphs and bullet lists ("- " lines), the way the coach is told to write. */
 export function CoachText({ text, className }: { text: string; className?: string }) {
   const blocks: { kind: "p" | "ul"; lines: string[] }[] = [];
-  for (const raw of text.split(/\r?\n/)) {
+  // the model sometimes writes long dashes; the app never shows them
+  for (const raw of plain(text).split(/\r?\n/)) {
     const line = raw.trim();
     if (!line) continue;
     const bullet = line.match(/^(?:[-•*]|\d+[.)])\s+(.*)$/);

@@ -76,9 +76,9 @@ function DayView({ date, setDate, setView }: { date: string; setDate: (d: string
       ) : (
       <section className="card nu-targets" aria-label="Today's targets">
         <div className="kcal" title={`${fmt(t.kcal)} kcal = ${nut.profile.base_kcal != null ? `${fmt(t.base)} (your rest-day number)` : `${fmt(t.bmr)} resting × 1.4`}${t.training ? ` + ${fmt(t.training)} training (${d.basis === "done" ? "from what you logged" : d.basis === "mixed" ? "logged + still planned" : "planned"})` : ""}${t.goalAdj ? ` ${t.goalAdj > 0 ? "+" : "−"} ${fmt(Math.abs(t.goalAdj))} goal` : ""}${t.goalNote ? `, ${t.goalNote}` : ""}`}><div className="k">Calories</div><div className="v"><b>{fmt(d.totals.kcal)}</b> / {fmt(t.kcal)} kcal</div><Bar v={d.totals.kcal} t={t.kcal} /><div className="u">{d.totals.kcal <= t.kcal ? `${fmt(t.kcal - d.totals.kcal)} remaining` : `${fmt(d.totals.kcal - t.kcal)} over`}</div></div>
-        <div><div className="k">Carbs</div><div className="v"><b>{d.estimateOnly ? "—" : fmt(d.totals.carbs)}</b> / {fmt(t.carbs)} g</div><Bar v={d.estimateOnly ? 0 : d.totals.carbs} t={t.carbs} /><div className="u">{d.estimateOnly ? "estimate, no breakdown" : `${fmt(Math.max(0, t.carbs - d.totals.carbs))} g remaining`}</div></div>
-        <div><div className="k">Protein</div><div className="v"><b>{d.estimateOnly ? "—" : fmt(d.totals.protein)}</b> / {fmt(t.protein)} g</div><Bar v={d.estimateOnly ? 0 : d.totals.protein} t={t.protein} /><div className="u">{d.estimateOnly ? "estimate, no breakdown" : `${fmt(Math.max(0, t.protein - d.totals.protein))} g remaining`}</div></div>
-        <div><div className="k">Fat</div><div className="v"><b>{d.estimateOnly ? "—" : fmt(d.totals.fat)}</b> / {fmt(t.fat)} g</div><Bar v={d.estimateOnly ? 0 : d.totals.fat} t={t.fat} /><div className="u">{d.estimateOnly ? "estimate, no breakdown" : `${fmt(Math.max(0, t.fat - d.totals.fat))} g remaining`}</div></div>
+        <div><div className="k">Carbs</div><div className="v"><b>{d.estimateOnly ? "-" : fmt(d.totals.carbs)}</b> / {fmt(t.carbs)} g</div><Bar v={d.estimateOnly ? 0 : d.totals.carbs} t={t.carbs} /><div className="u">{d.estimateOnly ? "estimate, no breakdown" : `${fmt(Math.max(0, t.carbs - d.totals.carbs))} g remaining`}</div></div>
+        <div><div className="k">Protein</div><div className="v"><b>{d.estimateOnly ? "-" : fmt(d.totals.protein)}</b> / {fmt(t.protein)} g</div><Bar v={d.estimateOnly ? 0 : d.totals.protein} t={t.protein} /><div className="u">{d.estimateOnly ? "estimate, no breakdown" : `${fmt(Math.max(0, t.protein - d.totals.protein))} g remaining`}</div></div>
+        <div><div className="k">Fat</div><div className="v"><b>{d.estimateOnly ? "-" : fmt(d.totals.fat)}</b> / {fmt(t.fat)} g</div><Bar v={d.estimateOnly ? 0 : d.totals.fat} t={t.fat} /><div className="u">{d.estimateOnly ? "estimate, no breakdown" : `${fmt(Math.max(0, t.fat - d.totals.fat))} g remaining`}</div></div>
         <div><div className="k">Hydration</div><div className="v"><b>{(d.drinks_ml / 1000).toFixed(1)}</b> / {(t.fluid_ml / 1000).toFixed(1)} L</div><Bar v={d.drinks_ml} t={t.fluid_ml} /><div className="u">{fmt(bottles, 1)} of {bottleTarget} bottles</div></div>
       </section>
       )}
@@ -150,7 +150,7 @@ function MealCard({ meal, entries, onAdd, onRemove }: { meal: Meal; entries: Log
           <div key={e.id} className="row">
             <span className="n">{e.name}{e.brand ? <small>, {e.brand}</small> : null}{e.source === "quick" && <small>, estimate</small>}</span>
             <span className="a muted">{e.unit ?? (e.amount ? `${fmt(e.amount)} g` : "")}</span>
-            <span className="num">{fmt(e.kcal)} kcal</span><span className="num">{e.source === "quick" ? "—" : `${fmt(e.carbs_g)} g`}</span><span className="num">{e.source === "quick" ? "—" : `${fmt(e.protein_g)} g`}</span><span className="num">{e.source === "quick" ? "—" : `${fmt(e.fat_g)} g`}</span>
+            <span className="num">{fmt(e.kcal)} kcal</span><span className="num">{e.source === "quick" ? "-" : `${fmt(e.carbs_g)} g`}</span><span className="num">{e.source === "quick" ? "-" : `${fmt(e.protein_g)} g`}</span><span className="num">{e.source === "quick" ? "-" : `${fmt(e.fat_g)} g`}</span>
             <button type="button" className="x" aria-label="Remove" onClick={() => onRemove(e.id)}>×</button>
           </div>
         ))}
@@ -188,7 +188,7 @@ function WeekView({ date, setDate, setView }: { date: string; setDate: (d: strin
   return (
     <>
       <div className="nu-daynav">
-        <PeriodStepper width={190} label={`${dateLabel(ymd(mon))} – ${dateLabel(ymd(addDays(mon, 6)))}`} prevLabel="Previous week" nextLabel="Next week" onPrev={() => setDate(ymd(addDays(mon, -7)))} onNext={() => setDate(ymd(addDays(mon, 7)))} />
+        <PeriodStepper width={190} label={`${dateLabel(ymd(mon))} - ${dateLabel(ymd(addDays(mon, 6)))}`} prevLabel="Previous week" nextLabel="Next week" onPrev={() => setDate(ymd(addDays(mon, -7)))} onNext={() => setDate(ymd(addDays(mon, 7)))} />
         <Toggle view="week" setView={setView} />
       </div>
       <div className="nu-cols week">
@@ -215,7 +215,7 @@ function WeekView({ date, setDate, setView }: { date: string; setDate: (d: strin
         </section>
         <section className="card nu-weekside" aria-label="Week summary">
           <div className="k">Average</div><div className="v"><b>{fmt(avg)} kcal</b>, target {fmt(avgT)}</div><div className="u">{logged.length} of 7 days logged</div>
-          {[["Carbs", macroK.c, "var(--carb)"], ["Protein", macroK.p, "var(--protein)"], ["Fat", macroK.f, "var(--fat)"]].map(([k, v, col]) => <div key={k as string} className="pct"><span>{k}</span><b>{macroDays ? `${Math.round(((v as number) / macroTot) * 100)}%` : "—"}</b><Bar v={v as number} t={macroTot} color={col as string} /></div>)}
+          {[["Carbs", macroK.c, "var(--carb)"], ["Protein", macroK.p, "var(--protein)"], ["Fat", macroK.f, "var(--fat)"]].map(([k, v, col]) => <div key={k as string} className="pct"><span>{k}</span><b>{macroDays ? `${Math.round(((v as number) / macroTot) * 100)}%` : "-"}</b><Bar v={v as number} t={macroTot} color={col as string} /></div>)}
           <div className="k" style={{ marginTop: 14 }}>Days on target</div><div className="v"><b>{onTarget} of {logged.length}</b></div><div className="u">within ±10 % of target</div>
         </section>
       </div>
@@ -223,7 +223,7 @@ function WeekView({ date, setDate, setView }: { date: string; setDate: (d: strin
         <table className="tbl small">
           <thead><tr><th>Day</th><th>Session</th><th className="num">Calories<small>kcal</small></th><th className="num">Target<small>kcal</small></th><th className="num">Carbs<small>g</small></th><th className="num">Protein<small>g</small></th><th className="num">Fat<small>g</small></th><th className="num">Sodium<small>mg</small></th><th className="num">Fluid<small>L</small></th></tr></thead>
           <tbody>
-            {days.map((x, i) => <tr key={x.date} className={`row${x.date === ymd(today()) ? " sel" : ""}`} onClick={() => { setDate(x.date); setView("day"); }}><td>{DAYS[i]} {shortDate(x.date)}</td><td>{sessionName(x)}</td><td className="num">{x.logged ? `${fmt(x.totals.kcal)}${x.estimateOnly ? " (est.)" : ""}` : "—"}</td><td className="num muted">{x.targets ? fmt(x.targets.kcal) : "—"}</td><td className="num">{x.logged && !x.estimateOnly ? fmt(x.totals.carbs) : "—"}</td><td className="num">{x.logged && !x.estimateOnly ? fmt(x.totals.protein) : "—"}</td><td className="num">{x.logged && !x.estimateOnly ? fmt(x.totals.fat) : "—"}</td><td className="num">{x.logged && !x.estimateOnly ? fmt(x.totals.sodium) : "—"}</td><td className="num">{x.drinks_ml ? (x.drinks_ml / 1000).toFixed(1) : "—"}</td></tr>)}
+            {days.map((x, i) => <tr key={x.date} className={`row${x.date === ymd(today()) ? " sel" : ""}`} onClick={() => { setDate(x.date); setView("day"); }}><td>{DAYS[i]} {shortDate(x.date)}</td><td>{sessionName(x)}</td><td className="num">{x.logged ? `${fmt(x.totals.kcal)}${x.estimateOnly ? " (est.)" : ""}` : "-"}</td><td className="num muted">{x.targets ? fmt(x.targets.kcal) : "-"}</td><td className="num">{x.logged && !x.estimateOnly ? fmt(x.totals.carbs) : "-"}</td><td className="num">{x.logged && !x.estimateOnly ? fmt(x.totals.protein) : "-"}</td><td className="num">{x.logged && !x.estimateOnly ? fmt(x.totals.fat) : "-"}</td><td className="num">{x.logged && !x.estimateOnly ? fmt(x.totals.sodium) : "-"}</td><td className="num">{x.drinks_ml ? (x.drinks_ml / 1000).toFixed(1) : "-"}</td></tr>)}
           </tbody>
         </table>
       </section>

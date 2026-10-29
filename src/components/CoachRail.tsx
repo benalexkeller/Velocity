@@ -6,6 +6,9 @@ import { usePlan } from "@/lib/store";
 import { today, ymd, dateLabel } from "@/lib/format";
 import { SPORT_LABEL } from "@/lib/data";
 import type { PlanChange } from "@/lib/coach/types";
+import { mealPhoto } from "@/lib/nutrition/meals";
+
+const MEAL_LABEL = { breakfast: "Breakfast", lunch: "Lunch", dinner: "Dinner", other: "Other" } as const;
 
 export interface CoachMsg { who: "You" | "Coach" | "action"; at?: string; text: string }
 
@@ -78,7 +81,14 @@ export function CoachRail({ onClose, drawer = false }: { onClose: () => void; dr
                 )}
               </div>
             )}
-            {m.proposal && m.proposal.kind !== "review" && (
+            {m.proposal?.kind === "meals" && m.proposal.meals?.map((f, j) => (
+              <div key={j} className="coach-meal">
+                {f.library_id ? <img src={mealPhoto(f.library_id)} width={44} height={44} alt="" /> : <span className="coach-meal-ic"><Icon name="fork" /></span>}
+                <div><b>{f.name}</b><span>{MEAL_LABEL[f.meal]}, {f.date === day ? "today" : dateLabel(f.date)}{f.servings && f.servings !== 1 ? `, ${f.servings} servings` : ""}</span><span>{f.kcal} kcal, {f.carbs_g} g carbs, {f.protein_g} g protein</span></div>
+                <em>Logged</em>
+              </div>
+            ))}
+            {m.proposal && m.proposal.kind !== "review" && m.proposal.kind !== "meals" && (
               <div className={`proposal ${m.status ?? "open"}`}>
                 <div className="p-head">{m.status === "accepted" ? "Applied to the plan" : m.status === "declined" ? "Declined" : m.tier === "strong" || m.proposal.changes.length > 6 ? "Full plan review, proposed changes" : "Proposed change"}</div>
                 <b>{m.proposal.summary}</b>

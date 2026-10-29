@@ -133,7 +133,8 @@
 
 /* ---------- nutrition ---------- */
 .lp-nutri { display: grid; grid-template-columns: minmax(0, 11fr) minmax(0, 9fr); gap: 14px; align-items: stretch; }
-.lp-shot-fuel { align-self: start; }
+/* the fuel plan is one card cut out of the app (transparent corners): no frame, only a soft shadow */
+.lp-shot.lp-shot-fuel { align-self: start; box-shadow: none; border-radius: 0; background: none; overflow: visible; filter: drop-shadow(0 18px 40px rgba(16, 17, 20, 0.10)); }
 .lp-fuel-cards { display: grid; grid-template-rows: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .lp-fuel { border: 1px solid var(--line); border-radius: var(--radius); padding: 14px 16px; display: grid; grid-template-columns: 64px minmax(0, 1fr); grid-template-rows: auto auto; column-gap: 14px; row-gap: 2px; align-items: center; align-content: center; }
 .lp-fuel .lp-food { grid-row: 1 / span 2; }

@@ -15,7 +15,8 @@ const nutritionSeed = () => {
   const e = (id, date, meal, name, unit, kcal, c, pr, f, fi, na, source = "manual") => ({ id, date, meal, name, unit, kcal, carbs_g: c, protein_g: pr, fat_g: f, fibre_g: fi, sodium_mg: na, source });
   localStorage.setItem("velocity.nutrition.v1", JSON.stringify({
     profile: { weight_kg: 74.8, height_cm: 178, birth_year: 1994, sex: "male", goal: "race_weight", goal_weight_kg: 71.5, weight_stages: [{ date: ymd(new Date(d.getTime() + 63 * 86400000)), weight_kg: 73.5, label: "Base 3" }, { date: ymd(new Date(d.getTime() + 154 * 86400000)), weight_kg: 72.3, label: "Build 2" }], base_kcal: null, bottle_ml: 750, supplements: [{ id: "caffeine", dose: "200 mg", time: "pre-session" }, { id: "creatine", dose: "5 g", time: "morning" }], setup_done: true },
-    log: [e("a1", t, "breakfast", "Oats with banana and honey", "1 serving", 500, 89, 16, 9, 10, 95), e("a2", t, "lunch", "Chicken, rice and broccoli", "1 serving", 550, 65, 55, 6, 4, 162), e("a3", t, "snack", "Greek yogurt with berries and granola", "1 serving", 406, 51, 26, 12, 8, 80), e("b1", y, "breakfast", "Scrambled eggs on toast", "1 serving", 448, 36, 30, 19, 7, 440), e("b2", y, "lunch", "Tuna pasta salad", "1 serving", 560, 78, 38, 12, 6, 330), e("b3", y, "dinner", "Salmon with potatoes and green beans", "1 serving", 605, 58, 39, 24, 8, 110)],
+    // today as the plan has it: a small breakfast before the morning ride, the recovery lunch after it, dinner
+    log: [e("a1", t, "breakfast", "Banana", "1 medium", 105, 27, 1, 0, 3, 1), e("a2", t, "lunch", "Chicken, rice and broccoli", "1 serving", 550, 65, 55, 6, 4, 162), e("a3", t, "dinner", "Salmon with potatoes and green beans", "1 serving", 605, 58, 39, 24, 8, 110), e("a4", t, "dinner", "Greek yogurt with berries and granola", "1 serving", 406, 51, 26, 12, 8, 80), e("b1", y, "breakfast", "Scrambled eggs on toast", "1 serving", 448, 36, 30, 19, 7, 440), e("b2", y, "lunch", "Tuna pasta salad", "1 serving", 560, 78, 38, 12, 6, 330), e("b3", y, "dinner", "Salmon with potatoes and green beans", "1 serving", 605, 58, 39, 24, 8, 110)],
     foods: [], drinks: [{ id: "d1", date: t, ml: 750, at: "07:40" }, { id: "d2", date: t, ml: 750, at: "12:10" }, { id: "d3", date: y, ml: 2250, at: "20:00" }], weights: [{ date: y, weight_kg: 74.8 }, { date: t, weight_kg: 74.6 }], taken: [{ date: t, supplement_id: "caffeine", taken_at: "08:00" }],
   }));
 };
@@ -30,10 +31,14 @@ const perfectAccount = (planWeeks) => {
   const hard = (t) => /tempo|threshold|interval|race|pickup|strides|hard/i.test(t);
   let seed = 1; const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
   const jitter = (v, pct) => Math.round(v * (1 + (rnd() * 2 - 1) * pct));
+  // real recorded tracks from the seed data, so the dashboard and Activities show a route on the map
+  const seedActs = JSON.parse(fs.readFileSync("src/lib/data/seed/actuals.json", "utf8")).flatMap((d) => d.entries);
+  const runRoute = seedActs.filter((e) => e.sport === "run" && e.route && /Munich/.test(e.name || "")).pop()?.route;
+  const rideRoute = seedActs.find((e) => e.sport === "ride" && e.route)?.route;
   const mk = (id, date, start, sport, min, text) => {
     const h = hard(text); const a = { id, date, start, sport, min, source: "garmin" };
-    if (sport === "run") { a.name = start < "12:00" ? "Morning Run" : "Evening Run"; a.pace_s = jitter(h ? 560 : 640, 0.04); a.mi = +((min * 60) / a.pace_s).toFixed(2); a.hr = jitter(h ? 158 : 140, 0.03); a.elev_ft = jitter(min * 2.2, 0.3); }
-    else if (sport === "bike") { a.name = start < "12:00" ? "Morning Ride" : "Evening Ride"; a.mph = +(jitter(h ? 180 : 165, 0.04) / 10).toFixed(1); a.mi = +((min / 60) * a.mph).toFixed(1); a.hr = jitter(h ? 150 : 132, 0.03); a.elev_ft = jitter(min * 6, 0.3); }
+    if (sport === "run") { a.name = start < "12:00" ? "Morning Run" : "Evening Run"; a.pace_s = jitter(h ? 560 : 640, 0.04); a.mi = +((min * 60) / a.pace_s).toFixed(2); a.hr = jitter(h ? 158 : 140, 0.03); a.elev_ft = jitter(min * 2.2, 0.3); if (runRoute) a.route = runRoute; }
+    else if (sport === "bike") { a.name = start < "12:00" ? "Morning Ride" : "Evening Ride"; a.mph = +(jitter(h ? 180 : 165, 0.04) / 10).toFixed(1); a.mi = +((min / 60) * a.mph).toFixed(1); a.hr = jitter(h ? 150 : 132, 0.03); a.elev_ft = jitter(min * 6, 0.3); if (rideRoute) a.route = rideRoute; }
     else if (sport === "swim") { a.name = "Morning Swim"; a.p100_s = jitter(h ? 118 : 127, 0.03); a.yd = Math.round(((min * 60) / a.p100_s) * 100 / 50) * 50; a.hr = jitter(135, 0.03); }
     else { a.name = sport === "strength" ? "Strength" : "Workout"; a.hr = jitter(118, 0.04); }
     return a;
@@ -83,9 +88,19 @@ const ask = async (p, q) => {
 };
 const save = async (buf, file, w) => { await sharp(buf).resize(w ? { width: w } : undefined).webp({ quality: 74 }).toFile(file); console.log("wrote", file); };
 const page = async (p, file) => save(await p.screenshot({ type: "png" }), file);
-const clip = async (p, sel, file, pad = 0) => { const el = await p.$(sel); const b = await el.boundingBox(); return save(await p.screenshot({ type: "png", clip: { x: b.x - pad, y: b.y - pad, width: b.width + 2 * pad, height: b.height + 2 * pad } }), file); };
-// the rail, cropped to its content: from the top of the rail to just under the last message
-const rail = async (p, file) => { const el = await p.$("aside.coach"); const b = await el.boundingBox(); const msgs = await p.$$("aside.coach .msg"); const last = await msgs[msgs.length - 1].boundingBox(); const h = Math.min(b.height, last.y + last.height + 16 - b.y); return save(await p.screenshot({ type: "png", clip: { x: b.x, y: b.y, width: b.width, height: h } }), file); };
+// one card cut out of the page, exactly on its edge, with the corners outside its border radius made transparent,
+// so the public pages can show it without a second frame around it
+const card = async (p, sel, file) => {
+  const el = await p.$(sel); const b = await el.boundingBox();
+  const r = await el.evaluate((e) => parseFloat(getComputedStyle(e).borderTopLeftRadius) || 0);
+  const buf = await p.screenshot({ type: "png", clip: { x: b.x, y: b.y, width: b.width, height: b.height } });
+  const { width, height } = await sharp(buf).metadata(); const k = width / b.width;
+  const mask = Buffer.from(`<svg width="${width}" height="${height}"><rect x="0" y="0" width="${width}" height="${height}" rx="${r * k}" ry="${r * k}" fill="#fff"/></svg>`);
+  const out = await sharp(buf).ensureAlpha().composite([{ input: mask, blend: "dest-in" }]).png().toBuffer();
+  await sharp(out).webp({ quality: 80, alphaQuality: 90 }).toFile(file); console.log("wrote", file);
+};
+// the rail, cropped to its content: from the top of the rail to just under the last message, without its left rule
+const rail = async (p, file) => { const el = await p.$("aside.coach"); const b = await el.boundingBox(); const msgs = await p.$$("aside.coach .msg"); const last = await msgs[msgs.length - 1].boundingBox(); const h = Math.min(b.height, last.y + last.height + 16 - b.y); return save(await p.screenshot({ type: "png", clip: { x: b.x + 1, y: b.y, width: b.width - 1, height: h } }), file); };
 // local mode keeps the thread in localStorage; start each coach shot from an empty thread
 const clearThread = async (p) => { await p.evaluate(() => { const k = "velocity.store.v1"; const s = JSON.parse(localStorage.getItem(k) || "{}"); s.thread = []; localStorage.setItem(k, JSON.stringify(s)); }); };
 
@@ -95,24 +110,40 @@ const clearThread = async (p) => { await p.evaluate(() => { const k = "velocity.
   const p = await ctx.newPage();
   const go = async (path) => { await p.goto(base + path, { waitUntil: "networkidle" }); await p.waitForTimeout(500); await p.addStyleTag({ content: ".topbar .greet{visibility:hidden}" }); };
 
-  await go("/dashboard"); await seedPerfect(p); await go("/dashboard"); await page(p, `${OUT}/dashboard.webp`);
+  // the perfect account: every session done, nutrition set up with a full day of meals
+  await go("/dashboard"); await seedPerfect(p); await p.evaluate(nutritionSeed); await go("/dashboard"); await page(p, `${OUT}/dashboard.webp`);
   // front page crop: content without the side nav
   await save(await p.screenshot({ type: "png", clip: { x: 130, y: 0, width: 1310, height: 790 } }), `${LP}/dashboard-crop.webp`);
 
   await go("/plan"); await page(p, `${OUT}/plan-week.webp`);
-  const ev = await p.$$(".wg-ev"); await ev[2].click(); await p.waitForTimeout(500); await p.$eval(".session-panel", (e) => e.scrollIntoView({ block: "start" })); await p.evaluate(() => window.scrollBy(0, -90)); await p.waitForTimeout(300);
-  await clip(p, ".session-panel", `${OUT}/session.webp`);
+  // the session shot: this week's swim with the 10 × 100 set (yards, not minutes)
+  for (const ev of await p.$$(".wg-ev")) {
+    if (!/swim/i.test(await ev.innerText())) continue;
+    await ev.click(); await p.waitForTimeout(400);
+    if (/10 ×|10x/i.test(await p.$eval(".session-panel", (e) => e.innerText))) break;
+  }
+  await p.$eval(".session-panel", (e) => e.scrollIntoView({ block: "start" })); await p.evaluate(() => window.scrollBy(0, -90)); await p.waitForTimeout(300);
+  await p.addStyleTag({ content: ".session-panel .sp-fuel{display:none}" }); // the fuel table has its own section on the Nutrition page
+  await card(p, ".session-panel", `${OUT}/session.webp`);
   await go("/plan"); await p.click("button:has-text('Month')"); await p.waitForTimeout(500); await page(p, `${OUT}/plan-month.webp`);
 
-  await go("/activities"); const rows = await p.$$("tr.row"); if (rows[1]) { await rows[1].click(); await p.waitForTimeout(400); } await page(p, `${OUT}/activities.webp`);
+  // Activities: the latest run (it has a route), with the coach insight generated
+  await go("/activities");
+  for (const r of await p.$$("tr.row")) { if (/Run/.test(await r.innerText())) { await r.click(); break; } }
+  await p.waitForTimeout(400);
+  const gen = await p.$("button:has-text('Generate coach insight')"); if (gen) { await gen.click(); await p.waitForFunction(() => !document.querySelector(".drawer button[disabled]"), null, { timeout: 15000 }).catch(() => {}); await p.waitForTimeout(600); }
+  await page(p, `${OUT}/activities.webp`);
 
-  await go("/analysis"); await page(p, `${OUT}/analysis.webp`);
+  // analysis: a taller window so the six figures, volume against the plan and the trends are all in one view
+  await p.setViewportSize({ width: 1440, height: 1180 }); await go("/analysis"); await p.addStyleTag({ content: ".coachbar-wrap{display:none}" });
+  await page(p, `${OUT}/analysis.webp`);
   await save(await p.screenshot({ type: "png", clip: { x: 130, y: 60, width: 1280, height: 605 } }), `${LP}/analysis-crop.webp`);
+  await p.setViewportSize({ width: 1440, height: 940 });
 
   await go("/nutrition"); await p.evaluate(nutritionSeed); await p.reload({ waitUntil: "networkidle" }); await p.waitForTimeout(600); await p.addStyleTag({ content: ".topbar .greet{visibility:hidden}" });
   await page(p, `${OUT}/nutrition.webp`);
-  await clip(p, ".nu-carbgoal", `${OUT}/nutrition-timing.webp`, 2);
-  await clip(p, ".nu-carbgoal", `${LP}/nutrition-fuel.webp`, 2);
+  await card(p, ".nu-carbgoal", `${OUT}/nutrition-timing.webp`);
+  await card(p, ".nu-carbgoal", `${LP}/nutrition-fuel.webp`);
   await p.click("button:has-text('Log meal')"); await p.waitForTimeout(500); await page(p, `${OUT}/nutrition-meals.webp`);
   await p.keyboard.press("Escape"); await p.waitForTimeout(200);
   await p.click(".tabs button:has-text('Guide')"); await p.waitForTimeout(500); await page(p, `${OUT}/nutrition-guide.webp`);
