@@ -11,7 +11,7 @@
 .pp-toc a span { font-size: 13px; line-height: 1.4; color: var(--muted); }
 .pp-toc a:hover { border-top-color: var(--accent); }
 .pp-toc a:hover b { color: var(--accent); }
-.pp-sec { max-width: var(--lp-w); margin: 0 auto; padding: 96px var(--lp-gutter) 0; box-sizing: content-box; display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: 48px; align-items: center; scroll-margin-top: 24px; }
+.pp-sec { max-width: var(--lp-w); margin: 0 auto; padding: 72px var(--lp-gutter) 0; box-sizing: content-box; display: grid; grid-template-columns: minmax(0, 4fr) minmax(0, 8fr); gap: 48px; align-items: center; scroll-margin-top: 24px; }
 .pp-sec.pp-flip { grid-template-columns: minmax(0, 8fr) minmax(0, 4fr); }
 .pp-sec.pp-flip .pp-sec-text { order: 2; }
 .pp-sec-text { display: grid; gap: 16px; align-content: start; }
@@ -34,7 +34,7 @@
 .pp-chips li em { font-style: normal; font-size: 12.5px; color: var(--muted); }
 .pp-chips li.on { border-color: var(--accent); }
 .pp-chips li.on em { color: var(--accent); }
-.pp-more { max-width: var(--lp-w); margin: 112px auto 0; padding: 0 var(--lp-gutter); box-sizing: content-box; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+.pp-more { max-width: var(--lp-w); margin: 88px auto 0; padding: 0 var(--lp-gutter); box-sizing: content-box; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
 .pp-more-card { text-decoration: none; color: inherit; display: grid; gap: 6px; padding: 22px 24px; border: 1px solid var(--line); border-radius: var(--radius-lg); }
 .pp-more-card b { font-size: 22px; font-weight: 600; letter-spacing: -0.02em; }
 .pp-more-card > span:last-child { font-size: 14px; line-height: 1.45; color: var(--ink-2); }

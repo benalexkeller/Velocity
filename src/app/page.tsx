@@ -1,5 +1,5 @@
 // The public front page at "/", built on PR's design (2026-10-27, reviewed 2026-10-29): a full-screen photo that
-// stays put while the white page slides up over it, a fixed top bar whose text turns black as it meets the white,
+// scrolls away with the page, a fixed top bar whose text turns black as it meets the white,
 // then Train, Plan, Nutrition, Coach and Analysis, each sliding into view. Signed-in athletes never see it: proxy.ts
 // sends them to /dashboard. In local mode (no accounts) the buttons open the app directly.
 // Photos: /landing/hero.webp (rider at sunrise; hero-tall.webp is the phone crop), /landing/trainer.webp (closing band),
