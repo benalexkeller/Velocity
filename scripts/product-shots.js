@@ -19,6 +19,63 @@ const nutritionSeed = () => {
     foods: [], drinks: [{ id: "d1", date: t, ml: 750, at: "07:40" }, { id: "d2", date: t, ml: 750, at: "12:10" }, { id: "d3", date: y, ml: 2250, at: "20:00" }], weights: [{ date: y, weight_kg: 74.8 }, { date: t, weight_kg: 74.6 }], taken: [{ date: t, supplement_id: "caffeine", taken_at: "08:00" }],
   }));
 };
+// The "perfect account": every planned session up to yesterday done, as Garmin activities with realistic figures,
+// so the dashboard, the weekly-hours chart and the analysis show a full, consistent history.
+const plan = JSON.parse(fs.readFileSync("src/lib/data/seed/plan.json", "utf8"));
+const perfectAccount = (planWeeks) => {
+  const d = new Date(); const ymd = (x) => `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, "0")}-${String(x.getDate()).padStart(2, "0")}`;
+  const todayS = ymd(d);
+  const sportOf = (t) => { const x = t.toLowerCase(); const sw = /swim/.test(x), bk = /bike|ride/.test(x), rn = /\brun/.test(x); if (bk && rn) return "brick"; if (sw) return "swim"; if (bk) return "bike"; if (rn) return "run"; if (/strength|core/.test(x)) return "strength"; return "other"; };
+  const minOf = (t) => { const m = t.match(/(\d+):(\d+)/); return m ? +m[1] * 60 + +m[2] : null; };
+  const hard = (t) => /tempo|threshold|interval|race|pickup|strides|hard/i.test(t);
+  let seed = 1; const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+  const jitter = (v, pct) => Math.round(v * (1 + (rnd() * 2 - 1) * pct));
+  const mk = (id, date, start, sport, min, text) => {
+    const h = hard(text); const a = { id, date, start, sport, min, source: "garmin" };
+    if (sport === "run") { a.name = start < "12:00" ? "Morning Run" : "Evening Run"; a.pace_s = jitter(h ? 560 : 640, 0.04); a.mi = +((min * 60) / a.pace_s).toFixed(2); a.hr = jitter(h ? 158 : 140, 0.03); a.elev_ft = jitter(min * 2.2, 0.3); }
+    else if (sport === "bike") { a.name = start < "12:00" ? "Morning Ride" : "Evening Ride"; a.mph = +(jitter(h ? 180 : 165, 0.04) / 10).toFixed(1); a.mi = +((min / 60) * a.mph).toFixed(1); a.hr = jitter(h ? 150 : 132, 0.03); a.elev_ft = jitter(min * 6, 0.3); }
+    else if (sport === "swim") { a.name = "Morning Swim"; a.p100_s = jitter(h ? 118 : 127, 0.03); a.yd = Math.round(((min * 60) / a.p100_s) * 100 / 50) * 50; a.hr = jitter(135, 0.03); }
+    else { a.name = sport === "strength" ? "Strength" : "Workout"; a.hr = jitter(118, 0.04); }
+    return a;
+  };
+  const out = [];
+  for (const w of planWeeks) {
+    const s0 = new Date(w.start + "T00:00:00");
+    w.days.forEach((day, i) => {
+      const dt = new Date(s0); dt.setDate(s0.getDate() + i); const date = ymd(dt);
+      if (date >= todayS || !day.min || /^rest/i.test(day.text) || /^race day/i.test(day.text)) return;
+      const text = day.text; const pm = text.match(/\bPM:\s*/i);
+      const amStart = i >= 5 ? "08:00" : "06:30";
+      if (pm) {
+        const amT = text.slice(0, pm.index).replace(/^AM:\s*/i, ""), pmT = text.slice(pm.index + pm[0].length);
+        const amMin = minOf(amT) ?? Math.round(day.min * 0.7), pmMin = Math.max(5, minOf(pmT) ?? day.min - amMin);
+        const amS = sportOf(amT), pmS = sportOf(pmT);
+        out.push(mk(`pa-${date}-a`, date, amStart, amS === "brick" ? "bike" : amS, jitter(amMin, 0.05), amT));
+        out.push(mk(`pa-${date}-p`, date, "18:00", pmS === "brick" ? "run" : pmS, jitter(pmMin, 0.05), pmT));
+        return;
+      }
+      const sp = sportOf(text);
+      if (sp === "brick") {
+        const m = text.match(/\+\s*run\s*(\d+):(\d+)/i); const runMin = m ? +m[1] * 60 + +m[2] : Math.round(day.min * 0.2); const bikeMin = day.min - runMin;
+        out.push(mk(`pa-${date}-b`, date, amStart, "bike", jitter(bikeMin, 0.04), text));
+        const h = +amStart.slice(0, 2) * 60 + +amStart.slice(3) + bikeMin; out.push(mk(`pa-${date}-r`, date, `${String(Math.floor(h / 60)).padStart(2, "0")}:${String(h % 60).padStart(2, "0")}`, "run", jitter(runMin, 0.05), "run off the bike"));
+        return;
+      }
+      // "Swim 0:40 + Strength 0:20": one swim activity of the swim's minutes
+      const own = minOf(text) ?? day.min;
+      out.push(mk(`pa-${date}`, date, amStart, sp === "other" ? "strength" : sp, jitter(Math.min(own, day.min), 0.05), text));
+    });
+  }
+  return out;
+};
+const seedPerfect = async (p) => {
+  const acts = perfectAccount(plan);
+  await p.evaluate((acts) => {
+    const k = "velocity.store.v1"; const s = JSON.parse(localStorage.getItem(k) || "{}");
+    s.manual = acts; s.hidden = []; s.thread = []; localStorage.setItem(k, JSON.stringify(s));
+  }, acts);
+  console.log("seeded", acts.length, "activities");
+};
 const ask = async (p, q) => {
   await p.fill("#coach-input", q); await p.press("#coach-input", "Enter");
   await p.waitForFunction(() => !document.querySelector(".msg.thinking") && !document.querySelector("#coach-input:disabled"), null, { timeout: 20000 });
@@ -38,7 +95,7 @@ const clearThread = async (p) => { await p.evaluate(() => { const k = "velocity.
   const p = await ctx.newPage();
   const go = async (path) => { await p.goto(base + path, { waitUntil: "networkidle" }); await p.waitForTimeout(500); await p.addStyleTag({ content: ".topbar .greet{visibility:hidden}" }); };
 
-  await go("/dashboard"); await page(p, `${OUT}/dashboard.webp`);
+  await go("/dashboard"); await seedPerfect(p); await go("/dashboard"); await page(p, `${OUT}/dashboard.webp`);
   // front page crop: content without the side nav
   await save(await p.screenshot({ type: "png", clip: { x: 130, y: 0, width: 1310, height: 790 } }), `${LP}/dashboard-crop.webp`);
 
