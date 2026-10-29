@@ -41,9 +41,9 @@ export default function Landing() {
           <div className="lp-eyebrow">Train</div>
           <h2 id="train-h">Today&apos;s session, easily explained</h2>
           <ul className="lp-facts">
-            <li>Check the splits, connect your wearable and start the session</li>
-            <li>See the next two planned activities to shape today&apos;s</li>
-            <li>Your core metrics and the week&apos;s totals, in front of you</li>
+            <li>Easily check your splits, connect your wearable and start your session</li>
+            <li>See your next two planned activities to better inform today&apos;s</li>
+            <li>Stay informed on your core metrics and the week&apos;s totals</li>
           </ul>
         </div>
         <div className="lp-devices">
@@ -53,17 +53,17 @@ export default function Landing() {
             <div className="lp-phone-top"><span className="wordmark">{BRAND.name}</span><span>Thu 29 Oct</span></div>
             <div className="lp-phone-hero">
               <div className="k">Today</div>
-              <div className="big"><SportIcon sport="run" size={22} />Run</div>
-              <div className="sub">Tempo, 60 min</div>
-              <div className="lp-phone-stats"><div><span>Pace</span><b>10:15-11:15</b></div><div><span>Zone</span><b>Z3</b></div><div><span>Load</span><b>68</b></div></div>
+              <div className="big"><SportIcon sport="bike" size={22} />Bike</div>
+              <div className="sub">Tempo, 70 min</div>
+              <div className="lp-phone-stats"><div><span>Speed</span><b>18-19 mph</b></div><div><span>Zone</span><b>Z3</b></div><div><span>Load</span><b>68</b></div></div>
               <div className="lp-phone-gm"><i />Garmin connected</div>
             </div>
             <ol className="lp-phone-steps">
-              <li><i>1</i>Warm-up<span>10 min</span></li>
-              <li><i>2</i>Tempo 3 × 10 min<span>40 min</span></li>
-              <li><i>3</i>Cool-down<span>10 min</span></li>
+              <li><i>1</i>Warm-up<span>15 min</span></li>
+              <li><i>2</i>Tempo 2 × 10 min<span>25 min</span></li>
+              <li><i>3</i>Steady, cool-down<span>30 min</span></li>
             </ol>
-            <div className="lp-phone-next"><div><b>Tomorrow</b><span>Swim 3,000 yd</span></div><div><b>Saturday</b><span>Ride 2:30</span></div></div>
+            <div className="lp-phone-next"><div><b>Tomorrow</b><span>Swim 2,750 yd</span></div><div><b>Saturday</b><span>Ride 2:30</span></div></div>
             <div className="lp-phone-btn">Start session</div>
             <div className="lp-phone-tabs"><span className="on">Today</span><span>Plan</span><span>Nutrition</span><span>Coach</span></div>
           </div>
@@ -85,11 +85,11 @@ export default function Landing() {
       <Reveal className="lp-feature" id="plan" aria-labelledby="plan-h">
         <div className="lp-text">
           <div className="lp-eyebrow">Plan</div>
-          <h2 id="plan-h">Life moves fast, your plan adapts around it</h2>
+          <h2 id="plan-h">Life moves pretty fast, your plan adapts around it</h2>
           <ul className="lp-facts">
-            <li>Every activity planned around your schedule</li>
-            <li>Attach your own calendar so others see when you&apos;re busy</li>
-            <li>Drag and drop sessions, or add one when you&apos;re feeling good</li>
+            <li>All activities strategically planned around your schedule</li>
+            <li>Attach your own calendar to let others know you&apos;re busy</li>
+            <li>Easily drag and drop, or create an activity when you&apos;re feeling good</li>
           </ul>
         </div>
         <CalendarMock />
@@ -100,7 +100,7 @@ export default function Landing() {
           <div className="lp-eyebrow">Nutrition</div>
           <h2 id="nutrition-h">Food planned around the session</h2>
           <ul className="lp-facts">
-            <li>Meal plans set from your attributes, tastes and the day&apos;s training</li>
+            <li>Meal plans set from your personal attributes, tastes and the day&apos;s and week&apos;s training</li>
             <li>Concise fuelling recommendations for every activity</li>
           </ul>
         </div>
@@ -117,11 +117,11 @@ export default function Landing() {
       <Reveal className="lp-feature" id="coach" aria-labelledby="coach-h">
         <div className="lp-text">
           <div className="lp-eyebrow">Coach</div>
-          <h2 id="coach-h">A coach that knows your situation and doesn&apos;t forget</h2>
+          <h2 id="coach-h">A coach that knows exactly your situation and doesn&apos;t forget</h2>
           <ul className="lp-facts">
-            <li>Reads your plan, your sessions, your body data and your nutrition before every answer</li>
-            <li>Reschedules activities, adjusts splits and redesigns your long-term plan around your life</li>
-            <li>Recommendations informed by professional coaches and sports doctors</li>
+            <li>Reads your plan, your sessions, your body data and your nutrition before every decision and answer</li>
+            <li>Reschedules activities, adjusts workout splits and redesigns your long-term plan around your life and status</li>
+            <li>Recommendations drawn from the published work of coaches, sports scientists and sports doctors</li>
           </ul>
         </div>
         <div className="lp-chats">
@@ -161,10 +161,10 @@ export default function Landing() {
       <Reveal className="lp-feature" id="analysis" aria-labelledby="analysis-h">
         <div className="lp-text">
           <div className="lp-eyebrow">Analysis</div>
-          <h2 id="analysis-h">The full picture of your training</h2>
+          <h2 id="analysis-h">The full picture of your entire training effort</h2>
           <ul className="lp-facts">
-            <li>Key metrics tracked, projected and digested into better training recommendations</li>
-            <li>Your total workload against the planned load, day by day, week by week</li>
+            <li>Key training metrics tracked, projected and digested for better training recommendations</li>
+            <li>An overview of your total workload against the planned load</li>
           </ul>
         </div>
         <figure className="lp-shot"><img src="/landing/analysis-crop.webp" width={1280} height={605} loading="lazy" alt="The Analysis page: key figures, the Sunday review and training volume against the plan." /></figure>

@@ -73,12 +73,14 @@ const perfectAccount = (planWeeks) => {
   }
   return out;
 };
+// the built-in sample activities (PR's own September) are hidden, so only the perfect account's sessions count
+const seedIds = JSON.parse(fs.readFileSync("src/lib/data/seed/actuals.json", "utf8")).flatMap((d) => d.entries.map((_, i) => `${d.date}-${i}`));
 const seedPerfect = async (p) => {
   const acts = perfectAccount(plan);
-  await p.evaluate((acts) => {
+  await p.evaluate(([acts, seedIds]) => {
     const k = "velocity.store.v1"; const s = JSON.parse(localStorage.getItem(k) || "{}");
-    s.manual = acts; s.hidden = []; s.thread = []; localStorage.setItem(k, JSON.stringify(s));
-  }, acts);
+    s.manual = acts; s.hidden = seedIds; s.thread = []; localStorage.setItem(k, JSON.stringify(s));
+  }, [acts, seedIds]);
   console.log("seeded", acts.length, "activities");
 };
 const ask = async (p, q) => {
