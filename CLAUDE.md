@@ -11,6 +11,7 @@ Database + logins: Supabase project `hngrtoufmjauqdkhncbp`. Product decisions an
 - Explain everything in simple, non-technical language. PR is not a backend developer; he decides product, you run the commands.
 - Copy rule for the app AND for replies: cold facts and to-dos, no motivational, "impactful" or feel-good statements anywhere.
 - Design must match the approved mocks 1:1: white background, Inter (self-hosted), blue accent `#2459FE`, cards with soft shadow, no dark mode.
+- No long dashes in anything the athlete reads: no "—" (use a comma or colon) and no "–"; ranges take a plain hyphen, numbers tight ("10:15-11:15", "15-17 mph"), dates spaced ("26 Oct - 1 Nov"). Stored text is cleaned on the way out by `plain()` in `src/lib/data/index.ts` (plan text, phases, notes) and in `CoachText`. Titles never end with a full stop.
 - No separator glyphs in UI text: never "·", "•" or "|" between facts. Inside a component, put the second fact after a gap (`<span className="at">`, same size, normal weight, muted); inside a sentence, a comma. Nothing bold for emphasis. Chart units go on the tick labels ("4 h", "20 mi"), never as a lone letter near the axis.
 - Verify with a screenshot or a scripted click-through before saying something works. `scripts/snapshot.js` renders the review mirror.
 
@@ -48,10 +49,13 @@ with tokens in `src/app/globals.css`, no UI library. `npm run dev` → http://lo
 - Garmin through Junction (junction.com): `src/lib/integrations/junction.ts`; routes `/api/connect/garmin` (start), `/done` (return), `/disconnect`, `/sync` (pulls the last 90 days with the athlete's own session: the minimum setup needs only the Junction key), `/api/connect/status`, webhook `/api/webhooks/junction` (Svix signature, service-role writes; optional, for automatic updates). Routes come from `map.summary_polyline`. Admin page lists connections + webhook calls (`admin_integrations`, `admin_webhook_log`). Env in `.env.example`; SQL in `supabase/schema-integrations.sql`. Switched on by `WEARABLE_PROVIDER=junction` + `WEARABLE_API_KEY`.
 - Phone app design: Claude Design canvas "Velocity Mobile" (6 screens, same tokens). Front-page review copy: artifact "Velocity Front Page".
 - Public site = front page (`src/app/page.tsx`, `landing.css`) + product pages `/product/{train,nutrition,coach}` (`src/app/product/[slug]`, content in `src/lib/public/product.ts`, which also feeds the top-bar menus in `components/public/PublicNav.tsx`). Screenshots: `node scripts/mock-coach.js` + app started with `OPENROUTER_BASE_URL=http://localhost:3999/v1`, then `node scripts/product-shots.js` writes `public/product/*.webp` and the front-page crops. Photos: `public/landing/hero*.webp`, `trainer.webp`; meal photos `public/food/<id>(-s).webp` shared by the front page and the nutrition meal library (`src/lib/nutrition/meals.ts`).
+- Coach and food (2026-10-29): the NutritionProvider registers itself in `src/lib/coach/nutrition-bridge.ts`; every coach question carries yesterday's and today's meals and targets plus the meal library, and the `log_meal` tool writes food straight to the nutrition log (library meals by id with their own macros, estimates otherwise). The reply is saved with a proposal of kind `meals` (no Accept), shown as a "Logged" card.
+- Help (`/help`, contact form → `POST /api/contact` → `feedback` table with tab `contact`, needs the "contact form" policy in `schema.sql` or the service-role key), `/privacy`, `/terms`: public, shared frame `components/public/LegalPage.tsx`. Plain-language drafts, not lawyer-reviewed.
+- Screenshot "perfect account" (`scripts/product-shots.js`): every planned session before today done as Garmin activities with routes, PR's own sample activities hidden, nutrition set up with a planned day of meals.
 - Strava's API policy (June 2026) bans putting Strava data into an AI model: never add Strava as a data source for the coach.
 
 ## Roadmap (in order)
 1. Buy Junction (sandbox first), set the env values, run the two SQL files, test Connect Garmin on the live site; apply to Garmin's own developer program in parallel.
 2. Coach: Sunday weekly review as a scheduled job; onboarding interview that writes the plan.
 3. Google sign-in; Google Calendar writing; Whoop.
-4. Metric units in the UI, password reset, avatar upload, Stripe, legal/GDPR docs, monitoring.
+4. Metric units in the UI, password reset, avatar upload, Stripe, lawyer review of Privacy/Terms, account deletion in the app, monitoring.
