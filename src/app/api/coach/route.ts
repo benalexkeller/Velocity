@@ -16,6 +16,8 @@ import { RED_FLAG_REPLY, redFlag } from "@/lib/coach/safety";
 import type { CoachContext, CoachReply, CoachRequest, PlanChange, Proposal } from "@/lib/coach/types";
 
 export const runtime = "nodejs";
+// a whole-plan review sends the full remaining plan to the model and can take well over the 10 s default; Vercel allows 60 s here
+export const maxDuration = 60;
 const MODEL = process.env.COACH_MODEL || "deepseek/deepseek-v4.1-flash";
 const MODEL_STRONG = process.env.COACH_MODEL_STRONG || MODEL; // a stronger model for the whole-plan review is one setting away
 const CAP = Number(process.env.COACH_DAILY_CAP || 40);

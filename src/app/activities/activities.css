@@ -77,3 +77,8 @@
 .act-more .menu > button.danger { color: var(--danger); }
 .act-more .confirm { display: grid; gap: 8px; padding: 8px 10px; font-size: 13px; color: var(--ink-2); }
 .act-more .confirm > div { display: flex; gap: 8px; }
+
+/* actions under the map: Analyze, and the coach insight on request */
+.drawer .act-actions { display: flex; gap: 8px; align-items: center; margin: 14px 0 4px; }
+.drawer h4 .linkbtn { margin-left: 8px; font-weight: 500; text-transform: none; letter-spacing: 0; }
+.drawer .note .coach-text { gap: 4px; }

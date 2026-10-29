@@ -25,6 +25,8 @@ export interface Session {
   status: Status;
   locked?: boolean; // cannot be dragged or moved until unlocked
   actual?: Activity; // the activity logged for this session, when it is done
+  /** The two halves of a brick share this id: the ride, then the run straight after it. */
+  brick?: string;
 }
 export interface Week {
   week: number;
@@ -162,22 +164,56 @@ export const STATUS_CREDIT: Record<Status, number> = { done: 1, partial: 0.5, su
 export const isRaceDay = (text: string) => /^race day/i.test(text.replace(/^(AM|PM):\s*/i, ""));
 export const raceDayMin = (days: { text: string; min: number }[]) => days.filter((d) => isRaceDay(d.text)).reduce((s, d) => s + (d.min || 0), 0);
 
-/** Builds the app's week objects from a stored plan; statuses come from the activities given. */
+const fmtMinShort = (m: number) => (m >= 60 ? `${Math.floor(m / 60)}:${String(Math.round(m % 60)).padStart(2, "0")} h` : `${Math.round(m)} min`);
+const addMin = (start: string, min: number) => { const [h, mm] = start.split(":").map(Number); const t = h * 60 + mm + min; return `${String(Math.floor(t / 60) % 24).padStart(2, "0")}:${String(t % 60).padStart(2, "0")}`; };
+/** How a brick splits into its two sessions: the ride (text before the "+"), then the run off the bike. Minutes
+ *  come from "Run H:MM off the bike" when the text says so, otherwise 80/20 rounded to 5 minutes. */
+export function brickParts(s: { text: string; min: number; intensity: string; start?: string }): { bike: { min: number; text: string; intensity: string }; run: { min: number; text: string; intensity: string; start?: string } } {
+  const text = s.text.replace(/^brick:\s*/i, "");
+  const m = text.match(/\+\s*run\s*(\d+):(\d+)\s*off the bike(.*)$/i);
+  const runMin = m ? Math.min(s.min - 10, +m[1] * 60 + +m[2]) : Math.max(10, Math.round((s.min * 0.2) / 5) * 5);
+  const bikeMin = Math.max(10, s.min - runMin);
+  const sim = /race (effort|pace)|race sim/i.test(text);
+  const bikeText = (m ? text.slice(0, m.index) : text).replace(/\s*\+\s*$/, "").trim() || `Ride ${fmtMinShort(bikeMin)}`;
+  const runText = `Run ${fmtMinShort(runMin)} off the bike${sim ? " at race effort" : ", easy"}`;
+  return { bike: { min: bikeMin, text: bikeText, intensity: s.intensity }, run: { min: runMin, text: runText, intensity: sim ? "Race pace" : "Zone 2", start: s.start ? addMin(s.start, bikeMin) : undefined } };
+}
+
+/** Builds the app's week objects from a stored plan; statuses come from the activities given. A brick day becomes
+ *  two sessions, the ride and the run straight after it, linked by `brick`; race day stays one entry. */
 export function buildWeeks(plan: PlanWeekJson[], acts: Activity[] = [], av: Availability = DEFAULT_AVAILABILITY): Week[] {
   return plan.map((w) => {
     const startD = fromYmd(w.start);
-    const sessions: Session[] = w.days.map((d, i) => {
+    const sessions: Session[] = w.days.flatMap((d, i) => {
       const date = ymd(addDays(startD, i));
       const sport = sportOf(d.text);
       const intensity = intensityOf(d.text);
-      return {
+      const start = timeFor(d.text, i, sport, av);
+      const one: Session = {
         id: `w${w.week}-${i}`, date, dayIndex: i,
-        start: timeFor(d.text, i, sport, av),
+        start,
         min: d.min, sport,
         title: isRaceDay(d.text) ? "Race day" : SPORT_LABEL[sport],
         detail: sport === "rest" ? "No session" : `${intensity}, ${d.min} min`,
         text: cleanText(d.text), intensity, why: whyOf(d.text, sport), status: sessionStatus(sport, d.min, date, activitiesOn(date, acts)),
       };
+      if (isRaceDay(d.text)) return [one];
+      // an AM + PM day is two sessions, each with its own steps; the PM one at the evening availability time
+      const pm = d.text.match(/\bPM:\s*/i);
+      if (pm && pm.index != null && sport !== "rest") {
+        const amText = cleanText(d.text.slice(0, pm.index).replace(/^AM:\s*/i, "").trim()), pmText = cleanText(d.text.slice(pm.index + pm[0].length).trim());
+        const minOf = (x: string) => { const m = x.match(/(\d+):(\d+)/); return m ? +m[1] * 60 + +m[2] : null; };
+        const amMin = minOf(amText) ?? Math.round(d.min * 0.7), pmMin = Math.max(5, minOf(pmText) ?? d.min - amMin);
+        const amSport = sportOf(amText), pmSport = sportOf(pmText);
+        const mk = (id: string, sp: Sport, text: string, min: number, st: string | undefined): Session => ({ ...one, id, sport: sp, start: st, min, title: SPORT_LABEL[sp], detail: `${intensityOf(text)}, ${min} min`, text, intensity: intensityOf(text), why: whyOf(text, sp), status: sessionStatus(sp, min, date, activitiesOn(date, acts)) });
+        return [mk(one.id, amSport, amText, amMin, timeFor("AM: " + amText, i, amSport, av)), mk(`${one.id}p`, pmSport, pmText, pmMin, timeFor("PM: " + pmText, i, pmSport, av))];
+      }
+      if (sport !== "brick") return [one];
+      const p = brickParts({ text: one.text, min: d.min, intensity, start });
+      const group = one.id;
+      const bike: Session = { ...one, sport: "bike", min: p.bike.min, title: SPORT_LABEL.bike, detail: `${p.bike.intensity}, ${p.bike.min} min`, text: p.bike.text, intensity: p.bike.intensity, why: whyOf(p.bike.text, "bike"), status: sessionStatus("bike", p.bike.min, date, activitiesOn(date, acts)), brick: group };
+      const run: Session = { ...one, id: `${one.id}r`, sport: "run", start: p.run.start, min: p.run.min, title: SPORT_LABEL.run, detail: `${p.run.intensity}, ${p.run.min} min`, text: p.run.text, intensity: p.run.intensity, why: "Running on tired legs straight off the bike, the way race day feels.", status: sessionStatus("run", p.run.min, date, activitiesOn(date, acts)), brick: group };
+      return [bike, run];
     });
     return {
       week: w.week, start: w.start, phase: w.phase, phaseShort: shortPhase(w.phase), focus: w.focus,

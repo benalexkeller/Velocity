@@ -50,6 +50,10 @@ function Dashboard() {
   const cur = plan.currentWeek();
   const ws = { ...plan.weekStatus(cur), load: weekLoad(cur, plan.counted) };
   const todayS = plan.sessionOn(ds);
+  // a brick day: the ride and the run straight after it, shown as one "Brick" with both parts
+  const todayAll = plan.weekOf(t)?.sessions.filter((s) => s.date === ds && s.sport !== "rest") ?? [];
+  const brickParts = todayS?.brick ? todayAll.filter((s) => s.brick === todayS.brick) : [];
+  const isBrick = brickParts.length === 2;
   const next = [1, 2].map((n) => ({ off: n, s: plan.sessionOn(ymd(addDays(t, n))) }));
   const last = plan.counted[plan.counted.length - 1];
   // "Connected" only when the Garmin connection is live; otherwise say when the last import happened
@@ -78,13 +82,17 @@ function Dashboard() {
           <Link href={todayS ? `/plan?session=${todayS.id}` : "/plan"} className={`hero${done ? " done" : ""}`} aria-label="Today's session — open in plan">
             <div className="top"><span>Today&apos;s session{done ? <span className="donetag">✓ Completed</span> : null}</span><span>{DAYS[(t.getDay() + 6) % 7]} {t.getDate()} {MONTHS[t.getMonth()]}</span></div>
             <div>
-              <div className="title">{todayS ? todayS.title : plan.hasPlan ? "Rest" : "No session"}</div>
-              <div className="sub">{todayS ? heroSub(todayS) : plan.hasPlan ? "No plan for today" : "No plan yet. Build one in Plan"}</div>
+              <div className="title">{isBrick ? "Brick" : todayS ? todayS.title : plan.hasPlan ? "Rest" : "No session"}</div>
+              {isBrick ? (
+                <div className="sub brick-parts">{brickParts.map((s) => <span key={s.id}><b>{s.start}</b> {s.title}, {s.min} min, {s.intensity}</span>)}</div>
+              ) : (
+                <div className="sub">{todayS ? heroSub(todayS) : plan.hasPlan ? "No plan for today" : "No plan yet. Build one in Plan"}</div>
+              )}
             </div>
             <div className="stats">
               {todayS && todayS.sport !== "rest" ? (
                 <>
-                  <div className="stat"><div className="k">Duration</div><div className="v">{todayS.min} min</div></div>
+                  <div className="stat"><div className="k">Duration</div><div className="v">{isBrick ? brickParts.reduce((a, s) => a + s.min, 0) : todayS.min} min</div></div>
                   <div className="stat"><div className="k">Intensity</div><div className="v">{todayS.intensity}</div></div>
                   {tgt && <div className="stat"><div className="k">{tgt.k}</div><div className="v">{tgt.v}</div><div className="u">{tgt.u}</div></div>}
                 </>

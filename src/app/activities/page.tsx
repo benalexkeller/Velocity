@@ -1,11 +1,12 @@
 "use client";
+import Link from "next/link";
 import "./activities.css";
 import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Icon } from "@/components/icons";
 import { SportIcon } from "@/components/SportIcon";
 import { MapModal, RouteMap } from "@/components/RouteMap";
-import { CoachNote } from "@/components/CoachNote";
+import { CoachText } from "@/components/CoachNote";
 import { activityLoad, type Activity } from "@/lib/data";
 import { hrZone } from "@/lib/athlete";
 import { ConnectWearable } from "@/components/ConnectWearable";
@@ -95,9 +96,9 @@ function Activities() {
               <h1>Activities</h1>
             </div>
             <span className="grow" />
+            <ConnectWearable variant="ghost" />
             <label className="search"><Icon name="search" /><input id="act-search" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Search activities…" aria-label="Search activities" /></label>
             <span style={{ position: "relative" }}>
-              <ConnectWearable variant="ghost" />
               <button className={`iconbtn${source !== "all" || gpsOnly ? " on" : ""}`} type="button" aria-label="Filters" aria-expanded={filters} onClick={() => setFilters((f) => !f)}><Icon name="filter" /></button>
               {filters && (
                 <div className="menu filters" role="dialog" aria-label="Filters">
@@ -164,7 +165,9 @@ function Drawer({ a, onDeleted }: { a: Activity; onDeleted: () => void }) {
   const [confirm, setConfirm] = useState(false);
   const [menu, setMenu] = useState(false);
   const [big, setBig] = useState(false);
-  useEffect(() => { setConfirm(false); setBig(false); setMenu(false); }, [a.id]);
+  const [thinking, setThinking] = useState(false);
+  useEffect(() => { setConfirm(false); setBig(false); setMenu(false); setThinking(false); }, [a.id]);
+  const insight = async () => { setThinking(true); try { await plan.activityInsight(a.id); } finally { setThinking(false); } };
   return (
     <aside className="card drawer" aria-label="Activity detail">
       {big && a.route && <MapModal route={a.route} title={a.name} sub={`${w.l1}, ${distance(a)}, ${fmtHMS(a.min)}`} onClose={() => setBig(false)} />}
@@ -200,7 +203,11 @@ function Drawer({ a, onDeleted }: { a: Activity; onDeleted: () => void }) {
         <RouteMap route={a.route} height={150} />
         {a.route && <button type="button" className="exp" onClick={() => setBig(true)} aria-label="Expand map" title="Whole route, zoom and drag"><Icon name="expand" /></button>}
       </div>
-      {a.coachNote && (<><h4>Coach insight</h4><div className="note"><CoachNote text={a.coachNote} /></div></>)}
+      <div className="act-actions">
+        <Link href={`/analysis?activity=${encodeURIComponent(a.id)}`} className="btn small">Analyze</Link>
+        {!a.coachNote && <button type="button" className="btn small ghost" disabled={thinking} onClick={() => void insight()}>{thinking ? "Thinking…" : "Generate coach insight"}</button>}
+      </div>
+      {a.coachNote && (<><h4>Coach insight <button type="button" className="linkbtn small" disabled={thinking} onClick={() => void insight()}>{thinking ? "Thinking…" : "Regenerate"}</button></h4><div className="note"><CoachText text={a.coachNote} /></div></>)}
       {a.note && (<><h4>Your note</h4><div className="note">{a.note}</div></>)}
       <h4>Details</h4>
       <div className="kv">

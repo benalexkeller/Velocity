@@ -242,13 +242,13 @@ export function generatePlan(intakeIn: Partial<Intake>, t: Date = today(), imper
         if (p === "taper") h = Math.min(h, 0.75);
         // swims (V-072): the hard days are the two quality sessions; standalone swims are steady sets or technique
         if (s.sport === "swim") swimNo++;
-        text = s.sport === "swim" ? (p === "base" || isRec || p === "taper" || isRaceWeek || swimNo > 1 ? `Swim ${hm(h)} — technique + 4x100 smooth` : `Swim ${hm(h)} — 5x200 steady, 30s rest`) : s.sport === "bike" ? `Bike ${hm(h)} EZ` : s.sport === "run" ? `Run ${hm(h)} EZ` : `Session ${hm(h)} EZ`;
+        text = s.sport === "swim" ? (p === "base" || isRec || p === "taper" || isRaceWeek || swimNo > 1 ? `Swim ${hm(h)} — technique + 4x100 smooth` : `Swim ${hm(h)} — 10x100 steady, 20s rest`) : s.sport === "bike" ? `Bike ${hm(h)} EZ` : s.sport === "run" ? `Run ${hm(h)} EZ` : `Session ${hm(h)} EZ`;
       }
       let min = mins(h);
       if (doubleDays.includes(s.day) && !isRaceWeek) {
         const sw = cap(disciplineH.swim / 2, 0.5, 1);
         const hardDay = s.role === "q1" || s.role === "q2";
-        const swimText = p === "base" || isRec || p === "taper" || !hardDay ? `Swim ${hm(sw)} — technique + 4x100 smooth` : `Swim ${hm(sw)} — 8x100 at threshold pace, 20s rest`;
+        const swimText = p === "base" || isRec || p === "taper" || !hardDay ? `Swim ${hm(sw)} — technique + 4x100 smooth` : `Swim ${hm(sw)} — 10x100 at threshold pace, 20s rest`;
         text = `AM: ${swimText}. PM: ${text}`;
         min += mins(sw);
       }

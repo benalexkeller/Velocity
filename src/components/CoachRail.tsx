@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "./icons";
-import { CoachNote } from "./CoachNote";
+import { CoachText } from "./CoachNote";
 import { usePlan } from "@/lib/store";
 import { today, ymd, dateLabel } from "@/lib/format";
 import { SPORT_LABEL } from "@/lib/data";
@@ -64,7 +64,7 @@ export function CoachRail({ onClose, drawer = false }: { onClose: () => void; dr
         {msgs.map((m, i) => (
           <div key={m.id ?? i} className={`msg ${m.who === "You" ? "user" : "coach-msg"}`}>
             <span className="who">{m.who} {m.at && <span style={{ marginLeft: 6 }}>{m.at}</span>}</span>
-            {m.who === "Coach" ? <CoachNote text={m.text} /> : m.text}
+            {m.who === "Coach" ? <CoachText text={m.text} /> : m.text}
             {m.proposal && m.proposal.kind === "review" && (
               <div className={`proposal review ${m.status ?? "open"}`}>
                 <div className="p-head">{m.status === "accepted" ? "Full plan review run" : m.status === "declined" ? "Review not run" : "Pitch: full plan review"}</div>
@@ -97,7 +97,7 @@ export function CoachRail({ onClose, drawer = false }: { onClose: () => void; dr
             )}
           </div>
         ))}
-        {plan.busy && <div className="msg coach-msg thinking" aria-label="The coach is answering"><span /><span /><span /></div>}
+        {plan.busy && <div className="msg coach-msg thinking" aria-label="The coach is answering"><span /><span /><span />{plan.reviewing && <em>Reading the whole plan, up to a minute</em>}</div>}
         {msgs.length === 0 && !plan.busy && (
           <div className="coach-empty">
             <p className="muted small">{plan.coachOn ? "Answers come from your plan, your activities and your body data. Plan changes are proposed; you accept or decline." : "Ask about today's session, this week, moving a session or the race."}</p>

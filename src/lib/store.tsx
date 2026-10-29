@@ -1,10 +1,9 @@
 "use client";
 // The athlete's data, live in the app. Loads once from the backend (browser or account), keeps the
 // working copy in memory, writes every change straight back. Everything the pages read comes from here.
-import { brickParts } from "@/lib/workout";
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { ACTIVITIES as SEED_ACTIVITIES, PLAN_SEED, SPORT_LABEL, STATUS_CREDIT, buildWeeks, fitsSession, intensityOf, isRaceDay, phasesOf, sportOf, statusOf, sumH, virtualWeeks, whyOf, type Activity, type Phase, type PlanWeekJson, type Session, type Sport, type Week } from "./data";
+import { ACTIVITIES as SEED_ACTIVITIES, PLAN_SEED, SPORT_LABEL, STATUS_CREDIT, activityLoad, buildWeeks, fitsSession, intensityOf, isRaceDay, phasesOf, sportOf, statusOf, sumH, virtualWeeks, whyOf, type Activity, type Phase, type PlanWeekJson, type Session, type Sport, type Week } from "./data";
 import { BODY_SEED, type BodyDay } from "./analysis";
 import { athleteOf, type Athlete, type Profile, type Race } from "./athlete";
 import type { Intake } from "./plan/intake";
@@ -12,7 +11,7 @@ import { deriveZones } from "./plan/zones";
 import type { Availability } from "./data";
 import { EMPTY_DATA, makeBackend, readLocal, type AddedSession, type Backend, type PlanStateJson, type SessionPatch, type ThreadMsg, type UserData } from "./backend";
 import { ACCOUNTS_ON } from "./supabase/env";
-import { addDays, dateFull, fromYmd, today, ymd } from "./format";
+import { addDays, dateFull, fmtPace, fromYmd, today, ymd } from "./format";
 import type { CoachReply, Proposal, ProposalStatus } from "./coach/types";
 import { buildCoachContext } from "./coach/context";
 
@@ -101,19 +100,19 @@ export interface PlanStore {
   moveSession: (id: string, to: { date: string; start?: string }) => void;
   editSession: (id: string, patch: SessionPatch) => void;
   toggleLock: (id: string) => void;
-  /** A brick becomes two sessions on the calendar: the ride, then the run off the bike. Returns the run's id. */
-  splitBrick: (id: string) => string | null;
-  /** Every upcoming, unlocked, not-done brick, split. Returns how many. */
-  splitAllBricks: () => number;
   deleteSession: (id: string) => void;
   addSession: (s: Omit<AddedSession, "id">) => string;
   logActivity: (a: ManualActivity) => void;
+  /** The coach reviews one activity against its planned session; the bullets are kept on the activity. */
+  activityInsight: (id: string) => Promise<string>;
   deleteActivity: (id: string) => void;
   toggleExcluded: (id: string) => void;
   /** Ask the coach. The answer arrives a moment later (busy is true meanwhile). */
   post: (text: string, opts?: { mode?: "chat" | "restructure" }) => Promise<void>;
   /** The whole remaining plan reviewed by the stronger model; comes back as one proposal. */
   reviewPlan: () => Promise<void>;
+  /** True while a whole-plan review is running (it takes longer than a question). */
+  reviewing: boolean;
   busy: boolean;
   /** Whether the coach service (model) is on for this site; false = rule-based answers only. */
   coachOn: boolean;
@@ -146,6 +145,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
   const [data, setData] = useState<UserData>(EMPTY_DATA);
   const [ready, setReady] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [reviewing, setReviewing] = useState(false);
   const [coachOn, setCoachOn] = useState(true);
   const storeRef = useRef<PlanStore | null>(null);
 
@@ -215,27 +215,33 @@ export function PlanProvider({ children }: { children: ReactNode }) {
       moveSession: (id, to) => { if (!inPlan(to.date)) return; setState((s) => ({ ...s, patches: { ...s.patches, [id]: { ...s.patches[id], date: to.date, ...(to.start ? { start: to.start } : {}) } } })); },
       editSession: (id, patch) => setState((s) => ({ ...s, patches: { ...s.patches, [id]: { ...s.patches[id], ...patch } } })),
       toggleLock: (id) => setState((s) => ({ ...s, patches: { ...s.patches, [id]: { ...s.patches[id], locked: !s.patches[id]?.locked } } })),
-      splitBrick: (id) => {
-        const found = findSession(id); if (!found) return null;
-        const { s } = found; if (s.sport !== "brick" || s.locked || s.status === "done") return null;
-        const parts = brickParts(s);
-        const runId = `add-${Date.now()}`;
-        setState((st) => ({ ...st, patches: { ...st.patches, [id]: { ...st.patches[id], sport: "bike", min: parts.bike.min, text: parts.bike.text, intensity: parts.bike.intensity } }, added: [...st.added, { id: runId, date: s.date, start: parts.run.start, min: parts.run.min, sport: "run", intensity: parts.run.intensity, text: parts.run.text }] }));
-        return runId;
-      },
-      splitAllBricks: () => {
-        const t = ymd(today());
-        const bricks = d.weeks.flatMap((w) => w.sessions).filter((s) => s.sport === "brick" && !s.locked && s.status !== "done" && s.date >= t);
-        if (!bricks.length) return 0;
-        setState((st) => {
-          const patches = { ...st.patches }, added = [...st.added];
-          bricks.forEach((s, i) => { const parts = brickParts(s); patches[s.id] = { ...patches[s.id], sport: "bike", min: parts.bike.min, text: parts.bike.text, intensity: parts.bike.intensity }; added.push({ id: `add-${Date.now()}-${i}`, date: s.date, start: parts.run.start, min: parts.run.min, sport: "run", intensity: parts.run.intensity, text: parts.run.text }); });
-          return { ...st, patches, added };
-        });
-        return bricks.length;
-      },
       deleteSession: (id) => setState((s) => ({ ...s, patches: { ...s.patches, [id]: { ...s.patches[id], deleted: true } }, added: s.added.filter((a) => a.id !== id) })),
       addSession: (a) => { if (!inPlan(a.date)) return ""; const id = `add-${Date.now()}`; setState((s) => ({ ...s, added: [...s.added, { ...a, id }] })); return id; },
+      activityInsight: async (id) => {
+        const a = data.activities.find((x) => x.id === id); if (!a) return "";
+        const planned = d.weeks.flatMap((w) => w.sessions).find((s) => s.date === a.date && fitsSession(s.sport, a));
+        const facts = [`${a.name}, ${a.date}${a.start ? ` ${a.start}` : ""}, ${a.sport}, ${a.min} min`, a.mi != null ? `${a.mi.toFixed(1)} mi` : a.yd != null ? `${a.yd} yd` : null, a.pace_s ? `${fmtPace(a.pace_s)} /mi` : a.mph ? `${a.mph.toFixed(1)} mph` : a.p100_s ? `${fmtPace(a.p100_s)} /100 yd` : null, a.hr ? `${a.hr} bpm` : null, a.exertion ? `effort ${a.exertion}/10` : null, a.note ? `note: ${a.note}` : null].filter(Boolean).join(", ");
+        const q = `Review this activity against the planned session: ${facts}.${planned ? ` Planned: ${planned.title}, ${planned.intensity}, ${planned.min} min, "${planned.text}".` : " Nothing was planned that day."} One verdict line, three bullets with the numbers, one next step.`;
+        let text: string;
+        try {
+          const r = await askCoach([{ role: "user", content: q }], storeRef.current!, "chat");
+          text = r === "off" ? "" : r.text;
+        } catch { text = ""; }
+        if (!text) {
+          // no coach service: the facts as bullets
+          const diff = planned ? a.min - planned.min : null;
+          text = [planned ? `${diff != null && Math.abs(diff) <= 5 ? "On plan." : diff != null && diff > 0 ? "Longer than planned." : "Shorter than planned."}` : "Unplanned session.",
+            `- **${a.min} min**${planned ? ` against ${planned.min} min planned` : ""}`,
+            a.pace_s ? `- Pace **${fmtPace(a.pace_s)} /mi**` : a.mph ? `- Speed **${a.mph.toFixed(1)} mph**` : a.p100_s ? `- Pace **${fmtPace(a.p100_s)} /100 yd**` : null,
+            a.hr ? `- Average heart rate **${a.hr} bpm**` : null,
+            `- Load **${activityLoad(a, storeRef.current?.athlete.lthr ?? undefined)}**`,
+          ].filter(Boolean).join("\n");
+        }
+        const next = { ...a, coachNote: text };
+        setData((cur) => ({ ...cur, activities: cur.activities.map((x) => (x.id === id ? next : x)) }));
+        void be.upsertActivity(next);
+        return text;
+      },
       logActivity: (m) => { const a = toActivity(m); setData((cur) => ({ ...cur, activities: [...cur.activities.filter((x) => x.id !== a.id), a] })); void be.upsertActivity(a); },
       deleteActivity: (id) => { setData((cur) => ({ ...cur, activities: cur.activities.filter((x) => x.id !== id) })); void be.deleteActivity(id); },
       toggleExcluded: (id) => { const cur = data.activities.find((a) => a.id === id); if (!cur) return; const excluded = !cur.excluded; setData((c) => ({ ...c, activities: c.activities.map((a) => (a.id === id ? { ...a, excluded: excluded || undefined } : a)) })); void be.setExcluded(id, excluded); },
@@ -273,8 +279,8 @@ export function PlanProvider({ children }: { children: ReactNode }) {
         }
         setBusy(false);
       },
-      reviewPlan: async () => storeRef.current!.post("Review my whole remaining plan against my recent training.", { mode: "restructure" }),
-      busy, coachOn,
+      reviewPlan: async () => { setReviewing(true); try { await storeRef.current!.post("Review my whole remaining plan against my recent training.", { mode: "restructure" }); } finally { setReviewing(false); } },
+      busy, coachOn, reviewing,
       decideProposal: async (id, status) => {
         const msg = data.thread.find((m) => m.id === id);
         if (!msg?.proposal || msg.status !== "open") return;

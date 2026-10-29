@@ -77,8 +77,8 @@ function DayView({ date, setDate, setView }: { date: string; setDate: (d: string
       <section className="card nu-targets" aria-label="Today's targets">
         <div className="kcal" title={`${fmt(t.kcal)} kcal = ${nut.profile.base_kcal != null ? `${fmt(t.base)} (your rest-day number)` : `${fmt(t.bmr)} resting × 1.4`}${t.training ? ` + ${fmt(t.training)} training (${d.basis === "done" ? "from what you logged" : d.basis === "mixed" ? "logged + still planned" : "planned"})` : ""}${t.goalAdj ? ` ${t.goalAdj > 0 ? "+" : "−"} ${fmt(Math.abs(t.goalAdj))} goal` : ""}${t.goalNote ? `, ${t.goalNote}` : ""}`}><div className="k">Calories</div><div className="v"><b>{fmt(d.totals.kcal)}</b> / {fmt(t.kcal)} kcal</div><Bar v={d.totals.kcal} t={t.kcal} /><div className="u">{d.totals.kcal <= t.kcal ? `${fmt(t.kcal - d.totals.kcal)} remaining` : `${fmt(d.totals.kcal - t.kcal)} over`}</div></div>
         <div><div className="k">Carbs</div><div className="v"><b>{d.estimateOnly ? "—" : fmt(d.totals.carbs)}</b> / {fmt(t.carbs)} g</div><Bar v={d.estimateOnly ? 0 : d.totals.carbs} t={t.carbs} /><div className="u">{d.estimateOnly ? "estimate, no breakdown" : `${fmt(Math.max(0, t.carbs - d.totals.carbs))} g remaining`}</div></div>
-        <div><div className="k">Protein</div><div className="v"><b>{d.estimateOnly ? "—" : fmt(d.totals.protein)}</b> / {fmt(t.protein)} g</div><Bar v={d.estimateOnly ? 0 : d.totals.protein} t={t.protein} color="var(--protein)" /><div className="u">{d.estimateOnly ? "estimate, no breakdown" : `${fmt(Math.max(0, t.protein - d.totals.protein))} g remaining`}</div></div>
-        <div><div className="k">Fat</div><div className="v"><b>{d.estimateOnly ? "—" : fmt(d.totals.fat)}</b> / {fmt(t.fat)} g</div><Bar v={d.estimateOnly ? 0 : d.totals.fat} t={t.fat} color="var(--fat)" /><div className="u">{d.estimateOnly ? "estimate, no breakdown" : `${fmt(Math.max(0, t.fat - d.totals.fat))} g remaining`}</div></div>
+        <div><div className="k">Protein</div><div className="v"><b>{d.estimateOnly ? "—" : fmt(d.totals.protein)}</b> / {fmt(t.protein)} g</div><Bar v={d.estimateOnly ? 0 : d.totals.protein} t={t.protein} /><div className="u">{d.estimateOnly ? "estimate, no breakdown" : `${fmt(Math.max(0, t.protein - d.totals.protein))} g remaining`}</div></div>
+        <div><div className="k">Fat</div><div className="v"><b>{d.estimateOnly ? "—" : fmt(d.totals.fat)}</b> / {fmt(t.fat)} g</div><Bar v={d.estimateOnly ? 0 : d.totals.fat} t={t.fat} /><div className="u">{d.estimateOnly ? "estimate, no breakdown" : `${fmt(Math.max(0, t.fat - d.totals.fat))} g remaining`}</div></div>
         <div><div className="k">Hydration</div><div className="v"><b>{(d.drinks_ml / 1000).toFixed(1)}</b> / {(t.fluid_ml / 1000).toFixed(1)} L</div><Bar v={d.drinks_ml} t={t.fluid_ml} /><div className="u">{fmt(bottles, 1)} of {bottleTarget} bottles</div></div>
       </section>
       )}
@@ -93,13 +93,14 @@ function DayView({ date, setDate, setView }: { date: string; setDate: (d: string
               </Link>
             ))}
             {MEALS.map((m) => <MealCard key={m.k} meal={m.k} entries={nut.entriesFor(date, m.k)} onAdd={() => setAdding(m.k)} onRemove={nut.removeEntry} />)}
+            <button type="button" className="nu-add-meal" onClick={() => setAdding("other")}><Icon name="plus" />Add a meal</button>
           </div>
         </section>
 
         <div className="nu-side">
           {timing && t && (
             <section className="card nu-carbgoal" aria-label="Carbohydrate goal">
-              <div className="k">Carbohydrate<span className="at">{dateLabel(date)}</span></div>
+              <h3 className="nu-h">Activity fuel plan<span className="at">{dateLabel(date)}</span></h3>
               <div className="v"><b>{fmt(t.carbs)} g</b> target</div>
               <div className="u">{t.dayType} day, {units === "imperial" ? `${(t.carbsPerKg / 2.2046).toFixed(1)} g per lb` : `${t.carbsPerKg} g per kg`}{d.basis === "done" ? ", from what you logged" : d.basis === "mixed" ? ", logged + planned" : ""}</div>
               <Bar v={d.estimateOnly ? 0 : d.totals.carbs} t={t.carbs} />
@@ -112,7 +113,7 @@ function DayView({ date, setDate, setView }: { date: string; setDate: (d: string
           )}
 
           <section className="card nu-hydration" aria-label="Hydration">
-            <div className="hd"><div className="k">Hydration</div><span className="v"><b>{(d.drinks_ml / 1000).toFixed(1)}</b>{t ? ` / ${(t.fluid_ml / 1000).toFixed(1)} L` : " L"}</span></div>
+            <div className="hd"><h3 className="nu-h">Hydration</h3><span className="v"><b>{(d.drinks_ml / 1000).toFixed(1)}</b>{t ? ` / ${(t.fluid_ml / 1000).toFixed(1)} L` : " L"}</span></div>
             {t && <Bar v={d.drinks_ml} t={t.fluid_ml} />}
             <div className="nu-bottles">{Array.from({ length: Math.max(bottleTarget, Math.ceil(bottles)) }, (_, i) => <i key={i} className={i < Math.floor(bottles) ? "full" : i < bottles ? "half" : ""} title={`${nut.profile.bottle_ml} ml`} />)}</div>
             <div className="row">
@@ -143,16 +144,17 @@ function MealCard({ meal, entries, onAdd, onRemove }: { meal: Meal; entries: Log
   return (
     <div className="nu-meal">
       <div className="body">
-        <div className="mh"><b>{label}</b>{entries.length > 0 && <span className="tot"><b>{fmt(tot.kcal)} kcal</b><span>{fmt(tot.c)} g carbs</span><span>{fmt(tot.p)} g protein</span><span>{fmt(tot.f)} g fat</span></span>}</div>
+        <div className="mh"><b>{label}</b>{entries.length > 0 && <span className="tot">{fmt(tot.kcal)} kcal</span>}</div>
+        {entries.length > 0 && <div className="row head"><span /><span /><span className="num">Kcal</span><span className="num">Carbs</span><span className="num">Protein</span><span className="num">Fat</span><span /></div>}
         {entries.map((e) => (
           <div key={e.id} className="row">
             <span className="n">{e.name}{e.brand ? <small>, {e.brand}</small> : null}{e.source === "quick" && <small>, estimate</small>}</span>
             <span className="a muted">{e.unit ?? (e.amount ? `${fmt(e.amount)} g` : "")}</span>
-            <span className="num">{fmt(e.kcal)}</span><span className="num">{e.source === "quick" ? "—" : fmt(e.carbs_g)}</span><span className="num">{e.source === "quick" ? "—" : fmt(e.protein_g)}</span><span className="num">{e.source === "quick" ? "—" : fmt(e.fat_g)}</span>
+            <span className="num">{fmt(e.kcal)} kcal</span><span className="num">{e.source === "quick" ? "—" : `${fmt(e.carbs_g)} g`}</span><span className="num">{e.source === "quick" ? "—" : `${fmt(e.protein_g)} g`}</span><span className="num">{e.source === "quick" ? "—" : `${fmt(e.fat_g)} g`}</span>
             <button type="button" className="x" aria-label="Remove" onClick={() => onRemove(e.id)}>×</button>
           </div>
         ))}
-        {entries.length > 0 && <div className="row head"><span /><span /><span className="num">kcal</span><span className="num">carbs</span><span className="num">protein</span><span className="num">fat</span><span /></div>}
+        {entries.length > 1 && <div className="row sum"><span>Total</span><span /><span className="num">{fmt(tot.kcal)} kcal</span><span className="num">{fmt(tot.c)} g</span><span className="num">{fmt(tot.p)} g</span><span className="num">{fmt(tot.f)} g</span><span /></div>}
         <button type="button" className="linkbtn" onClick={onAdd}>+ Add food</button>
       </div>
     </div>

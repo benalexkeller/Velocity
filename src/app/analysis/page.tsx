@@ -1,6 +1,6 @@
 "use client";
 import "./analysis.css";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CoachBar } from "@/components/CoachBar";
 import { ActivityAnalyzer, ActivityPanel } from "@/components/analysis/Panels";
@@ -32,6 +32,8 @@ export default function AnalysisPage() {
   const empty = plan.ready && plan.activities.length === 0 && plan.body.length === 0;
   const [range, setRange] = useState<Range>(12);
   const [sel, setSel] = useState<string | null>(null);
+  // the Activities page's Analyze button lands here with ?activity=<id>
+  useEffect(() => { const id = new URLSearchParams(window.location.search).get("activity"); if (id) setSel(id); }, []);
   const pick = (id: string) => { setSel(id); window.scrollTo({ top: 0, behavior: "smooth" }); };
   const from = addDays(today(), -(range === 99 ? 365 : range * 7));
   return (

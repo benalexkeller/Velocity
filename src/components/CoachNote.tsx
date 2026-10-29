@@ -26,3 +26,28 @@ export function CoachNote({ text, className }: { text: string; className?: strin
     </span>
   );
 }
+
+/** Inline markdown-lite: **bold** and [L1] citations; numbers are bolded only when the text has no bold of its own. */
+function inline(text: string, keyBase: string) {
+  if (!text.includes("**")) return text.split(RE).map((p, i) => (i % 2 === 1 ? <b key={`${keyBase}-${i}`}>{withCites(p, `${keyBase}b${i}`)}</b> : <span key={`${keyBase}-${i}`}>{withCites(p, `${keyBase}s${i}`)}</span>));
+  const parts = text.split(/\*\*(.+?)\*\*/g);
+  return parts.map((p, i) => (i % 2 === 1 ? <b key={`${keyBase}-${i}`}>{withCites(p, `${keyBase}b${i}`)}</b> : <span key={`${keyBase}-${i}`}>{withCites(p, `${keyBase}s${i}`)}</span>));
+}
+
+/** A coach answer as blocks: short paragraphs and bullet lists ("- " lines), the way the coach is told to write. */
+export function CoachText({ text, className }: { text: string; className?: string }) {
+  const blocks: { kind: "p" | "ul"; lines: string[] }[] = [];
+  for (const raw of text.split(/\r?\n/)) {
+    const line = raw.trim();
+    if (!line) continue;
+    const bullet = line.match(/^(?:[-•*]|\d+[.)])\s+(.*)$/);
+    const last = blocks[blocks.length - 1];
+    if (bullet) { if (last?.kind === "ul") last.lines.push(bullet[1]); else blocks.push({ kind: "ul", lines: [bullet[1]] }); }
+    else blocks.push({ kind: "p", lines: [line] });
+  }
+  return (
+    <div className={`coach-text${className ? ` ${className}` : ""}`}>
+      {blocks.map((b, i) => (b.kind === "ul" ? <ul key={i}>{b.lines.map((l, j) => <li key={j}>{inline(l, `${i}-${j}`)}</li>)}</ul> : <p key={i}>{inline(b.lines[0], `${i}`)}</p>))}
+    </div>
+  );
+}
