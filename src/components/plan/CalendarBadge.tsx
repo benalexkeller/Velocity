@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { connectGoogle, isLinked, refreshCalendar, useCalendar } from "@/lib/calendar/client";
+import { GoogleCalendarIcon } from "@/components/GoogleCalendarIcon";
 
 export function CalendarBadge() {
   const cal = useCalendar();
@@ -18,7 +19,7 @@ export function CalendarBadge() {
       {open && (
         <div className="menu" role="dialog">
           <div className="small"><b>Calendar</b><br />{text}</div>
-          {s?.google && (!g || g.status === "error") && <button type="button" onClick={() => connectGoogle("/plan")}>{g ? "Connect again" : "Connect Google Calendar"}</button>}
+          {s?.google && (!g || g.status === "error") && <button type="button" className="with-icon" onClick={() => connectGoogle("/plan")}><GoogleCalendarIcon />{g ? "Connect again" : "Connect Google Calendar"}</button>}
           <Link href="/profile#calendar" onClick={() => setOpen(false)}>Calendar settings</Link>
         </div>
       )}
