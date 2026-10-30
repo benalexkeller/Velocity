@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
       if (remove && row.google_calendar_id) { await deleteCalendar(await accessFrom(refresh), row.google_calendar_id); removed = true; }
       await revoke(refresh);
     } catch (e) { console.error("[calendar/disconnect]", e); }
-    if (row.feed_token) await saveRow(me.sb, me.uid, { google_token: null, google_email: null, google_calendar_id: null, google_status: null, google_error: null, event_map: {} });
+    if (row.feed_token) await saveRow(me.sb, me.uid, { google_token: null, google_email: null, google_calendar_id: null, google_status: null, google_error: null, google_scopes: null, show_events: false, read_calendars: null, event_map: {} });
     else await me.sb.from("calendar_links").delete().eq("user_id", me.uid);
     return NextResponse.json({ ok: true, removed });
   } catch (e) {

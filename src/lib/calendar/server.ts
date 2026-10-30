@@ -11,6 +11,11 @@ export interface CalendarRow {
   google_calendar_id: string | null;
   google_status: "connected" | "error" | null;
   google_error: string | null;
+  google_scopes: string | null;
+  /** "Show my other events" on the Plan page */
+  show_events: boolean;
+  /** which of the athlete's calendars to show; null = the ones shown in their Google Calendar */
+  read_calendars: string[] | null;
   event_map: EventMap;
   feed_token: string | null;
   sessions: CalSession[];

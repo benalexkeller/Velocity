@@ -10,6 +10,22 @@ const calendars = new Map(); // id -> { summary, timeZone, events: Map(eventId -
 let fail = null; // { status, reason, after } — fail every Calendar call once `after` more calls have succeeded
 let calls = 0;
 const tokens = new Set(["access-1"]);
+// the athlete's other events (Europe/Berlin, week of 2 Nov 2026)
+const OTHER = {
+  primary: [
+    { id: "p1", summary: "Dentist", start: { dateTime: "2026-11-03T08:30:00+01:00" }, end: { dateTime: "2026-11-03T09:15:00+01:00" }, status: "confirmed" },
+    { id: "p2", summary: "Dinner with Anna", start: { dateTime: "2026-11-06T19:00:00+01:00" }, end: { dateTime: "2026-11-06T22:00:00+01:00" }, status: "confirmed" },
+    { id: "p3", summary: "Trip to Munich", start: { date: "2026-11-07" }, end: { date: "2026-11-09" }, status: "confirmed" },
+    { id: "p4", summary: "Cancelled call", start: { dateTime: "2026-11-04T12:00:00+01:00" }, end: { dateTime: "2026-11-04T12:30:00+01:00" }, status: "cancelled" },
+    { id: "p5", summary: "Office", start: { date: "2026-11-02" }, end: { date: "2026-11-03" }, eventType: "workingLocation", status: "confirmed" },
+    { id: "p6", summary: "Night flight", start: { dateTime: "2026-11-05T23:00:00+01:00" }, end: { dateTime: "2026-11-06T02:00:00+01:00" }, status: "confirmed" },
+  ],
+  work: [
+    { id: "w1", summary: "Team standup", start: { dateTime: "2026-11-02T09:00:00+01:00" }, end: { dateTime: "2026-11-02T09:30:00+01:00" }, status: "confirmed" },
+    { id: "w2", summary: "Client review", start: { dateTime: "2026-11-04T06:00:00+01:00" }, end: { dateTime: "2026-11-04T07:30:00+01:00" }, status: "confirmed" },
+    { id: "w3", start: { dateTime: "2026-11-04T06:30:00+01:00" }, end: { dateTime: "2026-11-04T07:00:00+01:00" }, status: "confirmed" },
+  ],
+};
 
 const send = (res, status, body) => { res.writeHead(status, { "Content-Type": "application/json" }); res.end(body === undefined ? "" : JSON.stringify(body)); };
 const err = (res, status, reason, message) => send(res, status, { error: { code: status, message: message || reason, errors: [{ reason }] } });
@@ -43,6 +59,23 @@ http.createServer(async (req, res) => {
   if (fail) { if (fail.after > 0) fail.after--; else return err(res, fail.status, fail.reason); }
   const parts = p.slice("/calendar/v3/".length).split("/").map(decodeURIComponent);
   const body = raw ? JSON.parse(raw) : {};
+  // the athlete's own calendars (read-only list): primary + work + holidays + whatever Velocity created
+  if (p === "/calendar/v3/users/me/calendarList") {
+    const items = [
+      { id: "athlete@example.com", summary: "athlete@example.com", primary: true, selected: true, backgroundColor: "#9fe1e7" },
+      { id: "work@group.calendar.google.com", summary: "Work", selected: true, backgroundColor: "#f691b2" },
+      { id: "en.usa#holiday@group.v.calendar.google.com", summary: "Holidays in United States", selected: false, backgroundColor: "#16a765" },
+      { id: "addressbook#contacts@group.v.calendar.google.com", summary: "Birthdays", selected: true },
+      ...[...calendars].map(([id, c]) => ({ id, summary: c.summary, selected: true, backgroundColor: "#4986e7" })),
+    ];
+    return send(res, 200, { items });
+  }
+  if (parts[0] === "calendars" && parts[2] === "events" && parts.length === 3 && req.method === "GET") {
+    const min = Date.parse(url.searchParams.get("timeMin")), max = Date.parse(url.searchParams.get("timeMax"));
+    const src = parts[1] === "athlete@example.com" ? OTHER.primary : parts[1] === "work@group.calendar.google.com" ? OTHER.work : [...(calendars.get(parts[1])?.events.values() ?? [])];
+    const at = (t) => Date.parse(t.dateTime ?? `${t.date}T00:00:00Z`);
+    return send(res, 200, { items: src.filter((e) => at(e.end) > min && at(e.start) < max) });
+  }
   if (parts[0] !== "calendars") return err(res, 404, "notFound");
   if (parts.length === 1 && req.method === "POST") { const id = `cal${calendars.size + 1}@group.calendar.google.com`; calendars.set(id, { summary: body.summary, timeZone: body.timeZone, events: new Map() }); return send(res, 200, { id, summary: body.summary }); }
   const cal = calendars.get(parts[1]);

@@ -1,11 +1,11 @@
 "use client";
 // The calendar in the browser: one shared status (GET /api/calendar) for every component that shows it, the
 // actions behind the buttons, and the queue that sends the plan to /api/calendar/sync after a change.
-import { useSyncExternalStore } from "react";
-import { listPrint, type CalSession, type CalendarStatus } from "./events";
+import { useEffect, useSyncExternalStore } from "react";
+import { listPrint, type CalSession, type CalendarStatus, type OtherCalendar, type OtherEvent } from "./events";
 import { workoutFor, type Zones } from "../workout";
 import type { Week } from "../data";
-import { addDays, today, ymd } from "../format";
+import { addDays, fromYmd, today, ymd } from "../format";
 
 export interface CalendarState {
   status: CalendarStatus | null;
@@ -29,12 +29,62 @@ export async function refreshCalendar() {
   } catch { /* offline: keep what we had */ }
 }
 
-/** Leaves the app for Google's permission screen; Google brings the athlete back to `next`. */
-export function connectGoogle(next?: string) {
+/** Leaves the app for Google's permission screen; Google brings the athlete back to `next`. With `read`, Google
+ *  also asks to let Velocity read the athlete's other events. */
+export function connectGoogle(next?: string, read = false) {
   const back = next ?? window.location.pathname;
   // a full page load on purpose: the route answers with a redirect to Google, which the client router cannot follow
   // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-  window.location.href =`/api/connect/google-calendar?tz=${encodeURIComponent(browserZone())}&next=${encodeURIComponent(back)}`;
+  window.location.href = `/api/connect/google-calendar?tz=${encodeURIComponent(browserZone())}&next=${encodeURIComponent(back)}${read ? "&read=1" : ""}`;
+}
+
+/** "Show my other events" on or off, and which calendars. */
+export async function setReading(p: { show?: boolean; calendars?: string[] }) {
+  const res = await fetch("/api/calendar/read", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p) });
+  if (!res.ok) throw new Error(((await res.json().catch(() => ({}))) as { error?: string }).error ?? "Did not save");
+  events.clear(); version++; subs.forEach((f) => f());
+  await refreshCalendar();
+}
+
+export async function otherCalendars(): Promise<OtherCalendar[]> {
+  const res = await fetch("/api/calendar/events?list=1", { cache: "no-store" });
+  const body = (await res.json().catch(() => ({}))) as { calendars?: OtherCalendar[]; error?: string };
+  if (body.error) throw new Error(body.error);
+  return body.calendars ?? [];
+}
+
+// ---------- the athlete's other events, per week, kept in memory for a few minutes ----------
+const events = new Map<string, { at: number; list: OtherEvent[] | null; error?: string; loading?: Promise<void> }>();
+let version = 0;
+const versionOf = () => version;
+const FRESH_MS = 5 * 60000;
+
+function loadWeek(from: string, to: string) {
+  const key = `${from}/${to}`;
+  const cur = events.get(key);
+  if (cur && (cur.loading || Date.now() - cur.at < FRESH_MS)) return;
+  const entry = { at: Date.now(), list: cur?.list ?? null, error: undefined as string | undefined, loading: undefined as Promise<void> | undefined };
+  entry.loading = (async () => {
+    try {
+      const res = await fetch(`/api/calendar/events?from=${from}&to=${to}&tz=${encodeURIComponent(browserZone())}`, { cache: "no-store" });
+      const body = (await res.json().catch(() => ({}))) as { events?: OtherEvent[]; error?: string };
+      entry.list = body.events ?? []; entry.error = body.error;
+    } catch { entry.error = "Your Google events did not load."; }
+    entry.at = Date.now(); entry.loading = undefined; version++; subs.forEach((f) => f());
+  })();
+  events.set(key, entry);
+}
+
+/** The athlete's other Google events for the week starting `from` (7 days), or [] when the switch is off. */
+export function useOtherEvents(from: string): { list: OtherEvent[]; error: string | null } {
+  const s = useSyncExternalStore(subscribe, () => state, () => state);
+  useSyncExternalStore(subscribe, versionOf, versionOf);
+  const on = !!s.status?.connection?.showEvents && s.status.connection.status === "connected";
+  const to = ymd(addDays(fromYmd(from), 6));
+  useEffect(() => { if (on) loadWeek(from, to); }, [on, from, to]);
+  if (!on) return { list: [], error: null };
+  const e = events.get(`${from}/${to}`);
+  return { list: e?.list ?? [], error: e?.error ?? null };
 }
 
 export async function disconnectGoogle(remove: boolean) {

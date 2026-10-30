@@ -20,6 +20,11 @@ export const googleOn = () => { const c = googleConfig(); return Boolean(c.clien
 
 export const CALENDAR_SCOPE = "https://www.googleapis.com/auth/calendar.app.created";
 export const SCOPES = ["openid", "email", CALENDAR_SCOPE];
+/** Only asked for when the athlete turns on "Show my other events": read events (titles and times) and the list
+ *  of their calendars. Velocity never changes those events and does not store them. */
+export const READ_SCOPE = "https://www.googleapis.com/auth/calendar.events.readonly";
+export const LIST_SCOPE = "https://www.googleapis.com/auth/calendar.calendarlist.readonly";
+export const canRead = (scopes: string | null | undefined) => !!scopes && scopes.split(/\s+/).includes(READ_SCOPE) && scopes.split(/\s+/).includes(LIST_SCOPE);
 
 // ---------- the refresh token is stored encrypted (AES-256-GCM); the key never leaves the server ----------
 function key() {
@@ -41,9 +46,10 @@ export function unseal(sealed: string) {
 }
 
 // ---------- sign-in ----------
-export function authLink(redirectUri: string, state: string, loginHint?: string) {
+export function authLink(redirectUri: string, state: string, loginHint?: string, read = false) {
   const c = googleConfig();
-  const q = new URLSearchParams({ client_id: c.clientId, redirect_uri: redirectUri, response_type: "code", scope: SCOPES.join(" "), access_type: "offline", prompt: "consent", include_granted_scopes: "true", state });
+  const scope = [...SCOPES, ...(read ? [READ_SCOPE, LIST_SCOPE] : [])].join(" ");
+  const q = new URLSearchParams({ client_id: c.clientId, redirect_uri: redirectUri, response_type: "code", scope, access_type: "offline", prompt: "consent", include_granted_scopes: "true", state });
   if (loginHint) q.set("login_hint", loginHint);
   return `${c.authUrl}?${q}`;
 }
@@ -103,6 +109,26 @@ export async function deleteCalendar(access: string, id: string) {
   const res = await api(access, `/calendars/${encodeURIComponent(id)}`, { method: "DELETE" });
   if (res.ok || res.status === 404 || res.status === 410) return;
   await json(res);
+}
+
+// ---------- the athlete's other calendars (read-only, only with READ_SCOPE + LIST_SCOPE) ----------
+export interface GCal { id: string; name: string; color: string | null; primary: boolean; selected: boolean }
+/** Calendars shown in the athlete's Google Calendar, without Velocity's own and without birthdays/contacts. */
+export async function listCalendars(access: string, ownId: string | null): Promise<GCal[]> {
+  const body = await json(await api(access, "/users/me/calendarList?minAccessRole=freeBusyReader&maxResults=100"));
+  const items = (body.items as Record<string, unknown>[] | undefined) ?? [];
+  return items
+    .filter((c) => c.id !== ownId && !c.deleted && !c.hidden && !/#contacts@|addressbook#contacts/.test(String(c.id)))
+    .map((c) => ({ id: String(c.id), name: String(c.summaryOverride ?? c.summary ?? "Calendar"), color: (c.backgroundColor as string) ?? null, primary: !!c.primary, selected: !!c.selected || !!c.primary }));
+}
+/** Events of one calendar between two instants; repeating events come as single occurrences. */
+export async function listEvents(access: string, calendarId: string, timeMin: string, timeMax: string) {
+  const q = new URLSearchParams({ timeMin, timeMax, singleEvents: "true", orderBy: "startTime", maxResults: "250", fields: "items(id,summary,start,end,status,eventType,visibility)" });
+  const body = await json(await api(access, `/calendars/${encodeURIComponent(calendarId)}/events?${q}`));
+  return ((body.items as Record<string, unknown>[] | undefined) ?? [])
+    // working-location markers ("Home", "Office") are not appointments
+    .filter((e) => e.status !== "cancelled" && e.eventType !== "workingLocation")
+    .map((e) => ({ id: String(e.id), title: String(e.summary ?? "Busy"), start: e.start as { dateTime?: string; date?: string }, end: e.end as { dateTime?: string; date?: string } }));
 }
 
 /** Each session's event id is derived from the session id, so the same session can never be added twice. */

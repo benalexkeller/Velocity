@@ -18,6 +18,11 @@ create table if not exists public.calendar_links (
   synced_at timestamptz,
   updated_at timestamptz not null default now()
 );
+-- "Show my other events" (added 30 Oct): what Google allowed, the switch, and which calendars to show.
+-- The events themselves are read from Google when the Plan page opens and are never stored.
+alter table public.calendar_links add column if not exists google_scopes text;
+alter table public.calendar_links add column if not exists show_events boolean not null default false;
+alter table public.calendar_links add column if not exists read_calendars jsonb;
 alter table public.calendar_links enable row level security;
 drop policy if exists "own calendar" on public.calendar_links;
 create policy "own calendar" on public.calendar_links for all using (auth.uid() = user_id) with check (auth.uid() = user_id);

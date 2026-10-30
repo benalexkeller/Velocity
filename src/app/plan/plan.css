@@ -60,6 +60,19 @@
 .wg.dragging .wg-ev:not(.drag) { pointer-events: none; }
 .wg-col.target { background-color: var(--surface-2); } .wg-col.today.target { background-color: var(--accent-soft); }
 .wg-day.target b { text-decoration: underline; text-underline-offset: 3px; }
+/* the athlete's other Google Calendar events: read-only, grey, under the sessions */
+.wg-oe { position: absolute; z-index: 0; border-radius: 6px; background: var(--surface-2); border-left: 3px solid var(--muted-2, #B9BDC6); box-shadow: 0 0 0 1px var(--line-2); padding: 2px 6px; overflow: hidden; color: var(--ink-2); font-size: 11px; line-height: 14px; cursor: default; }
+.wg-oe b, .wg-oe small { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wg-oe b { font-weight: 600; }
+.wg-oe small { color: var(--muted); }
+.wg-ev.nar { right: calc(36% + 3px); padding-left: 5px; padding-right: 4px; }
+.wg-ev.nar .sport-icon { display: none !important; } /* part of a column: the words need the room (the icon sets display inline) */
+.wg-allday { display: block; margin: 4px 2px 0; padding: 1px 6px; border-radius: 5px; background: var(--surface-2); border-left: 3px solid var(--muted-2, #B9BDC6); color: var(--ink-2); font-size: 11px; font-style: normal; line-height: 15px; text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.wg-allday.more { background: none; border-left-color: transparent; color: var(--muted); }
+.wg-note { padding: 6px 12px; font-size: 12px; color: var(--muted); border-top: 1px solid var(--line-2); }
+.wl-oe { display: grid; gap: 2px; margin-bottom: 4px; font-size: 12px; color: var(--ink-2); }
+.wl-oe span { display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; padding-left: 8px; border-left: 3px solid var(--muted-2, #B9BDC6); }
+.wl-oe b { font-weight: 600; margin-right: 6px; color: var(--muted); }
 .wg-ev.locked:not(.done) { padding-right: 24px; } /* room for the lock icon; unlocked blocks show it only on hover, on its own background */
 .wg-ev .lk { position: absolute; top: 3px; right: 3px; width: 18px; height: 18px; border-radius: 5px; border: 0; background: transparent; color: inherit; display: inline-flex; align-items: center; justify-content: center; opacity: 0; cursor: pointer; padding: 0; }
 .wg-ev .lk svg { width: 12px; height: 12px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }

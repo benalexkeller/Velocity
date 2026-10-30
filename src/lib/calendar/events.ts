@@ -23,10 +23,48 @@ export interface CalendarStatus {
   google: boolean;
   /** The database has the calendar table (supabase/schema-calendar.sql has been run). */
   ready: boolean;
-  connection: { email: string | null; status: "connected" | "error"; error: string | null } | null;
+  connection: {
+    email: string | null; status: "connected" | "error"; error: string | null;
+    /** Google gave Velocity permission to read the athlete's events (the "Show my other events" switch). */
+    canRead: boolean;
+    /** The athlete's other events are shown on the Plan page. */
+    showEvents: boolean;
+  } | null;
   link: string | null;
   sig: string | null;
   syncedAt: string | null;
+}
+
+/** One of the athlete's own Google calendars, for the "which calendars to show" list. */
+export interface OtherCalendar { id: string; name: string; color: string | null; on: boolean; primary: boolean }
+/** One of the athlete's other events, cut into one piece per day, in the athlete's time zone. Read-only. */
+export interface OtherEvent { id: string; cal: string; title: string; date: string; start?: string; end?: string; allDay: boolean; color: string | null }
+
+/** A UTC instant as the local date and time in `tz`. */
+export function utcToLocal(d: Date, tz: string) {
+  const parts = new Intl.DateTimeFormat("en-US", { timeZone: tz, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }).formatToParts(d);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "00";
+  return { date: `${get("year")}-${get("month")}-${get("day")}`, time: `${get("hour")}:${get("minute")}` };
+}
+
+/** Google event times → one piece per day between `from` and `to` (inclusive), times local to `tz`. */
+export function piecesOf(e: { id: string; cal: string; title: string; color: string | null; start: { dateTime?: string; date?: string }; end: { dateTime?: string; date?: string } }, tz: string, from: string, to: string): OtherEvent[] {
+  const out: OtherEvent[] = [];
+  if (e.start.date) {
+    // all-day: the end date is the day after the last day
+    const last = e.end.date ? addMinutes(e.end.date, "00:00", -1440).date : e.start.date;
+    for (let d = e.start.date; d <= last; d = nextDay(d)) if (d >= from && d <= to) out.push({ id: `${e.id}:${d}`, cal: e.cal, title: e.title, date: d, allDay: true, color: e.color });
+    return out;
+  }
+  if (!e.start.dateTime || !e.end.dateTime) return out;
+  const a = utcToLocal(new Date(e.start.dateTime), tz), b = utcToLocal(new Date(e.end.dateTime), tz);
+  for (let d = a.date; d <= b.date; d = nextDay(d)) {
+    const start = d === a.date ? a.time : "00:00";
+    const end = d === b.date ? b.time : "24:00";
+    if (end === "00:00" && d !== a.date) break; // ends exactly at midnight: nothing on the next day
+    if (d >= from && d <= to) out.push({ id: `${e.id}:${d}`, cal: e.cal, title: e.title, date: d, start, end, allDay: false, color: e.color });
+  }
+  return out;
 }
 
 /** Event title: "Run: Tempo, 70 min". */

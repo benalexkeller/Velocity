@@ -6,6 +6,8 @@ import { SPORT_LABEL, STATUS_LABEL, type Session, type Week } from "@/lib/data";
 import { usePlan } from "@/lib/store";
 import { useNow } from "@/lib/useNow";
 import { DAYS, addDays, fromYmd, hoursToClock, rangeLabel, today, ymd } from "@/lib/format";
+import { useOtherEvents } from "@/lib/calendar/client";
+import type { OtherEvent } from "@/lib/calendar/events";
 
 const H0 = 0, H1 = 24, ROW = 20; // the grid covers the whole day, 00:00–24:00; the box shows 16 hours and scrolls for the rest
 const VIEW0 = 5, VIEW_H = 16; // opens at 05:00 showing 05:00–21:00, like before
@@ -28,6 +30,8 @@ export function WeekGrid({ week, selectedId, onPick }: { week: Week; selectedId?
   const box = useRef<HTMLDivElement>(null);
   const body = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<Drag | null>(null);
+  // the athlete's other Google Calendar events, shown read-only behind and beside the sessions
+  const other = useOtherEvents(week.start);
   useEffect(() => { if (box.current) box.current.scrollTop = y(VIEW0) - 8; }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // pointer position → day column and snapped start hour (the pointer keeps its hold on the block, so subtract the grab offset)
@@ -77,21 +81,25 @@ export function WeekGrid({ week, selectedId, onPick }: { week: Week; selectedId?
 
   return (
     <>
-    <WeekList week={week} selectedId={selectedId} onPick={onPick} />
+    <WeekList week={week} selectedId={selectedId} onPick={onPick} other={other.list} />
     <div className={`wg${drag ? " dragging" : ""}`}>
       <div className="wg-head">
         <div />
         {DAYS.map((d, i) => {
           const date = addDays(start, i);
           const isT = date.getTime() === t.getTime();
+          const allDay = other.list.filter((e) => e.allDay && e.date === ymd(date));
           return (
             <div key={d} className={`wg-day${isT ? " today" : ""}${drag && drag.day === i ? " target" : ""}`}>
               <span>{d.toUpperCase()}</span>
               <b>{date.getDate()}</b>
+              {allDay.slice(0, 2).map((e) => <i key={e.id} className="wg-allday" title={`${e.title}, all day, ${e.cal} (Google Calendar, read-only)`}>{e.title}</i>)}
+              {allDay.length > 2 && <i className="wg-allday more" title={allDay.slice(2).map((e) => e.title).join(", ")}>{allDay.length - 2} more</i>}
             </div>
           );
         })}
       </div>
+      {other.error && <div className="wg-note">{other.error}</div>}
       <div className="wg-scroll" ref={box} style={{ height: VIEW_H * ROW }}>
       <div className="wg-body" style={{ height }} ref={body}>
         <div className="wg-hours">
@@ -106,9 +114,12 @@ export function WeekGrid({ week, selectedId, onPick }: { week: Week; selectedId?
           // blocks that would overlap on screen (a ride and the run straight after it, a short session under a
           // tall minimum block) are nudged down so each stays full width and readable
           const tops = topsOf(sessions, y);
+          // other events: where one meets a session, the session keeps the left side and the event takes the right
+          const ext = layoutOther(other.list.filter((e) => !e.allDay && e.date === ymd(date)), sessions, tops, y);
           return (
             <div key={i} className={`wg-col${isT ? " today" : ""}${drag && drag.day === i ? " target" : ""}`}>
-              {sessions.map((s) => <Block key={s.id} s={s} y={y} top={tops.get(s.id)} selected={s.id === selectedId} drag={drag?.id === s.id ? drag : null} onDown={onDown(s)} onMove={onMove(s)} onUp={onUp(s)} onLock={() => plan.toggleLock(s.id)} onPick={onPick} />)}
+              {ext.items.map((o) => <OtherBlock key={o.e.id} o={o} y={y} />)}
+              {sessions.map((s) => <Block key={s.id} s={s} y={y} top={tops.get(s.id)} narrow={ext.narrow.has(s.id) && drag?.id !== s.id} selected={s.id === selectedId} drag={drag?.id === s.id ? drag : null} onDown={onDown(s)} onMove={onMove(s)} onUp={onUp(s)} onLock={() => plan.toggleLock(s.id)} onPick={onPick} />)}
               {isT && nowH >= H0 && nowH <= H1 && (
                 <div className="wg-now" style={{ top: y(nowH) }}>
                   <span><b className="now-w">NOW </b>{hoursToClock(nowH)}</span>
@@ -125,7 +136,7 @@ export function WeekGrid({ week, selectedId, onPick }: { week: Week; selectedId?
 }
 
 // Phones: the week as a list, one row per day. The time grid needs more width than a phone has.
-function WeekList({ week, selectedId, onPick }: { week: Week; selectedId?: string | null; onPick?: (s: Session) => void }) {
+function WeekList({ week, selectedId, onPick, other }: { week: Week; selectedId?: string | null; onPick?: (s: Session) => void; other: OtherEvent[] }) {
   const start = fromYmd(week.start);
   const t = today();
   return (
@@ -134,10 +145,12 @@ function WeekList({ week, selectedId, onPick }: { week: Week; selectedId?: strin
         const date = addDays(start, i);
         const isT = date.getTime() === t.getTime();
         const ss = week.sessions.filter((s) => s.dayIndex === i);
+        const oe = other.filter((e) => e.date === ymd(date));
         return (
           <li key={d} className={isT ? "today" : ""}>
             <span className="wl-d"><span>{d}</span><b>{date.getDate()}</b></span>
             <div className="wl-ss">
+              {oe.length > 0 && <div className="wl-oe">{oe.map((e) => <span key={e.id} title={`${e.cal} (Google Calendar, read-only)`}><b>{e.allDay ? "All day" : `${e.start}-${e.end}`}</b>{e.title}</span>)}</div>}
               {ss.length === 0 || ss.every((s) => s.sport === "rest") ? <span className="wl-rest">Rest</span> : ss.filter((s) => s.sport !== "rest").map((s) => {
                 const a = s.status === "done" || s.status === "partial" ? s.actual : undefined;
                 return (
@@ -177,7 +190,51 @@ function topsOf(sessions: Session[], y: (h: number) => number) {
   return out;
 }
 
-function Block({ s, y, top, selected, drag, onDown, onMove, onUp, onLock, onPick }: { s: Session; y: (h: number) => number; top?: number; selected?: boolean; drag: Drag | null; onDown: (e: React.PointerEvent) => void; onMove: (e: React.PointerEvent) => void; onUp: (e: React.PointerEvent) => void; onLock: () => void; onPick?: (s: Session) => void }) {
+/** Other events of one day: their lane (side by side when they overlap each other), whether they sit to the right
+ *  of a session, and which sessions give up the right side for them. */
+interface OtherPlaced { e: OtherEvent; h0: number; h1: number; left: number; width: number }
+function layoutOther(list: OtherEvent[], sessions: Session[], tops: Map<string, number>, y: (h: number) => number) {
+  const narrow = new Set<string>();
+  const sBoxes = sessions.filter((s) => s.sport !== "rest").map((s) => { const b = boxOf(s, y); const top = tops.get(s.id) ?? b.top; return { id: s.id, top, bottom: top + (b.bottom - b.top) }; });
+  const evs = list.map((e) => ({ e, h0: toH(e.start), h1: Math.max(toH(e.start) + 0.25, toH(e.end)) })).sort((a, b) => a.h0 - b.h0 || b.h1 - a.h1);
+  // clusters of events that overlap each other share their area in lanes
+  const items: OtherPlaced[] = [];
+  let cluster: { o: (typeof evs)[number]; lane: number }[] = [], ends: number[] = [], clusterEnd = -1;
+  const flush = () => {
+    const lanes = Math.max(1, ends.length);
+    // the whole cluster moves to the right when any of its events meets a session
+    let hit = false;
+    for (const c of cluster) {
+      const top = y(c.o.h0), bottom = y(c.o.h1);
+      for (const b of sBoxes) if (b.top < bottom && b.bottom > top) { narrow.add(b.id); hit = true; }
+    }
+    const [x0, x1] = hit ? [64, 100] : [0, 100];
+    const w = (x1 - x0) / lanes;
+    for (const c of cluster) items.push({ e: c.o.e, h0: c.o.h0, h1: c.o.h1, left: x0 + c.lane * w, width: w });
+    cluster = []; ends = [];
+  };
+  for (const o of evs) {
+    if (o.h0 >= clusterEnd) flush();
+    let lane = ends.findIndex((end) => end <= o.h0);
+    if (lane < 0) { lane = ends.length; ends.push(o.h1); } else ends[lane] = o.h1;
+    cluster.push({ o, lane });
+    clusterEnd = Math.max(clusterEnd, o.h1);
+  }
+  flush();
+  return { items, narrow };
+}
+
+function OtherBlock({ o, y }: { o: OtherPlaced; y: (h: number) => number }) {
+  const h = Math.max(16, (o.h1 - o.h0) * ROW - 2);
+  return (
+    <div className="wg-oe" style={{ top: y(o.h0) + 1, height: h, left: `calc(${o.left}% + 3px)`, width: `calc(${o.width}% - 6px)` }}
+      title={`${o.e.title}, ${o.e.start}-${o.e.end}, ${o.e.cal}. From Google Calendar, change it there.`}>
+      <b>{o.e.title}</b>{h >= 30 && <small>{o.e.start}-{o.e.end}</small>}
+    </div>
+  );
+}
+
+function Block({ s, y, top, narrow, selected, drag, onDown, onMove, onUp, onLock, onPick }: { s: Session; y: (h: number) => number; top?: number; narrow?: boolean; selected?: boolean; drag: Drag | null; onDown: (e: React.PointerEvent) => void; onMove: (e: React.PointerEvent) => void; onUp: (e: React.PointerEvent) => void; onLock: () => void; onPick?: (s: Session) => void }) {
   const onKey = (e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onPick?.(s); } };
   const done = s.status === "done" || s.status === "partial";
   const a = done ? s.actual : undefined;
@@ -189,7 +246,7 @@ function Block({ s, y, top, selected, drag, onDown, onMove, onUp, onLock, onPick
   const dx = drag ? (drag.day - s.dayIndex) * drag.colW : 0;
   const dy = drag && s.sport !== "rest" ? (drag.h - h0) * ROW : 0;
   const style: React.CSSProperties = drag ? { transform: `translate(${dx}px, ${dy}px)` } : {};
-  const cls = `wg-ev ${sport}${done ? " done" : ""}${s.status === "partial" ? " partial" : ""}${s.status === "substituted" ? " substituted" : ""}${selected ? " sel" : ""}${s.locked ? " locked" : ""}${drag ? " drag" : ""}`;
+  const cls = `wg-ev ${sport}${done ? " done" : ""}${s.status === "partial" ? " partial" : ""}${s.status === "substituted" ? " substituted" : ""}${selected ? " sel" : ""}${s.locked ? " locked" : ""}${drag ? " drag" : ""}${narrow ? " nar" : ""}`;
   const handlers = { onPointerDown: onDown, onPointerMove: onMove, onPointerUp: onUp, onPointerCancel: onUp };
   const lock = !done && <button type="button" className="lk" onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onLock(); }} aria-label={s.locked ? "Unlock session" : "Lock session"} title={s.locked ? "Locked, click to unlock" : "Lock in place"}><Icon name={s.locked ? "lock" : "unlock"} /></button>;
   if (s.sport === "rest") {

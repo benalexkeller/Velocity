@@ -4,7 +4,8 @@
 // others, refreshed whenever that app checks it).
 import { useEffect, useState } from "react";
 import { usePlan } from "@/lib/store";
-import { calendarPayload, connectGoogle, disconnectGoogle, queueSync, refreshCalendar, setCalendarLink, useCalendar } from "@/lib/calendar/client";
+import { calendarPayload, connectGoogle, disconnectGoogle, otherCalendars, queueSync, refreshCalendar, setCalendarLink, setReading, useCalendar } from "@/lib/calendar/client";
+import type { OtherCalendar } from "@/lib/calendar/events";
 
 const FLAG: Record<string, string> = {
   connected: "Google Calendar connected. Your sessions are being added to the Velocity training calendar.",
@@ -13,6 +14,8 @@ const FLAG: Record<string, string> = {
   error: "Google Calendar did not connect. Try again; if it fails twice, send feedback.",
   off: "Google Calendar is not switched on for this site yet.",
   setup: "Google Calendar is not set up on this site yet.",
+  reading: "Google Calendar connected. Your other events now show on the Plan page, read-only.",
+  readscope: "Google Calendar connected, but your other events are not shown: the box to see your events was not ticked on Google's screen.",
 };
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
@@ -58,7 +61,7 @@ export function CalendarCard() {
           <b>Google Calendar</b>
           <span className="muted">
             {!s.google ? "Not available yet"
-              : !g ? "A separate calendar called Velocity training. Velocity cannot see your other calendars or events."
+              : !g ? "Your sessions go to a separate calendar called Velocity training."
               : g.status === "error" ? (g.error ?? "Needs connecting again")
               : <>Connected{g.email ? `, ${g.email}` : ""}<span className="at">{cal.syncing ? "Updating" : s.syncedAt ? `Updated ${clock(s.syncedAt)}` : "Waiting for the first update"}</span></>}
           </span>
@@ -82,6 +85,25 @@ export function CalendarCard() {
           </div>
         </div>
       )}
+
+      {s.google && (!g || g.status === "connected") && (
+        <div className="cal-row">
+          <div>
+            <b>Your other events</b>
+            <span className="muted">
+              {g?.showEvents ? "Shown on the Plan page, read-only. Velocity reads them when you open the Plan page and does not store them."
+                : "See your other Google Calendar events on the Plan page, read-only, so you can plan around them."}
+              {!g?.canRead && " Google asks you for one more permission."}
+            </span>
+          </div>
+          <div className="row">
+            {!g?.canRead && <button type="button" className="btn ghost small" disabled={busy} onClick={() => connectGoogle(undefined, true)}>{g ? "Show my events" : "Connect and show"}</button>}
+            {g?.canRead && !g.showEvents && <button type="button" className="btn ghost small" disabled={busy} onClick={() => act(() => setReading({ show: true }))}>Show my events</button>}
+            {g?.showEvents && <button type="button" className="btn ghost small" disabled={busy} onClick={() => act(() => setReading({ show: false }))}>Hide</button>}
+          </div>
+        </div>
+      )}
+      {g?.showEvents && <CalendarChoice onError={setErr} />}
 
       <div className="cal-row">
         <div>
@@ -108,6 +130,30 @@ export function CalendarCard() {
         </div>
       )}
       {err && <p className="small" style={{ color: "var(--danger)", margin: "10px 0 0" }}>{err}</p>}
+    </div>
+  );
+}
+
+/** Which of the athlete's Google calendars show on the Plan page. */
+function CalendarChoice({ onError }: { onError: (e: string | null) => void }) {
+  const [list, setList] = useState<OtherCalendar[] | null>(null);
+  useEffect(() => { let live = true; otherCalendars().then((l) => { if (live) setList(l); }).catch((e) => { if (live) { setList([]); onError(e instanceof Error ? e.message : "Your calendars did not load."); } }); return () => { live = false; }; }, [onError]);
+  if (!list) return <p className="muted small cal-choice">Loading your calendars</p>;
+  if (!list.length) return null;
+  const toggle = async (id: string) => {
+    const next = list.map((c) => (c.id === id ? { ...c, on: !c.on } : c));
+    setList(next);
+    try { await setReading({ calendars: next.filter((c) => c.on).map((c) => c.id) }); } catch (e) { onError(e instanceof Error ? e.message : "Did not save."); }
+  };
+  return (
+    <div className="cal-choice">
+      {list.map((c) => (
+        <label key={c.id}>
+          <input type="checkbox" checked={c.on} onChange={() => toggle(c.id)} />
+          <i style={{ background: c.color ?? "var(--muted-2, #B9BDC6)" }} />
+          <span>{c.name}</span>
+        </label>
+      ))}
     </div>
   );
 }

@@ -11,7 +11,7 @@ export function CalendarBadge() {
   if (!cal.status?.accounts) return null;
   const s = cal.status, g = s?.connection;
   const on = isLinked(s) && g?.status !== "error";
-  const text = !s ? "Checking" : g?.status === "connected" ? `Sessions go to the Velocity training calendar in Google${g.email ? ` (${g.email})` : ""}.` : g?.status === "error" ? g.error ?? "Google Calendar needs connecting again." : s.link ? "Your calendar link is on." : "Not connected.";
+  const text = !s ? "Checking" : g?.status === "connected" ? `Sessions go to the Velocity training calendar in Google${g.email ? ` (${g.email})` : ""}.${g.showEvents ? " Your other Google events show in grey, read-only." : ""}` :g?.status === "error" ? g.error ?? "Google Calendar needs connecting again." : s.link ? "Your calendar link is on." : "Not connected.";
   return (
     <span style={{ position: "relative" }}>
       <button type="button" className={`badge${on ? "" : " ok-off"}`} aria-expanded={open} onClick={() => setOpen((o) => !o)}><span className="ok">{on ? "✓" : "-"}</span>Calendar</button>
