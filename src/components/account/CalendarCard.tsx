@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import { usePlan } from "@/lib/store";
 import { calendarPayload, connectGoogle, disconnectGoogle, otherCalendars, queueSync, refreshCalendar, setCalendarLink, setReading, useCalendar } from "@/lib/calendar/client";
 import type { OtherCalendar } from "@/lib/calendar/events";
+import { GoogleCalendarIcon } from "@/components/GoogleCalendarIcon";
 
 const FLAG: Record<string, string> = {
   connected: "Google Calendar connected. Your sessions are being added to the Velocity training calendar.",
@@ -68,8 +69,8 @@ export function CalendarCard() {
         </div>
         {s.google && (
           <div className="row">
-            {!g && <button type="button" className="btn small" disabled={busy} onClick={() => connectGoogle()}>Connect Google Calendar</button>}
-            {g?.status === "error" && <button type="button" className="btn small" disabled={busy} onClick={() => connectGoogle()}>Connect again</button>}
+            {!g && <button type="button" className="btn google small" disabled={busy} onClick={() => connectGoogle()}><GoogleCalendarIcon />Connect Google Calendar</button>}
+            {g?.status === "error" && <button type="button" className="btn google small" disabled={busy} onClick={() => connectGoogle()}><GoogleCalendarIcon />Connect again</button>}
             {g?.status === "connected" && <button type="button" className="btn ghost small" disabled={busy || cal.syncing} onClick={syncNow}>Update now</button>}
             {g && !asking && <button type="button" className="btn ghost small" disabled={busy} onClick={() => setAsking(true)}>Disconnect</button>}
           </div>
@@ -97,7 +98,7 @@ export function CalendarCard() {
             </span>
           </div>
           <div className="row">
-            {!g?.canRead && <button type="button" className="btn ghost small" disabled={busy} onClick={() => connectGoogle(undefined, true)}>{g ? "Show my events" : "Connect and show"}</button>}
+            {!g?.canRead && <button type="button" className="btn google small" disabled={busy} onClick={() => connectGoogle(undefined, true)}><GoogleCalendarIcon />{g ? "Show my events" : "Connect and show"}</button>}
             {g?.canRead && !g.showEvents && <button type="button" className="btn ghost small" disabled={busy} onClick={() => act(() => setReading({ show: true }))}>Show my events</button>}
             {g?.showEvents && <button type="button" className="btn ghost small" disabled={busy} onClick={() => act(() => setReading({ show: false }))}>Hide</button>}
           </div>
