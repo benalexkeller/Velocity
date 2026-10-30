@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: `Privacy - ${BRAND.name}`, descriptio
 
 export default function Privacy() {
   return (
-    <LegalPage eyebrow="Legal" title="Privacy policy" updated="29 October 2026" lead="What Velocity stores about you, why, which services handle it, and how to have it deleted. Only you can see your data, and we do not sell it.">
+    <LegalPage eyebrow="Legal" title="Privacy policy" updated="30 October 2026" lead="What Velocity stores about you, why, which services handle it, and how to have it deleted. Only you can see your data, and we do not sell it.">
       <h2>Who we are</h2>
       <p>{BRAND.name} is a training app for endurance athletes at velocityathletes.com. In this policy &quot;we&quot; means the team that runs it. Questions about your data go through the <Link href="/help">Help page</Link>.</p>
 
@@ -23,6 +23,7 @@ export default function Privacy() {
           <tr><th>Body data</th><td>From a connected watch: resting heart rate, heart-rate variability, sleep and VO2max. Body weight you log on the Nutrition page.</td></tr>
           <tr><th>Nutrition</th><td>Foods and meals you log, drinks, supplements, and your nutrition settings (goal weight and stages).</td></tr>
           <tr><th>Coach</th><td>The messages you send the coach and its answers, and the plan changes you accept or decline.</td></tr>
+          <tr><th>Calendar</th><td>If you connect Google Calendar: the email address of that Google account, an encrypted key that lets Velocity update its own calendar, and which sessions are in it. If you create a calendar link: the secret part of the link and the sessions it shows.</td></tr>
           <tr><th>Feedback</th><td>Feedback and contact messages you send us, with the page you were on, your browser and screen size.</td></tr>
         </tbody>
       </table>
@@ -43,10 +44,14 @@ export default function Privacy() {
           <tr><th>Vercel</th><td>Hosts the website and runs the app&apos;s server code.</td></tr>
           <tr><th>OpenRouter</th><td>Passes each coach question, with the compact copy of your data, to the AI model that answers it: DeepSeek or Google Gemini for everyday questions, Anthropic Claude, OpenAI GPT or Google Gemini for whole-plan reviews. It is used to answer that question only.</td></tr>
           <tr><th>Junction</th><td>Connects your watch (Garmin today) and sends your activities and body data to Velocity once you connect it. You can disconnect it at any time under Connect wearable; activities already imported stay until you delete them.</td></tr>
+          <tr><th>Google</th><td>Sign-in with Google gives us your email address, name and profile picture. If you connect Google Calendar, Velocity creates one calendar in your Google account, called Velocity training, and keeps your planned sessions in it (time, length and steps). Velocity can only create and change that calendar: it cannot see your other calendars or events. Disconnecting withdraws the access at Google, and you choose whether the calendar is deleted.</td></tr>
           <tr><th>USDA FoodData Central</th><td>Receives the words you type into food search, nothing else about you.</td></tr>
           <tr><th>CARTO</th><td>Serves the map tiles behind a route, so it sees which map area is shown.</td></tr>
         </tbody>
       </table>
+
+      <h2>Data from Google</h2>
+      <p>Velocity&apos;s use and transfer to any other app of information received from Google APIs will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noreferrer">Google API Services User Data Policy</a>, including the Limited Use requirements. We use it only to sign you in and to keep your Velocity training calendar up to date. We do not sell it, use it for advertising, or use it to train AI models, and no person reads it unless you ask us to help with a problem.</p>
 
       <h2>Your browser</h2>
       <p>We use the cookies needed to keep you signed in, and your browser&apos;s local storage for settings on this device. No advertising or tracking cookies.</p>

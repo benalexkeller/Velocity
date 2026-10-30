@@ -215,7 +215,7 @@ svg.ramp { width: 100%; height: auto; display: block; }
 .ok.off { background: var(--muted-2); }
 .plan-head .menu { position: absolute; right: 0; top: 44px; z-index: 20; background: var(--surface); border: 1px solid var(--line); border-radius: 10px; box-shadow: 0 12px 32px rgba(16,17,20,0.12); padding: 8px; min-width: 280px; display: grid; gap: 6px; }
 .plan-head .menu .small { font-size: 13px; color: var(--ink-2); line-height: 1.45; padding: 4px 6px; }
-.plan-head .menu button { border: 0; background: var(--surface-2); text-align: left; padding: 8px 10px; border-radius: 8px; font-size: 13px; color: var(--ink); font-weight: 600; }
+.plan-head .menu button, .plan-head .menu a { border: 0; background: var(--surface-2); text-align: left; padding: 8px 10px; border-radius: 8px; font-size: 13px; color: var(--ink); font-weight: 600; text-decoration: none; }
 .plan-head .badge { cursor: pointer; border: 0; font: inherit; }
 
 /* week overview (from the road-to-race chart) */

@@ -4,7 +4,7 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 // Pages anyone can open without signing in. "/" is the public front page; signed-in athletes are sent on to the app.
-const PUBLIC = ["/", "/login", "/auth", "/api/webhooks", "/product", "/help", "/privacy", "/terms", "/api/contact"];
+const PUBLIC = ["/", "/login", "/auth", "/api/webhooks", "/product", "/help", "/privacy", "/terms", "/api/contact", "/api/calendar/feed"];
 
 export async function proxy(request: NextRequest) {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL, key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;

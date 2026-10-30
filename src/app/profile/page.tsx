@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ConnectWearable, WEARABLES, useConnections, useWearables } from "@/components/ConnectWearable";
 import { usePlan } from "@/lib/store";
 import { ProfileForm } from "@/components/account/ProfileForm";
+import { CalendarCard } from "@/components/account/CalendarCard";
 import { dateFull, dateLabel } from "@/lib/format";
 
 export default function ProfilePage() {
@@ -37,6 +38,10 @@ export default function ProfilePage() {
           <h2>Connections</h2>
           <ProfileConnections />
         </section>
+        <section className="card" id="calendar">
+          <h2>Calendar</h2>
+          <CalendarCard />
+        </section>
         {plan.accounts && a.isAdmin && <Link href="/admin" className="link">Admin →</Link>}
       </div>
     </main>
@@ -55,7 +60,6 @@ function ProfileConnections() {
         {garminLive && <><span>Garmin</span><span>{garmin?.status === "connected" ? `Connected${garmin.last_event_at ? `, last data ${new Date(garmin.last_event_at).toLocaleDateString()}` : ""}` : garmin?.status === "error" ? "Connection failed" : "Not connected"}</span></>}
         {WEARABLES.filter((w) => picked.includes(w.k) && !(w.k === "garmin" && garminLive)).map((w) => <Fragment key={w.k}><span>{w.name}</span><span>Picked, connects when live</span></Fragment>)}
         {!picked.length && !garminLive && <><span>Wearable</span><span>None picked</span></>}
-        <span>Google Calendar</span><span>Not available yet</span>
       </div>
       <div style={{ marginTop: 12 }}><ConnectWearable variant="ghost" /></div>
     </>

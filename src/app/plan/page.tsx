@@ -13,6 +13,7 @@ import { SessionPanel } from "@/components/plan/SessionPanel";
 import { MonthGrid } from "@/components/plan/MonthGrid";
 import { PeriodStepper } from "@/components/PeriodStepper";
 import { RampChart } from "@/components/plan/RampChart";
+import { CalendarBadge } from "@/components/plan/CalendarBadge";
 import { PhaseDetail } from "@/components/plan/PlanExplained";
 import { plannedByDiscipline, plannedLoad, type Sport, type Week } from "@/lib/data";
 import { usePlan } from "@/lib/store";
@@ -106,7 +107,6 @@ function Plan() {
   const [adding, setAdding] = useState(false);
   const [overview, setOverview] = useState<number | null>(null);
   const [phaseSel, setPhaseSel] = useState<string | null>(null);
-  const [calInfo, setCalInfo] = useState(false);
   useEffect(() => { if (fromUrl) { setSel(fromUrl); const hit = plan.findSession(fromUrl); if (hit) setWk(hit.w.week); } }, [fromUrl, plan]);
   useEffect(() => { if (plan.ready && !fromUrl) setWk(plan.currentWeek().week); }, [plan.ready]); // eslint-disable-line react-hooks/exhaustive-deps
   const week = plan.weekByNumber(wk);
@@ -132,15 +132,7 @@ function Plan() {
             <button type="button" className={view === "week" ? "on" : ""} onClick={() => setView("week")}>Week</button>
             <button type="button" className={view === "month" ? "on" : ""} onClick={() => setView("month")}>Month</button>
           </div>
-          <span style={{ position: "relative" }}>
-            <button type="button" className="badge" aria-expanded={calInfo} onClick={() => setCalInfo((o) => !o)} title={`Google Calendar sync ${plan.calendar ? "on" : "off"}`}><span className={plan.calendar ? "ok" : "ok off"}>{plan.calendar ? "✓" : "-"}</span>Calendar</button>
-            {calInfo && (
-              <div className="menu" role="dialog">
-                <div className="small"><b>Google Calendar</b><br />Not connected yet.</div>
-                <button type="button" onClick={() => { plan.toggleCalendar(); setCalInfo(false); }}>{plan.calendar ? "Turn sync off" : "Turn sync on"}</button>
-              </div>
-            )}
-          </span>
+          <CalendarBadge />
           {!plan.hasPlan && <Link href="/plan/new" className="btn ghost">Build plan</Link>}
           <button className="btn" type="button" onClick={() => setAdding((a) => !a)} aria-expanded={adding}><Icon name="plus" />Add session</button>
         </div>
