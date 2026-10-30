@@ -42,7 +42,7 @@ export default function Privacy() {
         <tbody>
           <tr><th>Supabase</th><td>Database and sign-in. Stores everything listed above.</td></tr>
           <tr><th>Vercel</th><td>Hosts the website and runs the app&apos;s server code.</td></tr>
-          <tr><th>OpenRouter</th><td>Passes each coach question, with the compact copy of your data, to the AI model that answers it: DeepSeek or Google Gemini for everyday questions, Anthropic Claude, OpenAI GPT or Google Gemini for whole-plan reviews. It is used to answer that question only.</td></tr>
+          <tr><th>OpenRouter</th><td>Passes each coach question, with the compact copy of your data, to the AI model that answers it: DeepSeek or Google Gemini for everyday questions, Anthropic Claude, OpenAI GPT or Google Gemini for whole-plan reviews. It is used to answer that question only, and every request is set to go only to AI providers that do not store it or train on it.</td></tr>
           <tr><th>Junction</th><td>Connects your watch (Garmin today) and sends your activities and body data to Velocity once you connect it. You can disconnect it at any time under Connect wearable; activities already imported stay until you delete them.</td></tr>
           <tr><th>Google</th><td>Sign-in with Google gives us your email address, name and profile picture. If you connect Google Calendar, Velocity creates one calendar in your Google account, called Velocity training, and keeps your planned sessions in it (time, length and steps). Velocity can only change that calendar. Only if you also turn on Show my other events, Velocity reads the list of your calendars and the title, time and calendar of your other events, to show them on your Plan page; it reads them from Google each time you open the page, does not store them, and never changes them. Disconnecting withdraws the access at Google, and you choose whether the Velocity training calendar is deleted.</td></tr>
           <tr><th>USDA FoodData Central</th><td>Receives the words you type into food search, nothing else about you.</td></tr>
@@ -57,10 +57,10 @@ export default function Privacy() {
       <p>We use the cookies needed to keep you signed in, and your browser&apos;s local storage for settings on this device. No advertising or tracking cookies.</p>
 
       <h2>How long we keep it</h2>
-      <p>For as long as you have an account. When you ask us to delete your account, your data is deleted from our database within 30 days; backups held by our database provider roll over within their own retention period.</p>
+      <p>For as long as you have an account. Profile, Delete my account deletes your account and everything in it straight away, removes your Velocity training calendar from Google and ends your watch connection. If you ask us to delete it instead, we do it within 30 days. Backups held by our database provider roll over within their own retention period.</p>
 
       <h2>Your rights</h2>
-      <p>You can see and change your data in the app at any time. You can ask us for a copy of it, to correct it, to delete it, or to stop processing it, and you can withdraw consent for health data by deleting it or disconnecting your device. Send the request through the <Link href="/help">Help page</Link> from the email address on your account. If you are in the EU or UK you can also complain to your data protection authority.</p>
+      <p>You can see and change your data in the app at any time, and delete your account under Profile. You can ask us for a copy of it, to correct it, to delete it, or to stop processing it, and you can withdraw consent for health data by deleting it or disconnecting your device. Send the request through the <Link href="/help">Help page</Link> from the email address on your account. If you are in the EU or UK you can also complain to your data protection authority.</p>
 
       <h2>Age</h2>
       <p>Velocity is for people aged 16 and over.</p>
