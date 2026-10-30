@@ -49,8 +49,10 @@ export function unseal(sealed: string) {
 export function authLink(redirectUri: string, state: string, loginHint?: string, read = false) {
   const c = googleConfig();
   const scope = [...SCOPES, ...(read ? [READ_SCOPE, LIST_SCOPE] : [])].join(" ");
-  const q = new URLSearchParams({ client_id: c.clientId, redirect_uri: redirectUri, response_type: "code", scope, access_type: "offline", prompt: "consent", include_granted_scopes: "true", state });
-  if (loginHint) q.set("login_hint", loginHint);
+  // select_account: Google always shows "Choose an account" first, so the athlete picks the right Google account
+  // (work or personal), and that page's address starts with client_id (the Google review video needs it visible)
+  const q = new URLSearchParams({ client_id: c.clientId, redirect_uri: redirectUri, response_type: "code", scope, access_type: "offline", prompt: "consent select_account", include_granted_scopes: "true", state });
+  void loginHint;
   return `${c.authUrl}?${q}`;
 }
 
