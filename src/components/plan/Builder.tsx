@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { Icon } from "../icons";
 import { ConnectWearable } from "../ConnectWearable";
 import { usePlan } from "@/lib/store";
+import { useCalendar } from "@/lib/calendar/client";
 import { DISTANCES, distanceInfo, type Race, type RaceDistance } from "@/lib/athlete";
 import type { Availability } from "@/lib/data";
 import { dateFull, dateLabel, ymd, addDays, today } from "@/lib/format";
@@ -231,6 +232,7 @@ function FitnessStep({ intake, set, kind, imperial }: { intake: Intake; set: <K 
 // ---------- 4, time ----------
 function TimeStep({ intake, set, kind, plan }: { intake: Intake; set: <K extends keyof Intake>(k: K, p: Patch<Intake[K]>) => void; kind: Kind; plan: ReturnType<typeof usePlan> }) {
   const t = intake.time;
+  const cal = useCalendar();
   const toggleDay = (n: number) => set("time", (cur) => ({ days: cur.days.includes(n) ? cur.days.filter((x) => x !== n) : [...cur.days, n] }));
   const weekendOn = t.days.includes(6) || t.days.includes(0);
   return (
@@ -259,8 +261,7 @@ function TimeStep({ intake, set, kind, plan }: { intake: Intake; set: <K extends
         <button type="button" className="linkbtn" onClick={() => set("time", (cur) => ({ blackouts: [...cur.blackouts, { from: "", to: "", note: "" }] }))}>+ Add dates</button>
       </div>
       <div className="pb-cal">
-        <button type="button" className={`btn ghost${t.calendar_sync ? " on" : ""}`} onClick={() => { set("time", { calendar_sync: !t.calendar_sync }); if (plan.calendar !== !t.calendar_sync) plan.toggleCalendar(); }}><Icon name="calendar" />{t.calendar_sync ? "✓ Workouts will sync to Google Calendar" : "Sync workouts to Google Calendar"}</button>
-        <span className="hint">Not connected yet.</span>
+        <span className="hint">{cal.status?.connection?.status === "connected" ? "Your sessions go to the Velocity training calendar in Google Calendar as soon as the plan is built." : plan.accounts ? "Once the plan is built, your sessions can go to Google Calendar or any calendar app: Profile, Calendar." : "Calendar connections need an account."}</span>
       </div>
     </>
   );

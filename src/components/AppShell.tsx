@@ -9,6 +9,7 @@ import { useNow } from "@/lib/useNow";
 import { todayLabel } from "@/lib/format";
 import { FeedbackModal } from "./Feedback";
 import { CoachDockProvider } from "./CoachDock";
+import { CalendarSync } from "./CalendarSync";
 import "@/app/account.css";
 
 const NAV: { href: string; label: string; short?: string; icon: Parameters<typeof Icon>[0]["name"] }[] = [
@@ -75,6 +76,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         ))}
       </nav>
       <CoachDockProvider>{children}</CoachDockProvider>
+      {plan.accounts && <CalendarSync />}
     </div>
   );
 }

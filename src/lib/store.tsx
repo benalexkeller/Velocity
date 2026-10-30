@@ -122,8 +122,6 @@ export interface PlanStore {
   thread: ThreadMsg[];
   undone: boolean;
   undoPlanUpdate: () => void;
-  calendar: boolean;
-  toggleCalendar: () => void;
   changes: number;
   reset: () => void;
   saveProfile: (p: Partial<Profile>) => Promise<void>;
@@ -297,7 +295,6 @@ export function PlanProvider({ children }: { children: ReactNode }) {
       },
       thread: data.thread, undone: st.undone,
       undoPlanUpdate: () => setState((s) => ({ ...s, undone: !s.undone })),
-      calendar: st.calendar, toggleCalendar: () => setState((s) => ({ ...s, calendar: !s.calendar })),
       changes,
       reset: () => { void be.reset().then(reload); },
       saveProfile: async (p) => { await be.saveProfile(p); setData((cur) => ({ ...cur, profile: cur.profile ? { ...cur.profile, ...p } : cur.profile })); },
