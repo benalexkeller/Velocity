@@ -8,8 +8,9 @@
 
 /** Everyday questions: fast and cheap. */
 // No DeepSeek: its terms let it train on what it receives, which Google's review (1 Nov 2026) does not accept for an
-// app that uses Google data. Gemini Flash and Claude Haiku are paid APIs whose terms exclude training on requests.
-export const FAST_MODELS = ["~google/gemini-flash-latest", "~anthropic/claude-haiku-latest"];
+// app that uses Google data. Claude Haiku and Gemini Flash are paid APIs whose terms exclude training on requests.
+// Haiku first: on 1 Nov 2026 Claude Haiku 5.5 cost $0.10 / $0.50 per million tokens in / out, Gemini 3.8 Flash $0.75 / $3.75.
+export const FAST_MODELS = ["~anthropic/claude-haiku-latest", "~google/gemini-flash-latest"];
 /** Whole-plan reviews (and, next, new plans): the strongest models. */
 export const STRONG_MODELS = ["~anthropic/claude-sonnet-latest", "~openai/gpt-latest", "~google/gemini-pro-latest"];
 

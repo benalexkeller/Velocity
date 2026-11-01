@@ -4,7 +4,7 @@
 // any proposed plan change. The model key never reaches the browser.
 //
 // The coach works across several models (src/lib/coach/models.ts): everyday questions go to the fast list
-// (Gemini Flash first), a whole-plan review (mode "restructure", run only after the athlete accepts a pitch card) to
+// (Claude Haiku first), a whole-plan review (mode "restructure", run only after the athlete accepts a pitch card) to
 // the strong list (newest Claude, then GPT, then Gemini). OpenRouter tries each list in order, so a model that is
 // down never stops the coach. COACH_DAILY_CAP: questions per athlete per day (default 40).
 import { NextResponse, type NextRequest } from "next/server";
