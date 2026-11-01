@@ -4,7 +4,8 @@
 // One test user: reviewer@velocity.test / old-pass-123. Addresses ending in @outside.test get Supabase's
 // "Email address not authorized" (what the built-in email sender says for anyone outside the project team).
 // GET /debug/last-link gives the link the last reset email would contain; GET /debug/users the users.
-// Only the auth endpoints the login and reset pages use; database calls (/rest/v1) get an empty list.
+// Only the auth endpoints the login, sign-up and reset pages use. Database calls (/rest/v1) get an empty answer, except
+// profile writes, which get Supabase's 403 unless the id is the signed-in user's own (GET /debug/writes lists them).
 const http = require("http");
 const crypto = require("crypto");
 const PORT = Number(process.env.PORT || 54321);
@@ -15,6 +16,7 @@ const recoveries = new Map(); // token -> { email, redirect, challenge, method, 
 const codes = new Map(); // auth code -> { email, challenge, method }
 const sessions = new Map(); // access or refresh token -> email
 let lastLink = null;
+const writes = []; // profile writes: who sent them and for which ids
 
 const b64 = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
 const userOf = (email) => { const u = users.get(email); return { id: u.id, aud: "authenticated", role: "authenticated", email: u.email, email_confirmed_at: "2026-11-01T00:00:00Z", app_metadata: { provider: "email", providers: ["email"] }, user_metadata: {}, identities: [], created_at: "2026-11-01T00:00:00Z", updated_at: new Date().toISOString() }; };
@@ -106,8 +108,24 @@ http.createServer((req, res) => {
       }
       return send(res, 200, userOf(email));
     }
+    if (p === "/auth/v1/signup" && req.method === "POST") {
+      const email = String(body.email || "").toLowerCase();
+      if (users.has(email)) return fail(res, 422, "user_already_exists", "User already registered");
+      users.set(email, { id: crypto.randomUUID(), email, password: body.password });
+      return send(res, 200, session(email)); // "Confirm email" off: signed in straight away
+    }
     if (p === "/auth/v1/logout") { sessions.delete(String(req.headers.authorization || "").replace(/^Bearer /i, "")); return send(res, 204); }
-    if (p.startsWith("/rest/v1")) return send(res, 200, []);
+    // the one row rule that matters for sign-up: a profile can only be written by its own user (Supabase answers 403)
+    if (p === "/rest/v1/profiles" && (req.method === "POST" || req.method === "PATCH")) {
+      const email = bearer(req);
+      const rows = Array.isArray(body) ? body : [body];
+      writes.push({ method: req.method, as: email ?? "anon", ids: rows.map((r) => r.id) });
+      if (!email || rows.some((r) => r.id && r.id !== users.get(email).id)) return send(res, 403, { code: "42501", message: 'new row violates row-level security policy for table "profiles"' });
+      return send(res, 201, []);
+    }
+    if (p === "/debug/writes") return send(res, 200, writes);
+    if (p.startsWith("/rest/v1/rpc/")) return send(res, 200, false);
+    if (p.startsWith("/rest/v1")) return send(res, 200, req.headers.accept?.includes("vnd.pgrst.object") ? null : []);
     return fail(res, 404, "not_found", "Not found");
   });
 }).listen(PORT, () => console.log(`mock Supabase Auth on ${BASE}`));
