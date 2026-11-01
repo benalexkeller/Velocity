@@ -312,7 +312,9 @@ export function PlanProvider({ children }: { children: ReactNode }) {
         if (local.thread.length) await be.appendThread(local.thread);
         await reload();
       },
-      signOut: async () => { await be.signOut(); router.replace("/login"); },
+      // full page load on purpose: nothing of the signed-out account (plan, calendar, coach chat) stays in memory
+      // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+      signOut: async () => { await be.signOut(); window.location.assign("/login"); },
       reload,
     };
   }, [d, data, ready, busy, coachOn, athlete, be, setState, reload, router]);

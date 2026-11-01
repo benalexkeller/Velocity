@@ -7,6 +7,7 @@
 .lg-body { padding-top: 40px; padding-bottom: 32px; font-size: 16px; line-height: 1.65; color: var(--ink-2); }
 .lg-body h2 { font-size: 22px; letter-spacing: -0.02em; color: var(--ink); margin: 40px 0 12px; max-width: none; }
 .lg-body h2:first-child { margin-top: 0; }
+.lg-body h3 { font-size: 17px; letter-spacing: -0.01em; color: var(--ink); margin: 24px 0 8px; font-weight: 600; }
 .lg-body p { margin: 0 0 14px; }
 .lg-body ul { margin: 0 0 14px; padding-left: 20px; display: grid; gap: 6px; }
 .lg-body b { color: var(--ink); font-weight: 600; }

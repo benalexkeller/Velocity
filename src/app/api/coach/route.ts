@@ -4,7 +4,7 @@
 // any proposed plan change. The model key never reaches the browser.
 //
 // The coach works across several models (src/lib/coach/models.ts): everyday questions go to the fast list
-// (DeepSeek first), a whole-plan review (mode "restructure", run only after the athlete accepts a pitch card) to
+// (Claude Haiku first), a whole-plan review (mode "restructure", run only after the athlete accepts a pitch card) to
 // the strong list (newest Claude, then GPT, then Gemini). OpenRouter tries each list in order, so a model that is
 // down never stops the coach. COACH_DAILY_CAP: questions per athlete per day (default 40).
 import { NextResponse, type NextRequest } from "next/server";
@@ -108,7 +108,9 @@ async function callModel(models: string[], messages: Msg[], tools: unknown[], ma
       return await fetch(`${BASE}/chat/completions`, {
         method: "POST",
         headers: { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json", "HTTP-Referer": "https://velocityathletes.com", "X-Title": "Velocity coach" },
-        body: JSON.stringify({ model: list[0], ...(list.length > 1 ? { models: list } : {}), messages, tools, tool_choice: "auto", max_tokens: maxTokens, temperature: 0.3 }),
+        // provider.data_collection "deny": OpenRouter only uses AI providers that do not store prompts or train on
+        // them, which is what the privacy policy promises athletes
+        body: JSON.stringify({ model: list[0], ...(list.length > 1 ? { models: list } : {}), provider: { data_collection: "deny" }, messages, tools, tool_choice: "auto", max_tokens: maxTokens, temperature: 0.3 }),
         signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (e) { console.error("[coach] fetch", e); return null; }

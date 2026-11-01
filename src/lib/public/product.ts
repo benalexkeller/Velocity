@@ -145,7 +145,7 @@ export const PRODUCT: ProductPage[] = [
       {
         id: "models", title: "Built across the leading models", short: "The right model for each job, and the newest as they arrive",
         body: ["The coach works across the leading AI models. Everyday questions go to a fast model; whole-plan reviews go to the strongest one available. If a model is down, the next one in line answers.", "New versions are picked up as they are released, so the coach gets stronger without you changing anything. Your data, the library and the safety check stay the same whichever model answers."],
-        chips: [{ name: "DeepSeek", role: "Questions" }, { name: "Gemini Flash", role: "Questions, backup" }, { name: "Claude", role: "Plan reviews" }, { name: "GPT", role: "Plan reviews, backup" }, { name: "Gemini Pro", role: "Plan reviews, backup" }],
+        chips: [{ name: "Claude Haiku", role: "Questions" }, { name: "Gemini Flash", role: "Questions, backup" }, { name: "Claude", role: "Plan reviews" }, { name: "GPT", role: "Plan reviews, backup" }, { name: "Gemini Pro", role: "Plan reviews, backup" }],
       },
       {
         id: "limits", title: "Limits", short: "What the coach will not do",

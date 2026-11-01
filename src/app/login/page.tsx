@@ -5,6 +5,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { BRAND } from "@/lib/config";
 import { supabase } from "@/lib/supabase/client";
 import { ACCOUNTS_ON } from "@/lib/supabase/env";
+import { PasswordInput } from "@/components/account/PasswordInput";
 
 export default function LoginPage() {
   return <Suspense fallback={null}><Login /></Suspense>;
@@ -14,17 +15,32 @@ function GoogleMark() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="#4285F4" d="M23.5 12.3c0-.8-.1-1.6-.2-2.3H12v4.5h6.5c-.3 1.5-1.1 2.7-2.4 3.6v3h3.9c2.3-2.1 3.5-5.2 3.5-8.8z" /><path fill="#34A853" d="M12 24c3.2 0 6-1.1 8-2.9l-3.9-3c-1.1.7-2.5 1.2-4.1 1.2-3.1 0-5.8-2.1-6.7-5H1.3v3.1C3.3 21.3 7.3 24 12 24z" /><path fill="#FBBC05" d="M5.3 14.3c-.2-.7-.4-1.5-.4-2.3s.1-1.6.4-2.3V6.6H1.3C.5 8.2 0 10 0 12s.5 3.8 1.3 5.4l4-3.1z" /><path fill="#EA4335" d="M12 4.8c1.8 0 3.3.6 4.6 1.8l3.4-3.4C18 1.2 15.2 0 12 0 7.3 0 3.3 2.7 1.3 6.6l4 3.1c.9-2.9 3.6-4.9 6.7-4.9z" /></svg>;
 }
 
+type Mode = "in" | "up" | "forgot";
+const modeOf = (m: string | null): Mode => (m === "up" || m === "forgot" ? m : "in");
+const LINK_ERRORS: Record<string, string> = {
+  link: "That sign-in link didn't work. Try again.",
+  reset: "That reset link didn't work. A link works once, for one hour, in the browser where you asked for it. Ask for a new one below.",
+};
+
+/** Supabase's reset-email errors in plain words. */
+function resetError(x: unknown) {
+  const m = x instanceof Error ? x.message : "";
+  if (/not authorized/i.test(m)) return "Reset emails can't be sent to this address yet. Write to us through the Help page and we'll reset your password.";
+  if (/rate limit/i.test(m)) return "Too many reset emails have been asked for. Wait a few minutes and try again.";
+  return m || "Something went wrong.";
+}
+
 function Login() {
   const router = useRouter();
   const params = useSearchParams();
   const next = params.get("next") || "/dashboard";
   const linkError = params.get("error");
-  const [mode, setMode] = useState<"in" | "up">(params.get("mode") === "up" ? "up" : "in");
+  const [mode, setMode] = useState<Mode>(modeOf(params.get("mode")));
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [busy, setBusy] = useState(false);
-  const [err, setErr] = useState<string | null>(linkError ? "That sign-in link didn't work. Try again." : null);
+  const [err, setErr] = useState<string | null>(linkError ? LINK_ERRORS[linkError] ?? LINK_ERRORS.link : null);
   const [note, setNote] = useState<string | null>(null);
 
   if (!ACCOUNTS_ON) {
@@ -33,10 +49,21 @@ function Login() {
     );
   }
 
+  function go(to: Mode) { setMode(to); setErr(null); setNote(null); }
+
   async function submit(e: React.FormEvent) {
     e.preventDefault();
     const sb = supabase(); if (!sb) return;
     setBusy(true); setErr(null); setNote(null);
+    if (mode === "forgot") {
+      try {
+        const { error } = await sb.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset` });
+        if (error) throw error;
+        setNote(`If there is an account for ${email.trim()}, we've sent it a link to set a new password. Open the link in this browser within one hour.`);
+      } catch (x) { setErr(resetError(x)); }
+      setBusy(false);
+      return;
+    }
     try {
       if (mode === "up") {
         const { data, error } = await sb.auth.signUp({ email: email.trim(), password, options: { data: { full_name: name.trim() }, emailRedirectTo: `${window.location.origin}/auth/callback?next=/setup` } });
@@ -62,19 +89,27 @@ function Login() {
     <main className="auth">
       <section className="card box">
         <span className="wordmark">{BRAND.name}</span>
-        <h1>{mode === "in" ? "Sign in" : "Create your account"}</h1>
+        <h1>{mode === "in" ? "Sign in" : mode === "up" ? "Create your account" : "Reset your password"}</h1>
         {mode === "up" && <p className="sub">Only you can see your data.</p>}
-        <button type="button" className="btn google" onClick={google}><GoogleMark />Continue with Google</button>
-        <div className="or">or with email</div>
+        {mode === "forgot" && <p className="sub">Enter the email on your account and we&apos;ll send you a link to set a new password. If you sign in with Google, you don&apos;t need one: use Continue with Google.</p>}
+        {mode !== "forgot" && <>
+          <button type="button" className="btn google" onClick={google}><GoogleMark />Continue with Google</button>
+          <div className="or">or with email</div>
+        </>}
         <form className="form" onSubmit={submit}>
           {mode === "up" && <label><b>Name</b><input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" placeholder="First and last name" /></label>}
           <label><b>Email</b><input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="email" /></label>
-          <label><b>Password</b><input type="password" required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={mode === "in" ? "current-password" : "new-password"} placeholder={mode === "up" ? "At least 8 characters" : ""} /></label>
+          {mode !== "forgot" && <label><b>Password</b><PasswordInput required minLength={8} value={password} onChange={(e) => setPassword(e.target.value)} autoComplete={mode === "in" ? "current-password" : "new-password"} placeholder={mode === "up" ? "At least 8 characters" : ""} /></label>}
+          {mode === "in" && <div className="forgot"><button type="button" onClick={() => go("forgot")}>Forgot password?</button></div>}
           {err && <div className="err">{err}</div>}
           {note && <div className="ok-note">{note}</div>}
-          <button type="submit" className="btn wide" disabled={busy}>{busy ? "…" : mode === "in" ? "Sign in" : "Create account"}</button>
+          <button type="submit" className="btn wide" disabled={busy}>{busy ? "…" : mode === "in" ? "Sign in" : mode === "up" ? "Create account" : "Send reset link"}</button>
         </form>
-        <div className="switch">{mode === "in" ? <>No account yet? <button type="button" onClick={() => { setMode("up"); setErr(null); }}>Create one</button></> : <>Already have one? <button type="button" onClick={() => { setMode("in"); setErr(null); }}>Sign in</button></>}</div>
+        <div className="switch">{mode === "in"
+          ? <>No account yet? <button type="button" onClick={() => go("up")}>Create one</button></>
+          : mode === "up"
+            ? <>Already have one? <button type="button" onClick={() => go("in")}>Sign in</button></>
+            : <>Remembered it? <button type="button" onClick={() => go("in")}>Sign in</button></>}</div>
       </section>
     </main>
   );

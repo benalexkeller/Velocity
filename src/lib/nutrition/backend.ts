@@ -46,9 +46,10 @@ type Row = Record<string, unknown>;
 const n = (v: unknown) => (v == null ? 0 : Number(v));
 export class SupabaseNutrition implements NutritionBackend {
   kind = "supabase" as const;
-  private uid = "";
   constructor(private sb: SupabaseClient) {}
-  private async user() { if (this.uid) return this.uid; const { data } = await this.sb.auth.getUser(); this.uid = data.user?.id ?? ""; return this.uid; }
+  // The signed-in user's id, read from the current session every time (no network). A remembered id outlived a sign-out
+  // and a new sign-up in the same tab, so writes went out with the old account's id and Supabase refused them (403).
+  private async user() { const { data } = await this.sb.auth.getSession(); return data.session?.user.id ?? ""; }
   private fail(where: string, error: { message: string } | null) { if (error) console.error(`[velocity/nutrition] ${where}: ${error.message}`); }
   async load(): Promise<NutritionData> {
     const uid = await this.user();

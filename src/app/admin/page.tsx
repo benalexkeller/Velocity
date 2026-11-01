@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { usePlan } from "@/lib/store";
 import { supabase } from "@/lib/supabase/client";
 import { FEEDBACK_KINDS, FEEDBACK_TABS, listFeedback, setFeedbackStatus, type FeedbackEntry } from "@/lib/feedback";
+import { DELETE_TAB } from "@/lib/account/deleteReasons";
 import { LibraryAdmin } from "@/components/admin/Library";
 
 interface Conn { user_id: string; email: string | null; username: string | null; provider: string; via: string; status: string; connected_at: string | null; last_event_at: string | null; error: string | null }
@@ -56,7 +57,7 @@ export default function AdminPage() {
           <table className="tbl small fb-table">
             <thead><tr><th>When</th><th>Who</th><th>Part</th><th>Kind</th><th>Comment</th><th>Page, browser</th><th></th></tr></thead>
             <tbody>
-              {shown.map((e) => <tr key={e.id} className={e.status === "done" ? "muted" : ""}><td style={{ whiteSpace: "nowrap" }}>{when(e.created_at)}</td><td>{e.tab === "contact" ? <>{e.email ?? "-"}{e.username ? <><br />@{e.username}</> : null}</> : e.username ? `@${e.username}` : e.email ?? "-"}</td><td>{e.tab === "contact" ? "Contact form" : label(FEEDBACK_TABS, e.tab)}</td><td>{e.kind === "contact" ? "Message" : label(FEEDBACK_KINDS, e.kind)}</td><td style={{ whiteSpace: "pre-wrap", minWidth: 260 }}>{e.message}</td><td className="muted" style={{ fontSize: 11.5 }}>{e.page ?? "-"}{e.viewport ? `, ${e.viewport}` : ""}{e.ua ? `, ${e.ua.replace(/^Mozilla\/5\.0 /, "").slice(0, 60)}` : ""}</td><td><button type="button" className="btn ghost small" onClick={() => flip(e)}>{e.status === "done" ? "Reopen" : "Mark done"}</button></td></tr>)}
+              {shown.map((e) => <tr key={e.id} className={e.status === "done" ? "muted" : ""}><td style={{ whiteSpace: "nowrap" }}>{when(e.created_at)}</td><td>{e.tab === "contact" ? <>{e.email ?? "-"}{e.username ? <><br />@{e.username}</> : null}</> : e.username ? `@${e.username}` : e.email ?? "-"}</td><td>{e.tab === "contact" ? "Contact form" : e.tab === DELETE_TAB ? "Account deleted" : label(FEEDBACK_TABS, e.tab)}</td><td>{e.kind === "contact" ? "Message" : e.tab === DELETE_TAB ? "Reason" : label(FEEDBACK_KINDS, e.kind)}</td><td style={{ whiteSpace: "pre-wrap", minWidth: 260 }}>{e.message}</td><td className="muted" style={{ fontSize: 11.5 }}>{e.page ?? "-"}{e.viewport ? `, ${e.viewport}` : ""}{e.ua ? `, ${e.ua.replace(/^Mozilla\/5\.0 /, "").slice(0, 60)}` : ""}</td><td><button type="button" className="btn ghost small" onClick={() => flip(e)}>{e.status === "done" ? "Reopen" : "Mark done"}</button></td></tr>)}
               {fb && !shown.length && <tr><td colSpan={7} className="muted" style={{ padding: 20 }}>{showDone ? "No feedback yet." : "Nothing open."}</td></tr>}
             </tbody>
           </table>

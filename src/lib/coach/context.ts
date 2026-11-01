@@ -53,7 +53,8 @@ export function buildCoachContext(p: PlanStore, opts: { whole?: boolean } = {}):
   return {
     today: ymd(t), now: hm(new Date()),
     athlete: {
-      name: a.firstName, units: a.units,
+      // no name or email: they can come from the athlete's Google profile, and nothing from Google goes to an AI model
+      units: a.units,
       race: a.hasRace ? { name: a.race.name, date: a.race.date, distance: a.race.distanceLabel, goal: a.race.goal } : null,
       lthr: a.lthr, ftp: a.ftp, zones: a.zones, availability: a.availability,
     },

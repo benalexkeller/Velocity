@@ -6,6 +6,7 @@ import { ConnectWearable, WEARABLES, useConnections, useWearables } from "@/comp
 import { usePlan } from "@/lib/store";
 import { ProfileForm } from "@/components/account/ProfileForm";
 import { CalendarCard } from "@/components/account/CalendarCard";
+import { DeleteAccount } from "@/components/account/DeleteAccount";
 import { dateFull, dateLabel } from "@/lib/format";
 
 export default function ProfilePage() {
@@ -42,6 +43,12 @@ export default function ProfilePage() {
           <h2>Calendar</h2>
           <CalendarCard />
         </section>
+        {plan.accounts && (
+          <section className="card" id="delete">
+            <h2>Delete account</h2>
+            <DeleteAccount />
+          </section>
+        )}
         {plan.accounts && a.isAdmin && <Link href="/admin" className="link">Admin →</Link>}
       </div>
     </main>

@@ -65,7 +65,7 @@ export interface CoachContext {
   today: string; // YYYY-MM-DD, athlete's local date
   now: string; // HH:MM
   athlete: {
-    name: string; units: "imperial" | "metric";
+    units: "imperial" | "metric";
     race: { name: string; date: string; distance: string; goal: string } | null;
     lthr: number | null; ftp: number | null;
     zones: Record<string, Record<string, string>>;

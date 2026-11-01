@@ -131,9 +131,10 @@ function activityToRow(userId: string, a: Activity): Row {
 export class SupabaseBackend implements Backend {
   kind = "supabase" as const;
   private sb: SupabaseClient;
-  private uid = "";
   constructor(client: SupabaseClient) { this.sb = client; }
-  private async user() { if (this.uid) return this.uid; const { data } = await this.sb.auth.getUser(); this.uid = data.user?.id ?? ""; return this.uid; }
+  // The signed-in user's id, read from the current session every time (no network). A remembered id outlived a sign-out
+  // and a new sign-up in the same tab, so writes went out with the old account's id and Supabase refused them (403).
+  private async user() { const { data } = await this.sb.auth.getSession(); return data.session?.user.id ?? ""; }
   async load(): Promise<UserData> {
     const uid = await this.user();
     if (!uid) return EMPTY_DATA;
