@@ -58,8 +58,10 @@ with tokens in `src/app/globals.css`, no UI library. `npm run dev` → http://lo
 
 - Small fixes (2026-10-30): every OpenRouter request sends `provider: { data_collection: "deny" }` (only AI providers that neither store prompts nor train on them; the privacy page promises it). Profile → Delete account: `POST /api/account/delete` deletes the Velocity training calendar at Google and revokes access, ends the Junction/Garmin connection, then calls the SQL function `delete_my_account()` (`supabase/schema-account.sql`, security definer: deletes the athlete's feedback rows and their auth user; every other table cascades). The Help-page "contact form" insert policy and `delete_my_account` were run in Supabase on 30 Oct.
 
+- Passwords (2026-11-01): every password box is `components/account/PasswordInput.tsx` (eye button shows / hides it; hidden again on submit so browsers still offer to save it). Forgot password: Sign in → "Forgot password?" → `resetPasswordForEmail` with `redirectTo /auth/callback?next=/auth/reset` → `/auth/callback` turns the link into a session (`?code=`, or `?token_hash=&type=` if the Supabase email template is changed to link there) → `/auth/reset` sets the new password with `updateUser`. A failed or reused link goes to `/login?error=reset&mode=forgot`. Supabase's built-in email sender only delivers to the project team's addresses (2 emails an hour), so reset emails reach real athletes only once a mail sender (custom SMTP, e.g. Resend) is set in Supabase → Authentication → Emails; until then the form says to write through Help. Test without Supabase: `node scripts/mock-supabase-auth.js` and `NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321 NEXT_PUBLIC_SUPABASE_ANON_KEY=test`.
+
 ## Roadmap (in order)
 1. Buy Junction (sandbox first), set the env values, run the two SQL files, test Connect Garmin on the live site; apply to Garmin's own developer program in parallel.
 2. Coach: Sunday weekly review as a scheduled job; onboarding interview that writes the plan.
 3. Busy times from the athlete's calendar (`calendar.events.freebusy`, non-sensitive; decision pending); Whoop.
-4. Metric units in the UI, password reset, avatar upload, Stripe, lawyer review of Privacy/Terms, monitoring.
+4. Metric units in the UI, avatar upload, Stripe, lawyer review of Privacy/Terms, monitoring.
