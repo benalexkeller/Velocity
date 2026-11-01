@@ -13,3 +13,9 @@ end;
 $$;
 revoke all on function public.delete_my_account() from public, anon;
 grant execute on function public.delete_my_account() to authenticated;
+
+-- The optional "why are you deleting your account" answer, saved just before the deletion with no link to the person
+-- (user_id empty), so it is kept. Only a signed-in athlete can send one.
+drop policy if exists "account deleted reason" on public.feedback;
+create policy "account deleted reason" on public.feedback for insert to authenticated
+  with check (tab = 'account-deleted' and user_id is null);

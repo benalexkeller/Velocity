@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: `Privacy - ${BRAND.name}`, descriptio
 
 export default function Privacy() {
   return (
-    <LegalPage eyebrow="Legal" title="Privacy policy" updated="30 October 2026" lead="What Velocity stores about you, why, which services handle it, and how to have it deleted. Only you can see your data, and we do not sell it.">
+    <LegalPage eyebrow="Legal" title="Privacy policy" updated="1 November 2026" lead="What Velocity stores about you, why, which services handle it, and how to have it deleted. Only you can see your data, and we do not sell it.">
       <h2>Who we are</h2>
       <p>{BRAND.name} is a training app for endurance athletes at velocityathletes.com. In this policy &quot;we&quot; means the team that runs it. Questions about your data go through the <Link href="/help">Help page</Link>.</p>
 
@@ -42,7 +42,7 @@ export default function Privacy() {
         <tbody>
           <tr><th>Supabase</th><td>Database and sign-in. Stores everything listed above.</td></tr>
           <tr><th>Vercel</th><td>Hosts the website and runs the app&apos;s server code.</td></tr>
-          <tr><th>OpenRouter</th><td>Passes each coach question, with the compact copy of your data, to the AI model that answers it: DeepSeek or Google Gemini for everyday questions, Anthropic Claude, OpenAI GPT or Google Gemini for whole-plan reviews. It is used to answer that question only, and every request is set to go only to AI providers that do not store it or train on it.</td></tr>
+          <tr><th>OpenRouter</th><td>Passes each coach question, with the compact copy of your training data, to the AI model that answers it: Google Gemini Flash or Anthropic Claude Haiku for everyday questions, Anthropic Claude, OpenAI GPT or Google Gemini for whole-plan reviews. It is used to answer that question only. The paid services of these companies do not train on the requests they receive, and every request is set to go only to providers that do not store it or train on it. The coach never receives anything that came from Google (see Data from Google).</td></tr>
           <tr><th>Junction</th><td>Connects your watch (Garmin today) and sends your activities and body data to Velocity once you connect it. You can disconnect it at any time under Connect wearable; activities already imported stay until you delete them.</td></tr>
           <tr><th>Google</th><td>Sign-in with Google gives us your email address, name and profile picture. If you connect Google Calendar, Velocity creates one calendar in your Google account, called Velocity training, and keeps your planned sessions in it (time, length and steps). Velocity can only change that calendar. Only if you also turn on Show my other events, Velocity reads the list of your calendars and the title, time and calendar of your other events, to show them on your Plan page; it reads them from Google each time you open the page, does not store them, and never changes them. Disconnecting withdraws the access at Google, and you choose whether the Velocity training calendar is deleted.</td></tr>
           <tr><th>USDA FoodData Central</th><td>Receives the words you type into food search, nothing else about you.</td></tr>
@@ -50,8 +50,30 @@ export default function Privacy() {
         </tbody>
       </table>
 
-      <h2>Data from Google</h2>
-      <p>Velocity&apos;s use and transfer to any other app of information received from Google APIs will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noreferrer">Google API Services User Data Policy</a>, including the Limited Use requirements. We use it only to sign you in, to keep your Velocity training calendar up to date and, if you turn it on, to show your other events on your Plan page. We do not sell it, use it for advertising, or use it to train AI models, and no person reads it unless you ask us to help with a problem.</p>
+      <h2 id="google">Data from Google</h2>
+      <p>Velocity&apos;s use and transfer to any other app of information received from Google APIs will adhere to the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noreferrer">Google API Services User Data Policy</a>, including the Limited Use requirements.</p>
+      <h3>What we receive and why</h3>
+      <ul>
+        <li>Sign in with Google: your email address, name and profile picture, to create and show your account.</li>
+        <li>Connect Google Calendar: permission to create one calendar, Velocity training, and to add, change and delete the events in it, so your planned sessions appear in your calendar. Velocity cannot see or change any other calendar with this permission.</li>
+        <li>Show my other events, only if you turn it on: the list of your calendars and the title, start and end time and calendar of your other events, to show them read-only on your Plan page.</li>
+      </ul>
+      <h3>Who we share it with</h3>
+      <p>We share Google user data only with the two service providers that run Velocity for us, and only to provide these features to you:</p>
+      <ul>
+        <li>Supabase (database): stores your Google email address, name and profile picture, the encrypted key that lets Velocity update your Velocity training calendar, and which sessions are in that calendar.</li>
+        <li>Vercel (hosting): runs the server code that talks to Google. Your other calendar events pass through it on their way to your screen and are not stored.</li>
+      </ul>
+      <p>We do not sell, rent, transfer or disclose Google user data to anyone else, except where the law requires it. We do not use it for advertising. No AI model receives it: the coach is never sent your Google name, email or picture or any of your calendar events, and Google user data is never used to train AI models. No person at Velocity reads it unless you ask us to help with a problem.</p>
+      <h3>How we protect it</h3>
+      <ul>
+        <li>All traffic between your browser, our servers and Google is encrypted (HTTPS/TLS).</li>
+        <li>The database is encrypted at rest (AES-256), and access rules in the database let each signed-in person read only their own rows.</li>
+        <li>The Google Calendar key is encrypted again with AES-256-GCM before it is stored; the decryption key exists only on our server.</li>
+        <li>Your other calendar events are read from Google each time you open the Plan page, kept only in memory for that request, and never written to our database or logs.</li>
+        <li>Server keys and secrets are kept in our hosting provider&apos;s encrypted settings and never sent to the browser. Only the owner of Velocity can open the database and hosting accounts.</li>
+        <li>Disconnecting Google Calendar withdraws Velocity&apos;s access at Google; Delete my account in Profile deletes everything we hold about you, including the Google data above.</li>
+      </ul>
 
       <h2>Your browser</h2>
       <p>We use the cookies needed to keep you signed in, and your browser&apos;s local storage for settings on this device. No advertising or tracking cookies.</p>
