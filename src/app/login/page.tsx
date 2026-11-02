@@ -19,7 +19,7 @@ type Mode = "in" | "up" | "forgot";
 const modeOf = (m: string | null): Mode => (m === "up" || m === "forgot" ? m : "in");
 const LINK_ERRORS: Record<string, string> = {
   link: "That sign-in link didn't work. Try again.",
-  reset: "That reset link didn't work. A link works once, for one hour, in the browser where you asked for it. Ask for a new one below.",
+  reset: "That reset link didn't work. A link works once, for one hour. Ask for a new one below.",
 };
 
 /** Supabase's reset-email errors in plain words. */
@@ -59,7 +59,7 @@ function Login() {
       try {
         const { error } = await sb.auth.resetPasswordForEmail(email.trim(), { redirectTo: `${window.location.origin}/auth/callback?next=/auth/reset` });
         if (error) throw error;
-        setNote(`If there is an account for ${email.trim()}, we've sent it a link to set a new password. Open the link in this browser within one hour.`);
+        setNote(`If there is an account for ${email.trim()}, we've sent it a link to set a new password. The link works once, for one hour.`);
       } catch (x) { setErr(resetError(x)); }
       setBusy(false);
       return;

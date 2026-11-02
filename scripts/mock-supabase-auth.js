@@ -3,7 +3,8 @@
 // Point the app at it: NEXT_PUBLIC_SUPABASE_URL=http://localhost:54321 NEXT_PUBLIC_SUPABASE_ANON_KEY=test npx next dev
 // One test user: reviewer@velocity.test / old-pass-123. Addresses ending in @outside.test get Supabase's
 // "Email address not authorized" (what the built-in email sender says for anyone outside the project team).
-// GET /debug/last-link gives the link the last reset email would contain; GET /debug/users the users.
+// GET /debug/last-link gives the link the last reset email would contain (and its token_hash, for Velocity's own
+// email templates); GET /debug/users the users.
 // Only the auth endpoints the login, sign-up and reset pages use. Database calls (/rest/v1) get an empty answer, except
 // profile writes, which get Supabase's 403 unless the id is the signed-in user's own (GET /debug/writes lists them).
 const http = require("http");
@@ -16,6 +17,7 @@ const recoveries = new Map(); // token -> { email, redirect, challenge, method, 
 const codes = new Map(); // auth code -> { email, challenge, method }
 const sessions = new Map(); // access or refresh token -> email
 let lastLink = null;
+let lastHash = null; // what {{ .TokenHash }} would be in the email
 const writes = []; // profile writes: who sent them and for which ids
 
 const b64 = (o) => Buffer.from(JSON.stringify(o)).toString("base64url");
@@ -43,7 +45,7 @@ http.createServer((req, res) => {
     console.log(req.method, p + url.search);
     if (req.method === "OPTIONS") { res.writeHead(204, cors); return res.end(); }
 
-    if (p === "/debug/last-link") return send(res, 200, { link: lastLink });
+    if (p === "/debug/last-link") return send(res, 200, { link: lastLink, token_hash: lastHash });
     if (p === "/debug/users") return send(res, 200, [...users.values()]);
 
     if (p === "/auth/v1/token" && req.method === "POST") {
@@ -77,10 +79,18 @@ http.createServer((req, res) => {
         const token = crypto.randomBytes(16).toString("hex");
         recoveries.set(token, { email, redirect: url.searchParams.get("redirect_to"), challenge: body.code_challenge, method: body.code_challenge_method, used: false });
         lastLink = `${BASE}/auth/v1/verify?token=${token}&type=recovery&redirect_to=${encodeURIComponent(url.searchParams.get("redirect_to") || "")}`;
+        lastHash = crypto.createHash("sha256").update(token).digest("hex");
       }
       return send(res, 200, {});
     }
 
+    // Velocity's email templates link to /auth/callback?token_hash=…; the server then calls verifyOtp (POST /verify)
+    if (p === "/auth/v1/verify" && req.method === "POST") {
+      const r = [...recoveries.entries()].find(([t]) => crypto.createHash("sha256").update(t).digest("hex") === body.token_hash);
+      if (!r || r[1].used) return fail(res, 403, "otp_expired", "Email link is invalid or has expired");
+      r[1].used = true;
+      return send(res, 200, session(r[1].email, "recovery"));
+    }
     if (p === "/auth/v1/verify" && req.method === "GET") {
       const r = recoveries.get(url.searchParams.get("token"));
       const to = new URL(url.searchParams.get("redirect_to") || "http://localhost:3111/");

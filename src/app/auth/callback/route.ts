@@ -1,7 +1,8 @@
 // Where Google, email confirmation links and password reset links send the browser back to. Turns the one-time code
 // into a signed-in session, then continues to the app (a reset link continues to /auth/reset).
-// Two link shapes: ?code=… (Supabase's default emails; only works in the browser where the link was asked for), and
-// ?token_hash=…&type=… (if the email template is changed to link here directly; works in any browser).
+// Two link shapes: ?token_hash=…&type=… (Velocity's own email templates, supabase/email-templates; works in any browser
+// and on any device), and ?code=… (Google sign-in, and Supabase's default emails, which only work in the browser where
+// the link was asked for).
 import { NextResponse, type NextRequest } from "next/server";
 import type { EmailOtpType } from "@supabase/supabase-js";
 import { supabaseServer } from "@/lib/supabase/server";
