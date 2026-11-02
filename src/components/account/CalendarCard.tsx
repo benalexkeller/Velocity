@@ -27,10 +27,10 @@ const FLAG: Record<string, string> = {
   "outlook-off": "Outlook is not switched on for this site yet.",
 };
 
-/** false: Google has the same "Show my events on Plan" switch as Outlook and Apple (chosen 2 Nov 2026, while Google
- *  was still reviewing calendar.events.readonly). true brings back the exact words sent to Google's reviewers on
- *  1 Nov ("Connect Google Calendar", "Your other events", "Connect and show"), if a reviewer cannot follow the new
- *  layout. Either way the permissions asked for are the same. */
+/** false: Google has the same "Show my events on Plan" switch as Outlook and Apple. Google approved
+ *  calendar.events.readonly on 2 Nov 2026, reviewed with the older wording; true brings that wording back
+ *  ("Connect Google Calendar", "Your other events", "Connect and show") if Google ever reviews it again. Either way
+ *  the permissions asked for are the same. */
 const GOOGLE_AS_REVIEWED = false;
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
