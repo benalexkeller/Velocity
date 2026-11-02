@@ -8,7 +8,6 @@ import { usePlan } from "@/lib/store";
 import { calendarPayload, connectApple, connectGoogle, connectOutlook, disconnectCalendar, otherCalendars, queueSync, refreshCalendar, setCalendarLink, setReading, useCalendar } from "@/lib/calendar/client";
 import { PROVIDER_NAME, type AccountStatus, type CalProvider, type OtherCalendar } from "@/lib/calendar/events";
 import { GoogleCalendarIcon } from "@/components/GoogleCalendarIcon";
-import { MicrosoftSignInButton } from "@/components/MicrosoftSignInButton";
 import { PasswordInput } from "@/components/account/PasswordInput";
 
 const FLAG: Record<string, string> = {
@@ -210,9 +209,7 @@ function Account({ provider, on, acc, busy, act, onError }: {
       status={!on ? "Not available yet" : !acc ? (provider === "outlook" ? "Personal, work or school account" : "Not connected") : !ok ? (acc.error ?? "Needs connecting again") : acc.email ?? "Connected"}
       error={!!acc && !ok}
       action={on && !form && (
-        // Outlook connects through Microsoft's sign-in, so it gets Microsoft's own sign-in button
-        provider === "outlook" && !ok ? <MicrosoftSignInButton disabled={busy} onClick={connect} />
-          : !acc ? <button type="button" className="btn small" disabled={busy} onClick={connect}>Connect</button>
+        !acc ? <button type="button" className="btn small" disabled={busy} onClick={connect}>Connect</button>
           : !ok ? <button type="button" className="btn small" disabled={busy} onClick={connect}>Connect again</button>
           : !asking && <button type="button" className="btn ghost small" disabled={busy} onClick={() => setAsking(true)}>Disconnect</button>
       )}>
