@@ -8,6 +8,7 @@ import { usePlan } from "@/lib/store";
 import { calendarPayload, connectApple, connectGoogle, connectOutlook, disconnectCalendar, otherCalendars, queueSync, refreshCalendar, setCalendarLink, setReading, useCalendar } from "@/lib/calendar/client";
 import { PROVIDER_NAME, type AccountStatus, type CalProvider, type OtherCalendar } from "@/lib/calendar/events";
 import { GoogleCalendarIcon } from "@/components/GoogleCalendarIcon";
+import { MicrosoftLogo } from "@/components/MicrosoftLogo";
 import { PasswordInput } from "@/components/account/PasswordInput";
 
 const FLAG: Record<string, string> = {
@@ -36,7 +37,7 @@ const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct
 /** "30 Oct, 14:02" */
 const clock = (iso: string | null) => { if (!iso) return ""; const d = new Date(iso); return `${d.getDate()} ${MON[d.getMonth()]}, ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
 
-/** A plain calendar outline, for calendars whose own icon Velocity may not use. */
+/** A plain calendar outline, for Apple Calendar: Apple does not allow its logo or Calendar icon in other apps. */
 const CalendarGlyph = () => (
   <svg viewBox="0 0 20 20" width="18" height="18" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" aria-hidden="true">
     <rect x="3" y="4.5" width="14" height="12.5" rx="2.5" /><path d="M3 8.5h14M7 2.8v3.2M13 2.8v3.2" />
@@ -205,7 +206,7 @@ function Account({ provider, on, acc, busy, act, onError }: {
   const connect = () => (provider === "outlook" ? connectOutlook() : setForm(true));
   const ok = acc?.status === "connected";
   return (
-    <Item icon={<CalendarGlyph />} name={name}
+    <Item icon={provider === "outlook" ? <MicrosoftLogo size={18} /> : <CalendarGlyph />} name={name}
       status={!on ? "Not available yet" : !acc ? (provider === "outlook" ? "Personal, work or school account" : "Not connected") : !ok ? (acc.error ?? "Needs connecting again") : acc.email ?? "Connected"}
       error={!!acc && !ok}
       action={on && !form && (
