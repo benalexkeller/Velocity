@@ -1,8 +1,9 @@
 // Server only: the signed-in athlete and their calendar_links row (supabase/schema-calendar.sql).
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { supabaseServer } from "@/lib/supabase/server";
-import { validZone, type CalSession } from "./events";
+import { validZone, type CalProvider, type CalSession } from "./events";
 import type { EventMap } from "./google";
+import type { AccountMap } from "./engine";
 
 export interface CalendarRow {
   user_id: string;
@@ -18,6 +19,10 @@ export interface CalendarRow {
   read_calendars: string[] | null;
   event_map: EventMap;
   feed_token: string | null;
+  /** the calendar link was set up from the Apple row ("Apple Calendar with one tap") */
+  apple_feed?: boolean;
+  /** when a calendar app last fetched the calendar link */
+  feed_seen_at?: string | null;
   sessions: CalSession[];
   tz: string | null;
   sig: string | null;
@@ -42,6 +47,42 @@ export async function saveRow(sb: SupabaseClient, uid: string, patch: Partial<Ca
   const { error } = await sb.from("calendar_links").upsert({ user_id: uid, ...patch, updated_at: new Date().toISOString() });
   if (error) throw new Error(error.message);
 }
+
+// ---------- Outlook and Apple accounts (supabase/schema-calendar-accounts.sql) ----------
+export interface AccountRow {
+  user_id: string;
+  provider: CalProvider;
+  email: string | null;
+  /** encrypted: Microsoft refresh token, or the Apple app-specific password */
+  secret: string | null;
+  /** the Velocity training calendar: Graph calendar id, or its CalDAV address */
+  calendar_id: string | null;
+  /** Apple: the address of the account's calendar list */
+  home: string | null;
+  status: "connected" | "error";
+  error: string | null;
+  write_training: boolean;
+  show_events: boolean;
+  read_calendars: string[] | null;
+  event_map: AccountMap;
+  sig: string | null;
+  synced_at: string | null;
+}
+/** The athlete's Outlook and Apple accounts; none when the table is not there yet. */
+export async function loadAccounts(sb: SupabaseClient, uid: string): Promise<AccountRow[]> {
+  const { data, error } = await sb.from("calendar_accounts").select("*").eq("user_id", uid);
+  if (error) { if (/calendar_accounts|schema cache|does not exist/i.test(error.message)) return []; throw new Error(error.message); }
+  return (data as AccountRow[] | null) ?? [];
+}
+export async function saveAccount(sb: SupabaseClient, uid: string, provider: CalProvider, patch: Partial<AccountRow>) {
+  const { error } = await sb.from("calendar_accounts").upsert({ user_id: uid, provider, ...patch, updated_at: new Date().toISOString() });
+  if (error) throw new Error(error.message);
+}
+export async function dropAccount(sb: SupabaseClient, uid: string, provider: CalProvider) {
+  const { error } = await sb.from("calendar_accounts").delete().eq("user_id", uid).eq("provider", provider);
+  if (error) throw new Error(error.message);
+}
+export const isProvider = (p: unknown): p is CalProvider => p === "outlook" || p === "apple";
 
 /** The table does not exist yet: supabase/schema-calendar.sql has not been run. */
 export const missingTable = (e: unknown) => /calendar_links|schema cache|does not exist/i.test(String((e as Error)?.message ?? e));

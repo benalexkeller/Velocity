@@ -16,11 +16,31 @@ export interface CalSession {
 
 export const CALENDAR_NAME = "Velocity training";
 
+/** Outlook (Microsoft) and Apple (iCloud) calendar accounts, next to Google Calendar. */
+export type CalProvider = "outlook" | "apple";
+export const PROVIDER_NAME: Record<CalProvider | "google", string> = { google: "Google Calendar", outlook: "Outlook", apple: "Apple Calendar" };
+export interface AccountStatus {
+  email: string | null;
+  status: "connected" | "error";
+  error: string | null;
+  /** Velocity keeps a "Velocity training" calendar in this account. */
+  write: boolean;
+  /** The athlete's other events from this account show on the Plan page, read-only. */
+  show: boolean;
+  syncedAt: string | null;
+}
+
 /** GET /api/calendar */
 export interface CalendarStatus {
   accounts: boolean;
   /** Google Calendar can be connected on this site (client id and secret are set). */
   google: boolean;
+  /** Outlook can be connected on this site (Microsoft client id and secret are set). */
+  outlookOn: boolean;
+  /** Apple Calendar can be connected on this site (the server can encrypt the app password). */
+  appleOn: boolean;
+  /** The athlete's Outlook and Apple accounts. */
+  other: Record<CalProvider, AccountStatus | null>;
   /** The database has the calendar table (supabase/schema-calendar.sql has been run). */
   ready: boolean;
   connection: {
@@ -31,12 +51,19 @@ export interface CalendarStatus {
     showEvents: boolean;
   } | null;
   link: string | null;
+  /** Apple Calendar subscribed to the calendar link with one tap (no password); `seenAt`: when a calendar app last
+   *  fetched the link. */
+  appleFeed: { seenAt: string | null } | null;
+  /** when a calendar app last fetched the calendar link */
+  linkSeenAt: string | null;
   sig: string | null;
   syncedAt: string | null;
 }
 
-/** One of the athlete's own Google calendars, for the "which calendars to show" list. */
+/** One of the athlete's own calendars (Google, Outlook or Apple), for the "which calendars to show" list. */
 export interface OtherCalendar { id: string; name: string; color: string | null; on: boolean; primary: boolean }
+/** An event as each provider's reader returns it, before it is cut into days: timed (UTC instants) or all-day. */
+export interface RawEvent { id: string; title: string; start: { dateTime?: string; date?: string }; end: { dateTime?: string; date?: string } }
 /** One of the athlete's other events, cut into one piece per day, in the athlete's time zone. Read-only. */
 export interface OtherEvent { id: string; cal: string; title: string; date: string; start?: string; end?: string; allDay: boolean; color: string | null }
 
@@ -154,20 +181,45 @@ function fold(line: string) {
   return out.join("\r\n ");
 }
 
+/** The VEVENT lines of one session (unfolded). */
+function icsEventLines(s: CalSession, tz: string, appUrl: string, host: string, now: Date) {
+  const url = `${appUrl}/plan?session=${encodeURIComponent(s.id)}`;
+  const lines = ["BEGIN:VEVENT", `UID:${s.id.replace(/[^\w.-]/g, "_")}@${host}`, `DTSTAMP:${icsUtc(now)}`];
+  if (s.start) {
+    const start = zonedToUtc(s.date, s.start, tz), end = new Date(start.getTime() + Math.max(5, s.min) * 60000);
+    lines.push(`DTSTART:${icsUtc(start)}`, `DTEND:${icsUtc(end)}`);
+  } else lines.push(`DTSTART;VALUE=DATE:${icsDate(s.date)}`, `DTEND;VALUE=DATE:${icsDate(nextDay(s.date))}`);
+  lines.push(`SUMMARY:${icsText(summaryOf(s))}`, `DESCRIPTION:${icsText(descriptionOf(s, appUrl))}`, `URL:${url}`, "TRANSP:OPAQUE", "END:VEVENT");
+  return lines;
+}
+
 export function icsCalendar(list: CalSession[], tz: string, appUrl: string, host: string, now = new Date()) {
   const lines = [
     "BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Velocity//Training plan//EN", "CALSCALE:GREGORIAN", "METHOD:PUBLISH",
     `X-WR-CALNAME:${icsText(CALENDAR_NAME)}`, `X-WR-TIMEZONE:${tz}`, "REFRESH-INTERVAL;VALUE=DURATION:PT1H", "X-PUBLISHED-TTL:PT1H",
   ];
-  for (const s of list) {
-    const url = `${appUrl}/plan?session=${encodeURIComponent(s.id)}`;
-    lines.push("BEGIN:VEVENT", `UID:${s.id.replace(/[^\w.-]/g, "_")}@${host}`, `DTSTAMP:${icsUtc(now)}`);
-    if (s.start) {
-      const start = zonedToUtc(s.date, s.start, tz), end = new Date(start.getTime() + Math.max(5, s.min) * 60000);
-      lines.push(`DTSTART:${icsUtc(start)}`, `DTEND:${icsUtc(end)}`);
-    } else lines.push(`DTSTART;VALUE=DATE:${icsDate(s.date)}`, `DTEND;VALUE=DATE:${icsDate(nextDay(s.date))}`);
-    lines.push(`SUMMARY:${icsText(summaryOf(s))}`, `DESCRIPTION:${icsText(descriptionOf(s, appUrl))}`, `URL:${url}`, "TRANSP:OPAQUE", "END:VEVENT");
-  }
+  for (const s of list) lines.push(...icsEventLines(s, tz, appUrl, host, now));
   lines.push("END:VCALENDAR");
   return lines.map(fold).join("\r\n") + "\r\n";
+}
+
+/** One session as a whole .ics file, the way CalDAV (Apple iCloud) stores each event. */
+export function icsSingle(s: CalSession, tz: string, appUrl: string, host: string, now = new Date()) {
+  const lines = ["BEGIN:VCALENDAR", "VERSION:2.0", "PRODID:-//Velocity//Training plan//EN", "CALSCALE:GREGORIAN", ...icsEventLines(s, tz, appUrl, host, now), "END:VCALENDAR"];
+  return lines.map(fold).join("\r\n") + "\r\n";
+}
+
+// ---------- Outlook (Microsoft Graph) event body ----------
+export function outlookEvent(s: CalSession, tz: string, appUrl: string) {
+  const timed = !!s.start;
+  const end = timed ? addMinutes(s.date, s.start!, Math.max(5, s.min)) : null;
+  return {
+    subject: summaryOf(s),
+    body: { contentType: "text", content: descriptionOf(s, appUrl) },
+    start: timed ? { dateTime: `${s.date}T${s.start}:00`, timeZone: tz } : { dateTime: `${s.date}T00:00:00`, timeZone: tz },
+    end: timed ? { dateTime: `${end!.date}T${end!.time}:00`, timeZone: tz } : { dateTime: `${nextDay(s.date)}T00:00:00`, timeZone: tz },
+    isAllDay: !timed,
+    showAs: "busy",
+    isReminderOn: false,
+  };
 }

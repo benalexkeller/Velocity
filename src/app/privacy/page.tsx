@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: `Privacy - ${BRAND.name}`, descriptio
 
 export default function Privacy() {
   return (
-    <LegalPage eyebrow="Legal" title="Privacy policy" updated="1 November 2026" lead="What Velocity stores about you, why, which services handle it, and how to have it deleted. Only you can see your data, and we do not sell it.">
+    <LegalPage eyebrow="Legal" title="Privacy policy" updated="2 November 2026" lead="What Velocity stores about you, why, which services handle it, and how to have it deleted. Only you can see your data, and we do not sell it.">
       <h2>Who we are</h2>
       <p>{BRAND.name} is a training app for endurance athletes at velocityathletes.com. In this policy &quot;we&quot; means the team that runs it. Questions about your data go through the <Link href="/help">Help page</Link>.</p>
 
@@ -23,7 +23,7 @@ export default function Privacy() {
           <tr><th>Body data</th><td>From a connected watch: resting heart rate, heart-rate variability, sleep and VO2max. Body weight you log on the Nutrition page.</td></tr>
           <tr><th>Nutrition</th><td>Foods and meals you log, drinks, supplements, and your nutrition settings (goal weight and stages).</td></tr>
           <tr><th>Coach</th><td>The messages you send the coach and its answers, and the plan changes you accept or decline.</td></tr>
-          <tr><th>Calendar</th><td>If you connect Google Calendar: the email address of that Google account, an encrypted key that lets Velocity update its own calendar, and which sessions are in it. If you create a calendar link: the secret part of the link and the sessions it shows.</td></tr>
+          <tr><th>Calendar</th><td>If you connect Google Calendar or Outlook: the email address of that account, an encrypted key that lets Velocity update its own calendar, and which sessions are in it. If you connect Apple Calendar: your Apple ID email address, the app-specific password you made for Velocity (encrypted), and which sessions are in the Velocity calendar. If you create a calendar link or add Apple Calendar with one tap: the secret part of the link, the sessions it shows, and when a calendar app last fetched it.</td></tr>
           <tr><th>Feedback</th><td>Feedback and contact messages you send us, with the page you were on, your browser and screen size.</td></tr>
         </tbody>
       </table>
@@ -42,9 +42,11 @@ export default function Privacy() {
         <tbody>
           <tr><th>Supabase</th><td>Database and sign-in. Stores everything listed above.</td></tr>
           <tr><th>Vercel</th><td>Hosts the website and runs the app&apos;s server code.</td></tr>
-          <tr><th>OpenRouter</th><td>Passes each coach question, with the compact copy of your training data, to the AI model that answers it: Anthropic Claude Haiku or Google Gemini Flash for everyday questions, Anthropic Claude, OpenAI GPT or Google Gemini for whole-plan reviews. It is used to answer that question only. The paid services of these companies do not train on the requests they receive, and every request is set to go only to providers that do not store it or train on it. The coach never receives anything that came from Google (see Data from Google).</td></tr>
+          <tr><th>OpenRouter</th><td>Passes each coach question, with the compact copy of your training data, to the AI model that answers it: Anthropic Claude Haiku or Google Gemini Flash for everyday questions, Anthropic Claude, OpenAI GPT or Google Gemini for whole-plan reviews. It is used to answer that question only. The paid services of these companies do not train on the requests they receive, and every request is set to go only to providers that do not store it or train on it. The coach never receives anything that came from Google (see Data from Google), Microsoft or Apple.</td></tr>
           <tr><th>Junction</th><td>Connects your watch (Garmin today) and sends your activities and body data to Velocity once you connect it. You can disconnect it at any time under Connect wearable; activities already imported stay until you delete them.</td></tr>
           <tr><th>Google</th><td>Sign-in with Google gives us your email address, name and profile picture. If you connect Google Calendar, Velocity creates one calendar in your Google account, called Velocity training, and keeps your planned sessions in it (time, length and steps). Velocity can only change that calendar. Only if you also turn on Show my other events, Velocity reads the list of your calendars and the title, time and calendar of your other events, to show them on your Plan page; it reads them from Google each time you open the page, does not store them, and never changes them. Disconnecting withdraws the access at Google, and you choose whether the Velocity training calendar is deleted.</td></tr>
+          <tr><th>Microsoft</th><td>If you connect Outlook, Microsoft&apos;s sign-in gives us your email address and permission to manage your calendars. Velocity creates one calendar, Velocity training, and keeps your planned sessions in it. With Show my events on Plan turned on, Velocity reads the list of your calendars and the title and time of your other events to show them on your Plan page; it does not store them and never changes them.</td></tr>
+          <tr><th>Apple</th><td>Apple Calendar with one tap: your iPhone, iPad or Mac subscribes to your private calendar link (see Calendar above) and fetches your planned sessions from it; Velocity notes only when the link was last fetched. With the full connection, Velocity signs in to iCloud Calendar with your Apple ID and an app-specific password you made for it. Velocity creates one calendar, Velocity training, and keeps your planned sessions in it. With Show my events on Plan turned on, Velocity reads the list of your calendars and the title and time of your other events to show them on your Plan page; it does not store them and never changes them.</td></tr>
           <tr><th>USDA FoodData Central</th><td>Receives the words you type into food search, nothing else about you.</td></tr>
           <tr><th>CARTO</th><td>Serves the map tiles behind a route, so it sees which map area is shown.</td></tr>
         </tbody>
@@ -75,11 +77,20 @@ export default function Privacy() {
         <li>Disconnecting Google Calendar withdraws Velocity&apos;s access at Google; Delete my account in Profile deletes everything we hold about you, including the Google data above.</li>
       </ul>
 
+      <h2 id="outlook-apple">Outlook and Apple Calendar</h2>
+      <ul>
+        <li>Outlook asks Microsoft for permission to read and write your calendars (Calendars.ReadWrite), because Microsoft has no narrower permission that lets an app create its own calendar. Velocity only writes to its own Velocity training calendar and only reads the others when Show my events on Plan is on.</li>
+        <li>Apple has no sign-in screen for other apps, so Velocity uses an app-specific password you make at account.apple.com. An app-specific password can open iCloud Mail, Contacts and Calendars but cannot sign in to your Apple account, and you can cancel it there at any time. Velocity uses it only for your calendars.</li>
+        <li>The Microsoft key and the Apple app-specific password are encrypted with AES-256-GCM before they are stored; the decryption key exists only on our server.</li>
+        <li>Your other events are read each time you open the Plan page, kept only in memory for that request, and never written to our database or logs. No AI model receives them, and they are never used to train AI models.</li>
+        <li>Each one has two switches in Profile, Calendar: Add my training and Show my events on Plan. Disconnecting deletes the stored key or password, and you choose whether the Velocity training calendar is deleted.</li>
+      </ul>
+
       <h2>Your browser</h2>
       <p>We use the cookies needed to keep you signed in, and your browser&apos;s local storage for settings on this device. No advertising or tracking cookies.</p>
 
       <h2>How long we keep it</h2>
-      <p>For as long as you have an account. Profile, Delete my account deletes your account and everything in it straight away, removes your Velocity training calendar from Google and ends your watch connection. If you ask us to delete it instead, we do it within 30 days. Backups held by our database provider roll over within their own retention period.</p>
+      <p>For as long as you have an account. Profile, Delete my account deletes your account and everything in it straight away, removes your Velocity training calendar from Google, Outlook and iCloud and ends your watch connection. If you ask us to delete it instead, we do it within 30 days. Backups held by our database provider roll over within their own retention period.</p>
 
       <h2>Your rights</h2>
       <p>You can see and change your data in the app at any time, and delete your account under Profile. You can ask us for a copy of it, to correct it, to delete it, or to stop processing it, and you can withdraw consent for health data by deleting it or disconnecting your device. Send the request through the <Link href="/help">Help page</Link> from the email address on your account. If you are in the EU or UK you can also complain to your data protection authority.</p>

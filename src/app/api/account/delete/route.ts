@@ -1,10 +1,11 @@
-// POST /api/account/delete — "Delete my account" in Profile. In order: the Google Calendar connection (the Velocity
-// training calendar is deleted from Google and Velocity's access withdrawn), the Garmin connection at Junction,
+// POST /api/account/delete — "Delete my account" in Profile. In order: the calendar connections (the Velocity
+// training calendar is deleted from Google, Outlook and iCloud, and Velocity's access to Google withdrawn), the Garmin
+// connection at Junction,
 // then the account itself with everything in it (supabase/schema-account.sql), then sign-out.
 import { NextResponse, type NextRequest } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
 import { DELETE_REASONS, DELETE_TAB, deleteReasonLabel } from "@/lib/account/deleteReasons";
-import { cleanupOutside } from "@/lib/account/cleanup";
+import { cleanupOutside, type OutsideLinks } from "@/lib/account/cleanup";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,11 +27,13 @@ export async function POST(req: NextRequest) {
   }
 
   // outside services first, while the tokens and ids still exist; a failure here does not stop the deletion
-  const [{ data: cal }, { data: g }] = await Promise.all([
+  const [{ data: cal }, { data: g }, { data: other }] = await Promise.all([
     sb.from("calendar_links").select("google_token, google_calendar_id").eq("user_id", uid).maybeSingle(),
     sb.from("integrations").select("external_user_id").eq("user_id", uid).eq("provider", "garmin").maybeSingle(),
+    // missing table (schema-calendar-accounts.sql not run yet) comes back as an error and no rows
+    sb.from("calendar_accounts").select("provider, secret, calendar_id, home").eq("user_id", uid),
   ]);
-  await cleanupOutside({ googleToken: cal?.google_token as string | null, calendarId: cal?.google_calendar_id as string | null, garminId: g?.external_user_id as string | null }, "account/delete");
+  await cleanupOutside({ googleToken: cal?.google_token as string | null, calendarId: cal?.google_calendar_id as string | null, garminId: g?.external_user_id as string | null, accounts: other as OutsideLinks["accounts"] }, "account/delete");
 
   const { error } = await sb.rpc("delete_my_account");
   if (error) {

@@ -32,6 +32,8 @@ export function Overview() {
             { label: "Asked the coach (30 d)", n: d.coach_users_30 },
             { label: "Watch connected", n: d.watch },
             { label: "Google Calendar", n: d.calendar },
+            { label: "Outlook", n: d.outlook },
+            { label: "Apple Calendar", n: d.apple },
           ]} />
         </section>
         <section className="card">

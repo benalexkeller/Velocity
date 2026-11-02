@@ -15,6 +15,9 @@ export async function GET(req: NextRequest, ctx: { params: Promise<{ file: strin
   const { data, error } = await sb.rpc("calendar_feed", { t: token });
   const row = (data as { sessions: CalSession[]; tz: string | null }[] | null)?.[0];
   if (error || !row) return new NextResponse("Not found", { status: 404 });
+  // when a calendar app last fetched the link, for "Last checked" in Profile (at most one write per 5 minutes; nothing
+  // else about the request is kept). Missing function = SQL not run yet: ignored.
+  await sb.rpc("calendar_feed_seen", { t: token }).then(() => undefined, () => undefined);
   const body = icsCalendar(row.sessions ?? [], row.tz || "UTC", req.nextUrl.origin, req.nextUrl.hostname);
   return new NextResponse(body, { headers: { "Content-Type": "text/calendar; charset=utf-8", "Content-Disposition": 'inline; filename="velocity-training.ics"', "Cache-Control": "private, max-age=300" } });
 }

@@ -2,7 +2,7 @@
 // The calendar in the browser: one shared status (GET /api/calendar) for every component that shows it, the
 // actions behind the buttons, and the queue that sends the plan to /api/calendar/sync after a change.
 import { useEffect, useSyncExternalStore } from "react";
-import { listPrint, type CalSession, type CalendarStatus, type OtherCalendar, type OtherEvent } from "./events";
+import { listPrint, type CalProvider, type CalSession, type CalendarStatus, type OtherCalendar, type OtherEvent } from "./events";
 import { workoutFor, type Zones } from "../workout";
 import type { Week } from "../data";
 import { addDays, fromYmd, today, ymd } from "../format";
@@ -20,7 +20,13 @@ const subscribe = (f: () => void) => { subs.add(f); return () => { subs.delete(f
 export const useCalendar = () => useSyncExternalStore(subscribe, () => state, () => state);
 
 export const browserZone = () => { try { return Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC"; } catch { return "UTC"; } };
-export const isLinked = (s: CalendarStatus | null) => Boolean(s && (s.connection || s.link));
+/** The plan goes somewhere: Google Calendar, the calendar link, or an Outlook or Apple account with "Add my training" on. */
+export const isLinked = (s: CalendarStatus | null) => Boolean(s && (s.connection || s.link || Object.values(s.other ?? {}).some((a) => a?.write && a.status === "connected")));
+/** The Plan page shows the athlete's other events from at least one calendar. */
+export const showsEvents = (s: CalendarStatus | null) => Boolean(s && ((s.connection?.showEvents && s.connection.status === "connected") || Object.values(s.other ?? {}).some((a) => a?.show && a.status === "connected")));
+
+/** A message at the top of the Calendar card. */
+export const showNote = (note: string | null) => set({ note });
 
 export async function refreshCalendar() {
   try {
@@ -38,16 +44,34 @@ export function connectGoogle(next?: string, read = false) {
   window.location.href = `/api/connect/google-calendar?tz=${encodeURIComponent(browserZone())}&next=${encodeURIComponent(back)}${read ? "&read=1" : ""}`;
 }
 
-/** "Show my other events" on or off, and which calendars. */
-export async function setReading(p: { show?: boolean; calendars?: string[] }) {
+/** Leaves the app for Microsoft's sign-in; Microsoft brings the athlete back to `next`. */
+export function connectOutlook(next?: string) {
+  const back = next ?? window.location.pathname;
+  // eslint-disable-next-line @next/next/no-location-assign-relative-destination
+  window.location.href = `/api/connect/outlook?next=${encodeURIComponent(back)}`;
+}
+
+/** Apple ID and app-specific password, checked with iCloud by the server. */
+export async function connectApple(appleId: string, password: string) {
+  const res = await fetch("/api/connect/apple", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ appleId, password }) });
+  const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string };
+  if (!res.ok || !body.ok) throw new Error(body.error ?? "Apple Calendar did not connect. Try again.");
+  set({ note: null });
+  events.clear(); version++;
+  await refreshCalendar();
+}
+
+/** One calendar's switches: "Show my events on Plan" and which calendars, and (Outlook, Apple) "Add my training".
+ *  No provider = Google. */
+export async function setReading(p: { provider?: CalProvider; show?: boolean; write?: boolean; calendars?: string[] }) {
   const res = await fetch("/api/calendar/read", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(p) });
   if (!res.ok) throw new Error(((await res.json().catch(() => ({}))) as { error?: string }).error ?? "Did not save");
   events.clear(); version++; subs.forEach((f) => f());
   await refreshCalendar();
 }
 
-export async function otherCalendars(): Promise<OtherCalendar[]> {
-  const res = await fetch("/api/calendar/events?list=1", { cache: "no-store" });
+export async function otherCalendars(provider: CalProvider | "google" = "google"): Promise<OtherCalendar[]> {
+  const res = await fetch(`/api/calendar/events?list=1&provider=${provider}`, { cache: "no-store" });
   const body = (await res.json().catch(() => ({}))) as { calendars?: OtherCalendar[]; error?: string };
   if (body.error) throw new Error(body.error);
   return body.calendars ?? [];
@@ -69,17 +93,18 @@ function loadWeek(from: string, to: string) {
       const res = await fetch(`/api/calendar/events?from=${from}&to=${to}&tz=${encodeURIComponent(browserZone())}`, { cache: "no-store" });
       const body = (await res.json().catch(() => ({}))) as { events?: OtherEvent[]; error?: string };
       entry.list = body.events ?? []; entry.error = body.error;
-    } catch { entry.error = "Your Google events did not load."; }
+    } catch { entry.error = "Your events did not load."; }
     entry.at = Date.now(); entry.loading = undefined; version++; subs.forEach((f) => f());
   })();
   events.set(key, entry);
 }
 
-/** The athlete's other Google events for the week starting `from` (7 days), or [] when the switch is off. */
+/** The athlete's other events (Google, Outlook, Apple) for the week starting `from` (7 days), or [] when every
+ *  "Show my events" switch is off. */
 export function useOtherEvents(from: string): { list: OtherEvent[]; error: string | null } {
   const s = useSyncExternalStore(subscribe, () => state, () => state);
   useSyncExternalStore(subscribe, versionOf, versionOf);
-  const on = !!s.status?.connection?.showEvents && s.status.connection.status === "connected";
+  const on = showsEvents(s.status);
   const to = ymd(addDays(fromYmd(from), 6));
   useEffect(() => { if (on) loadWeek(from, to); }, [on, from, to]);
   if (!on) return { list: [], error: null };
@@ -87,11 +112,37 @@ export function useOtherEvents(from: string): { list: OtherEvent[]; error: strin
   return { list: e?.list ?? [], error: e?.error ?? null };
 }
 
-export async function disconnectGoogle(remove: boolean) {
-  const res = await fetch("/api/calendar/disconnect", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ remove }) });
-  if (!res.ok) throw new Error(((await res.json().catch(() => ({}))) as { error?: string }).error ?? "Did not disconnect");
-  set({ note: remove ? "Disconnected. The Velocity training calendar was deleted from Google." : "Disconnected. The Velocity training calendar stays in Google with the sessions it has." });
+export async function disconnectGoogle(remove: boolean) { return disconnectCalendar("google", remove); }
+
+const WHERE: Record<CalProvider | "google", string> = { google: "Google", outlook: "Outlook", apple: "iCloud" };
+export async function disconnectCalendar(provider: CalProvider | "google", remove: boolean) {
+  const res = await fetch("/api/calendar/disconnect", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ remove, ...(provider === "google" ? {} : { provider }) }) });
+  const body = (await res.json().catch(() => ({}))) as { error?: string; removed?: boolean };
+  if (!res.ok) throw new Error(body.error ?? "Did not disconnect");
+  const where = WHERE[provider];
+  set({ note: !remove ? `Disconnected. The Velocity training calendar stays in ${where} with the sessions it has.` : body.removed ? `Disconnected. The Velocity training calendar was deleted from ${where}.` : `Disconnected. The Velocity training calendar could not be deleted from ${where}; delete it there by hand.` });
+  events.clear(); version++;
   await refreshCalendar();
+}
+
+/** iPhone, iPad or Mac: the devices where a webcal:// link opens Apple's own "Subscribe" screen. (iPads report
+ *  themselves as a Mac.) */
+export const isAppleDevice = () => typeof navigator !== "undefined" && /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent);
+/** The calendar link as a webcal:// address, which calendar apps open as a subscription. */
+export const webcalOf = (link: string) => link.replace(/^https?:\/\//, "webcal://");
+
+/** "Apple Calendar with one tap": keeps or makes the calendar link, fills it with the plan straight away, and opens
+ *  Apple's "Subscribe" screen. Returns the webcal address (also shown as a link in case the screen did not open). */
+export async function addAppleOneTap(p: SyncPayload) {
+  const res = await fetch("/api/calendar/link", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ on: true, apple: true, tz: p.tz, sessions: p.sessions, sig: p.sig }) });
+  const body = (await res.json().catch(() => ({}))) as { link?: string | null; error?: string };
+  if (!res.ok || !body.link) throw new Error(body.error ?? "Did not work. Try again.");
+  const webcal = webcalOf(body.link);
+  set({ note: null });
+  // a full navigation on purpose: the browser hands webcal:// to Calendar, which asks to subscribe
+  window.location.href = webcal;
+  void refreshCalendar();
+  return webcal;
 }
 
 export async function setCalendarLink(on: boolean) {
