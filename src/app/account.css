@@ -76,6 +76,11 @@
 .cal-txt .err { color: var(--danger); white-space: normal; }
 .cal-act { flex: 0 0 auto; display: flex; gap: 8px; }
 .cal-sub { display: grid; gap: 8px; margin: 10px 0 0 48px; }
+.cal-subrow { display: flex; align-items: center; justify-content: space-between; gap: 8px 16px; font-size: 13px; }
+.cal-subrow > div { display: grid; gap: 1px; min-width: 0; }
+.cal-subrow > button { flex: 0 0 auto; white-space: nowrap; }
+.cal-subrow b { font-weight: 600; color: var(--ink); }
+@media (max-width: 640px) { .cal-subrow { flex-direction: column; align-items: flex-start; } }
 .cal-switches { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 18px; font-size: 13px; }
 .cal-switches label { display: inline-flex; align-items: center; gap: 7px; color: var(--ink-2); cursor: pointer; }
 .cal-switches input, .cal-choice input { margin: 0; accent-color: var(--accent); }
@@ -91,7 +96,7 @@
 .cal-link { display: grid; gap: 6px; }
 .cal-link input { flex: 1; min-width: 0; font: inherit; font-size: 13px; color: var(--ink-2); border: 1px solid var(--line); border-radius: 9px; padding: 7px 10px; background: var(--surface-2); outline: none; }
 .cal-link input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
-@media (max-width: 640px) { .cal-sub { margin-left: 0; } }
+@media (max-width: 640px) { .cal-sub { margin-left: 0; } .cal-head { flex-wrap: wrap; } .cal-txt { flex: 1 1 150px; } .cal-txt span { white-space: normal; } }
 .del-ask { gap: 12px; margin: -4px 0 8px; }
 .del-reasons { border: 0; margin: 0; padding: 0; display: grid; gap: 7px; }
 .del-reasons legend { font-weight: 600; color: var(--ink); margin-bottom: 4px; padding: 0; }

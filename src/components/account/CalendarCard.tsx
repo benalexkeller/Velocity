@@ -26,6 +26,13 @@ const FLAG: Record<string, string> = {
   "outlook-off": "Outlook is not switched on for this site yet.",
 };
 
+/** Google is still reviewing the "see your events" permission (calendar.events.readonly). Until it approves, Google's
+ *  part of the card keeps the exact words and buttons the reviewers were sent ("Your other events", "Connect and
+ *  show"). After approval set this to false: Google then gets the same "Show my events on Plan" switch as Outlook
+ *  and Apple. Nothing else changes, and the switch needs no new review (Google only reviews scope, name, logo and
+ *  link changes). */
+const GOOGLE_AS_REVIEWED = true;
+
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 /** "30 Oct, 14:02" */
 const clock = (iso: string | null) => { if (!iso) return ""; const d = new Date(iso); return `${d.getDate()} ${MON[d.getMonth()]}, ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
@@ -105,12 +112,29 @@ export function CalendarCard() {
           status={!s.google ? "Not available yet" : !g ? "Not connected" : g.status === "error" ? (g.error ?? "Needs connecting again") : g.email ?? "Connected"}
           error={g?.status === "error"}
           action={s.google && (
-            !g ? <button type="button" className="btn small" disabled={busy} onClick={() => connectGoogle()}>Connect</button>
+            !g ? (GOOGLE_AS_REVIEWED
+              ? <button type="button" className="btn google small" disabled={busy} onClick={() => connectGoogle()}><GoogleCalendarIcon />Connect Google Calendar</button>
+              : <button type="button" className="btn small" disabled={busy} onClick={() => connectGoogle()}>Connect</button>)
               : g.status === "error" ? <button type="button" className="btn small" disabled={busy} onClick={() => connectGoogle()}>Connect again</button>
               : !asking && <button type="button" className="btn ghost small" disabled={busy} onClick={() => setAsking(true)}>Disconnect</button>
           )}>
           {asking && g && <Ask where="your Google account" busy={busy} onAnswer={(remove) => act(async () => { if (remove !== null) await disconnectCalendar("google", remove); setAsking(false); })} />}
-          {g?.status === "connected" && !asking && (
+          {/* the wording Google's reviewers were given: "Your other events", "Connect and show" */}
+          {GOOGLE_AS_REVIEWED && s.google && !asking && (!g || g.status === "connected") && (
+            <>
+              <div className="cal-subrow">
+                <div>
+                  <b>Your other events</b>
+                  <span className="muted">{g?.showEvents ? "Shown on the Plan page, read-only. Not stored." : "See your other Google Calendar events on the Plan page, read-only."}{!g?.canRead && " Google asks you for one more permission."}</span>
+                </div>
+                {!g?.canRead && <button type="button" className="btn google small" disabled={busy} onClick={() => connectGoogle(undefined, true)}><GoogleCalendarIcon />{g ? "Show my events" : "Connect and show"}</button>}
+                {g?.canRead && !g.showEvents && <button type="button" className="btn ghost small" disabled={busy} onClick={() => act(() => setReading({ show: true }))}>Show my events</button>}
+                {g?.showEvents && <button type="button" className="btn ghost small" disabled={busy} onClick={() => act(() => setReading({ show: false }))}>Hide</button>}
+              </div>
+              {g?.showEvents && <Choice provider="google" onError={setErr} />}
+            </>
+          )}
+          {!GOOGLE_AS_REVIEWED && g?.status === "connected" && !asking && (
             <>
               <div className="cal-switches">
                 <label>
