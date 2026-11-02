@@ -42,13 +42,31 @@ $$;
 revoke all on function public.admin_calendar_accounts(uuid) from public, anon;
 grant execute on function public.admin_calendar_accounts(uuid) to authenticated;
 
+-- Apple Calendar with one tap: Apple Calendar subscribes to the athlete's calendar link (no password). `apple_feed`
+-- says the link was set up from the Apple row; `feed_seen_at` is when a calendar app last fetched the link (nothing
+-- else about the request is kept). Written by calendar_feed_seen, which the public link calls with its secret.
+alter table public.calendar_links add column if not exists apple_feed boolean not null default false;
+alter table public.calendar_links add column if not exists feed_seen_at timestamptz;
+create or replace function public.calendar_feed_seen(t text)
+returns void
+language sql security definer set search_path = public volatile as $$
+  update public.calendar_links set feed_seen_at = now()
+  where length(t) >= 32 and feed_token = t and (feed_seen_at is null or feed_seen_at < now() - interval '5 minutes');
+$$;
+revoke all on function public.calendar_feed_seen(text) from public;
+grant execute on function public.calendar_feed_seen(text) to anon, authenticated;
+
 -- Admin → Overview and Users: which athletes have Outlook or Apple connected (names of the providers only).
 create or replace function public.admin_calendar_providers()
 returns table (user_id uuid, providers text[])
 language sql security definer set search_path = public stable as $$
-  select a.user_id, array_agg(a.provider order by a.provider) from public.calendar_accounts a
+  select x.user_id, array_agg(x.provider order by x.provider) from (
+    select a.user_id, a.provider from public.calendar_accounts a
+    union
+    select c.user_id, 'apple' from public.calendar_links c where c.apple_feed and c.feed_token is not null
+  ) x
   where exists (select 1 from public.profiles me where me.id = auth.uid() and me.is_admin)
-  group by a.user_id;
+  group by x.user_id;
 $$;
 revoke all on function public.admin_calendar_providers() from public, anon;
 grant execute on function public.admin_calendar_providers() to authenticated;

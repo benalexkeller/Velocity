@@ -51,6 +51,11 @@ export interface CalendarStatus {
     showEvents: boolean;
   } | null;
   link: string | null;
+  /** Apple Calendar subscribed to the calendar link with one tap (no password); `seenAt`: when a calendar app last
+   *  fetched the link. */
+  appleFeed: { seenAt: string | null } | null;
+  /** when a calendar app last fetched the calendar link */
+  linkSeenAt: string | null;
   sig: string | null;
   syncedAt: string | null;
 }

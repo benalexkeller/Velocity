@@ -25,6 +25,9 @@ export const isLinked = (s: CalendarStatus | null) => Boolean(s && (s.connection
 /** The Plan page shows the athlete's other events from at least one calendar. */
 export const showsEvents = (s: CalendarStatus | null) => Boolean(s && ((s.connection?.showEvents && s.connection.status === "connected") || Object.values(s.other ?? {}).some((a) => a?.show && a.status === "connected")));
 
+/** A message at the top of the Calendar card. */
+export const showNote = (note: string | null) => set({ note });
+
 export async function refreshCalendar() {
   try {
     const res = await fetch("/api/calendar", { cache: "no-store" });
@@ -120,6 +123,26 @@ export async function disconnectCalendar(provider: CalProvider | "google", remov
   set({ note: !remove ? `Disconnected. The Velocity training calendar stays in ${where} with the sessions it has.` : body.removed ? `Disconnected. The Velocity training calendar was deleted from ${where}.` : `Disconnected. The Velocity training calendar could not be deleted from ${where}; delete it there by hand.` });
   events.clear(); version++;
   await refreshCalendar();
+}
+
+/** iPhone, iPad or Mac: the devices where a webcal:// link opens Apple's own "Subscribe" screen. (iPads report
+ *  themselves as a Mac.) */
+export const isAppleDevice = () => typeof navigator !== "undefined" && /iPhone|iPad|iPod|Macintosh/.test(navigator.userAgent);
+/** The calendar link as a webcal:// address, which calendar apps open as a subscription. */
+export const webcalOf = (link: string) => link.replace(/^https?:\/\//, "webcal://");
+
+/** "Apple Calendar with one tap": keeps or makes the calendar link, fills it with the plan straight away, and opens
+ *  Apple's "Subscribe" screen. Returns the webcal address (also shown as a link in case the screen did not open). */
+export async function addAppleOneTap(p: SyncPayload) {
+  const res = await fetch("/api/calendar/link", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ on: true, apple: true, tz: p.tz, sessions: p.sessions, sig: p.sig }) });
+  const body = (await res.json().catch(() => ({}))) as { link?: string | null; error?: string };
+  if (!res.ok || !body.link) throw new Error(body.error ?? "Did not work. Try again.");
+  const webcal = webcalOf(body.link);
+  set({ note: null });
+  // a full navigation on purpose: the browser hands webcal:// to Calendar, which asks to subscribe
+  window.location.href = webcal;
+  void refreshCalendar();
+  return webcal;
 }
 
 export async function setCalendarLink(on: boolean) {

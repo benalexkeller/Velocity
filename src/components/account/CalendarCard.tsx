@@ -5,8 +5,8 @@
 // account, one button; the switches appear under a row once it is connected.
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { usePlan } from "@/lib/store";
-import { calendarPayload, connectApple, connectGoogle, connectOutlook, disconnectCalendar, otherCalendars, queueSync, refreshCalendar, setCalendarLink, setReading, useCalendar } from "@/lib/calendar/client";
-import { PROVIDER_NAME, type AccountStatus, type CalProvider, type OtherCalendar } from "@/lib/calendar/events";
+import { addAppleOneTap, calendarPayload, connectApple, connectGoogle, connectOutlook, disconnectCalendar, isAppleDevice, showNote, otherCalendars, queueSync, refreshCalendar, setCalendarLink, setReading, useCalendar, webcalOf, type SyncPayload } from "@/lib/calendar/client";
+import { PROVIDER_NAME, type AccountStatus, type CalProvider, type CalendarStatus, type OtherCalendar } from "@/lib/calendar/events";
 import { GoogleCalendarIcon } from "@/components/GoogleCalendarIcon";
 import { MicrosoftLogo } from "@/components/MicrosoftLogo";
 import { PasswordInput } from "@/components/account/PasswordInput";
@@ -73,6 +73,7 @@ export function CalendarCard() {
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [showLink, setShowLink] = useState(false);
 
   useEffect(() => {
     void refreshCalendar();
@@ -92,7 +93,7 @@ export function CalendarCard() {
 
   const g = s.connection;
   const note = flag ? FLAG[flag] : cal.note;
-  const writing = g?.status === "connected" || Object.values(s.other ?? {}).some((a) => a?.status === "connected" && a.write);
+  const writing = g?.status === "connected" || !!s.appleFeed || Object.values(s.other ?? {}).some((a) => a?.status === "connected" && a.write);
   return (
     <div className="cal-card">
       <div className="cal-top">
@@ -151,14 +152,16 @@ export function CalendarCard() {
 
         {/* ---------- Outlook and Apple ---------- */}
         <Account provider="outlook" on={s.outlookOn} acc={s.other?.outlook ?? null} busy={busy} act={act} onError={setErr} />
-        <Account provider="apple" on={s.appleOn} acc={s.other?.apple ?? null} busy={busy} act={act} onError={setErr} />
+        <AppleRow s={s} payload={() => calendarPayload(plan.weeks, plan.athlete.zones)} busy={busy} act={act} onError={setErr} />
 
         {/* ---------- calendar link ---------- */}
-        <Item icon={<LinkGlyph />} name="Calendar link" status={s.link ? "On" : "For any other calendar app"}
+        <Item icon={<LinkGlyph />} name="Calendar link" status={s.link ? (s.appleFeed ? "Used by Apple Calendar" : s.linkSeenAt ? `On, last checked ${clock(s.linkSeenAt)}` : "On") : "For any other calendar app"}
           action={s.link
-            ? <button type="button" className="btn ghost small" disabled={busy} onClick={() => act(() => setCalendarLink(false))}>Turn off</button>
+            // in use by Apple Calendar: Remove on the Apple row turns it off; here it can only be shown
+            ? s.appleFeed ? <button type="button" className="btn ghost small" onClick={() => setShowLink((v) => !v)}>{showLink ? "Hide link" : "Show link"}</button>
+              : <button type="button" className="btn ghost small" disabled={busy} onClick={() => act(() => setCalendarLink(false))}>Turn off</button>
             : <button type="button" className="btn ghost small" disabled={busy} onClick={() => act(async () => { await setCalendarLink(true); queueSync(calendarPayload(plan.weeks, plan.athlete.zones)); })}>Create link</button>}>
-          {s.link && (
+          {s.link && (!s.appleFeed || showLink) && (
             <div className="cal-link">
               <div className="row">
                 <input readOnly value={s.link} aria-label="Calendar link" onFocus={(e) => e.currentTarget.select()} />
@@ -229,8 +232,60 @@ function Account({ provider, on, acc, busy, act, onError }: {
   );
 }
 
+/** Apple Calendar. Default: one tap. On an iPhone, iPad or Mac, Connect opens Apple's own "Subscribe" screen for the
+ *  calendar link (no password; Apple checks for changes on its own schedule). Optional, or on other devices: the
+ *  full connection with an app-specific password (updates within seconds, and the athlete's Apple events on Plan). */
+function AppleRow({ s, payload, busy, act, onError }: {
+  s: CalendarStatus; payload: () => SyncPayload; busy: boolean;
+  act: (f: () => Promise<unknown>) => Promise<void>; onError: (e: string | null) => void;
+}) {
+  const acc = s.other?.apple ?? null;
+  const feed = s.appleFeed;
+  const [form, setForm] = useState(false);
+  const [elsewhere, setElsewhere] = useState(false);
+  const [asking, setAsking] = useState(false);
+  // the full connection, once made, replaces the one-tap subscription
+  if (acc) return <Account provider="apple" on={s.appleOn} acc={acc} busy={busy} act={act} onError={onError} />;
+  const upgrade = s.appleOn && <button type="button" className="link-btn small" onClick={() => setForm(true)}>{feed ? "Faster updates and your Apple events on Plan: use an app-specific password" : "Or connect here with an app-specific password"}</button>;
+  const connected = async () => {
+    setForm(false);
+    if (feed) { await setCalendarLink(false); showNote("Apple Calendar connected. Now delete the older Velocity training calendar under Subscribed in the Calendar app, so sessions do not show twice."); }
+  };
+  return (
+    <Item icon={<CalendarGlyph />} name="Apple Calendar"
+      status={feed ? "Added with one tap" : "iPhone, iPad and Mac"}
+      action={!form && (feed
+        ? !asking && <button type="button" className="btn ghost small" disabled={busy} onClick={() => setAsking(true)}>Remove</button>
+        : <button type="button" className="btn small" disabled={busy} onClick={() => (isAppleDevice() ? act(() => addAppleOneTap(payload())) : setElsewhere(true))}>Connect</button>)}>
+      {form && <AppleForm onDone={() => setForm(false)} onConnected={connected} />}
+      {asking && feed && (
+        <div className="cal-ask">
+          <span>Stop sending your sessions to Apple Calendar? Then delete Velocity training under Subscribed in the Calendar app.</span>
+          <div className="row">
+            <button type="button" className="btn danger small" disabled={busy} onClick={() => act(async () => { await setCalendarLink(false); setAsking(false); })}>Remove</button>
+            <button type="button" className="btn ghost small" disabled={busy} onClick={() => setAsking(false)}>Cancel</button>
+          </div>
+        </div>
+      )}
+      {!form && !asking && feed && s.link && (
+        <>
+          <span className="muted small">{feed.seenAt ? `Apple last checked ${clock(feed.seenAt)}.` : "Waiting for Apple to check."} Apple checks for changes on its own schedule, usually within a few hours.</span>
+          <a className="link-btn small" href={webcalOf(s.link)}>Add to Apple Calendar again, or on another iPhone or Mac</a>
+          {upgrade}
+        </>
+      )}
+      {!form && !feed && elsewhere && (
+        <>
+          <span className="muted small">Open velocityathletes.com on your iPhone, iPad or Mac and tap Connect there. Apple Calendar then adds Velocity training with one tap.</span>
+          {upgrade}
+        </>
+      )}
+    </Item>
+  );
+}
+
 /** Apple has no sign-in screen for other apps: the athlete makes an app-specific password and enters it once. */
-function AppleForm({ onDone }: { onDone: () => void }) {
+function AppleForm({ onDone, onConnected }: { onDone: () => void; onConnected?: () => Promise<void> | void }) {
   const [id, setId] = useState("");
   const [pw, setPw] = useState("");
   const [busy, setBusy] = useState(false);
@@ -238,7 +293,7 @@ function AppleForm({ onDone }: { onDone: () => void }) {
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     setBusy(true); setErr(null);
-    try { await connectApple(id, pw); setPw(""); onDone(); }
+    try { await connectApple(id, pw); setPw(""); if (onConnected) await onConnected(); else onDone(); }
     catch (x) { setErr(x instanceof Error ? x.message : "Apple Calendar did not connect. Try again."); }
     finally { setBusy(false); }
   };

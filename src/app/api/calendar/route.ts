@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 const appleOn = () => Boolean(process.env.CALENDAR_TOKEN_KEY || process.env.GOOGLE_CLIENT_SECRET);
 
 export async function GET(req: NextRequest) {
-  const base: CalendarStatus = { accounts: ACCOUNTS_ON, google: googleOn(), outlookOn: outlookOn(), appleOn: appleOn(), other: { outlook: null, apple: null }, ready: false, connection: null, link: null, sig: null, syncedAt: null };
+  const base: CalendarStatus = { accounts: ACCOUNTS_ON, google: googleOn(), outlookOn: outlookOn(), appleOn: appleOn(), other: { outlook: null, apple: null }, ready: false, connection: null, link: null, appleFeed: null, linkSeenAt: null, sig: null, syncedAt: null };
   const me = await athlete();
   if (!me) return NextResponse.json(base);
   try {
@@ -37,6 +37,8 @@ export async function GET(req: NextRequest) {
         canRead: canRead(row.google_scopes), showEvents: canRead(row.google_scopes) && !!row.show_events,
       } : null,
       link: feedUrl(req.nextUrl.origin, row?.feed_token ?? null),
+      appleFeed: row?.feed_token && row.apple_feed ? { seenAt: row.feed_seen_at ?? null } : null,
+      linkSeenAt: row?.feed_token ? row.feed_seen_at ?? null : null,
       sig, syncedAt: times.length ? times[times.length - 1] : null,
     } satisfies CalendarStatus);
   } catch (e) {

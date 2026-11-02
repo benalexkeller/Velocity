@@ -75,6 +75,9 @@
 .cal-txt span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .cal-txt .err { color: var(--danger); white-space: normal; }
 .cal-act { flex: 0 0 auto; display: flex; gap: 8px; }
+.cal-txt .at { margin-left: 8px; }
+.cal-sub > .link-btn { justify-self: start; text-align: left; text-decoration: none; }
+.cal-sub > a.link-btn:hover { text-decoration: underline; }
 .cal-sub { display: grid; gap: 8px; margin: 10px 0 0 48px; }
 .cal-subrow { display: flex; align-items: center; justify-content: space-between; gap: 8px 16px; font-size: 13px; }
 .cal-subrow > div { display: grid; gap: 1px; min-width: 0; }

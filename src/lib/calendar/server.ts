@@ -19,6 +19,10 @@ export interface CalendarRow {
   read_calendars: string[] | null;
   event_map: EventMap;
   feed_token: string | null;
+  /** the calendar link was set up from the Apple row ("Apple Calendar with one tap") */
+  apple_feed?: boolean;
+  /** when a calendar app last fetched the calendar link */
+  feed_seen_at?: string | null;
   sessions: CalSession[];
   tz: string | null;
   sig: string | null;

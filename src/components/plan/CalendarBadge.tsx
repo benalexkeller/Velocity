@@ -25,6 +25,7 @@ export function CalendarBadge() {
     if (a.write) to.push(PROVIDER_NAME[p]);
     if (a.show) shown.push(PROVIDER_NAME[p]);
   }
+  if (s?.appleFeed && !s.other?.apple) to.push(PROVIDER_NAME.apple);
   const and = (l: string[]) => (l.length < 2 ? l.join("") : `${l.slice(0, -1).join(", ")} and ${l[l.length - 1]}`);
   const text = !s ? "Checking" : [
     to.length ? `Sessions go to the Velocity training calendar in ${and(to)}.` : s.link ? "Your calendar link is on." : broken.length ? "" : "Not connected.",
