@@ -43,7 +43,7 @@ export default function ResetPassword() {
         {email === undefined ? <p className="sub">Checking your link…</p>
           : email === null ? <>
             <h1>Link expired</h1>
-            <p className="sub">This reset link has expired or was already used. A link works once, for one hour, in the browser where you asked for it.</p>
+            <p className="sub">This reset link has expired or was already used. A link works once, for one hour.</p>
             <Link className="btn wide" href="/login?mode=forgot">Ask for a new link</Link>
           </>
           : done ? <>

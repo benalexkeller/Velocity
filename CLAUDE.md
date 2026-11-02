@@ -62,6 +62,8 @@ with tokens in `src/app/globals.css`, no UI library. `npm run dev` → http://lo
 
 - Account switching (2026-11-01 fix): the backends read the user id from the live session on every call (`getSession`), never a remembered id, and Sign out does a full page load. Before, signing out and creating another account in the same tab sent the new account's writes with the old id, and Supabase refused them (403, "Could not save" on Setup). `scripts/mock-supabase-auth.js` refuses profile writes for another user's id, so this can be re-tested locally.
 
+- Email sender (2026-11-02, in progress): Velocity's own Supabase email templates in `supabase/email-templates/` (reset, confirm sign-up, magic link, change email, invite). Their links go to `/auth/callback?token_hash=…&type=…&next=…` (server `verifyOtp`), so they work in any browser and on any device, unlike Supabase's default `{{ .ConfirmationURL }}` PKCE links. Sending through Resend as custom SMTP in Supabase (host smtp.resend.com, port 465, user `resend`, password = Resend API key, sender no-reply@velocityathletes.com); DNS records for Resend live in Vercel (velocityathletes.com uses Vercel DNS).
+
 ## Roadmap (in order)
 1. Buy Junction (sandbox first), set the env values, run the two SQL files, test Connect Garmin on the live site; apply to Garmin's own developer program in parallel.
 2. Coach: Sunday weekly review as a scheduled job; onboarding interview that writes the plan.
