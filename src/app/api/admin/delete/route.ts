@@ -1,9 +1,9 @@
 // POST /api/admin/delete { user, reason } — Admin → Users → Delete account. The same clean-up as Delete my account
-// (Velocity's Google calendar and access, the Garmin connection), then the account with everything in it
+// (Velocity's calendars in Google, Outlook and iCloud, its Google access, the Garmin connection), then the account with everything in it
 // (admin_delete_user in supabase/schema-admin.sql, which refuses anyone but the admin and never deletes an admin).
 import { NextResponse, type NextRequest } from "next/server";
 import { supabaseServer } from "@/lib/supabase/server";
-import { cleanupOutside } from "@/lib/account/cleanup";
+import { cleanupOutside, type OutsideLinks } from "@/lib/account/cleanup";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -26,7 +26,9 @@ export async function POST(req: NextRequest) {
 
   const { data: links } = await sb.rpc("admin_external_links", { p_user: user });
   const row = (links as { google_token: string | null; google_calendar_id: string | null; garmin_external_id: string | null }[] | null)?.[0];
-  if (row) await cleanupOutside({ googleToken: row.google_token, calendarId: row.google_calendar_id, garminId: row.garmin_external_id }, "admin/delete");
+  // missing function (schema-calendar-accounts.sql not run yet) comes back as an error and no rows
+  const { data: other } = await sb.rpc("admin_calendar_accounts", { p_user: user });
+  await cleanupOutside({ googleToken: row?.google_token, calendarId: row?.google_calendar_id, garminId: row?.garmin_external_id, accounts: other as OutsideLinks["accounts"] }, "admin/delete");
 
   const { error } = await sb.rpc("admin_delete_user", { p_user: user, p_reason: reason });
   if (error) {

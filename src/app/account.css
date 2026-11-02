@@ -76,6 +76,12 @@
 .cal-choice { display: flex; flex-wrap: wrap; gap: 6px 16px; margin: -4px 0 10px; font-size: 13px; }
 .cal-choice label { display: inline-flex; align-items: center; gap: 7px; color: var(--ink-2); cursor: pointer; }
 .cal-choice i { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+.cal-switches { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: -4px 0 10px; font-size: 13px; }
+.cal-switches label { display: inline-flex; align-items: center; gap: 7px; color: var(--ink-2); cursor: pointer; }
+.cal-switches input { margin: 0; accent-color: var(--accent); }
+.cal-apple { gap: 10px; padding: 12px; margin: -4px 0 10px; background: var(--surface-2); border-radius: 10px; max-width: 460px; }
+.cal-apple ol { margin: 0; padding-left: 18px; display: grid; gap: 3px; }
+.cal-apple a { color: var(--accent); }
 .cal-link { display: grid; gap: 8px; margin: -4px 0 4px; }
 .cal-link input { flex: 1; min-width: 0; font: inherit; font-size: 13px; color: var(--ink-2); border: 1px solid var(--line); border-radius: 9px; padding: 7px 10px; background: var(--surface-2); outline: none; }
 .cal-link input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }

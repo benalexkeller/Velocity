@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Icon } from "../icons";
 import { ConnectWearable } from "../ConnectWearable";
 import { usePlan } from "@/lib/store";
-import { useCalendar } from "@/lib/calendar/client";
+import { isLinked, useCalendar } from "@/lib/calendar/client";
 import { DISTANCES, distanceInfo, type Race, type RaceDistance } from "@/lib/athlete";
 import type { Availability } from "@/lib/data";
 import { dateFull, dateLabel, ymd, addDays, today } from "@/lib/format";
@@ -261,7 +261,7 @@ function TimeStep({ intake, set, kind, plan }: { intake: Intake; set: <K extends
         <button type="button" className="linkbtn" onClick={() => set("time", (cur) => ({ blackouts: [...cur.blackouts, { from: "", to: "", note: "" }] }))}>+ Add dates</button>
       </div>
       <div className="pb-cal">
-        <span className="hint">{cal.status?.connection?.status === "connected" ? "Your sessions go to the Velocity training calendar in Google Calendar as soon as the plan is built." : plan.accounts ? "Once the plan is built, your sessions can go to Google Calendar or any calendar app: Profile, Calendar." : "Calendar connections need an account."}</span>
+        <span className="hint">{isLinked(cal.status) ? "Your sessions go to your connected calendars as soon as the plan is built." : plan.accounts ? "Once the plan is built, your sessions can go to Google Calendar, Outlook, Apple Calendar or any calendar app: Profile, Calendar." : "Calendar connections need an account."}</span>
       </div>
     </>
   );

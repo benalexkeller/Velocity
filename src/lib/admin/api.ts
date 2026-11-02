@@ -18,12 +18,16 @@ export interface AdminUser {
   created_at: string; last_seen: string | null; setup_done: boolean;
   race: string | null; race_date: string | null; activities: number; plan_weeks: number | null;
   signin: string; watch: string | null; calendar: boolean; coach_30: number;
+  /** "Google", "Outlook", "Apple": connected calendars */
+  calendars: string[];
   access: Membership; access_kind: "trial" | "comp" | "paid" | null; access_ends: string | null; access_note: string | null;
   disabled: boolean; is_admin: boolean;
 }
 export interface Overview {
   users: number; new_7: number; new_30: number; active_1: number; active_7: number; active_30: number;
   setup_done: number; has_plan: number; has_activity: number; watch: number; calendar: number; coach_users_30: number;
+  /** athletes with Outlook, with Apple Calendar (0 until schema-calendar-accounts.sql has been run) */
+  outlook: number; apple: number;
   google_signin: number; disabled: number; trial: number; pro: number; free_pro: number;
   deleted_30: number; deleted_all: number; coach_cost_30: number; signups: { week: string; n: number }[];
 }
@@ -49,16 +53,25 @@ async function rpc<T>(name: string, args?: Record<string, unknown>): Promise<T> 
   if (error) throw new Error(plain(error.message));
   return data as T;
 }
+/** Outlook and Apple connections per athlete; empty until supabase/schema-calendar-accounts.sql has been run. */
+async function otherCalendars(): Promise<Map<string, string[]>> {
+  try { return new Map(((await rpc<{ user_id: string; providers: string[] }[]>("admin_calendar_providers")) ?? []).map((r) => [r.user_id, r.providers ?? []])); }
+  catch { return new Map(); }
+}
 /** numeric columns arrive as strings from some Postgres types; make them numbers */
 const num = (v: unknown) => (typeof v === "number" ? v : Number(v ?? 0) || 0);
 
 export const adminApi = {
   async overview() {
-    const r = await rpc<Overview | null>("admin_overview");
+    const [r, other] = await Promise.all([rpc<Overview | null>("admin_overview"), otherCalendars()]);
     if (!r) throw new Error("Only the admin account can see this.");
-    return { ...r, coach_cost_30: num(r.coach_cost_30), signups: r.signups ?? [] };
+    const count = (p: string) => [...other.values()].filter((l) => l.includes(p)).length;
+    return { ...r, coach_cost_30: num(r.coach_cost_30), signups: r.signups ?? [], outlook: count("outlook"), apple: count("apple") };
   },
-  users: () => rpc<AdminUser[]>("admin_users").then((r) => r ?? []),
+  async users() {
+    const [r, other] = await Promise.all([rpc<Omit<AdminUser, "calendars">[]>("admin_users"), otherCalendars()]);
+    return (r ?? []).map((u) => ({ ...u, calendars: [...(u.calendar ? ["Google"] : []), ...(other.get(u.id) ?? []).map((p) => (p === "outlook" ? "Outlook" : "Apple"))] }));
+  },
   /** kind: "free" removes the membership; "trial" and "comp" (Free Pro) need no end date */
   setAccess: (user: string, kind: "free" | "trial" | "comp", ends: string | null, note: string) =>
     rpc<void>("admin_set_access", { p_user: user, p_kind: kind, p_ends: ends, p_note: note }),
@@ -75,7 +88,7 @@ export const adminApi = {
       failed: num(r.failed), capped: num(r.capped),
     };
   },
-  /** Same clean-up as Delete my account (Google calendar, Garmin), then the account with everything in it. */
+  /** Same clean-up as Delete my account (calendars, Garmin), then the account with everything in it. */
   async deleteUser(user: string, reason: string) {
     const res = await fetch("/api/admin/delete", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ user, reason }) });
     const body = (await res.json().catch(() => ({}))) as { error?: string };
