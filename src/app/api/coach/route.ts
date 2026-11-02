@@ -28,6 +28,20 @@ const BASE = process.env.OPENROUTER_BASE_URL || "https://openrouter.ai/api/v1";
 const ACTION = /\b(move|swap|reschedule|shift|delete|remove|lock|unlock|undo|add a|log)\b/i;
 
 type Msg = { role: string; content: string };
+type Usage = { prompt_tokens?: number; completion_tokens?: number; cost?: number };
+type Db = NonNullable<Awaited<ReturnType<typeof supabaseServer>>>;
+
+/** One row per request in coach_usage for the Admin page: tier, model, tokens and cost, never the message text.
+ *  A missing table (SQL not run yet) or any other error is logged and ignored. */
+async function logUsage(sb: Db | null, uid: string | null, tier: "fast" | "strong" | "capped" | "failed", model?: string, usage?: Usage) {
+  if (!sb || !uid) return;
+  const { error } = await sb.from("coach_usage").insert({
+    user_id: uid, tier, model: model ?? null,
+    tokens_in: usage?.prompt_tokens ?? null, tokens_out: usage?.completion_tokens ?? null,
+    cost_usd: typeof usage?.cost === "number" ? usage.cost : null,
+  });
+  if (error) console.error("[coach] usage log", error.message);
+}
 type ModelOut = { content?: string | null; tool_calls?: { function?: { name?: string; arguments?: string } }[] };
 
 export async function POST(req: NextRequest) {
@@ -44,14 +58,14 @@ export async function POST(req: NextRequest) {
   // 2. who is asking: a signed-in athlete (accounts mode) — or anyone, in local development
   let uid: string | null = null;
   let extra: Passage[] = [];
+  const sb = ACCOUNTS_ON ? await supabaseServer() : null;
   if (ACCOUNTS_ON) {
-    const sb = await supabaseServer();
     const { data } = await sb!.auth.getUser();
     if (!data.user) return NextResponse.json({ error: "signed_out" }, { status: 401 });
     uid = data.user.id;
     const since = new Date(); since.setUTCHours(0, 0, 0, 0);
     const { count } = await sb!.from("coach_messages").select("id", { count: "exact", head: true }).eq("user_id", uid).eq("who", "You").gte("created_at", since.toISOString());
-    if ((count ?? 0) >= CAP) return NextResponse.json({ text: `Daily limit reached (${CAP} questions). The coach answers again tomorrow.`, capped: true, tier: "none" } satisfies CoachReply);
+    if ((count ?? 0) >= CAP) { await logUsage(sb, uid, "capped"); return NextResponse.json({ text: `Daily limit reached (${CAP} questions). The coach answers again tomorrow.`, capped: true, tier: "none" } satisfies CoachReply); }
     // passages the admin added or changed in the database (same shape as the bundled ones; a row overrides its bundled id)
     const { data: rows } = await sb!.from("library").select("id, title, topic, grade, tags, body, source, url").eq("published", true);
     extra = ((rows as Passage[] | null) ?? []);
@@ -73,8 +87,9 @@ export async function POST(req: NextRequest) {
 
   const models = restructure ? coachModels().strong : coachModels().fast;
   const res = await callModel(models, messages, restructure ? TOOLS : [...TOOLS, RESTRUCTURE_TOOL, LOG_MEAL_TOOL], restructure ? 1800 : 700, restructure ? 55_000 : 30_000);
-  if (!res) return NextResponse.json({ error: "upstream" }, { status: 502 });
-  const { out, model } = res;
+  if (!res) { await logUsage(sb, uid, "failed", models[0]); return NextResponse.json({ error: "upstream" }, { status: 502 }); }
+  const { out, model, usage } = res;
+  await logUsage(sb, uid, restructure ? "strong" : "fast", model, usage);
 
   let text = (out.content ?? "").trim();
   let proposal: Proposal | undefined;
@@ -102,7 +117,7 @@ export async function POST(req: NextRequest) {
 /** One request to OpenRouter with the whole model list: the first answers, the rest stand in when it fails.
  *  If OpenRouter rejects the list itself (an unknown id in an override), the first model is tried alone.
  *  Returns the answer and the model that actually gave it. */
-async function callModel(models: string[], messages: Msg[], tools: unknown[], maxTokens: number, timeoutMs: number): Promise<{ out: ModelOut; model: string } | null> {
+async function callModel(models: string[], messages: Msg[], tools: unknown[], maxTokens: number, timeoutMs: number): Promise<{ out: ModelOut; model: string; usage?: Usage } | null> {
   const send = async (list: string[]) => {
     try {
       return await fetch(`${BASE}/chat/completions`, {
@@ -110,7 +125,7 @@ async function callModel(models: string[], messages: Msg[], tools: unknown[], ma
         headers: { Authorization: `Bearer ${KEY}`, "Content-Type": "application/json", "HTTP-Referer": "https://velocityathletes.com", "X-Title": "Velocity coach" },
         // provider.data_collection "deny": OpenRouter only uses AI providers that do not store prompts or train on
         // them, which is what the privacy policy promises athletes
-        body: JSON.stringify({ model: list[0], ...(list.length > 1 ? { models: list } : {}), provider: { data_collection: "deny" }, messages, tools, tool_choice: "auto", max_tokens: maxTokens, temperature: 0.3 }),
+        body: JSON.stringify({ model: list[0], ...(list.length > 1 ? { models: list } : {}), provider: { data_collection: "deny" }, usage: { include: true }, messages, tools, tool_choice: "auto", max_tokens: maxTokens, temperature: 0.3 }),
         signal: AbortSignal.timeout(timeoutMs),
       });
     } catch (e) { console.error("[coach] fetch", e); return null; }
@@ -119,9 +134,10 @@ async function callModel(models: string[], messages: Msg[], tools: unknown[], ma
   if (res && res.status === 400 && models.length > 1) { console.error("[coach] openrouter rejected the model list", (await res.text()).slice(0, 300)); res = await send(models.slice(0, 1)); }
   if (!res) return null;
   if (!res.ok) { console.error("[coach] openrouter", models[0], res.status, (await res.text()).slice(0, 500)); return null; }
-  const data = (await res.json()) as { model?: string; choices?: { message?: ModelOut }[] };
+  // usage.include asks OpenRouter for the tokens and the cost in dollars of this request (for the Admin page)
+  const data = (await res.json()) as { model?: string; choices?: { message?: ModelOut }[]; usage?: Usage };
   const out = data.choices?.[0]?.message;
-  return out ? { out, model: data.model ?? models[0] } : null;
+  return out ? { out, model: data.model ?? models[0], usage: data.usage } : null;
 }
 
 /** Keeps the request small whatever the browser sends; the whole plan goes only in restructure mode. */

@@ -1,92 +1,66 @@
 "use client";
+// Admin: Overview, Users (with membership and account actions), Coach (usage and cost), Library, Inbox, System.
+// Every number comes from database functions that answer only the admin (supabase/schema-admin.sql); athletes' own
+// data (workouts, body data, meals, coach messages, calendar events) is never shown here.
 import "../account.css";
-import { useEffect, useState } from "react";
+import "./admin.css";
+import { Suspense, useEffect, useState } from "react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { usePlan } from "@/lib/store";
-import { supabase } from "@/lib/supabase/client";
-import { FEEDBACK_KINDS, FEEDBACK_TABS, listFeedback, setFeedbackStatus, type FeedbackEntry } from "@/lib/feedback";
-import { DELETE_TAB } from "@/lib/account/deleteReasons";
+import { listFeedback } from "@/lib/feedback";
 import { LibraryAdmin } from "@/components/admin/Library";
+import { Overview } from "@/components/admin/Overview";
+import { Users } from "@/components/admin/Users";
+import { Coach } from "@/components/admin/Coach";
+import { Inbox } from "@/components/admin/Inbox";
+import { System } from "@/components/admin/System";
 
-interface Conn { user_id: string; email: string | null; username: string | null; provider: string; via: string; status: string; connected_at: string | null; last_event_at: string | null; error: string | null }
-interface Hook { id: number; via: string; event_type: string | null; external_user_id: string | null; ok: boolean; note: string | null; created_at: string }
-interface Row { id: string; email: string | null; username: string | null; name: string | null; created_at: string; last_seen: string | null; setup_done: boolean; race: string | null; race_date: string | null; activities: number }
-const when = (s: string | null) => (s ? new Date(s).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }) : "-");
+const TABS = [
+  { k: "overview", label: "Overview" },
+  { k: "users", label: "Users" },
+  { k: "coach", label: "Coach" },
+  { k: "library", label: "Library" },
+  { k: "inbox", label: "Inbox" },
+  { k: "system", label: "System" },
+] as const;
+type Tab = (typeof TABS)[number]["k"];
 
-// Only the admin gets rows back; everyone else sees an empty table (the database enforces it).
 export default function AdminPage() {
+  return <Suspense fallback={null}><Admin /></Suspense>;
+}
+
+function Admin() {
   const plan = usePlan();
-  const [rows, setRows] = useState<Row[] | null>(null);
-  const [err, setErr] = useState<string | null>(null);
-  const [fb, setFb] = useState<FeedbackEntry[] | null>(null);
-  const [fbErr, setFbErr] = useState<string | null>(null);
-  const [showDone, setShowDone] = useState(false);
-  const [conns, setConns] = useState<Conn[] | null>(null);
-  const [hooks, setHooks] = useState<Hook[] | null>(null);
-  const [connErr, setConnErr] = useState<string | null>(null);
-  useEffect(() => { const sb = supabase(); if (!sb) return; sb.rpc("admin_users").then(({ data, error }) => { if (error) setErr(error.message); else setRows((data as Row[]) ?? []); }); }, []);
-  useEffect(() => {
-    const sb = supabase(); if (!sb) return;
-    sb.rpc("admin_integrations").then(({ data, error }) => { if (error) setConnErr(error.message.includes("admin_integrations") ? "Run supabase/schema-integrations.sql to see connections." : error.message); else setConns((data as Conn[]) ?? []); });
-    sb.rpc("admin_webhook_log", { n: 50 }).then(({ data, error }) => { if (!error) setHooks((data as Hook[]) ?? []); });
-  }, []);
-  useEffect(() => { listFeedback().then(setFb).catch((e) => setFbErr(e instanceof Error ? e.message : "Could not load feedback.")); }, []);
-  const label = (list: { k: string; label: string }[], k: string) => list.find((x) => x.k === k)?.label ?? k;
-  const flip = async (e: FeedbackEntry) => { const status = e.status === "done" ? "open" : "done"; setFb((cur) => (cur ?? []).map((x) => (x.id === e.id ? { ...x, status } : x))); try { await setFeedbackStatus(e.id, status); } catch (x) { setFbErr(x instanceof Error ? x.message : "Could not update."); } };
-  const open = (fb ?? []).filter((e) => e.status !== "done");
-  const shown = showDone ? fb ?? [] : open;
-  if (!plan.accounts) return <main className="main"><div className="admin"><div className="page-head"><h1>Admin</h1></div><p className="muted">Admin tools arrive with accounts.</p></div></main>;
-  if (!plan.athlete.isAdmin) return <main className="main"><div className="admin"><div className="page-head"><h1>Admin</h1></div><p className="muted">This page is for the admin account.</p></div></main>;
-  return (
-    <main className="main">
-      <div className="admin">
-        <div className="page-head"><div><h1>Users</h1><div className="muted sub">{rows ? `${rows.length} account${rows.length === 1 ? "" : "s"}` : "Loading…"}</div></div></div>
-        {err && <div className="form"><div className="err">{err}</div></div>}
-        <div className="card" style={{ overflow: "auto" }}>
-          <table className="tbl small">
-            <thead><tr><th>Name</th><th>Username</th><th>Email</th><th>Signed up</th><th>Last seen</th><th>Setup</th><th>Race</th><th>Activities</th></tr></thead>
-            <tbody>
-              {(rows ?? []).map((r) => <tr key={r.id}><td>{r.name ?? "-"}</td><td>{r.username ? `@${r.username}` : "-"}</td><td>{r.email ?? "-"}</td><td>{when(r.created_at)}</td><td>{when(r.last_seen)}</td><td>{r.setup_done ? "done" : "not yet"}</td><td>{r.race ? `${r.race}${r.race_date ? `, ${r.race_date}` : ""}` : "-"}</td><td>{r.activities}</td></tr>)}
-              {rows && !rows.length && <tr><td colSpan={8} className="muted" style={{ padding: 20 }}>No accounts yet.</td></tr>}
-            </tbody>
-          </table>
-        </div>
+  const params = useSearchParams();
+  const router = useRouter();
+  const path = usePathname();
+  const tab: Tab = TABS.some((t) => t.k === params.get("tab")) ? (params.get("tab") as Tab) : "overview";
+  const [openInbox, setOpenInbox] = useState<number | null>(null);
+  const isAdmin = plan.accounts && plan.athlete.isAdmin;
+  useEffect(() => { if (isAdmin) listFeedback().then((f) => setOpenInbox(f.filter((e) => e.status !== "done").length), () => {}); }, [isAdmin, tab]);
 
-        <div className="page-head" style={{ marginTop: 28 }}><div><h1>Feedback</h1><div className="muted sub">{fb ? `${open.length} open, ${(fb.length - open.length)} done` : fbErr ? "" : "Loading…"}</div></div><span className="grow" /><button type="button" className="btn ghost small" onClick={() => setShowDone((v) => !v)}>{showDone ? "Hide done" : "Show done"}</button></div>
-        {fbErr && <div className="form"><div className="err">{fbErr}</div></div>}
-        <div className="card" style={{ overflow: "auto" }}>
-          <table className="tbl small fb-table">
-            <thead><tr><th>When</th><th>Who</th><th>Part</th><th>Kind</th><th>Comment</th><th>Page, browser</th><th></th></tr></thead>
-            <tbody>
-              {shown.map((e) => <tr key={e.id} className={e.status === "done" ? "muted" : ""}><td style={{ whiteSpace: "nowrap" }}>{when(e.created_at)}</td><td>{e.tab === "contact" ? <>{e.email ?? "-"}{e.username ? <><br />@{e.username}</> : null}</> : e.username ? `@${e.username}` : e.email ?? "-"}</td><td>{e.tab === "contact" ? "Contact form" : e.tab === DELETE_TAB ? "Account deleted" : label(FEEDBACK_TABS, e.tab)}</td><td>{e.kind === "contact" ? "Message" : e.tab === DELETE_TAB ? "Reason" : label(FEEDBACK_KINDS, e.kind)}</td><td style={{ whiteSpace: "pre-wrap", minWidth: 260 }}>{e.message}</td><td className="muted" style={{ fontSize: 11.5 }}>{e.page ?? "-"}{e.viewport ? `, ${e.viewport}` : ""}{e.ua ? `, ${e.ua.replace(/^Mozilla\/5\.0 /, "").slice(0, 60)}` : ""}</td><td><button type="button" className="btn ghost small" onClick={() => flip(e)}>{e.status === "done" ? "Reopen" : "Mark done"}</button></td></tr>)}
-              {fb && !shown.length && <tr><td colSpan={7} className="muted" style={{ padding: 20 }}>{showDone ? "No feedback yet." : "Nothing open."}</td></tr>}
-            </tbody>
-          </table>
+  const shell = (body: React.ReactNode) => <main className="main"><div className="adm"><div className="page-head"><h1>Admin</h1></div>{body}</div></main>;
+  if (!plan.accounts) return shell(<p className="muted">Admin tools arrive with accounts.</p>);
+  if (!plan.ready) return shell(<p className="muted">Loading…</p>);
+  if (!plan.athlete.isAdmin) return shell(<p className="muted">This page is for the admin account.</p>);
+  const go = (k: Tab) => router.replace(k === "overview" ? path : `${path}?tab=${k}`, { scroll: false });
+  return shell(
+    <>
+      <div className="tabs-row">
+        <div className="pill-group" role="tablist" aria-label="Admin sections">
+          {TABS.map((t) => (
+            <button key={t.k} type="button" role="tab" aria-selected={tab === t.k} className={tab === t.k ? "on" : ""} onClick={() => go(t.k)}>
+              {t.label}{t.k === "inbox" && openInbox ? <span className="c">{openInbox}</span> : null}
+            </button>
+          ))}
         </div>
-
-        <div className="page-head" style={{ marginTop: 28 }}><div><h1>Connections</h1><div className="muted sub">{conns ? `${conns.filter((c) => c.status === "connected").length} connected, ${conns.length} total` : connErr ? "" : "Loading…"}</div></div></div>
-        {connErr && <div className="form"><div className="err">{connErr}</div></div>}
-        <div className="card" style={{ overflow: "auto" }}>
-          <table className="tbl small">
-            <thead><tr><th>Who</th><th>Device</th><th>Through</th><th>Status</th><th>Connected</th><th>Last data</th><th>Error</th></tr></thead>
-            <tbody>
-              {(conns ?? []).map((c) => <tr key={`${c.user_id}-${c.provider}`}><td>{c.username ? `@${c.username}` : c.email ?? c.user_id.slice(0, 8)}</td><td>{c.provider}</td><td>{c.via}</td><td>{c.status}</td><td>{when(c.connected_at)}</td><td>{when(c.last_event_at)}</td><td className="muted" style={{ fontSize: 11.5 }}>{c.error ?? ""}</td></tr>)}
-              {conns && !conns.length && <tr><td colSpan={7} className="muted" style={{ padding: 20 }}>No connections yet.</td></tr>}
-            </tbody>
-          </table>
-        </div>
-        <LibraryAdmin />
-        {hooks && hooks.length > 0 && (
-          <>
-            <div className="page-head" style={{ marginTop: 28 }}><div><h1>Webhook calls</h1><div className="muted sub">last {hooks.length}</div></div></div>
-            <div className="card" style={{ overflow: "auto" }}>
-              <table className="tbl small">
-                <thead><tr><th>When</th><th>Event</th><th>Athlete id</th><th>Result</th></tr></thead>
-                <tbody>{hooks.map((h) => <tr key={h.id} className={h.ok ? "" : "muted"}><td style={{ whiteSpace: "nowrap" }}>{when(h.created_at)}</td><td>{h.event_type ?? "-"}</td><td className="muted" style={{ fontSize: 11.5 }}>{h.external_user_id?.slice(0, 8) ?? "-"}</td><td>{h.ok ? "ok" : "failed"}{h.note ? `, ${h.note}` : ""}</td></tr>)}</tbody>
-              </table>
-            </div>
-          </>
-        )}
       </div>
-    </main>
+      {tab === "overview" && <Overview />}
+      {tab === "users" && <Users />}
+      {tab === "coach" && <Coach />}
+      {tab === "library" && <LibraryAdmin />}
+      {tab === "inbox" && <Inbox />}
+      {tab === "system" && <System />}
+    </>
   );
 }

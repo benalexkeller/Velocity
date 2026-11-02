@@ -8,6 +8,7 @@ import { ProfileForm } from "@/components/account/ProfileForm";
 import { CalendarCard } from "@/components/account/CalendarCard";
 import { DeleteAccount } from "@/components/account/DeleteAccount";
 import { dateFull, dateLabel } from "@/lib/format";
+import { Membership } from "@/components/account/Membership";
 
 export default function ProfilePage() {
   const plan = usePlan();
@@ -31,6 +32,7 @@ export default function ProfilePage() {
             <span>Weeks</span><span>{plan.hasPlan ? `${plan.planJson.length}, starts ${dateLabel(plan.planJson[0].start)}` : "No plan yet"}</span>
             <span>Race</span><span>{a.hasRace ? `${a.race.name}, ${dateFull(a.race.date)}${a.race.goal ? `, ${a.race.goal}` : ""}` : "Not set"}</span>
             <span>Activities</span><span>{plan.activities.length}</span>
+            {plan.accounts && <Membership />}
             {!plan.accounts && <><span>Changes on this device</span><span>{plan.changes}</span></>}
           </div>
           {plan.accounts && a.isAdmin && !plan.hasPlan && <div className="row" style={{ marginTop: 12 }}><button type="button" className="btn ghost" disabled={importing} onClick={async () => { setImporting(true); try { await plan.importSeed(); } finally { setImporting(false); } }}>{importing ? "Importing…" : "Import my seed data"}</button></div>}

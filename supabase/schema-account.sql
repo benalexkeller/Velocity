@@ -2,12 +2,20 @@
 -- Deletes the signed-in athlete's login. Every table that belongs to the athlete references profiles, which references
 -- the login, with "on delete cascade", so plan, activities, body data, nutrition, coach messages and connections go
 -- with it. Feedback is kept "on delete set null" for other reasons, so the athlete's own feedback rows are deleted first.
+-- Each deletion also adds a dated row to account_deletions (no other data) for the Admin overview.
+create table if not exists public.account_deletions (
+  id bigserial primary key,
+  deleted_at timestamptz not null default now(),
+  by_admin boolean not null default false
+);
+alter table public.account_deletions enable row level security; -- no policies
 create or replace function public.delete_my_account()
 returns void language plpgsql security definer set search_path = public, auth as $$
 declare uid uuid := auth.uid();
 begin
   if uid is null then raise exception 'not signed in'; end if;
   delete from public.feedback where user_id = uid;
+  insert into public.account_deletions (by_admin) values (false);
   delete from auth.users where id = uid;
 end;
 $$;
