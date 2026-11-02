@@ -26,12 +26,11 @@ const FLAG: Record<string, string> = {
   "outlook-off": "Outlook is not switched on for this site yet.",
 };
 
-/** Google is still reviewing the "see your events" permission (calendar.events.readonly). Until it approves, Google's
- *  part of the card keeps the exact words and buttons the reviewers were sent ("Your other events", "Connect and
- *  show"). After approval set this to false: Google then gets the same "Show my events on Plan" switch as Outlook
- *  and Apple. Nothing else changes, and the switch needs no new review (Google only reviews scope, name, logo and
- *  link changes). */
-const GOOGLE_AS_REVIEWED = true;
+/** false: Google has the same "Show my events on Plan" switch as Outlook and Apple (chosen 2 Nov 2026, while Google
+ *  was still reviewing calendar.events.readonly). true brings back the exact words sent to Google's reviewers on
+ *  1 Nov ("Connect Google Calendar", "Your other events", "Connect and show"), if a reviewer cannot follow the new
+ *  layout. Either way the permissions asked for are the same. */
+const GOOGLE_AS_REVIEWED = false;
 
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 /** "30 Oct, 14:02" */
