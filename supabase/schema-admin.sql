@@ -1,6 +1,8 @@
 -- Admin panel (2 Nov 2026): plans and access, an audit log, coach usage and cost, account actions.
 -- Idempotent: paste into Supabase → SQL Editor → Run. Needs schema.sql, schema-integrations.sql, schema-calendar.sql,
--- schema-coach.sql and schema-account.sql first (all already run on the live project).
+-- schema-coach.sql and schema-account.sql first. On the live project schema-integrations.sql had not been run on
+-- 2 Nov 2026 (Garmin not set up yet); it only creates empty tables, so run it first if Supabase says
+-- relation "integrations" does not exist.
 --
 -- Rule: the admin sees account facts and counts, never an athlete's own data (workouts, meals, body data, coach
 -- messages, calendar events). Nothing below returns any of it.
