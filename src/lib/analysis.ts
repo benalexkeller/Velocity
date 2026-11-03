@@ -289,8 +289,8 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
     };
   }
 
-  function zoneDistribution(days = 84) {
-    const t = today(), from = addDays(t, -days);
+  function zoneDistribution(fromYmdS?: string, toYmdS?: string) {
+    const t = toYmdS ? fromYmd(toYmdS) : today(), from = fromYmdS ? fromYmd(fromYmdS) : addDays(t, -84);
     const acts = ACTIVITIES.filter((a) => between(a, from, t));
     const load = [0, 0, 0, 0, 0, 0];
     let total = 0, unknown = 0;
@@ -299,6 +299,7 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
     const zones = [1, 2, 3, 4, 5].map((z) => ({ z, load: Math.round(load[z]), pct: Math.round((load[z] / known) * 100) }));
     const easy = zones[0].pct + zones[1].pct, moderate = zones[2].pct, hard = zones[3].pct + zones[4].pct;
     // previous window for the trend line
+    const days = Math.max(1, Math.round((t.getTime() - from.getTime()) / 86400000));
     const pf = addDays(from, -days);
     const prevActs = ACTIVITIES.filter((a) => between(a, pf, from));
     let pe = 0, pt = 0;
@@ -311,7 +312,8 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
   function lastWeeks(n = 12) {
     const cur = currentWeek();
     const s0 = fromYmd(cur.start);
-    return Array.from({ length: n }, (_, i) => { const start = addDays(s0, -7 * (n - 1 - i)); const ys = ymd(start); const w = WEEKS.find((x) => x.start === ys); return { start: ys, week: w ? w.week : null }; });
+    const plan0 = WEEKS.length ? fromYmd(WEEKS[0].start).getTime() : null;
+    return Array.from({ length: n }, (_, i) => { const start = addDays(s0, -7 * (n - 1 - i)); const ys = ymd(start); const w = WEEKS.find((x) => x.start === ys); return { start: ys, week: w ? w.week : plan0 != null ? Math.round((start.getTime() - plan0) / 604800000) + 1 : i + 1 }; }); // weeks before the plan count down: W0, W-1 …
   }
   /** Sport cards: the last 5 sessions (fewer when there are fewer) against the 5 before, plus a 12-week weekly trend. */
   function sportPerformance(sp: "swim" | "bike" | "run") {
@@ -329,7 +331,7 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
       { k: sp === "swim" ? "Longest swim" : sp === "bike" ? "Longest ride" : "Longest run", cur: longest(cur), prev: longest(prev), kind: "dist" as const },
     ];
     // weekly trend (12 weeks): duration-weighted pace per week
-    const trend = lastWeeks(12).map((w) => { const s = fromYmd(w.start), e = addDays(s, 7); const xs = ACTIVITIES.filter((a) => a.sport === sp && between(a, addDays(s, -1), e)); return { week: w.week, start: w.start, v: wavg(xs, pace) }; });
+    const trend = lastWeeks(12).map((w) => { const s = fromYmd(w.start), e = addDays(s, 7); const xs = ACTIVITIES.filter((a) => a.sport === sp && between(a, addDays(s, -1), e)); return { week: w.week, start: w.start, v: wavg(xs, pace) }; }).filter((q, i, arr) => arr.slice(0, i + 1).some((z) => z.v != null)); // starts at the first week with data
     return { rows, trend, sessions: cur.length, prevSessions: prev.length };
   }
 
@@ -376,7 +378,7 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
     const weeks = lastWeeks(12);
     const inWeek = (w: { start: string }) => { const s0 = fromYmd(w.start); return ACTIVITIES.filter((a) => a.sport === sp && between(a, addDays(s0, -1), addDays(s0, 7))); };
     const wavg = (xs: { v: number; w: number }[]) => { const w = xs.reduce((s2, x) => s2 + x.w, 0); return w ? xs.reduce((s2, x) => s2 + x.v * x.w, 0) / w : null; };
-    type Series = { k: string; label: string; kind: "pace" | "speed" | "hr"; info: string; pts: { week: number | null; start: string; v: number | null }[] };
+    type Series = { k: string; label: string; kind: "pace" | "speed" | "hr"; info: string; pts: { week: number; start: string; v: number | null }[] };
     const out: Series[] = [];
     const series = (k: string, label: string, kind: Series["kind"], info: string, f: (xs: Activity[]) => number | null) => out.push({ k, label, kind, info, pts: weeks.map((w) => ({ week: w.week, start: w.start, v: f(inWeek(w)) })) });
     if (sp === "run") {
@@ -398,10 +400,12 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
     } else {
       series("thr", "Threshold pace", "pace", "Best pace of swims of 1,000 yd (900 m) or more in the six weeks up to that week, a stand-in for critical swim speed. Falling = fitter.",
         (xs) => { if (!xs.length) return null; const end = addDays(fromYmd(xs[0].date), 7); const win = ACTIVITIES.filter((a) => a.sport === "swim" && a.p100_s && (a.yd ?? 0) >= 1000 && between(a, addDays(end, -42), end)); const v = win.map((a) => a.p100_s!); return v.length ? Math.min(...v) : null; });
+      series("hrEasy", "Heart rate at steady pace", "hr", "Average heart rate of swims within 8% of the week's average pace. Falling at the same pace = the same work costs less.",
+        (xs) => { const withHr = xs.filter((a) => a.hr && a.p100_s); const avgP = wavg(xs.filter((a) => a.p100_s).map((a) => ({ v: a.p100_s!, w: a.min }))); return wavg((avgP != null ? withHr.filter((a) => Math.abs(a.p100_s! - avgP) / avgP <= 0.08) : []).map((a) => ({ v: a.hr!, w: a.min }))); });
       series("long", "Longest swim pace", "pace", "Pace of the longest swim of the week. Holding pace as the swim grows is race durability.",
         (xs) => { const l = xs.filter((a) => a.p100_s).sort((a, b) => (b.yd ?? 0) - (a.yd ?? 0))[0]; return l?.p100_s ?? null; });
     }
-    return out.map((sr) => { const vals = sr.pts.filter((p) => p.v != null); return { ...sr, cur: vals.length ? vals[vals.length - 1].v : null }; });
+    return out.map((sr) => { const pts = sr.pts.filter((q, i, arr) => arr.slice(0, i + 1).some((z) => z.v != null)); const vals = pts.filter((p) => p.v != null); return { ...sr, pts, cur: vals.length ? vals[vals.length - 1].v : null }; });
   }
 
   /** Body values over a range, for the Body charts. */
@@ -451,8 +455,8 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
     return { ready: p.ready, daysToRace, legs, total: { mid: sum((l) => l.mid), lo: sum((l) => l.lo), hi: sum((l) => l.hi) }, transitions: p.transitions, goalTotal, longest: p.longest };
   }
 
-  function progressSeries(sp: "swim" | "bike" | "run", metric: Metric, days = 84) {
-    const t = today(), from = addDays(t, -days);
+  function progressSeries(sp: "swim" | "bike" | "run", metric: Metric, fromYmdS?: string, toYmdS?: string) {
+    const t = toYmdS ? fromYmd(toYmdS) : today(), from = fromYmdS ? fromYmd(fromYmdS) : addDays(t, -84);
     const val = (a: Activity): number | null => metric === "pace" ? paceOf(a, sp) : metric === "hr" ? a.hr ?? null : metric === "distance" ? (sp === "swim" ? a.yd ?? null : a.mi ?? null) : metric === "duration" ? a.min : activityLoad(a);
     const pts = ACTIVITIES.filter((a) => a.sport === sp && between(a, from, t)).map((a) => ({ id: a.id, date: a.date, v: val(a) })).filter((p): p is { id: string; date: string; v: number } => p.v != null);
     const cur = pts.length ? pts[pts.length - 1].v : null;

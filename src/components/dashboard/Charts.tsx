@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { actualByDiscipline, plannedByDiscipline, type Activity } from "@/lib/data";
 import { usePlan } from "@/lib/store";
-import { fmtPace, fromYmd, shortDate, today, addDays, fmtHours } from "@/lib/format";
+import { fmtPace, fromYmd, shortDate, today, addDays, fmtHours, ymd } from "@/lib/format";
 import { paceEligible } from "@/lib/analysis";
 import { runPace, speed, swimPace } from "@/lib/units";
 import { niceTicks, useWidth } from "@/lib/ticks";
@@ -27,7 +27,10 @@ export function PaceChart() {
   const [svgRef, W] = useWidth<SVGSVGElement>(420); const H = 190, L = 44, R = 10, T = 12, B = 26;
   const nt = niceTicks(pts.length ? Math.min(...pts.map((p) => p.v)) : 0, pts.length ? Math.max(...pts.map((p) => p.v)) : 1, 4, sp === "bike" ? "number" : "pace");
   const lo = nt.lo, hi = nt.hi;
-  const x = (i: number) => L + (pts.length < 2 ? (W - L - R) / 2 : (i / (pts.length - 1)) * (W - L - R));
+  // time-based x over the fixed eight-week window, so the axis and its labels stay put when the sport changes
+  const span = 56 * 86400000, x0 = since.getTime();
+  const x = (i: number) => L + ((fromYmd(pts[i].date).getTime() - x0) / span) * (W - L - R);
+  const axisDates = [0, 1, 2, 3].map((i) => ({ at: L + (i / 3) * (W - L - R), label: shortDate(ymd(addDays(since, Math.round((i * 56) / 3)))), anchor: i === 0 ? "start" : i === 3 ? "end" : "middle" }));
   const y = (v: number) => (inv ? T + ((v - lo) / (hi - lo)) * (H - T - B) : H - B - ((v - lo) / (hi - lo)) * (H - T - B));
   const fmt = (v: number) => (sp === "bike" ? v.toFixed(1) : fmtPace(v));
   const wk = plan.currentWeek();
@@ -57,7 +60,7 @@ export function PaceChart() {
           <line x1={L} y1={T} x2={L} y2={H - B} stroke="var(--line)" />
           {pts.length > 1 && <path d={pts.map((p, i) => `${i ? "L" : "M"}${x(i)} ${y(p.v)}`).join("")} fill="none" stroke="var(--accent)" strokeWidth={2} />}
           {pts.map((p, i) => <circle key={p.date + i} cx={x(i)} cy={y(p.v)} r={4} fill="var(--accent)" stroke="var(--surface)" strokeWidth={2} />)}
-          {pts.map((p, i) => (i === 0 || i === pts.length - 1 || i % Math.max(1, Math.ceil(pts.length / 4)) === 0) && <text key={"l" + i} x={x(i)} y={H - 8} textAnchor="middle">{shortDate(p.date)}</text>)}
+          {axisDates.map((d, i) => <text key={"l" + i} x={d.at} y={H - 8} textAnchor={d.anchor as "start" | "middle" | "end"}>{d.label}</text>)}
           {!pts.length && <text x={W / 2} y={H / 2} textAnchor="middle">No {sp} activities yet</text>}
         </svg>
       </div>
