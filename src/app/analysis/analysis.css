@@ -195,8 +195,8 @@
 .ax-empty a { color: var(--accent); font-weight: 600; }
 
 /* ---------- v2: gauges, expert insights, progress hover, body charts, race window ---------- */
-.kpi.gauge-card { grid-template-rows: auto auto auto auto; }
-.kpi .gauge { display: block; margin: 2px auto 0; }
+.kpi.gauge-card { grid-template-rows: auto auto auto; }
+.kpi .gauge { display: block; margin: 0 auto; max-width: 100%; height: auto; }
 .sgauge { position: relative; display: flex; align-items: center; gap: 12px; margin: -4px 0 8px; }
 .sgauge .sg-text { display: grid; gap: 2px; min-width: 0; }
 .sgauge .sg-text b { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

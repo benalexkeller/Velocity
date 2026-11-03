@@ -62,21 +62,25 @@ export const KPI_INFO = {
 
 // ---------- 1. KPI tiles ----------
 /** A half-circle gauge with 1.00 at the centre: the needle sits left (red) when the ratio is under 1, right (green) above. */
-function RatioGauge({ ratio, w = 120 }: { ratio: number | null; w?: number }) {
-  const h = w * 0.58, cx = w / 2, cy = h - 6, r = w / 2 - 8;
-  const f = ratio == null ? 0.5 : Math.max(0, Math.min(1, (ratio - 0.85) / 0.3)); // 0.85 … 1.15 across the dial
-  const ang = Math.PI - f * Math.PI;
-  const nx = cx + Math.cos(ang) * (r - 4), ny = cy - Math.sin(ang) * (r - 4);
-  const arc = (a0: number, a1: number) => `M${cx + Math.cos(a0) * r} ${cy - Math.sin(a0) * r} A${r} ${r} 0 0 1 ${cx + Math.cos(a1) * r} ${cy - Math.sin(a1) * r}`;
-  const col = ratio == null ? "var(--muted-2)" : ratio >= 1 ? "var(--ok)" : "var(--danger)";
+/** Run efficiency, PR's sketch: a thick half ring, a tick for 1.00 at the top, a filled segment from the tick to the ratio (its value at the tip), the signed percent inside. 0.85 … 1.15 across the dial. */
+function RatioGauge({ ratio, w = 164 }: { ratio: number | null; w?: number }) {
+  const sw = 14, h = w * 0.6, cx = w / 2, cy = h - 10, r = w / 2 - 22;
+  const f = ratio == null ? 0.5 : Math.max(0, Math.min(1, (ratio - 0.85) / 0.3));
+  const ang = Math.PI - f * Math.PI, top = Math.PI / 2;
+  const pt = (a: number, rr: number) => `${cx + Math.cos(a) * rr} ${cy - Math.sin(a) * rr}`;
+  const arc = (a0: number, a1: number) => `M${pt(a0, r)} A${r} ${r} 0 0 1 ${pt(a1, r)}`; // a0 → a1 clockwise (left to right over the top)
+  const up = ratio != null && ratio >= 1;
+  const col = ratio == null ? "var(--muted-2)" : up ? "var(--ok)" : "var(--danger)";
+  const pct = ratio == null ? "–" : `${ratio >= 1 ? "+" : "−"}${Math.abs((ratio - 1) * 100).toFixed(0)}%`;
+  const tipR = r + sw / 2 + 6, tx = cx + Math.cos(ang) * tipR, ty = cy - Math.sin(ang) * tipR;
   return (
-    <svg className="gauge" viewBox={`0 0 ${w} ${h}`} width={w} height={h} role="img" aria-label={ratio == null ? "No baseline yet" : `${ratio.toFixed(2)} of the earlier value`}>
-      <path d={arc(Math.PI, Math.PI / 2)} fill="none" stroke="var(--danger-soft, #fde2e2)" strokeWidth={9} strokeLinecap="round" />
-      <path d={arc(Math.PI / 2, 0)} fill="none" stroke="var(--ok-soft, #dcf3e6)" strokeWidth={9} strokeLinecap="round" />
-      <line x1={cx} y1={cy - r - 6} x2={cx} y2={cy - r + 6} stroke="var(--muted-2)" strokeWidth={1.5} />
-      <line x1={cx} y1={cy} x2={nx} y2={ny} stroke={col} strokeWidth={3} strokeLinecap="round" />
-      <circle cx={cx} cy={cy} r={4} fill={col} />
-      <text x={cx} y={cy - r - 10} textAnchor="middle" fontSize={10} fill="var(--muted)">1.00</text>
+    <svg className="gauge" viewBox={`0 0 ${w} ${h}`} width={w} height={h} role="img" aria-label={ratio == null ? "No baseline yet" : `${ratio.toFixed(2)} of the 4 weeks before, ${pct}`}>
+      <path d={arc(Math.PI, 0)} fill="none" stroke="var(--track)" strokeWidth={sw} />
+      {ratio != null && Math.abs(ang - top) > 0.01 && <path d={up ? arc(top, ang) : arc(ang, top)} fill="none" stroke={col} strokeWidth={sw} />}
+      <line x1={cx} y1={cy - r - sw / 2 - 4} x2={cx} y2={cy - r + sw / 2 + 4} stroke="var(--ink)" strokeWidth={2} />
+      <text x={cx} y={cy - r - sw / 2 - 9} textAnchor="middle" fontSize={11} fill="var(--muted)">1</text>
+      {ratio != null && <text x={tx} y={ty + 4} textAnchor={f > 0.52 ? "start" : f < 0.48 ? "end" : "middle"} fontSize={11} fontWeight={600} fill="var(--ink)">{ratio.toFixed(2)}</text>}
+      <text x={cx} y={cy - 2} textAnchor="middle" fontSize={22} fontWeight={600} fill={ratio == null ? "var(--muted-2)" : col}>{pct}</text>
     </svg>
   );
 }
@@ -90,7 +94,7 @@ export function KpiRow() {
       <div className="card kpi"><div className="k">Week load<Info {...KPI_INFO.load} /></div><div className="row"><div className="v">{k.load.v}<small> / {k.load.planned}</small></div></div><div className="u">{k.load.last != null ? `last week ${k.load.last}` : "first plan week"}</div><Bars pts={k.load.bars} /></div>
       <div className="card kpi"><div className="k">Completed<span className="at">28 d</span><Info {...KPI_INFO.compliance} /></div><div className="row"><div className="v">{k.compliance.v ?? "-"}{k.compliance.v != null && <small>%</small>}</div></div><div className="u">{k.compliance.planned ? `${Math.round(k.compliance.done * 2) / 2} of ${k.compliance.planned} sessions` : "no sessions planned yet"}</div></div>
       <div className="card kpi"><div className="k">Fitness<Info {...KPI_INFO.fitness} /></div><div className="row"><div className="v">{k.fitness.v.toFixed(0)}</div>{pts(k.fitness.d)}</div><div className="u">42-day load</div><Spark pts={k.fitness.spark} /></div>
-      <div className="card kpi gauge-card"><div className="k">Run efficiency<Info {...KPI_INFO.ef} /></div><div className="row"><div className="v">{k.ef.v != null ? k.ef.v.toFixed(2) : "-"}</div>{k.ef.v != null && (k.ef.d != null ? <span className="delta">{k.ef.d >= 0 ? "+" : "−"}{Math.abs(k.ef.d).toFixed(2)}, 4 wk</span> : <span className="delta muted">no baseline yet</span>)}</div><RatioGauge ratio={k.ef.ratio} /><div className="u">{k.ef.v != null ? (k.ef.ratio != null ? `${k.ef.ratio >= 1 ? "up" : "down"} ${Math.abs((k.ef.ratio - 1) * 100).toFixed(0)}% vs the 4 weeks before` : "m/min per bpm, 4 wk") : "no runs with heart rate"}</div></div>
+      <div className="card kpi gauge-card"><div className="k">Run efficiency<Info {...KPI_INFO.ef} /></div><RatioGauge ratio={k.ef.ratio} /><div className="u">{k.ef.v != null ? (k.ef.ratio != null ? `vs the 4 weeks before, now ${k.ef.v.toFixed(2)} m/min per bpm` : `${k.ef.v.toFixed(2)} m/min per bpm, no baseline yet`) : "no runs with heart rate"}</div></div>
       <div className="card kpi"><div className="k">VO2max<Info title="VO2max" text="Your watch's estimate of the most oxygen your body can use per kilogram per minute, the usual measure of aerobic fitness. Change against the reading 4 weeks ago; the line shows the last readings." /></div><div className="row"><div className="v">{k.vo2.v != null ? k.vo2.v.toFixed(0) : "-"}</div>{k.vo2.v != null && (k.vo2.d != null ? <span className="delta">{k.vo2.d >= 0 ? "+" : "−"}{Math.abs(k.vo2.d).toFixed(0)}, 4 wk</span> : <span className="delta muted">first readings</span>)}</div><div className="u">{k.vo2.date ? `last reading ${dateLabel(k.vo2.date)}` : "no readings yet"}</div>{k.vo2.spark.length > 1 ? <Spark pts={k.vo2.spark} /> : null}</div>
     </div>
   );
@@ -308,12 +312,12 @@ function ScoreGauge({ sp }: { sp: Sp }) {
   const sc = an.sessionScore(sp);
   const w = 96, r = 40, cx = w / 2, cy = w / 2, c = 2 * Math.PI * r, arcLen = c * 0.75;
   const f = sc ? sc.score / 100 : 0;
-  const col = !sc ? "var(--muted-2)" : sc.score >= 75 ? "var(--ok)" : sc.score >= 50 ? "var(--accent)" : "var(--warn)";
+  const col = !sc ? "var(--muted-2)" : "var(--accent)";
   return (
     <div className={`sgauge${sc ? "" : " empty"}`}>
       <svg viewBox={`0 0 ${w} ${w}`} width={w} height={w} role="img" aria-label={sc ? `${sp} session score ${sc.score}` : `no ${sp} session yet`}>
-        <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--track)" strokeWidth={8} strokeDasharray={`${arcLen} ${c - arcLen}`} strokeLinecap="round" transform={`rotate(135 ${cx} ${cy})`} />
-        {sc && <circle cx={cx} cy={cy} r={r} fill="none" stroke={col} strokeWidth={8} strokeDasharray={`${arcLen * f} ${c - arcLen * f}`} strokeLinecap="round" transform={`rotate(135 ${cx} ${cy})`} />}
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--accent-soft)" strokeWidth={10} strokeDasharray={`${arcLen} ${c - arcLen}`} strokeLinecap="round" transform={`rotate(135 ${cx} ${cy})`} />
+        {sc && <circle cx={cx} cy={cy} r={r} fill="none" stroke={col} strokeWidth={10} strokeDasharray={`${arcLen * f} ${c - arcLen * f}`} strokeLinecap="round" transform={`rotate(135 ${cx} ${cy})`} />}
         <text x={cx} y={cy + 8} textAnchor="middle" fontSize={26} fontWeight={600} fill="var(--ink)">{sc ? sc.score : "–"}</text>
       </svg>
       <div className="sg-text">
