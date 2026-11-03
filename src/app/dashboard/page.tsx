@@ -86,7 +86,7 @@ function Dashboard() {
           <div className="dash-left">
           <div className="dash-row1">
           <Link href={todayS ? `/plan?session=${todayS.id}` : "/plan"} className={`hero${done ? " done" : ""}`} aria-label="Today's session, open in plan">
-            <div className="top"><span>Today&apos;s session{done ? <span className="donetag">✓ Completed</span> : null}</span><span>{DAYS[(t.getDay() + 6) % 7]} {t.getDate()} {MONTHS[t.getMonth()]}</span></div>
+            <div className="top"><span>Today&apos;s session<span className="sep">·</span>{DAYS[(t.getDay() + 6) % 7]} {t.getDate()} {MONTHS[t.getMonth()]}{done ? <span className="donetag">✓ Completed</span> : null}</span></div>
             <div>
               <div className="title">{isBrick ? multiTitle : todayS ? todayS.title : plan.hasPlan ? "Rest" : "No session"}</div>
               {isBrick ? (
