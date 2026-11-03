@@ -6,6 +6,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "./icons";
+import { BrandMark } from "./BrandMark";
 import { ACCOUNTS_ON } from "@/lib/supabase/env";
 import { WEARABLES, type ConnectStatus, type ConnectionRow, type WearableKey } from "@/lib/wearables/providers";
 export { WEARABLES } from "@/lib/wearables/providers";
@@ -107,6 +108,7 @@ export function ConnectWearableSheet({ onClose, onPick }: { onClose: () => void;
             if (w.k === "apple") {
               return (
                 <li key={w.k} className={connected ? "on" : ""}>
+                  <BrandMark k={w.k} />
                   <div><b>{w.name}</b><span className="muted">{connected ? connectionText(w.k, c, "app") : `${w.brings}. Connects through the Velocity iPhone app, coming soon.`}</span></div>
                   {connected
                     ? <span className="cw-actions"><button type="button" className="btn small ghost" disabled={busy === w.k} onClick={async () => { setBusy(w.k); await disconnect(w.k); setBusy(null); }}>Disconnect</button></span>
@@ -119,6 +121,7 @@ export function ConnectWearableSheet({ onClose, onPick }: { onClose: () => void;
               const canSync = w.k === "whoop" || status.live[w.k] === "junction";
               return (
                 <li key={w.k} className={connected ? "on" : ""}>
+                  <BrandMark k={w.k} />
                   <div><b>{w.name}</b><span className="muted">{note[w.k] || connectionText(w.k, c, status.live[w.k]) || w.brings}</span></div>
                   {connected
                     ? <span className="cw-actions">
@@ -131,6 +134,7 @@ export function ConnectWearableSheet({ onClose, onPick }: { onClose: () => void;
             }
             return (
               <li key={w.k} className={on ? "on" : ""}>
+                <BrandMark k={w.k} />
                 <div><b>{w.name}</b><span className="muted">{w.brings}</span></div>
                 {pickButton(w.k, on)}
               </li>
