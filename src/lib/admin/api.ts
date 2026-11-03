@@ -1,6 +1,7 @@
 // The Admin page's data: database functions in supabase/schema-admin.sql (each refuses anyone but the admin) and one
 // server route for deleting an account. Account facts and counts only, never an athlete's own data.
 import { supabase } from "@/lib/supabase/client";
+import { WEARABLE_NAME } from "@/lib/wearables/providers";
 
 /** Membership: what an athlete has. "plan" is the training plan, so the word for this is membership. */
 export type Membership = "free" | "trial" | "pro" | "free_pro" | "ended";
@@ -20,6 +21,8 @@ export interface AdminUser {
   signin: string; watch: string | null; calendar: boolean; coach_30: number;
   /** "Google", "Outlook", "Apple": connected calendars */
   calendars: string[];
+  /** "Garmin", "WHOOP", "Apple Watch": connected wearables (empty until schema-wearables.sql has been run) */
+  wearables: string[];
   access: Membership; access_kind: "trial" | "comp" | "paid" | null; access_ends: string | null; access_note: string | null;
   disabled: boolean; is_admin: boolean;
 }
@@ -58,6 +61,11 @@ async function otherCalendars(): Promise<Map<string, string[]>> {
   try { return new Map(((await rpc<{ user_id: string; providers: string[] }[]>("admin_calendar_providers")) ?? []).map((r) => [r.user_id, r.providers ?? []])); }
   catch { return new Map(); }
 }
+/** Connected wearables per athlete; empty until supabase/schema-wearables.sql has been run. */
+async function wearables(): Promise<Map<string, string[]>> {
+  try { return new Map(((await rpc<{ user_id: string; providers: string[] }[]>("admin_wearable_providers")) ?? []).map((r) => [r.user_id, r.providers ?? []])); }
+  catch { return new Map(); }
+}
 /** numeric columns arrive as strings from some Postgres types; make them numbers */
 const num = (v: unknown) => (typeof v === "number" ? v : Number(v ?? 0) || 0);
 
@@ -69,8 +77,12 @@ export const adminApi = {
     return { ...r, coach_cost_30: num(r.coach_cost_30), signups: r.signups ?? [], outlook: count("outlook"), apple: count("apple") };
   },
   async users() {
-    const [r, other] = await Promise.all([rpc<Omit<AdminUser, "calendars">[]>("admin_users"), otherCalendars()]);
-    return (r ?? []).map((u) => ({ ...u, calendars: [...(u.calendar ? ["Google"] : []), ...(other.get(u.id) ?? []).map((p) => (p === "outlook" ? "Outlook" : "Apple"))] }));
+    const [r, other, wear] = await Promise.all([rpc<Omit<AdminUser, "calendars" | "wearables">[]>("admin_users"), otherCalendars(), wearables()]);
+    return (r ?? []).map((u) => ({
+      ...u,
+      calendars: [...(u.calendar ? ["Google"] : []), ...(other.get(u.id) ?? []).map((p) => (p === "outlook" ? "Outlook" : "Apple"))],
+      wearables: wear.has(u.id) ? (wear.get(u.id) ?? []).map(WEARABLE_NAME) : u.watch === "connected" ? ["Garmin"] : [],
+    }));
   },
   /** kind: "free" removes the membership; "trial" and "comp" (Free Pro) need no end date */
   setAccess: (user: string, kind: "free" | "trial" | "comp", ends: string | null, note: string) =>

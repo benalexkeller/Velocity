@@ -118,6 +118,7 @@ function rowToActivity(r: Row): Activity {
     mi: num("mi"), yd: num("yd"), pace_s: num("pace_s"), mph: num("mph"), p100_s: num("p100_s"), hr: num("hr"), elev_ft: num("elev_ft"),
     route: (r.route as [number, number][]) ?? undefined, source: (r.source as Activity["source"]) ?? "manual", note: (r.note as string) ?? undefined, exertion: num("exertion"),
     coachNote: (r.coach_note as string) ?? undefined, excluded: r.excluded ? true : undefined,
+    kcal: num("kcal"), strain: num("strain"), dupOf: (r.dup_of as string) ?? undefined,
   };
 }
 function activityToRow(userId: string, a: Activity): Row {
@@ -160,7 +161,7 @@ export class SupabaseBackend implements Backend {
       intake: ((plan.data as { intake?: Intake | null } | null)?.intake ?? null),
       state: st ? { patches: (st.patches as PlanStateJson["patches"]) ?? {}, added: (st.added as AddedSession[]) ?? [], undone: !!st.undone, calendar: st.calendar !== false } : EMPTY_STATE,
       activities: ((acts.data as Row[]) ?? []).map(rowToActivity),
-      body: ((body.data as Row[]) ?? []).map((b) => ({ date: String(b.date), rhr: b.rhr as number, hrv: b.hrv as number, sleep_h: b.sleep_h == null ? undefined : Number(b.sleep_h), sleep_score: b.sleep_score as number, stress: b.stress as number, vo2: b.vo2 == null ? undefined : Number(b.vo2) })),
+      body: ((body.data as Row[]) ?? []).map((b) => ({ date: String(b.date), rhr: b.rhr as number, hrv: b.hrv as number, sleep_h: b.sleep_h == null ? undefined : Number(b.sleep_h), sleep_score: b.sleep_score as number, stress: b.stress as number, vo2: b.vo2 == null ? undefined : Number(b.vo2), recovery: b.recovery == null ? undefined : Number(b.recovery), strain: b.strain == null ? undefined : Number(b.strain) })),
       thread: (threadRows ?? []).map((m) => ({ id: String(m.id), who: m.who as ThreadMsg["who"], at: String(m.at ?? ""), text: String(m.text), day: m.created_at ? localYmd(new Date(String(m.created_at))) : undefined, proposal: (m.proposal as Proposal | null) ?? null, status: (m.status as ProposalStatus | null) ?? null, sources: (m.sources as Citation[] | null) ?? null, tier: (m.tier as ThreadMsg["tier"]) ?? null })),
     };
   }
@@ -168,7 +169,13 @@ export class SupabaseBackend implements Backend {
   async saveState(state: PlanStateJson) { const uid = await this.user(); const { error } = await this.sb.from("plan_state").upsert({ user_id: uid, ...state, updated_at: new Date().toISOString() }); this.fail("saveState", error); }
   async upsertActivity(a: Activity) { const uid = await this.user(); const { error } = await this.sb.from("activities").upsert(activityToRow(uid, a)); this.fail("upsertActivity", error); }
   async deleteActivity(id: string) { const uid = await this.user(); const { error } = await this.sb.from("activities").delete().eq("user_id", uid).eq("id", id); this.fail("deleteActivity", error); }
-  async setExcluded(id: string, excluded: boolean) { const uid = await this.user(); const { error } = await this.sb.from("activities").update({ excluded }).eq("user_id", uid).eq("id", id); this.fail("setExcluded", error); }
+  async setExcluded(id: string, excluded: boolean) {
+    const uid = await this.user();
+    // un-excluding a duplicate means "keep both"; the next import must not exclude it again (dup_of column: schema-wearables.sql)
+    let { error } = await this.sb.from("activities").update({ excluded, ...(excluded ? {} : { dup_of: "keep" }) }).eq("user_id", uid).eq("id", id);
+    if (error && /dup_of/.test(error.message)) ({ error } = await this.sb.from("activities").update({ excluded }).eq("user_id", uid).eq("id", id));
+    this.fail("setExcluded", error);
+  }
   async appendThread(msgs: ThreadMsg[]) {
     const uid = await this.user();
     const rows = msgs.map(({ day: _day, id: _id, proposal, status, sources, tier, ...m }) => ({ user_id: uid, ...m, proposal: proposal ?? null, status: status ?? null, sources: sources ?? null, tier: tier ?? null }));

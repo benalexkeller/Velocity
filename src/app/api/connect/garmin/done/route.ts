@@ -15,5 +15,5 @@ export async function GET(req: NextRequest) {
     const err = ok ? null : (q.get("error") || q.get("error_type") || q.get("state") || "cancelled").slice(0, 200);
     await sb.from("integrations").update(ok ? { status: "connected", connected_at: now, error: null, updated_at: now } : { status: err === "user_cancelled" ? "disconnected" : "error", error: err, updated_at: now }).eq("user_id", u.user.id).eq("provider", "garmin");
   }
-  return NextResponse.redirect(new URL(`/profile?garmin=${ok ? "connected" : "error"}`, req.nextUrl.origin));
+  return NextResponse.redirect(new URL(`/profile?wearable=garmin-${ok ? "connected" : "error"}`, req.nextUrl.origin));
 }

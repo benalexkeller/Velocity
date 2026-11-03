@@ -27,13 +27,15 @@ export async function POST(req: NextRequest) {
   }
 
   // outside services first, while the tokens and ids still exist; a failure here does not stop the deletion
-  const [{ data: cal }, { data: g }, { data: other }] = await Promise.all([
+  const [{ data: cal }, { data: g }, { data: other }, other2] = await Promise.all([
     sb.from("calendar_links").select("google_token, google_calendar_id").eq("user_id", uid).maybeSingle(),
-    sb.from("integrations").select("external_user_id").eq("user_id", uid).eq("provider", "garmin").maybeSingle(),
+    sb.from("integrations").select("external_user_id, via").eq("user_id", uid).eq("provider", "garmin").maybeSingle(),
     // missing table (schema-calendar-accounts.sql not run yet) comes back as an error and no rows
     sb.from("calendar_accounts").select("provider, secret, calendar_id, home").eq("user_id", uid),
+    sb.from("integrations").select("provider, via, external_user_id, secret").eq("user_id", uid),
   ]);
-  await cleanupOutside({ googleToken: cal?.google_token as string | null, calendarId: cal?.google_calendar_id as string | null, garminId: g?.external_user_id as string | null, accounts: other as OutsideLinks["accounts"] }, "account/delete");
+  const wearables = (other2.data ?? null) as OutsideLinks["wearables"];
+  await cleanupOutside({ googleToken: cal?.google_token as string | null, calendarId: cal?.google_calendar_id as string | null, garminId: g?.via === "junction" ? (g?.external_user_id as string | null) : null, accounts: other as OutsideLinks["accounts"], wearables }, "account/delete");
 
   const { error } = await sb.rpc("delete_my_account");
   if (error) {

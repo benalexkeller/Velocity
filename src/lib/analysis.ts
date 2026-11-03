@@ -8,7 +8,7 @@ import { DEFAULT_ATHLETE, DEFAULT_LTHR, hrZone, type Athlete } from "./athlete";
 import { addDays, fromYmd, today, ymd } from "./format";
 
 // ---------- body metrics (Garmin) ----------
-export interface BodyDay { date: string; rhr?: number; hrv?: number; sleep_h?: number; sleep_score?: number; stress?: number; vo2?: number }
+export interface BodyDay { date: string; rhr?: number; hrv?: number; sleep_h?: number; sleep_score?: number; stress?: number; vo2?: number; /** WHOOP recovery % */ recovery?: number; /** WHOOP day strain */ strain?: number }
 export const BODY_SEED: BodyDay[] = (bodySeed as BodyDay[]).slice().sort((a, b) => a.date.localeCompare(b.date));
 
 function avg(xs: (number | undefined)[]) { const v = xs.filter((x): x is number => x != null); return v.length ? v.reduce((s, x) => s + x, 0) / v.length : null; }

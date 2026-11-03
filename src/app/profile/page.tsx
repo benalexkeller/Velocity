@@ -1,8 +1,9 @@
 "use client";
 import "../account.css";
-import { Fragment, useState } from "react";
+import { Fragment, useEffect, useState } from "react";
 import Link from "next/link";
-import { ConnectWearable, WEARABLES, useConnections, useWearables } from "@/components/ConnectWearable";
+import { ConnectWearable, WEARABLES, connectionText, useConnections, useWearables } from "@/components/ConnectWearable";
+import type { WearableKey } from "@/lib/wearables/providers";
 import { usePlan } from "@/lib/store";
 import { ProfileForm } from "@/components/account/ProfileForm";
 import { CalendarCard } from "@/components/account/CalendarCard";
@@ -57,18 +58,36 @@ export default function ProfilePage() {
   );
 }
 
+const FLAG: Record<string, string> = {
+  "garmin-connected": "Garmin connected. Activities arrive on their own as your watch syncs.",
+  "garmin-denied": "Garmin was not connected: the permission was not given.",
+  "garmin-error": "Garmin did not connect. Try again; if it fails twice, send feedback.",
+  "garmin-off": "Garmin is not switched on for this site yet.",
+  "whoop-connected": "WHOOP connected. The last 30 days are in; new sleep, recovery and workouts arrive on their own.",
+  "whoop-denied": "WHOOP was not connected: the permission was not given.",
+  "whoop-error": "WHOOP did not connect. Try again; if it fails twice, send feedback.",
+  "whoop-off": "WHOOP is not switched on for this site yet.",
+  setup: "Wearable connections are not set up on this site yet.",
+};
+
 function ProfileConnections() {
   const { picked } = useWearables();
-  const { garmin, garminLive } = useConnections();
-  const flag = typeof window !== "undefined" ? new URLSearchParams(window.location.search).get("garmin") : null;
-  const note = flag === "connected" ? "Garmin connected. Activities arrive on their own from now on; the last 90 days follow over the next hours." : flag === "error" ? "Garmin did not connect. Try again; if it fails twice, send feedback." : flag === "off" ? "Garmin sync is not switched on for this site yet." : null;
+  const { status, of, isLive } = useConnections();
+  // ?wearable=whoop-connected (or garmin-error…) when a maker sends the athlete back; read once
+  const [flag] = useState<string | null>(() => (typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("wearable")));
+  useEffect(() => { const u = new URL(window.location.href); if (u.searchParams.has("wearable")) { u.searchParams.delete("wearable"); window.history.replaceState(null, "", u.toString()); } }, []);
+  const note = flag ? FLAG[flag] : null;
+  const rows = WEARABLES.filter((w) => isLive(w.k) || of(w.k)?.status === "connected" || picked.includes(w.k));
   return (
     <>
       {note && <p className="small" style={{ margin: "0 0 10px" }}>{note}</p>}
       <div className="kv">
-        {garminLive && <><span>Garmin</span><span>{garmin?.status === "connected" ? `Connected${garmin.last_event_at ? `, last data ${new Date(garmin.last_event_at).toLocaleDateString()}` : ""}` : garmin?.status === "error" ? "Connection failed" : "Not connected"}</span></>}
-        {WEARABLES.filter((w) => picked.includes(w.k) && !(w.k === "garmin" && garminLive)).map((w) => <Fragment key={w.k}><span>{w.name}</span><span>Picked, connects when live</span></Fragment>)}
-        {!picked.length && !garminLive && <><span>Wearable</span><span>None picked</span></>}
+        {rows.map((w) => {
+          const c = of(w.k);
+          const text = connectionText(w.k as WearableKey, c, status.live[w.k]) ?? (isLive(w.k) ? "Not connected" : w.k === "apple" ? "Connects through the Velocity iPhone app, coming soon" : "Picked, connects when live");
+          return <Fragment key={w.k}><span>{w.name}</span><span>{text}</span></Fragment>;
+        })}
+        {!rows.length && <><span>Wearable</span><span>None picked</span></>}
       </div>
       <div style={{ marginTop: 12 }}><ConnectWearable variant="ghost" /></div>
     </>

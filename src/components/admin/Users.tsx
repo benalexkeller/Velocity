@@ -56,7 +56,7 @@ export function Users() {
       </div>
       <section className="card" style={{ padding: "6px 10px", overflow: "auto" }}>
         <table className="tbl small">
-          <thead><tr><th>Athlete</th><th>Membership</th><th>{head("created_at", "Signed up")}</th><th>{head("last_seen", "Last active")}</th><th>Setup</th><th className="num">Plan weeks</th><th className="num">{head("activities", "Activities")}</th><th className="num">{head("coach_30", "Coach 30 d")}</th><th>Watch</th><th>Calendar</th><th>Sign-in</th></tr></thead>
+          <thead><tr><th>Athlete</th><th>Membership</th><th>{head("created_at", "Signed up")}</th><th>{head("last_seen", "Last active")}</th><th>Setup</th><th className="num">Plan weeks</th><th className="num">{head("activities", "Activities")}</th><th className="num">{head("coach_30", "Coach 30 d")}</th><th>Wearables</th><th>Calendar</th><th>Sign-in</th></tr></thead>
           <tbody>
             {shown.map((u) => (
               <tr key={u.id} className={`row${open === u.id ? " sel" : ""}`} onClick={() => setOpen(u.id)} tabIndex={0} onKeyDown={(e) => { if (e.key === "Enter") setOpen(u.id); }}>
@@ -68,7 +68,7 @@ export function Users() {
                 <td className="num">{u.plan_weeks ?? <span className="muted">-</span>}</td>
                 <td className="num">{int(u.activities)}</td>
                 <td className="num">{int(u.coach_30)}</td>
-                <td>{u.watch ?? <span className="muted">-</span>}</td>
+                <td>{u.wearables.length ? u.wearables.join(", ") : <span className="muted">-</span>}</td>
                 <td>{u.calendars.length ? u.calendars.join(", ") : <span className="muted">-</span>}</td>
                 <td>{u.signin === "google" ? "Google" : "Email"}</td>
               </tr>
@@ -106,7 +106,7 @@ function UserPanel({ u, onClose, onChanged }: { u: AdminUser; onClose: () => voi
               <span>Plan</span><span>{u.plan_weeks ? `${u.plan_weeks} weeks` : "none"}</span>
               <span>Activities</span><span>{int(u.activities)}</span>
               <span>Coach, 30 days</span><span>{int(u.coach_30)} questions</span>
-              <span>Watch</span><span>{u.watch ? `Garmin, ${u.watch}` : "none"}</span>
+              <span>Wearables</span><span>{u.wearables.length ? u.wearables.join(", ") : "none"}</span>
               <span>Calendars</span><span>{u.calendars.length ? u.calendars.join(", ") : "none"}</span>
             </div>
           </section>
@@ -190,7 +190,7 @@ function AccountActions({ u, onChanged, onDeleted }: { u: AdminUser; onChanged: 
                 <div className="row"><button type="button" className="btn danger small" disabled={busy} onClick={() => run(async () => { await adminApi.setDisabled(u.id, true); await onChanged(); }, "Account disabled.")}>Disable account</button><button type="button" className="btn ghost small" onClick={() => setAsk(null)}>Cancel</button></div></div>
             : <div className="row"><button type="button" className="btn ghost small" onClick={() => { setAsk("disable"); setMsg(null); }}>Disable account</button></div>}
         {ask === "delete"
-          ? <div className="confirm">Delete this account and everything in it? Their plan, activities, body data, meals and coach messages are deleted, their Velocity calendars are removed from Google, Outlook and iCloud and their watch is disconnected. This cannot be undone.
+          ? <div className="confirm">Delete this account and everything in it? Their plan, activities, body data, meals and coach messages are deleted, their Velocity calendars are removed from Google, Outlook and iCloud and their wearables are disconnected. This cannot be undone.
               <input type="text" value={reason} maxLength={300} onChange={(e) => setReason(e.target.value)} placeholder="Reason, for the log (optional)" aria-label="Reason" style={{ font: "inherit", fontSize: 14, border: "1px solid var(--line)", borderRadius: 9, padding: "8px 10px" }} />
               <div className="row"><button type="button" className="btn danger small" disabled={busy} onClick={() => run(async () => { await adminApi.deleteUser(u.id, reason); await onDeleted(); }, "Account deleted.")}>{busy ? "Deleting…" : "Delete permanently"}</button><button type="button" className="btn ghost small" onClick={() => setAsk(null)}>Cancel</button></div></div>
           : <div className="row"><button type="button" className="btn danger small" onClick={() => { setAsk("delete"); setMsg(null); }}>Delete account</button></div>}
