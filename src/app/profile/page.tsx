@@ -86,14 +86,14 @@ function ProfileConnections() {
   const [flag] = useState<string | null>(() => (typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("wearable")));
   useEffect(() => { const u = new URL(window.location.href); if (u.searchParams.has("wearable")) { u.searchParams.delete("wearable"); window.history.replaceState(null, "", u.toString()); } }, []);
   const note = flag ? [FLAG[flag], flag.endsWith("-error") ? connectNote() : ""].filter(Boolean).join(" ") || null : null;
-  const rows = WEARABLES.filter((w) => isLive(w.k) || of(w.k)?.status === "connected" || picked.includes(w.k));
+  const rows = WEARABLES.filter((w) => isLive(w.k) || of(w.k)?.status === "connected" || of(w.k)?.status === "requested" || picked.includes(w.k));
   return (
     <>
       {note && <p className="small" style={{ margin: "0 0 10px" }}>{note}</p>}
       <div className="kv">
         {rows.map((w) => {
           const c = of(w.k);
-          const text = connectionText(w.k as WearableKey, c, status.live[w.k]) ?? (isLive(w.k) ? "Not connected" : w.k === "apple" ? "Connects through the Velocity iPhone app, coming soon" : "Picked, connects when live");
+          const text = connectionText(w.k as WearableKey, c, status.live[w.k]) ?? (isLive(w.k) ? "Not connected" : w.k === "apple" ? "Connects through the Velocity iPhone app, coming soon" : "Requested, pending until it opens");
           return <Fragment key={w.k}><span>{w.name}</span><span>{text}</span></Fragment>;
         })}
         {!rows.length && <><span>Wearable</span><span>None picked</span></>}
