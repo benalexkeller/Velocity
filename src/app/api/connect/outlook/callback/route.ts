@@ -23,8 +23,14 @@ export async function GET(req: NextRequest) {
   };
   const q = req.nextUrl.searchParams;
   if (!outlookOn()) return back("outlook-off");
-  // the athlete pressed Cancel or No on Microsoft's screen
-  if (q.get("error")) return back(q.get("error") === "access_denied" ? "outlook-denied" : "outlook-error");
+  if (q.get("error")) {
+    // a work or school account whose company only lets an administrator approve apps (Velocity's publisher is not
+    // verified with Microsoft yet): AADSTS90093/90094 admin-only, 900941/900981 app needs admin review, 65001 no consent
+    const why = `${q.get("error")} ${q.get("error_description") ?? ""}`;
+    if (/AADSTS(90093|90094|900941|900981|65001)\b|consent_required/i.test(why)) return back("outlook-admin");
+    // the athlete pressed Cancel or No on Microsoft's screen (or went back after asking their IT for approval)
+    return back(q.get("error") === "access_denied" ? "outlook-denied" : "outlook-error");
+  }
   if (!saved.state || q.get("state") !== saved.state || !q.get("code")) return back("outlook-error");
   const me = await athlete();
   if (!me) return NextResponse.redirect(new URL(`/login?next=${encodeURIComponent(next)}`, req.nextUrl.origin));
