@@ -70,6 +70,8 @@ export interface Intake {
   devices: string[];             // garmin | whoop | apple | coros | polar | strava | none
   strength: boolean;
   created_at: string;
+  /** the units the fitness answers were typed in (missing on older answers: the athlete's units at the time) */
+  units?: "imperial" | "metric";
 }
 
 export const DEVICES: { k: string; label: string }[] = [{ k: "garmin", label: "Garmin" }, { k: "whoop", label: "Whoop" }, { k: "apple", label: "Apple Watch" }, { k: "coros", label: "Coros" }, { k: "polar", label: "Polar" }, { k: "strava", label: "Strava" }, { k: "none", label: "None" }];
@@ -85,6 +87,29 @@ export const EMPTY_INTAKE: Intake = {
 };
 
 export const MIN_WEEKS = 4;
+
+const KM = 1.609344, YD = 0.9144;
+const secText = (t: string, f: number) => { const sec = paceToSec(t); if (sec == null) return t; const v = Math.round(sec * f); return `${Math.floor(v / 60)}:${String(v % 60).padStart(2, "0")}`; };
+const r1 = (v: number | null, f: number) => (v == null ? v : Math.round(v * f * 10) / 10);
+/** The same answers in other units (an athlete who switched from miles to kilometres edits the plan in kilometres). */
+export function intakeInUnits(intake: Intake, u: "imperial" | "metric"): Intake {
+  const from = intake.units ?? u;
+  if (from === u) return intake.units ? intake : { ...intake, units: u };
+  const toMetric = u === "metric";
+  const f = intake.fitness;
+  return {
+    ...intake, units: u,
+    fitness: {
+      ...f,
+      swim_pace_100: secText(f.swim_pace_100, toMetric ? 1 / YD : YD),
+      swim_longest: f.swim_longest == null ? null : Math.round(toMetric ? f.swim_longest * YD : f.swim_longest / YD),
+      bike_speed: r1(f.bike_speed, toMetric ? KM : 1 / KM),
+      bike_longest: r1(f.bike_longest, toMetric ? KM : 1 / KM),
+      run_pace: secText(f.run_pace, toMetric ? 1 / KM : KM),
+      run_longest: r1(f.run_longest, toMetric ? KM : 1 / KM),
+    },
+  };
+}
 export const hoursToText = (h: number | null | undefined) => { if (!h) return ""; const H = Math.floor(h), M = Math.round((h - H) * 60); return `${H}:${String(M).padStart(2, "0")}`; };
 export const textToHours = (t: string) => { const m = t.trim().match(/^(\d{1,2})(?::(\d{1,2}))?$/); return m ? +m[1] + (+(m[2] ?? 0)) / 60 : null; };
 export const paceToSec = (t: string) => { const m = t.trim().match(/^(\d{1,2}):(\d{2})$/); return m ? +m[1] * 60 + +m[2] : null; };

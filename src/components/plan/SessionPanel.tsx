@@ -11,7 +11,7 @@ import { useNutrition } from "@/lib/nutrition/store";
 import { STATUS_LABEL, activityLoad, plannedLoad, type Session, type Sport } from "@/lib/data";
 import { usePlan } from "@/lib/store";
 import { dateLabel, fmtDur, fmtHMS, fmtPace, today, ymd } from "@/lib/format";
-import { elev, fmtDist, fmtSpeed, runPace, swimDist, swimPace } from "@/lib/units";
+import { elev, fmtDist, fmtSpeed, runPace, swimDist, swimPace, unitWords } from "@/lib/units";
 import { hardestStep, workoutFor, zoneName, zoneWord, type Segment, type Zone } from "@/lib/workout";
 
 const INTENSITIES = ["Zone 2", "Aerobic", "Technique", "Endurance", "Tempo", "Threshold", "Intervals", "Race"];
@@ -55,11 +55,12 @@ function EditForm({ s, onDone }: { s: Session; onDone: () => void }) {
 // The target in the stats column is the target of the hardest work in the steps, so the two always match.
 function targetOf(s: Session, seg: Segment | undefined, zones: Record<string, Record<string, string>>) {
   let v = seg?.target, sp = s.sport === "brick" ? "bike" : s.sport;
-  if (seg && /\/mi$/.test(seg.target)) sp = "run"; else if (seg && /\/100 yd$/.test(seg.target)) sp = "swim"; else if (seg && /mph|W$/.test(seg.target)) sp = "bike";
+  if (seg && /\/(mi|km)$/.test(seg.target)) sp = "run"; else if (seg && /\/100 (yd|m)$/.test(seg.target)) sp = "swim"; else if (seg && /mph|W$/.test(seg.target)) sp = "bike";
   if (!v || !/\d/.test(v)) v = zones[sp]?.[s.intensity];
   if (!v) return null;
-  v = v.replace(/\s*\/(mi|100 yd)$/, "");
-  return { k: sp === "bike" ? (/W$/.test(v) ? "Target power" : "Target speed") : "Target pace", v, u: sp === "bike" ? "" : sp === "swim" ? "per 100 yd" : "per mile" };
+  v = v.replace(/\s*\/(mi|km|100 yd|100 m)$/, "");
+  const w = unitWords();
+  return { k: sp === "bike" ? (/W$/.test(v) ? "Target power" : "Target speed") : "Target pace", v, u: sp === "bike" ? "" : sp === "swim" ? w.perSwim : w.perDist };
 }
 
 // one zone palette for the whole app (tokens in globals.css)
@@ -82,15 +83,17 @@ function IntervalChart({ segments, fuel }: { segments: Segment[]; fuel: Fuel }) 
   const H = showFuel ? 214 : 170, L = 40, R = 12, T = 28, B = showFuel ? 72 : 28;
   const x = (m: number) => L + (m / total) * (W - L - R);
   const y = (z: number) => T + ((5 - z) / 5) * (H - T - B);
-  const tick = (byYd ? [100, 200, 250, 500, 1000, 2000] : [5, 10, 15, 20, 30, 60, 90, 120]).find((t) => (t / total) * (W - L - R) >= 64) ?? (byYd ? 2000 : 120);
+  // swim ticks land on round numbers of the athlete's unit (500 m as well as 500 yd): chosen in that unit, placed in yards
+  const perYd = byYd ? swimDist(1000).v / 1000 : 1; // metres per yard, or 1
+  const tick = (byYd ? [100, 200, 250, 500, 1000, 2000].map((t) => t / perYd) : [5, 10, 15, 20, 30, 60, 90, 120]).find((t) => (t / total) * (W - L - R) >= 64) ?? (byYd ? 2000 / perYd : 120);
   const ticks: number[] = []; for (let m = 0; m <= total; m += tick) ticks.push(m);
-  const tickLabel = (m: number) => (byYd ? `${m.toLocaleString()} yd` : totalMin >= 60 ? `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}` : `${m} min`);
+  const tickLabel = (m: number) => (byYd ? `${Math.round(m * perYd).toLocaleString()} ${swimDist(m).u}` : totalMin >= 60 ? `${Math.floor(m / 60)}:${String(m % 60).padStart(2, "0")}` : `${m} min`);
   // group repeats: a set starts at a work segment; "Rep n" segments and recoveries join it
   const groups: { label: string; target: string; from: number; to: number; segs: { s: Segment; at: number }[] }[] = [];
   let acc = 0;
   for (const sg of segments) {
     const isRep = /^Rep \d+$/.test(sg.label) || sg.kind === "recovery";
-    if (!isRep || !groups.length) groups.push({ label: sg.label, target: sg.target.replace(/ ?\/(mi|100 yd)$/, ""), from: acc, to: acc + span(sg), segs: [] });
+    if (!isRep || !groups.length) groups.push({ label: sg.label, target: sg.target.replace(/ ?\/(mi|km|100 yd|100 m)$/, ""), from: acc, to: acc + span(sg), segs: [] });
     const g = groups[groups.length - 1];
     g.segs.push({ s: sg, at: acc }); g.to = acc + span(sg); acc += span(sg);
   }
@@ -194,7 +197,7 @@ export function SessionPanel({ id, onClose }: { id: string | null; onClose: () =
             <>
               <div className="stat"><div className="k">Duration</div><div className="v">{s.min >= 120 ? fmtDur(s.min) : `${s.min} min`}</div></div>
               <div className="stat"><div className="k">Zone</div><div className="v">Z{zoneOfIntensity}<small className="at">{zoneWord(zoneOfIntensity)}</small></div></div>
-              {s.sport === "swim" && swimYd > 0 && <div className="stat"><div className="k">Distance</div><div className="v">{swimYd.toLocaleString()}<small className="at">yd</small></div></div>}
+              {s.sport === "swim" && swimYd > 0 && <div className="stat"><div className="k">Distance</div><div className="v">{swimDist(swimYd).v.toLocaleString()}<small className="at">{swimDist(swimYd).u}</small></div></div>}
               {tgt && <div className="stat"><div className="k">{tgt.k}</div><div className="v">{tgt.v}</div><div className="u">{tgt.u}{plan.athlete.zonesSource === "intake" ? `${tgt.u ? ", " : ""}from your answers` : plan.athlete.zonesSource === "default" ? `${tgt.u ? ", " : ""}default zones` : ""}</div></div>}
               <div className="stat"><div className="k">Planned load</div><div className="v">{plannedLoad(s)}</div></div>
               {s.actual && (s.actual.sport !== s.sport || Math.abs(s.actual.min - s.min) >= 5) && <div className="stat actual"><div className="k">Done as</div><div className="v">{s.actual.sport[0].toUpperCase() + s.actual.sport.slice(1)} {s.actual.min} min</div><div className="u">planned {s.title} {s.min} min</div></div>}

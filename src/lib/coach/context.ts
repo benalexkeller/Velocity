@@ -6,33 +6,45 @@ import { addDays, fromYmd, today, ymd } from "@/lib/format";
 import { fmtPace } from "@/lib/format";
 import type { Activity } from "@/lib/data";
 import { nutritionContext } from "./nutrition-bridge";
+import { fmtDist, fmtSpeed, localize, runPace, swimDist, swimPace, type Units } from "@/lib/units";
+import type { Zones } from "@/lib/workout";
 
 const r1 = (x: number) => Math.round(x * 10) / 10;
 
-function distOf(a: Activity) {
-  if (a.sport === "swim" && a.yd != null) return `${a.yd} yd`;
-  if (a.mi != null) return `${a.mi.toFixed(1)} mi`;
+// activities go to the coach in the athlete's units, the same numbers they see on screen
+function distOf(a: Activity, u: Units) {
+  if (a.sport === "swim" && a.yd != null) return `${swimDist(a.yd, u).v} ${swimDist(a.yd, u).u}`;
+  if (a.mi != null) return fmtDist(a.mi, 1, u);
   return undefined;
 }
-function paceOf(a: Activity) {
-  if (a.sport === "swim" && a.p100_s != null) return `${fmtPace(a.p100_s)}/100yd`;
-  if (a.sport === "run" && a.pace_s != null) return `${fmtPace(a.pace_s)}/mi`;
-  if (a.sport === "bike" && a.mph != null) return `${a.mph.toFixed(1)} mph`;
+function paceOf(a: Activity, u: Units) {
+  if (a.sport === "swim" && a.p100_s != null) return `${fmtPace(swimPace(a.p100_s, u).s)}${swimPace(a.p100_s, u).u.replace(" ", "")}`;
+  if (a.sport === "run" && a.pace_s != null) return `${fmtPace(runPace(a.pace_s, u).s)}${runPace(a.pace_s, u).u}`;
+  if (a.sport === "bike" && a.mph != null) return fmtSpeed(a.mph, u);
   return undefined;
+}
+/** The zones are stored in imperial without a unit on each range; the coach gets them in the athlete's units, labelled. */
+function zonesIn(z: Zones, u: Units): Zones {
+  const out: Zones = {};
+  for (const [sport, zs] of Object.entries(z)) {
+    if (sport === "meta" || sport === "hr") { out[sport] = zs; continue; }
+    out[sport] = Object.fromEntries(Object.entries(zs).map(([k, v]) => [k, sport === "run" ? localize(`${v} /mi`, u) : sport === "swim" ? localize(`${v} /100 yd`, u) : localize(v, u)]));
+  }
+  return out;
 }
 const hm = (d: Date) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 
 export function buildCoachContext(p: PlanStore, opts: { whole?: boolean } = {}): CoachContext {
-  const t = today();
+  const t = today(), u = p.athlete.units;
   const cur = p.hasPlan ? p.currentWeek() : undefined;
   const next = cur ? p.weeks[cur.week] : undefined; // weeks[] is 0-based; cur.week is 1-based → the next one
   const sessions = [cur, next].filter((w): w is NonNullable<typeof w> => !!w).flatMap((w) => w.sessions).map((s) => ({
     id: s.id, date: s.date, start: s.start, sport: s.sport, intensity: s.intensity, min: s.min, text: s.text, status: s.status, locked: s.locked || undefined,
-    actual: s.actual ? `${s.actual.min} min${distOf(s.actual) ? `, ${distOf(s.actual)}` : ""}${s.actual.hr ? `, ${s.actual.hr} bpm` : ""}` : undefined,
+    actual: s.actual ? `${s.actual.min} min${distOf(s.actual, u) ? `, ${distOf(s.actual, u)}` : ""}${s.actual.hr ? `, ${s.actual.hr} bpm` : ""}` : undefined,
   }));
   const since = ymd(addDays(t, -14));
   const activities = p.counted.filter((a) => a.date >= since && a.date <= ymd(t)).map((a) => ({
-    date: a.date, start: a.start, sport: a.sport, name: a.name, min: a.min, dist: distOf(a), pace: paceOf(a), hr: a.hr, exertion: a.exertion, note: a.note,
+    date: a.date, start: a.start, sport: a.sport, name: a.name, min: a.min, dist: distOf(a, u), pace: paceOf(a, u), hr: a.hr, exertion: a.exertion, note: a.note,
   }));
   const weeks = (cur ? p.weeks.slice(Math.max(0, cur.week - 4), cur.week) : []).map((w) => {
     const st = p.weekStatus(w);
@@ -56,7 +68,7 @@ export function buildCoachContext(p: PlanStore, opts: { whole?: boolean } = {}):
       // no name or email: they can come from the athlete's Google profile, and nothing from Google goes to an AI model
       units: a.units,
       race: a.hasRace ? { name: a.race.name, date: a.race.date, distance: a.race.distanceLabel, goal: a.race.goal } : null,
-      lthr: a.lthr, ftp: a.ftp, zones: a.zones, availability: a.availability,
+      lthr: a.lthr, ftp: a.ftp, zones: zonesIn(a.zones, u), availability: a.availability,
     },
     plan: cur && p.planRange ? { phase: cur.phase, week: cur.week, weeks: p.weeks.length, start: p.planRange.start, end: p.planRange.end } : null,
     sessions, activities, weeks, ...(plan_all ? { plan_all } : {}),

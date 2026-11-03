@@ -15,7 +15,7 @@ const fmtH = (h: number) => `${h.toFixed(1)} h`;
 
 export function Building({ intake, edit, onOpen }: { intake: Intake; edit: boolean; onOpen: () => void }) {
   const plan = usePlan();
-  const result = useMemo(() => generatePlan(intake, undefined, plan.athlete.units !== "metric"), [intake, plan.athlete.units]);
+  const result = useMemo(() => generatePlan(intake, undefined, (intake.units ?? plan.athlete.units) !== "metric"), [intake, plan.athlete.units]);
   const { weeks, summary } = result;
   const [t, setT] = useState(0);
   const [saved, setSaved] = useState(false);

@@ -27,6 +27,12 @@ with tokens in `src/app/globals.css`, no UI library. `npm run dev` → http://lo
   Accounts are ON only when `NEXT_PUBLIC_SUPABASE_URL` + `NEXT_PUBLIC_SUPABASE_ANON_KEY` exist (`.env.example`).
 - `src/lib/data/index.ts` — types, seed loaders, classification (`sportOf`, `intensityOf`), `buildWeeks`, `phasesOf`, load/compliance math.
 - `src/lib/analysis.ts` — `createAnalysis(activities, weeks, {phases, body, athlete})`; use through `useAnalysis()` in components.
+- Units: storage is imperial (mi, yd, ft, mph, s/mi, s/100 yd; zones too). `src/lib/units.ts` holds the live setting (`units`, set by the
+  store from the profile) and the helpers (`fmtDist`, `runPace`, `swimDist`, `unitWords`, …); never write "mi"/"yd"/"mph" in UI text.
+  `localize(text)` rewrites free text (plan sessions, workout steps, coach facts) into the athlete's units either way; the store applies
+  it to every session text, `workoutFor` to targets and steps. The plan builder's answers carry `intake.units`; `intakeInUnits` converts
+  them when the athlete edits after switching. `TimePicker` (`src/components/TimePicker.tsx`) is the only way to enter h:mm / m:ss
+  (phones have no colon key): scroll wheels plus an "or type" box.
 - `supabase/schema.sql` — the whole database; idempotent, paste into Supabase SQL Editor. RLS: users only see their own rows.
   `admin_emails` decides who is admin (currently benalexkeller@gmail.com).
 - Seed files (`src/lib/data/seed/*.json`) are PR's real plan/activities/body data; never invent data. `seed/maps.json` = OpenStreetMap vector base maps (via the Garmin MCP's `get_area_map`, thinned by the scratch script) that `RouteMap` draws under routes; routes outside them use CARTO label-free tiles.
@@ -72,5 +78,5 @@ with tokens in `src/app/globals.css`, no UI library. `npm run dev` → http://lo
 1. Buy Junction (sandbox first), set the env values, run the two SQL files, test Connect Garmin on the live site; apply to Garmin's own developer program in parallel.
 2. Coach: Sunday weekly review as a scheduled job; onboarding interview that writes the plan.
 3. Busy times from the athlete's calendar (`calendar.events.freebusy`, non-sensitive; decision pending).
-4. Metric units in the UI, avatar upload, Stripe, lawyer review of Privacy/Terms, monitoring.
+4. Avatar upload, Stripe, lawyer review of Privacy/Terms, monitoring. (Metric units: done 3 Nov.)
 5. Next: WHOOP live (PR registers the app at developer.whoop.com, keys in Vercel, webhook URL); Garmin's own program once the LLC exists (keys in Vercel switch it on); iPhone app sends Apple Health to `/api/wearables/apple/import`; notifications and in-app banners; Stripe and membership gating.

@@ -2,6 +2,7 @@
 // each with a duration, a zone and a target pace. Drives the session panel on the Plan page.
 import type { Session, Sport } from "./data";
 import { ATHLETE } from "./config";
+import { localize, units, type Units } from "./units";
 export type Zones = Record<string, Record<string, string>>;
 
 export type Zone = 1 | 2 | 3 | 4 | 5;
@@ -150,7 +151,8 @@ function parsePart(text: string, sport: Sport, totalMin: number, part?: "AM" | "
   return out;
 }
 
-export function workoutFor(s: Session, zones: Zones = ATHLETE.zones): Workout {
+/** Zones are kept in imperial; the targets and steps come out in the athlete's units (`u`, the live setting by default). */
+export function workoutFor(s: Session, zones: Zones = ATHLETE.zones, u: Units = units): Workout {
   const text = s.text.replace(/^(AM|PM):\s*/i, "");
   const parts = text.split(/\bPM:\s*/i);
   const segments: Segment[] = [];
@@ -200,7 +202,8 @@ export function workoutFor(s: Session, zones: Zones = ATHLETE.zones): Workout {
       i++;
     }
   }
-  return { segments, steps, sport: s.sport, note: /fuel|eat|drink/i.test(text) ? text.match(/(?:[—-]|,)\s*([^—,]*(?:fuel|eat|drink)[^—,]*)$/i)?.[1]?.trim() : undefined };
+  for (const g of segments) g.target = localize(g.target, u);
+  return { segments, steps: steps.map((x) => localize(x, u)), sport: s.sport, note: /fuel|eat|drink/i.test(text) ? text.match(/(?:[—-]|,)\s*([^—,]*(?:fuel|eat|drink)[^—,]*)$/i)?.[1]?.trim() : undefined };
 }
 
 /** The key work of a session and its target: the hardest zone with at least 8 minutes in it (so strides do not
