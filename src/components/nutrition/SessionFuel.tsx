@@ -2,6 +2,8 @@
 // Fuel for one session, where the session is shown (dashboard hero, plan session panel). Same numbers as the
 // Nutrition tab (lib/nutrition/targets.ts sessionFuel): before by the clock, per hour during, after by the gap.
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { Icon, type IconName } from "@/components/icons";
 import type { Session } from "@/lib/data";
 import { useNutrition } from "@/lib/nutrition/store";
 
@@ -17,17 +19,25 @@ export function perHourInProducts(perHour: number, fluidLh: number) {
   return `${perHour} g carbs per hour: ${fluidLh} L of 6 % drink mix${gels ? ` + ${gels} gel${gels > 1 ? "s" : ""}` : ""}`;
 }
 
+/** The fuel strip on today's hero: before / during / after at a glance, and a link to the full plan under Nutrition. */
 export function FuelLine({ s }: { s: Session }) {
   const nut = useNutrition();
+  const router = useRouter();
   if (!nut.ready || s.sport === "rest") return null;
-  if (!nut.hasWeight) return <div className="fuel-line muted">Fuel: add your weight under Nutrition to get session targets</div>;
+  const go = (e: React.SyntheticEvent) => { e.preventDefault(); e.stopPropagation(); router.push("/nutrition"); };
+  if (!nut.hasWeight) return <div className="fuel-strip"><span className="fs-note">Add your weight under Nutrition to get session fuel</span><span className="fs-link" role="link" tabIndex={0} onClick={go} onKeyDown={(e) => { if (e.key === "Enter") go(e); }}>Set up nutrition →</span></div>;
   const f = nut.fuelFor(s);
-  const parts = [
-    f.before ? `before ${f.before} g carbs by ${f.beforeAt}` : null,
-    `during ${f.perHour ? `${f.perHour} g/h` : "water"}${f.fluidLh ? `, ${f.fluidLh} L/h` : ""}${f.naMgH ? `, ${f.naMgH} mg sodium/h` : ""}`,
-    f.after.carbs ? `after ${f.after.carbs} g carbs + ${f.after.protein} g protein ${f.window}` : `after ${f.after.protein} g protein at the next meal`,
-  ].filter(Boolean);
-  return <div className="fuel-line"><b>Fuel</b> {parts.join(", ")}</div>;
+  const cells: { k: string; icon: IconName; v: string }[] = [
+    { k: "Before", icon: "fork", v: f.before ? `${f.before} g carbs` : "Normal meal" },
+    { k: "During", icon: "drop", v: f.perHour ? `${f.perHour} g/h${f.fluidLh ? `, ${f.fluidLh} L/h` : ""}` : f.fluidLh ? `Water, ${f.fluidLh} L/h` : "Water" },
+    { k: "After", icon: "bowl", v: f.after.carbs ? `${f.after.carbs} g carbs + ${f.after.protein} g protein` : "Meal" },
+  ];
+  return (
+    <div className="fuel-strip" aria-label="Fuel for today's session">
+      {cells.map((c) => <div key={c.k} className="fs-cell"><span className="fs-icon"><Icon name={c.icon} /></span><div><div className="fs-k">{c.k}</div><div className="fs-v">{c.v}</div></div></div>)}
+      <span className="fs-link" role="link" tabIndex={0} onClick={go} onKeyDown={(e) => { if (e.key === "Enter") go(e); }}>Fuel this workout →</span>
+    </div>
+  );
 }
 
 export function FuelBlock({ s }: { s: Session }) {

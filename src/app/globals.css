@@ -410,9 +410,18 @@ svg.chart .accent { fill: var(--accent); }
 .cw-actions .btn { min-width: 0; }
 
 /* ---------- Session fuel (dashboard hero line, plan session panel block) ---------- */
-.fuel-line { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.14); font-size: 13px; line-height: 18px; color: rgba(255,255,255,0.82); }
-.fuel-line b { color: #fff; font-weight: 600; margin-right: 6px; }
-.fuel-line.muted { color: rgba(255,255,255,0.6); }
+/* fuel strip on the hero: icon, label, value per phase, dividers between, link at the right */
+.fuel-strip { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.14); display: flex; flex-wrap: wrap; align-items: center; row-gap: 10px; color: #fff; }
+.fuel-strip .fs-cell { display: flex; align-items: center; gap: 12px; padding: 0 18px; border-left: 1px solid rgba(255,255,255,0.18); min-width: 0; }
+.fuel-strip .fs-cell:first-child { padding-left: 0; border-left: 0; }
+.fuel-strip .fs-icon { display: inline-flex; width: 22px; height: 22px; flex: none; }
+.fuel-strip .fs-icon svg { width: 22px; height: 22px; fill: none; stroke: #fff; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.fuel-strip .fs-k { font-size: 12px; line-height: 16px; color: rgba(255,255,255,0.72); }
+.fuel-strip .fs-v { font-size: 15px; line-height: 20px; font-weight: 600; white-space: nowrap; }
+.fuel-strip .fs-note { font-size: 13px; color: rgba(255,255,255,0.72); }
+.fuel-strip .fs-link { margin-left: auto; padding-left: 16px; font-size: 14px; font-weight: 600; color: #7AA7FF; white-space: nowrap; cursor: pointer; }
+.fuel-strip .fs-link:hover { text-decoration: underline; }
+@media (max-width: 640px) { .fuel-strip .fs-cell { padding: 0 14px; } .fuel-strip .fs-link { width: 100%; padding-left: 0; margin-left: 0; } }
 .sp-fuel { margin: 14px 0 4px; padding: 12px 14px; border-radius: 12px; background: var(--surface-2); }
 .sp-fuel dl { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 6px 12px; margin: 8px 0 0; font-size: 14px; line-height: 20px; }
 .sp-fuel dt { color: var(--muted); }
