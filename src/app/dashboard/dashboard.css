@@ -16,18 +16,18 @@
 /* a brick: both parts with their start times */
 .hero .sub.brick-parts { display: grid; gap: 2px; font-size: 20px; letter-spacing: -0.01em; margin-top: 8px; }
 .hero .sub.brick-parts b { font-weight: 600; opacity: 1; }
-.hero .stats { display: flex; align-items: flex-start; gap: 0; }
-.hero .stat { padding-right: 16px; margin-right: 16px; border-right: 1px solid rgba(255,255,255,0.18); }
-.hero .stat:last-child { padding-right: 0; margin-right: 0; border-right: 0; }
-.hero .stats { min-width: 0; }
-.hero .stat:last-of-type { border-right: 0; }
+/* the stats share the hero's width in equal columns (never narrower than their text), dividers between */
+.hero .stats { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(max-content, 1fr); align-items: flex-start; min-width: 0; }
+.hero .stat { padding: 0 16px; border-right: 1px solid rgba(255,255,255,0.18); min-width: 0; }
+.hero .stat:first-child { padding-left: 0; }
+.hero .stat:last-child { padding-right: 0; border-right: 0; }
 .hero .stat .k { font-size: 14px; opacity: 0.75; }
 .hero .stat .v { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; white-space: nowrap; }
 .hero .stat .u { font-size: 13px; opacity: 0.7; }
 .hero .donetag { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; letter-spacing: 0.08em; background: rgba(255,255,255,0.16); border-radius: 999px; padding: 2px 9px; margin-left: 12px; vertical-align: 1px; }
 
 /* Garmin: watch hovering on the right of the hero; status lives in the stats row */
-.hero .stat.gm { position: relative; margin-right: 0; padding-right: 0; border-right: 0; } /* right after the session stats, no gap */
+.hero .stat.gm { position: relative; padding-right: 0; border-right: 0; }
 .hero .garmin { position: absolute; left: 50%; margin-left: -58px; bottom: calc(100% + 10px); width: 116px; filter: drop-shadow(0 0 18px rgba(255,255,255,0.22)) drop-shadow(0 14px 20px rgba(0,0,0,0.5)); animation: hover 4s ease-in-out infinite; }
 @keyframes hover { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-5px); } }
 .hero .stat.gm .v { display: inline-flex; align-items: center; gap: 9px; font-size: 28px; height: 34px; }
@@ -180,14 +180,14 @@ a.next:hover .date, a.next:hover .d, a.tw:hover .k { color: var(--muted); }
   .la .stats div { padding-right: 8px; margin-right: 8px; }
   .la .stats div:last-child { padding-right: 0; margin-right: 0; }
   .la .stats .v { font-size: 16px; }
-  .hero .stat { border-right: 0 !important; padding-right: 0 !important; margin-right: 0 !important; }
-  .hero .stats { gap: 28px; }
+  .hero .stat { border-right: 0 !important; padding: 0 !important; }
+  .hero .stats { display: flex; flex-wrap: wrap; gap: 28px; }
   .dash-right { grid-template-columns: 1fr 1fr; }
 }
 @media (max-width: 800px) {
   .dash-row1, .dash-row2, .dash-right, .dash-charts { grid-template-columns: 1fr; }
   .hero .title { font-size: 40px; } .hero .sub { font-size: 20px; }
-  .hero .stats { flex-wrap: wrap; gap: 10px; } .hero .garmin { display: none; }
+  .hero .stats { display: flex; flex-wrap: wrap; gap: 10px; } .hero .garmin { display: none; }
   .phase { grid-template-columns: 1fr; gap: 14px; }
   .chartcard { grid-template-columns: 1fr; } .chartcard .side { border-left: 0; padding-left: 0; }
   .review { flex-wrap: wrap; } .review .by { margin-left: 0; }
@@ -195,4 +195,4 @@ a.next:hover .date, a.next:hover .d, a.tw:hover .k { color: var(--muted); }
 .hero .stat.gm .v .dim { font-size: 20px; opacity: 0.7; }
 
 /* a narrow hero (laptop widths with the right column beside it): the wearable stat moves to its own line, the watch picture goes */
-@container hero (max-width: 620px) { .hero .stats { flex-wrap: wrap; row-gap: 14px; } .hero .garmin { display: none; } .hero .stat:has(+ .stat.gm) { border-right: 0; } }
+@container hero (max-width: 620px) { .hero .stats { display: flex; flex-wrap: wrap; row-gap: 14px; } .hero .garmin { display: none; } .hero .stat:has(+ .stat.gm) { border-right: 0; } }

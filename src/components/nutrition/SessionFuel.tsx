@@ -19,23 +19,25 @@ export function perHourInProducts(perHour: number, fluidLh: number) {
   return `${perHour} g carbs per hour: ${fluidLh} L of 6 % drink mix${gels ? ` + ${gels} gel${gels > 1 ? "s" : ""}` : ""}`;
 }
 
-/** The fuel strip on today's hero: before / during / after at a glance, and a link to the full plan under Nutrition. */
+/** The fuel strip on today's hero: one cell per fuel item (icon, phase, value); every cell opens the fuel timing under Nutrition. */
 export function FuelLine({ s }: { s: Session }) {
   const nut = useNutrition();
   const router = useRouter();
   if (!nut.ready || s.sport === "rest") return null;
-  const go = (e: React.SyntheticEvent) => { e.preventDefault(); e.stopPropagation(); router.push("/nutrition"); };
-  if (!nut.hasWeight) return <div className="fuel-strip"><span className="fs-note">Add your weight under Nutrition to get session fuel</span><span className="fs-link" role="link" tabIndex={0} onClick={go} onKeyDown={(e) => { if (e.key === "Enter") go(e); }}>Set up nutrition →</span></div>;
+  const go = (e: React.SyntheticEvent) => { e.preventDefault(); e.stopPropagation(); router.push("/nutrition#fuel"); };
+  const linkProps = { role: "link" as const, tabIndex: 0, onClick: go, onKeyDown: (e: React.KeyboardEvent) => { if (e.key === "Enter") go(e); } };
+  if (!nut.hasWeight) return <div className="fuel-strip"><span className="fs-note">Add your weight under Nutrition to get session fuel</span><span className="fs-link" {...linkProps}>Set up nutrition →</span></div>;
   const f = nut.fuelFor(s);
   const cells: { k: string; icon: IconName; v: string }[] = [
     { k: "Before", icon: "fork", v: f.before ? `${f.before} g carbs` : "Normal meal" },
-    { k: "During", icon: "drop", v: f.perHour ? `${f.perHour} g/h${f.fluidLh ? `, ${f.fluidLh} L/h` : ""}` : f.fluidLh ? `Water, ${f.fluidLh} L/h` : "Water" },
-    { k: "After", icon: "bowl", v: f.after.carbs ? `${f.after.carbs} g carbs + ${f.after.protein} g protein` : "Meal" },
+    ...(f.perHour ? [{ k: "During", icon: "gel" as IconName, v: `${f.perHour} g carbs/h` }] : []),
+    { k: f.perHour ? "Fluid" : "During", icon: "bottle", v: f.fluidLh ? `${f.perHour ? "" : "Water, "}${f.fluidLh} L/h` : "Water" },
+    { k: "After", icon: "bowl", v: f.after.carbs ? `${f.after.carbs} g carbs + ${f.after.protein} g protein` : `${f.after.protein} g protein` },
   ];
   return (
     <div className="fuel-strip" aria-label="Fuel for today's session">
-      {cells.map((c) => <div key={c.k} className="fs-cell"><span className="fs-icon"><Icon name={c.icon} /></span><div><div className="fs-k">{c.k}</div><div className="fs-v">{c.v}</div></div></div>)}
-      <span className="fs-link" role="link" tabIndex={0} onClick={go} onKeyDown={(e) => { if (e.key === "Enter") go(e); }}>Fuel this workout →</span>
+      {cells.map((c) => <div key={c.k} className="fs-cell" {...linkProps} aria-label={`${c.k}: ${c.v}, open fuel plan`}><span className="fs-icon"><Icon name={c.icon} /></span><div><div className="fs-k">{c.k}</div><div className="fs-v">{c.v}</div></div></div>)}
+      <span className="fs-link" {...linkProps}>Fuel this workout →</span>
     </div>
   );
 }

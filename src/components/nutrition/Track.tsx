@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { Icon } from "../icons";
 import { SportIcon } from "../SportIcon";
@@ -48,6 +48,7 @@ function DayView({ date, setDate, setView }: { date: string; setDate: (d: string
   const bottleTarget = t ? Math.ceil(t.fluid_ml / nut.profile.bottle_ml) : 0;
 
   // carbohydrate timing: before / during / after the main session, and the rest of the day
+  useEffect(() => { if (typeof window !== "undefined" && window.location.hash === "#fuel") document.getElementById("fuel")?.scrollIntoView({ behavior: "smooth", block: "start" }); }, []);
   const timing = useMemo(() => {
     if (!active.length || !t) return null;
     const first = [...active].sort((a, b) => b.min - a.min)[0], fuel = nut.fuelFor(first);
@@ -99,7 +100,7 @@ function DayView({ date, setDate, setView }: { date: string; setDate: (d: string
 
         <div className="nu-side">
           {timing && t && (
-            <section className="card nu-carbgoal" aria-label="Carbohydrate goal">
+            <section className="card nu-carbgoal" id="fuel" aria-label="Carbohydrate goal">
               <h3 className="nu-h">Activity fuel plan<span className="at">{dateLabel(date)}</span></h3>
               <div className="v"><b>{fmt(t.carbs)} g</b> target</div>
               <div className="u">{t.dayType} day, {units === "imperial" ? `${(t.carbsPerKg / 2.2046).toFixed(1)} g per lb` : `${t.carbsPerKg} g per kg`}{d.basis === "done" ? ", from what you logged" : d.basis === "mixed" ? ", logged + planned" : ""}</div>
