@@ -242,7 +242,8 @@ h2 .at { font-size: 0.72em; letter-spacing: 0; margin-left: 10px; }
 /* chart cards */
 /* charts */
 .chartcard { padding: 16px 20px 14px; display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 16px; }
-.chartcard .head { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; }
+.chartcard .head { grid-column: 1 / -1; min-height: 34px; display: flex; align-items: center; justify-content: space-between; }
+.chartcard > div:not(.head):not(.side) { display: flex; flex-direction: column; justify-content: flex-end; } /* the two charts end at the same level */
 .chartcard .side { border-left: 1px solid var(--line-2); padding-left: 18px; display: grid; align-content: space-between; gap: 14px; }
 .chartcard .side .rows { display: grid; gap: 14px; }
 .chartcard .side .drow { display: grid; gap: 5px; }
