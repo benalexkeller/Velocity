@@ -8,12 +8,13 @@ import { CoachNote } from "../CoachNote";
 import type { Activity } from "@/lib/data";
 import { useAnalysis } from "@/lib/useAnalysis";
 import { addDays, dateLabel, fmtHMS, fmtHours, fmtPace, fromYmd, shortDate, today } from "@/lib/format";
-import { elev, fmtDist, fmtSpeed, runPace, swimDist, swimPace } from "@/lib/units";
+import { elev, fmtDist, localize, runPace, speed, swimDist, swimPace } from "@/lib/units";
 
 export type Range = 4 | 12 | 99;
 type Sp = "swim" | "bike" | "run";
-const UNIT: Record<Sp, string> = { run: `min${runPace(0).u}`, swim: `min${swimPace(0).u}`, bike: "mph" };
-const fmtV = (sp: Sp, v: number) => (sp === "bike" ? fmtSpeed(v).replace(" mph", "") : sp === "run" ? fmtPace(runPace(v).s) : fmtPace(swimPace(v).s));
+// read at render time, so they follow the athlete's Units setting
+const unitOf = (sp: Sp) => (sp === "run" ? `min${runPace(0).u}` : sp === "swim" ? `min${swimPace(0).u}` : speed(0).u);
+const fmtV = (sp: Sp, v: number) => (sp === "bike" ? speed(v).v.toFixed(1) : sp === "run" ? fmtPace(runPace(v).s) : fmtPace(swimPace(v).s));
 const sign = (n: number | null, digits = 0) => (n == null ? "-" : `${n > 0 ? "+" : ""}${n.toFixed(digits)}`);
 
 // ---------- Row 1: scores ----------
@@ -143,7 +144,7 @@ export function PaceCorridor({ range, onPick }: { range: Range; onPick: (id: str
         <div className="pill-group">{(["swim", "bike", "run"] as Sp[]).map((k) => <button key={k} type="button" className={sp === k ? "on" : ""} onClick={() => setSp(k)}>{k[0].toUpperCase() + k.slice(1)}</button>)}</div>
       </div>
       <div>
-        <div className="muted" style={{ fontSize: 12, marginBottom: 2 }}>{UNIT[sp]}, faster is higher, band = coach target for that date</div>
+        <div className="muted" style={{ fontSize: 12, marginBottom: 2 }}>{unitOf(sp)}, faster is higher, band = coach target for that date</div>
         <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${sp} pace with target corridor`}>
           {Array.from({ length: ticks + 1 }, (_, k) => lo + ((hi - lo) * k) / ticks).map((v, k) => <g key={k}><line x1={L} y1={y(v)} x2={W - R} y2={y(v)} stroke="var(--grid)" /><text x={L - 8} y={y(v) + 4} textAnchor="end">{fmtV(sp, v)}</text></g>)}
           <path d={band} fill="var(--accent-soft)" />
@@ -153,9 +154,9 @@ export function PaceCorridor({ range, onPick }: { range: Range; onPick: (id: str
         </svg>
       </div>
       <div className="side">
-        <div><div className="k">4-week avg</div><div className="v">{avg != null ? fmtV(sp, avg) : "-"}</div><div className="u">{UNIT[sp]}, dashed line</div></div>
-        <div><div className="k">Target now</div><div className="v">{fmtV(sp, now.lo)}-{fmtV(sp, now.hi)}</div><div className="u">{UNIT[sp]}</div></div>
-        <div><div className="k">Race-day target</div><div className="v">{fmtV(sp, corridorAt(sp, fromYmd(ATHLETE.race.date)).lo)}-{fmtV(sp, corridorAt(sp, fromYmd(ATHLETE.race.date)).hi)}</div><div className="u">{UNIT[sp]}</div></div>
+        <div><div className="k">4-week avg</div><div className="v">{avg != null ? fmtV(sp, avg) : "-"}</div><div className="u">{unitOf(sp)}, dashed line</div></div>
+        <div><div className="k">Target now</div><div className="v">{fmtV(sp, now.lo)}-{fmtV(sp, now.hi)}</div><div className="u">{unitOf(sp)}</div></div>
+        <div><div className="k">Race-day target</div><div className="v">{fmtV(sp, corridorAt(sp, fromYmd(ATHLETE.race.date)).lo)}-{fmtV(sp, corridorAt(sp, fromYmd(ATHLETE.race.date)).hi)}</div><div className="u">{unitOf(sp)}</div></div>
       </div>
     </section>
   );
@@ -208,7 +209,7 @@ export function TotalsPanel() {
             <tr><td>Longest ride</td><td>{t.bests.longestRide ? `${fmtDist(t.bests.longestRide.mi)}, ${dateLabel(t.bests.longestRide.date)}` : "-"}</td></tr>
             <tr><td>Longest run</td><td>{t.bests.longestRun ? `${fmtDist(t.bests.longestRun.mi)}, ${dateLabel(t.bests.longestRun.date)}` : "-"}</td></tr>
             <tr><td>Longest swim</td><td>{t.bests.longestSwim ? `${swimDist(t.bests.longestSwim.yd ?? 0).v.toLocaleString()} ${swimDist(0).u}, ${dateLabel(t.bests.longestSwim.date)}` : "-"}</td></tr>
-            <tr><td>Fastest run (≥ 3 mi)</td><td>{t.bests.fastestRun ? `${fmtPace(runPace(t.bests.fastestRun.pace_s ?? 0).s)} ${runPace(0).u}, ${dateLabel(t.bests.fastestRun.date)}` : "-"}</td></tr>
+            <tr><td>Fastest run (≥ {localize("3 mi")})</td><td>{t.bests.fastestRun ? `${fmtPace(runPace(t.bests.fastestRun.pace_s ?? 0).s)} ${runPace(0).u}, ${dateLabel(t.bests.fastestRun.date)}` : "-"}</td></tr>
             <tr><td>Longest session</td><td>{t.bests.longestSession ? `${fmtHMS(t.bests.longestSession.min)}, ${t.bests.longestSession.name}` : "-"}</td></tr>
           </tbody>
         </table>
@@ -218,7 +219,7 @@ export function TotalsPanel() {
         <table className="tbl small">
           <thead><tr><th>Leg</th><th>Projected</th><th>{ATHLETE.race.goal} goal</th><th>Gap</th></tr></thead>
           <tbody>
-            {([["Swim 2.4 mi", p.swimH, ATHLETE.raceSplits.swim], ["Bike 112 mi", p.bikeH, ATHLETE.raceSplits.bike], ["Run 26.2 mi", p.runH, ATHLETE.raceSplits.run], ["Transitions", p.transitions, ATHLETE.raceSplits.transitions]] as const).map(([k, v, g]) => (
+            {([[localize("Swim 2.4 mi"), p.swimH, ATHLETE.raceSplits.swim], [localize("Bike 112 mi"), p.bikeH, ATHLETE.raceSplits.bike], [localize("Run 26.2 mi"), p.runH, ATHLETE.raceSplits.run], ["Transitions", p.transitions, ATHLETE.raceSplits.transitions]] as const).map(([k, v, g]) => (
               <tr key={k}><td>{k}</td><td>{h(v)}</td><td>{h(g)}</td><td className={v != null && v > g ? "neg" : "pos"}>{v != null ? sign((v - g) * 60) + " min" : "-"}</td></tr>
             ))}
             <tr className="total"><td>Total</td><td>{h(p.total)}</td><td>{h(goalTotal)}</td><td className={p.total != null && p.total > goalTotal ? "neg" : "pos"}>{p.total != null ? sign((p.total - goalTotal) * 60) + " min" : "-"}</td></tr>
@@ -254,8 +255,8 @@ export function ActivityPanel({ id, onClose }: { id: string | null; onClose: () 
   if (!a) return null;
   const r = an.analyzeActivity(a);
   const sp = r.sport as Sp | null;
-  const paceStr = sp && r.pace != null ? `${fmtV(sp, r.pace)} ${UNIT[sp]}` : "-";
-  const rangeStr = sp && r.range ? `${fmtV(sp, r.range[0])}-${fmtV(sp, r.range[1])} ${UNIT[sp]}` : "-";
+  const paceStr = sp && r.pace != null ? `${fmtV(sp, r.pace)} ${unitOf(sp)}` : "-";
+  const rangeStr = sp && r.range ? `${fmtV(sp, r.range[0])}-${fmtV(sp, r.range[1])} ${unitOf(sp)}` : "-";
   return (
     <section className="card an-activity" aria-label="Activity analysis">
       <button className="close" type="button" onClick={onClose} aria-label="Close"><Icon name="close" /></button>

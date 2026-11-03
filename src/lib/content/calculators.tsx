@@ -4,6 +4,7 @@ import type { Cube } from "@/components/Cubes";
 import { fmtHMS, fmtPace } from "@/lib/format";
 import { useAnalysis } from "@/lib/useAnalysis";
 import type { RaceDistance } from "@/lib/athlete";
+import { localize, runPace, speed, swimPace, toMph, toSecPer100yd, toSecPerMi, unitWords, units } from "@/lib/units";
 
 // ---------- helpers ----------
 const num = (s: string) => { const n = parseFloat(s); return isNaN(n) ? 0 : n; };
@@ -33,32 +34,35 @@ function Res({ k, v, u, hero }: { k: string; v: string; u?: string; hero?: boole
 function RaceTime() {
   const an = useAnalysis();
   const [race, setRace] = useState<RaceKey>(RACE_OF[an.athlete.race.distance] ?? "Ironman 140.6");
-  const [swim, setSwim] = useState("2:05"); const [t1, setT1] = useState("8"); const [bike, setBike] = useState("17.5"); const [t2, setT2] = useState("5"); const [run, setRun] = useState("10:45");
+  const raceName = (k: RaceKey) => localize(k);
+  const w = unitWords();
+  // the fields are in the athlete's units; the maths runs on yards, miles and mph
+  const [swim, setSwim] = useState(() => fmtPace(swimPace(125).s)); const [t1, setT1] = useState("8"); const [bike, setBike] = useState(() => speed(17.5).v.toFixed(1)); const [t2, setT2] = useState("5"); const [run, setRun] = useState(() => fmtPace(runPace(645).s));
   const d = RACES[race];
-  const swimS = (d.swimYd / 100) * toSec(swim), bikeS = num(bike) ? (d.bikeMi / num(bike)) * 3600 : 0, runS = d.runMi * toSec(run);
+  const swimS = (d.swimYd / 100) * toSecPer100yd(toSec(swim)), bikeS = num(bike) ? (d.bikeMi / toMph(num(bike))) * 3600 : 0, runS = d.runMi * toSecPerMi(toSec(run));
   const tr = d.swimYd ? (num(t1) + num(t2)) * 60 : 0;
   const total = swimS + bikeS + runS + tr;
   // the athlete's own 4-week averages (sessions long enough to count), never another account's
   const avg = { swim: an.weightedAvgPace("swim"), bike: an.weightedAvgPace("bike"), run: an.weightedAvgPace("run") };
   const hasAvg = (d.swimYd > 0 && avg.swim != null) || (d.bikeMi > 0 && avg.bike != null) || (d.runMi > 0 && avg.run != null);
-  const mine = () => { if (avg.swim) setSwim(fmtPace(avg.swim)); if (avg.bike) setBike(avg.bike.toFixed(1)); if (avg.run) setRun(fmtPace(avg.run)); };
+  const mine = () => { if (avg.swim) setSwim(fmtPace(swimPace(avg.swim).s)); if (avg.bike) setBike(speed(avg.bike).v.toFixed(1)); if (avg.run) setRun(fmtPace(runPace(avg.run).s)); };
   const goalH = an.athlete.hasRace && an.athlete.race.goal ? an.athlete.raceSplits.swim + an.athlete.raceSplits.bike + an.athlete.raceSplits.run + an.athlete.raceSplits.transitions : null;
   return (
     <div className="calc">
       <div className="inputs">
-        <label>Race<select value={race} onChange={(e) => setRace(e.target.value as RaceKey)}>{Object.keys(RACES).map((k) => <option key={k}>{k}</option>)}</select></label>
-        {d.swimYd > 0 && <label>Swim pace per 100 yd (m:ss)<input value={swim} onChange={(e) => setSwim(e.target.value)} /></label>}
+        <label>Race<select value={race} onChange={(e) => setRace(e.target.value as RaceKey)}>{Object.keys(RACES).map((k) => <option key={k} value={k}>{raceName(k as RaceKey)}</option>)}</select></label>
+        {d.swimYd > 0 && <label>Swim pace {w.perSwim} (m:ss)<input value={swim} onChange={(e) => setSwim(e.target.value)} /></label>}
         {d.swimYd > 0 && <div className="two"><label>T1 (min)<input value={t1} onChange={(e) => setT1(e.target.value)} /></label><label>T2 (min)<input value={t2} onChange={(e) => setT2(e.target.value)} /></label></div>}
-        {d.bikeMi > 0 && <label>Bike speed (mph)<input value={bike} onChange={(e) => setBike(e.target.value)} /></label>}
-        {d.runMi > 0 && <label>Run pace per mile (m:ss)<input value={run} onChange={(e) => setRun(e.target.value)} /></label>}
+        {d.bikeMi > 0 && <label>Bike speed ({w.speed})<input value={bike} onChange={(e) => setBike(e.target.value)} /></label>}
+        {d.runMi > 0 && <label>Run pace {w.perDist} (m:ss)<input value={run} onChange={(e) => setRun(e.target.value)} /></label>}
         <button type="button" className="btn ghost" onClick={mine} disabled={!hasAvg}>{hasAvg ? "Use my 4-week average paces" : "No activities in the last 4 weeks"}</button>
       </div>
       <div className="out">
         <div className="res">
           <Res k="Finish time" v={hms(total)} hero />
-          {d.swimYd > 0 && <Res k={`Swim ${(d.swimYd / 1760).toFixed(1)} mi`} v={hms(swimS)} />}
-          {d.bikeMi > 0 && <Res k={`Bike ${d.bikeMi} mi`} v={hms(bikeS)} />}
-          {d.runMi > 0 && <Res k={`Run ${d.runMi} mi`} v={hms(runS)} />}
+          {d.swimYd > 0 && <Res k={localize(`Swim ${(d.swimYd / 1760).toFixed(1)} mi`)} v={hms(swimS)} />}
+          {d.bikeMi > 0 && <Res k={localize(`Bike ${d.bikeMi} mi`)} v={hms(bikeS)} />}
+          {d.runMi > 0 && <Res k={localize(`Run ${d.runMi} mi`)} v={hms(runS)} />}
           {d.swimYd > 0 && <Res k="Transitions" v={hms(tr)} />}
         </div>
         <div className="note">{goalH && RACE_OF[an.athlete.race.distance] === race ? `Your goal for ${an.athlete.race.name}: ${hms(goalH * 3600)}.` : "Average paces from training are a starting point; race-day pace over the full distance is usually slower."}</div>
@@ -69,7 +73,8 @@ function RaceTime() {
 
 // ---------- 2. Pace, distance, time ----------
 function Zones() {
-  const [lthr, setLthr] = useState("168"); const [tp, setTp] = useState("8:45"); const [ftp, setFtp] = useState("230");
+  const w = unitWords();
+  const [lthr, setLthr] = useState("168"); const [tp, setTp] = useState(() => fmtPace(runPace(525).s)); const [ftp, setFtp] = useState("230");
   const H = num(lthr), P = toSec(tp), F = num(ftp);
   const hr: [string, number, number, string][] = [["Z1 Recovery", 0, 0.81, "Easy, conversational"], ["Z2 Aerobic", 0.81, 0.89, "All-day pace; most of the plan"], ["Z3 Tempo", 0.90, 0.93, "Comfortably hard"], ["Z4 Threshold", 0.94, 0.99, "1-hour race effort"], ["Z5 VO2max", 1.0, 1.06, "3-8 min intervals"]];
   const rp: [string, number, number][] = [["Z1", 1.29, 1.5], ["Z2", 1.14, 1.29], ["Z3", 1.06, 1.13], ["Z4", 0.97, 1.05], ["Z5", 0.90, 0.97]];
@@ -78,7 +83,7 @@ function Zones() {
     <div className="calc">
       <div className="inputs">
         <label>Lactate threshold heart rate (bpm)<input value={lthr} onChange={(e) => setLthr(e.target.value)} /></label>
-        <label>Run threshold pace per mile (m:ss)<input value={tp} onChange={(e) => setTp(e.target.value)} /></label>
+        <label>Run threshold pace {w.perDist} (m:ss)<input value={tp} onChange={(e) => setTp(e.target.value)} /></label>
         <label>Bike FTP (watts)<input value={ftp} onChange={(e) => setFtp(e.target.value)} /></label>
         <div className="note">Threshold = the pace or heart rate you can hold for about 60 minutes. The plan's week-4 tests (30-min run, 20-min bike) set these.</div>
       </div>
@@ -89,7 +94,7 @@ function Zones() {
             <table><tbody>{hr.map(([z, a, b, d]) => <tr key={z}><td>{z}</td><td>{Math.round(H * a)}-{Math.round(H * b)}</td><td>{d}</td></tr>)}</tbody></table>
           </div>
           <div>
-            <h3>Run pace (per mile)</h3>
+            <h3>Run pace ({w.perDist})</h3>
             <table><tbody>{rp.map(([z, a, b]) => <tr key={z}><td>{z}</td><td>{pace(P * b)}-{pace(P * a)}</td></tr>)}</tbody></table>
           </div>
           <div>
@@ -104,17 +109,18 @@ function Zones() {
 
 // ---------- 5. Sweat rate ----------
 function Sweat() {
-  const [before, setBefore] = useState("165"); const [after, setAfter] = useState("162.5"); const [drank, setDrank] = useState("24"); const [dur, setDur] = useState("90");
-  const lossLb = num(before) - num(after) + num(drank) / 33.814 * 2.2046; // fluid drunk counts as loss (it left as sweat)
-  const lossL = lossLb / 2.2046;
+  const metric = units === "metric"; // kg and ml, or lb and fl oz
+  const [before, setBefore] = useState(metric ? "75" : "165"); const [after, setAfter] = useState(metric ? "73.9" : "162.5"); const [drank, setDrank] = useState(metric ? "700" : "24"); const [dur, setDur] = useState("90");
+  const kg = (v: number) => (metric ? v : v / 2.2046), litres = (v: number) => (metric ? v / 1000 : v / 33.814);
+  const lossL = kg(num(before)) - kg(num(after)) + litres(num(drank)); // fluid drunk counts as loss (it left as sweat)
   const h = num(dur) / 60;
   const rate = h ? lossL / h : 0;
   const pct = num(before) ? ((num(before) - num(after)) / num(before)) * 100 : 0;
   return (
     <div className="calc">
       <div className="inputs">
-        <div className="two"><label>Weight before (lb)<input value={before} onChange={(e) => setBefore(e.target.value)} /></label><label>Weight after (lb)<input value={after} onChange={(e) => setAfter(e.target.value)} /></label></div>
-        <div className="two"><label>Fluid drunk (fl oz)<input value={drank} onChange={(e) => setDrank(e.target.value)} /></label><label>Duration (min)<input value={dur} onChange={(e) => setDur(e.target.value)} /></label></div>
+        <div className="two"><label>Weight before ({metric ? "kg" : "lb"})<input value={before} onChange={(e) => setBefore(e.target.value)} /></label><label>Weight after ({metric ? "kg" : "lb"})<input value={after} onChange={(e) => setAfter(e.target.value)} /></label></div>
+        <div className="two"><label>Fluid drunk ({metric ? "ml" : "fl oz"})<input value={drank} onChange={(e) => setDrank(e.target.value)} /></label><label>Duration (min)<input value={dur} onChange={(e) => setDur(e.target.value)} /></label></div>
         <div className="note">Weigh nude or in dry kit, after toweling off, before and after. Note the temperature: rates differ by 2× between cool and hot days.</div>
       </div>
       <div className="out">

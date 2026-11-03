@@ -9,7 +9,8 @@ import { isLinked, useCalendar } from "@/lib/calendar/client";
 import { DISTANCES, distanceInfo, type Race, type RaceDistance } from "@/lib/athlete";
 import type { Availability } from "@/lib/data";
 import { dateFull, dateLabel, ymd, addDays, today } from "@/lib/format";
-import { DEVICES, EMPTY_INTAKE, EVENT_TYPES, MIN_WEEKS, eventType, hoursToText, textToHours, type Intake, type Kind, type PastRace } from "@/lib/plan/intake";
+import { DEVICES, EMPTY_INTAKE, EVENT_TYPES, MIN_WEEKS, eventType, hoursToText, intakeInUnits, textToHours, type Intake, type Kind, type PastRace } from "@/lib/plan/intake";
+import { TimePicker, formatClock, parseClock } from "@/components/TimePicker";
 import { searchEvents, usualMonth, type CatalogEvent } from "@/lib/plan/events";
 import { generatePlan, weeksUntil, planStart } from "@/lib/plan/generate";
 import { Building } from "./Building";
@@ -26,11 +27,13 @@ function NumInput({ value, onChange, min, max, ...rest }: { value: number | null
   const clamp = (v: number) => Math.min(max ?? Infinity, Math.max(min ?? -Infinity, v));
   return <input {...rest} value={shown} inputMode={rest.inputMode ?? "decimal"} onChange={(e) => { const t = e.target.value.replace(",", "."); setTxt(t); const v = parseFloat(t); onChange(t.trim() === "" ? null : isNaN(v) ? value : v); }} onBlur={() => { const v = parseFloat(shown); onChange(shown.trim() === "" || isNaN(v) ? null : clamp(v)); setTxt(null); }} />;
 }
-/** h:mm field that lets the colon and partial minutes be typed; converts when the text is a full time. */
-function TimeInput({ hours, onChange, ...rest }: { hours: number | null; onChange: (h: number | null) => void } & Omit<InputHTMLAttributes<HTMLInputElement>, "value" | "onChange">) {
-  const [txt, setTxt] = useState<string | null>(null);
-  const shown = txt ?? hoursToText(hours);
-  return <input {...rest} value={shown} inputMode="numeric" placeholder={rest.placeholder ?? "h:mm"} onChange={(e) => { const t = e.target.value; setTxt(t); if (/^\d{1,2}:\d{2}$/.test(t) || t.trim() === "") onChange(textToHours(t)); }} onBlur={() => { onChange(textToHours(shown)); setTxt(null); }} />;
+/** h:mm picked on scroll wheels (no colon key on phone keyboards); hours in, hours out. */
+function TimeInput({ hours, onChange, placeholder }: { hours: number | null; onChange: (h: number | null) => void; placeholder?: string }) {
+  return <TimePicker parts="hm" maxHours={30} seconds={hours == null ? null : Math.round(hours * 3600)} onChange={(s) => onChange(s == null ? null : s / 3600)} placeholder={placeholder} />;
+}
+/** m:ss pace picked on scroll wheels; the text form ("9:30") in and out, as the plan stores it. */
+function PaceInput({ value, onChange, placeholder, maxMinutes = 20 }: { value: string; onChange: (t: string) => void; placeholder?: string; maxMinutes?: number }) {
+  return <TimePicker parts="ms" maxMinutes={maxMinutes} seconds={parseClock(value, "ms")} onChange={(s) => onChange(s == null ? "" : formatClock(s, "ms"))} placeholder={placeholder} />;
 }
 
 type Patch<T> = Partial<T> | ((cur: T) => Partial<T>);
@@ -39,14 +42,15 @@ export function Builder({ edit, importFirst = false }: { edit: boolean; importFi
   const plan = usePlan();
   const router = useRouter();
   const imperial = plan.athlete.units === "imperial";
-  const [intake, setIntake] = useState<Intake>(() => (edit && plan.intake ? plan.intake : { ...EMPTY_INTAKE, time: { ...EMPTY_INTAKE.time, days: plan.athlete.availability.days, weekend_start: plan.athlete.availability.weekend } }));
+  // the answers carry the units they were typed in; an athlete who switched units edits them in the new ones
+  const [intake, setIntake] = useState<Intake>(() => (edit && plan.intake ? intakeInUnits(plan.intake, plan.athlete.units) : { ...EMPTY_INTAKE, units: plan.athlete.units, time: { ...EMPTY_INTAKE.time, days: plan.athlete.availability.days, weekend_start: plan.athlete.availability.weekend } }));
   const [step, setStep] = useState(0);
   const [mode, setMode] = useState<"ask" | "building" | "import">(importFirst ? "import" : "ask");
   const [err, setErr] = useState<string | null>(null);
   const set = <K extends keyof Intake>(k: K, patch: Patch<Intake[K]>) => { setErr(null); setIntake((cur) => ({ ...cur, [k]: { ...(cur[k] as object), ...(typeof patch === "function" ? patch(cur[k]) : patch) } as Intake[K] })); };
   // local mode loads after the first render: take the saved answers (or the profile's days) when they arrive
   const seeded = useRef(false);
-  useEffect(() => { if (seeded.current || !plan.ready) return; seeded.current = true; if (edit && plan.intake) setIntake(plan.intake); else if (!edit) setIntake((cur) => ({ ...cur, time: { ...cur.time, days: plan.athlete.availability.days, weekend_start: plan.athlete.availability.weekend } })); }, [plan.ready, plan.intake, plan.athlete.availability, edit]);
+  useEffect(() => { if (seeded.current || !plan.ready) return; seeded.current = true; if (edit && plan.intake) setIntake(intakeInUnits(plan.intake, plan.athlete.units)); else if (!edit) setIntake((cur) => ({ ...cur, units: plan.athlete.units, time: { ...cur.time, days: plan.athlete.availability.days, weekend_start: plan.athlete.availability.weekend } })); }, [plan.ready, plan.intake, plan.athlete.availability, plan.athlete.units, edit]);
   const et = eventType(intake.goal.type);
   const kind = et.kind;
   const weeks = intake.goal.date ? weeksUntil(intake.goal.date) : null;
@@ -55,7 +59,7 @@ export function Builder({ edit, importFirst = false }: { edit: boolean; importFi
     if (s === 0) {
       if (!intake.goal.date) return "Pick the race date.";
       if (weeks != null && weeks < MIN_WEEKS) return `That is ${weeks < 1 ? "less than a week" : `${weeks} week${weeks === 1 ? "" : "s"}`} away. The shortest plan is ${MIN_WEEKS} weeks, pick a later race or start with a later date.`;
-      if (intake.goal.kind === "time" && !intake.goal.target_hours) return "Enter the target time (h:mm).";
+      if (intake.goal.kind === "time" && !intake.goal.target_hours) return "Pick the target time.";
       if (intake.goal.type === "other" && !intake.goal.custom_label?.trim()) return "Say what the event is.";
     }
     if (s === 3) {
@@ -70,7 +74,7 @@ export function Builder({ edit, importFirst = false }: { edit: boolean; importFi
   const start = () => { const e = validate(0) ?? validate(3); setErr(e); if (e) { setStep(e === validate(0) ? 0 : 3); return; } setMode("building"); };
 
   if (mode === "import") return <ImportPlan onBack={() => setMode("ask")} onDone={() => { router.push("/plan"); }} />;
-  if (mode === "building") return <Building intake={{ ...intake, created_at: intake.created_at || new Date().toISOString() }} edit={edit} onOpen={() => router.push("/plan")} />;
+  if (mode === "building") return <Building intake={{ ...intake, units: plan.athlete.units, created_at: intake.created_at || new Date().toISOString() }} edit={edit} onOpen={() => router.push("/plan")} />;
 
   return (
     <div className="pb">
@@ -146,7 +150,7 @@ function GoalStep({ intake, set, imperial, weeks }: { intake: Intake; set: <K ex
       </div>
       {g.kind !== "finish" && (
         <div className="two">
-          <label><b>{g.kind === "time" ? "Target time (h:mm)" : "Time it will take (h:mm, optional)"}</b><TimeInput hours={g.target_hours} onChange={(h) => setTargetText(hoursToText(h))} placeholder={hoursToText(info.hours)} /></label>
+          <label><b>{g.kind === "time" ? "Target time" : "Time it will take (optional)"}</b><TimeInput hours={g.target_hours} onChange={(h) => setTargetText(hoursToText(h))} placeholder={hoursToText(info.hours)} /></label>
           {et.kind === "tri" && <label className="pb-chk" style={{ alignSelf: "end" }}><input type="checkbox" checked={splitOn} onChange={(e) => { setSplitOn(e.target.checked); const h = textToHours(target); set("goal", { splits: e.target.checked && h ? autoSplits(h, g.type) : null }); }} /><b>Split it into swim / bike / run</b></label>}
         </div>
       )}
@@ -178,7 +182,7 @@ function HistoryStep({ intake, set, kind }: { intake: Intake; set: <K extends ke
             <div key={i} className="pb-race">
               <label><b>Sport</b><select value={r.sport} onChange={(e) => setRace(i, { sport: e.target.value as Kind })}>{sports.map((s) => <option key={s.k} value={s.k}>{s.label}</option>)}</select></label>
               <label><b>Distance</b><input value={r.distance} onChange={(e) => setRace(i, { distance: e.target.value })} placeholder={r.sport === "tri" ? "70.3" : r.sport === "run" ? "Half marathon" : r.sport === "bike" ? "100 km" : "3.8 km"} /></label>
-              <label><b>Time</b><input value={r.time} onChange={(e) => setRace(i, { time: e.target.value })} placeholder="h:mm" inputMode="numeric" /></label>
+              <label><b>Time</b><TimePicker parts="hm" maxHours={30} seconds={parseClock(r.time, "hm")} onChange={(s) => setRace(i, { time: s == null ? "" : formatClock(s, "hm") })} placeholder="h:mm" /></label>
               <button type="button" className="x" aria-label="Remove" onClick={() => set("history", (cur) => ({ races: cur.races.filter((_, j) => j !== i) }))}>×</button>
             </div>
           ))}
@@ -205,7 +209,7 @@ function FitnessStep({ intake, set, kind, imperial }: { intake: Intake; set: <K 
     <>
       <div className="pb-q"><h2>Where you are now</h2><span className="hint">Leave blank what you don't know.</span></div>
       {swim && <div className="pb-sport"><span className="k">Swim</span><div className="two">
-        <label><b>Pace per 100 {imperial ? "yd" : "m"} (m:ss)</b><input value={f.swim_pace_100} onChange={(e) => set("fitness", { swim_pace_100: e.target.value })} placeholder="1:50" inputMode="numeric" /></label>
+        <label><b>Pace per 100 {imperial ? "yd" : "m"}</b><PaceInput value={f.swim_pace_100} onChange={(t) => set("fitness", { swim_pace_100: t })} placeholder="1:50" maxMinutes={6} /></label>
         <label><b>Longest swim, last 8 weeks ({imperial ? "yd" : "m"})</b><NumInput value={f.swim_longest} onChange={(v) => set("fitness", { swim_longest: v })} placeholder={imperial ? "2000" : "1500"} inputMode="numeric" /></label>
       </div></div>}
       {bike && <div className="pb-sport"><span className="k">Bike</span><div className="three">
@@ -214,7 +218,7 @@ function FitnessStep({ intake, set, kind, imperial }: { intake: Intake; set: <K 
         <label><b>Longest ride, last 8 weeks ({imperial ? "mi" : "km"})</b><NumInput value={f.bike_longest} onChange={(v) => set("fitness", { bike_longest: v })} placeholder={imperial ? "40" : "60"} inputMode="decimal" /></label>
       </div></div>}
       {run && <div className="pb-sport"><span className="k">Run</span><div className="two">
-        <label><b>Easy pace per {imperial ? "mile" : "km"} (m:ss)</b><input value={f.run_pace} onChange={(e) => set("fitness", { run_pace: e.target.value })} placeholder={imperial ? "9:30" : "5:55"} inputMode="numeric" /></label>
+        <label><b>Easy pace per {imperial ? "mile" : "km"}</b><PaceInput value={f.run_pace} onChange={(t) => set("fitness", { run_pace: t })} placeholder={imperial ? "9:30" : "5:55"} /></label>
         <label><b>Longest run, last 8 weeks ({imperial ? "mi" : "km"})</b><NumInput value={f.run_longest} onChange={(v) => set("fitness", { run_longest: v })} placeholder={imperial ? "8" : "13"} inputMode="decimal" /></label>
       </div></div>}
       <div className="pb-sport"><span className="k">Physiology, optional</span>

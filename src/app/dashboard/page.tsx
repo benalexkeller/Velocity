@@ -17,7 +17,7 @@ import { weekLoad, type Session } from "@/lib/data";
 import { usePlan } from "@/lib/store";
 import { hardestStep } from "@/lib/workout";
 import { DAYS, MONTHS, addDays, dateLabel, fmtDur, fmtHMS, fromYmd, shortDate, today, ymd } from "@/lib/format";
-import { fmtDist, fmtSpeed, runPace, swimDist, swimPace } from "@/lib/units";
+import { fmtDist, fmtSpeed, localize, runPace, swimDist, swimPace, unitWords } from "@/lib/units";
 import { fmtPace } from "@/lib/format";
 
 function heroSub(s: Session) {
@@ -32,11 +32,13 @@ function heroSub(s: Session) {
 }
 // the hero shows the target of the session's key work (same as the Plan panel)
 function target(s: Session, z: Record<string, Record<string, string>>) {
-  const key = hardestStep(s, z);
-  const t = key && /\d/.test(key.seg.target) ? key.seg.target.replace(/\s*\/(mi|100 yd)$/, "") : null;
-  if (s.sport === "run") return { k: "Target pace", v: t ?? z.run[s.intensity] ?? z.run["Zone 2"], u: `per ${runPace(0).u.replace("/", "")}` };
-  if (s.sport === "bike" || s.sport === "brick") return { k: "Target speed", v: t ?? z.bike[s.intensity] ?? z.bike["Zone 2"], u: "" };
-  if (s.sport === "swim") return { k: "Target pace", v: t ?? z.swim[s.intensity] ?? z.swim["Aerobic"], u: `per 100 ${swimDist(0).u}` };
+  const key = hardestStep(s, z); // targets come out in the athlete's units
+  const strip = (x: string) => x.replace(/\s*\/(mi|km|100 yd|100 m)$/, "");
+  const t = key && /\d/.test(key.seg.target) ? strip(key.seg.target) : null;
+  const w = unitWords();
+  if (s.sport === "run") { const zr = z.run?.[s.intensity] ?? z.run?.["Zone 2"]; return { k: "Target pace", v: t ?? (zr ? strip(localize(`${zr} /mi`)) : "-"), u: w.perDist }; }
+  if (s.sport === "bike" || s.sport === "brick") { const zb = z.bike?.[s.intensity] ?? z.bike?.["Zone 2"]; return { k: "Target speed", v: t ?? (zb ? localize(zb) : "-"), u: "" }; }
+  if (s.sport === "swim") { const zs = z.swim?.[s.intensity] ?? z.swim?.["Aerobic"]; return { k: "Target pace", v: t ?? (zs ? strip(localize(`${zs} /100 yd`)) : "-"), u: w.perSwim }; }
   return null;
 }
 
@@ -107,7 +109,7 @@ function Dashboard() {
                   <div className="stat"><div className="k">Next session</div><div className="v">{next[0].s ? `${next[0].s.title} ${next[0].s.min} min` : "-"}</div><div className="u">{next[0].s ? `${DAYS[(addDays(t, 1).getDay() + 6) % 7]}${next[0].s.start ? `, ${next[0].s.start}` : ""}` : ""}</div></div>
                 </>
               )}
-              <div className="stat gm">{garmin && <div className="garmin" aria-hidden="true"><Watch width={116} time={last ? fmtHMS(last.min) : ""} dist={last?.mi ? `${last.mi.toFixed(1)} mi` : last?.yd ? `${last.yd.toLocaleString()} yd` : ""} hr={last?.hr} /></div>}<div className="k"><i className={`gm-dot${garmin ? " on" : ""}`} aria-label={garmin ? "connected" : "not connected"} />{deviceName}<ConnectWearable variant="dark" label="Connect" /></div><div className="v">{garminLive ? <span className="garmin-date">{lastGarmin ? `Synced ${shortDate(lastGarmin.date)}` : "Connected"}</span> : garmin ? <span className="garmin-date">Imported {shortDate(lastGarmin!.date)}</span> : <span className="dim">Not connected</span>}</div></div>
+              <div className="stat gm">{garmin && <div className="garmin" aria-hidden="true"><Watch width={116} time={last ? fmtHMS(last.min) : ""} dist={last?.mi ? fmtDist(last.mi) : last?.yd ? `${swimDist(last.yd).v.toLocaleString()} ${swimDist(last.yd).u}` : ""} hr={last?.hr} /></div>}<div className="k"><i className={`gm-dot${garmin ? " on" : ""}`} aria-label={garmin ? "connected" : "not connected"} />{deviceName}<ConnectWearable variant="dark" label="Connect" /></div><div className="v">{garminLive ? <span className="garmin-date">{lastGarmin ? `Synced ${shortDate(lastGarmin.date)}` : "Connected"}</span> : garmin ? <span className="garmin-date">Imported {shortDate(lastGarmin!.date)}</span> : <span className="dim">Not connected</span>}</div></div>
             </div>
             {todayS && todayS.sport !== "rest" && <FuelLine s={todayS} />}
           </Link>

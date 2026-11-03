@@ -7,14 +7,17 @@ import { activityLoad, plannedLoad } from "@/lib/data";
 import { METRICS, type Metric } from "@/lib/analysis";
 import { useAnalysis } from "@/lib/useAnalysis";
 import { addDays, dateLabel, fmtHMS, fmtHours, fmtPace, fromYmd, shortDate, today, ymd as ymdOf } from "@/lib/format";
-import { fmtDist, runPace, swimDist, swimPace } from "@/lib/units";
+import { dist, fmtDist, fmtSpeed, localize, runPace, speed, swimDist, swimPace, unitWords } from "@/lib/units";
 import { niceTicks, useWidth } from "@/lib/ticks";
 
 type Sp = "swim" | "bike" | "run";
 export type Range = 4 | 12 | 99;
 const sign = (n: number | null | undefined, digits = 0, suffix = "") => (n == null ? "-" : `${n > 0 ? "+" : ""}${n.toFixed(digits)}${suffix}`);
-const fmtV = (sp: Sp, v: number) => (sp === "bike" ? `${v.toFixed(1)}` : sp === "run" ? fmtPace(runPace(v).s) : fmtPace(swimPace(v).s));
-const unitOf = (sp: Sp) => (sp === "bike" ? "mph" : sp === "run" ? runPace(0).u : swimPace(0).u);
+/** A stored pace or speed (s/mi, s/100 yd, mph) in the athlete's units, as a number; `fmtV` writes it. */
+const paceDisp = (sp: Sp, v: number) => (sp === "bike" ? speed(v).v : sp === "run" ? runPace(v).s : swimPace(v).s);
+const distDisp = (sp: Sp, v: number) => (sp === "swim" ? swimDist(v).v : dist(v).v);
+const fmtV = (sp: Sp, v: number) => (sp === "bike" ? `${v.toFixed(1)}` : fmtPace(v));
+const unitOf = (sp: Sp) => (sp === "bike" ? speed(0).u : sp === "run" ? runPace(0).u : swimPace(0).u);
 
 // ---------- small marks ----------
 function Delta({ v, good = "up", suffix = "%", digits = 0 }: { v: number | null | undefined; good?: "up" | "down"; suffix?: string; digits?: number }) {
@@ -163,7 +166,7 @@ export function Volume({ range }: { range: Range }) {
     const hours = { swim: 0, bike: 0, run: 0, other: 0 }, count = { swim: 0, bike: 0, run: 0, other: 0 };
     for (const a of acts) {
       const k = a.sport === "swim" || a.sport === "bike" || a.sport === "run" ? a.sport : "other";
-      g[k] += mode === "hours" ? a.min / 60 : mode === "load" ? activityLoad(a, an.athlete.lthr ?? undefined) : a.sport === "swim" ? (a.yd ?? 0) / 1760 : a.mi ?? 0;
+      g[k] += mode === "hours" ? a.min / 60 : mode === "load" ? activityLoad(a, an.athlete.lthr ?? undefined) : dist(a.sport === "swim" ? (a.yd ?? 0) / 1760 : a.mi ?? 0).v;
       hours[k] += a.min / 60; count[k]++;
     }
     const active = b.sessions.filter((x) => x.sport !== "rest");
@@ -180,7 +183,7 @@ export function Volume({ range }: { range: Range }) {
   const gw = (W - L - R) / Math.max(1, rows.length), bw = Math.min(40, gw * 0.55);
   const ticks = nt.ticks;
   // the unit sits on the tick labels ("4 h", "20 mi"), never as a stray letter above the axis
-  const tick = (v: number) => (mode === "hours" ? `${v} h` : mode === "distance" ? `${Math.round(v)} mi` : String(Math.round(v)));
+  const tick = (v: number) => (mode === "hours" ? `${v} h` : mode === "distance" ? `${Math.round(v)} ${dist(0).u}` : String(Math.round(v)));
   return (
     <section className="card ax-panel" aria-label="Training volume">
       <div className="ax-head">
@@ -223,7 +226,7 @@ export function Volume({ range }: { range: Range }) {
           );
         })()}
       </div>
-      {mode === "distance" && <div className="ax-foot muted">Swim yards shown as miles.</div>}
+      {mode === "distance" && <div className="ax-foot muted">Swim {unitWords().long.swim} shown as {unitWords().long.dist}.</div>}
     </section>
   );
 }
@@ -266,10 +269,10 @@ export function LoadDistribution({ range }: { range: Range }) {
 function SportCard({ sp }: { sp: Sp }) {
   const an = useAnalysis();
   const p = an.sportPerformance(sp);
-  const fmtRow = (kind: string, v: number | null) => v == null ? "-" : kind === "pace" ? `${fmtV(sp, v)} ${unitOf(sp)}` : kind === "speed" ? `${v.toFixed(1)} mph` : kind === "hr" ? `${v.toFixed(0)} bpm` : sp === "swim" ? `${swimDist(v).v.toLocaleString()} ${swimDist(0).u}` : fmtDist(v);
+  const fmtRow = (kind: string, v: number | null) => v == null ? "-" : kind === "pace" ? `${fmtV(sp, paceDisp(sp, v))} ${unitOf(sp)}` : kind === "speed" ? fmtSpeed(v) : kind === "hr" ? `${v.toFixed(0)} bpm` : sp === "swim" ? `${swimDist(v).v.toLocaleString()} ${swimDist(0).u}` : fmtDist(v);
   const good = (kind: string) => (kind === "pace" || kind === "hr" ? "down" : "up");
   const [svgRef, W] = useWidth<SVGSVGElement>(240); const H = 92, L = 42, R = 8, T = 8, B = 18;
-  const pts = p.trend;
+  const pts = p.trend.map((q) => ({ ...q, v: q.v == null ? q.v : paceDisp(sp, q.v) })); // in the athlete's units, so the ticks land on round numbers
   const v = pts.map((q) => q.v).filter((q): q is number => q != null);
   const lo = v.length ? Math.min(...v) : 0, hi = v.length ? Math.max(...v) : 1;
   const nt = niceTicks(lo, hi, 2, sp === "bike" ? "number" : "pace");
@@ -284,7 +287,7 @@ function SportCard({ sp }: { sp: Sp }) {
     <div className="sport">
       <div className="sh"><SportIcon sport={sp} size={22} /><b>{sp[0].toUpperCase() + sp.slice(1)}</b><span className="muted">{p.sessions} sessions in 4 wk</span></div>
       <table><tbody>{p.rows.map((r) => <tr key={r.k}><td>{r.k}</td><td><b>{fmtRow(r.kind, r.cur)}</b></td><td><Delta v={r.cur != null && r.prev ? ((r.cur - r.prev) / r.prev) * 100 : null} good={good(r.kind)} /></td></tr>)}</tbody></table>
-      <div className="k">{sp === "bike" ? "Weekly average speed, mph" : `Weekly average pace per ${unitOf(sp).replace(/^\//, "")}`}{inv ? " (higher is faster)" : ""}</div>
+      <div className="k">{sp === "bike" ? `Weekly average speed, ${speed(0).u}` : `Weekly average pace per ${unitOf(sp).replace(/^\//, "")}`}{inv ? " (higher is faster)" : ""}</div>
       <svg ref={svgRef} className="chart mini" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${sp} weekly ${sp === "bike" ? "speed" : "pace"} trend`}>
         {v.length ? guides.map((g, i) => <g key={i}><line x1={L} y1={y(g)} x2={W - R} y2={y(g)} stroke="var(--grid)" /><text x={L - 5} y={y(g) + 3} textAnchor="end">{fmtV(sp, g)}</text></g>) : null}
         <line x1={L} y1={H - B} x2={W - R} y2={H - B} stroke="var(--line)" />
@@ -317,7 +320,8 @@ export function Progress({ range, onPick }: { range: Range; onPick: (id: string)
   // in "all" mode the sports have different units for pace and distance, so each is plotted as % of its first session
   const normalise = sp === "all" && (m === "pace" || m === "distance");
   // bike "pace" is a speed, so its ratio is flipped to keep "faster = up" consistent with run and swim
-  const series = sports.map((k) => { const s = an.progressSeries(k, m, days); const base = s.pts[0]?.v ?? 1; return { k, ...s, plot: s.pts.map((q) => ({ ...q, y: normalise ? (m === "pace" && k === "bike" ? (base / q.v) * 100 : (q.v / base) * 100) : q.v })) }; });
+  const conv = (k: Sp, v: number) => (m === "pace" ? paceDisp(k, v) : m === "distance" ? distDisp(k, v) : v); // stored → the athlete's units
+  const series = sports.map((k) => { const s = an.progressSeries(k, m, days); const base = s.pts[0]?.v ?? 1; return { k, ...s, plot: s.pts.map((q) => ({ ...q, y: normalise ? (m === "pace" && k === "bike" ? (base / q.v) * 100 : (q.v / base) * 100) : conv(k, q.v) })) }; });
   const all = series.flatMap((s) => s.plot);
   const inv = m === "pace" && sp !== "bike" && !normalise ? true : normalise && m === "pace";
   const vals = all.map((q) => q.y);
@@ -330,7 +334,7 @@ export function Progress({ range, onPick }: { range: Range; onPick: (id: string)
   const y = (n: number) => (inv ? T + ((n - lo) / (hi - lo)) * (H - T - B) : H - B - ((n - lo) / (hi - lo)) * (H - T - B));
   const fmtFor = (k: Sp, n: number) => m === "pace" ? fmtV(k, n) : m === "hr" ? `${n.toFixed(0)}` : m === "distance" ? (k === "swim" ? `${Math.round(n)}` : n.toFixed(1)) : m === "duration" ? fmtHMS(n) : n.toFixed(0);
   const fmtAxis = (n: number) => normalise ? `${n.toFixed(0)}%` : sp === "all" ? (m === "duration" ? fmtHMS(n) : n.toFixed(0)) : fmtFor(sp as Sp, n);
-  const unitFor = (k: Sp) => m === "pace" ? unitOf(k) : m === "hr" ? "bpm" : m === "distance" ? (k === "swim" ? "yd" : "mi") : m === "duration" ? "" : "load";
+  const unitFor = (k: Sp) => m === "pace" ? unitOf(k) : m === "hr" ? "bpm" : m === "distance" ? (k === "swim" ? swimDist(0).u : dist(0).u) : m === "duration" ? "" : "load";
   const goodDir = m === "pace" ? (sp === "bike" ? "up" : "down") : m === "hr" ? "down" : "up";
   const single = sp !== "all" ? series[0] : null;
   return (
@@ -463,11 +467,11 @@ export function RaceReadiness() {
   const r = an.raceReadiness();
   const D = ATHLETE.raceDist;
   const h = (x: number | null | undefined) => (x == null ? "-" : fmtHMS(x * 60));
-  const swimLabel = D.swimYd >= 1760 ? `${(D.swimYd / 1760).toFixed(1)} mi` : `${D.swimYd.toLocaleString()} yd`;
+  const swimLabel = localize(D.swimYd >= 1760 ? `${(D.swimYd / 1760).toFixed(1)} mi` : `${D.swimYd.toLocaleString()} yd`);
   const legs = ([
     { k: "swim" as const, show: D.swimYd > 0, label: `Swim ${swimLabel}`, v: r.swimH },
-    { k: "bike" as const, show: D.bikeMi > 0, label: `Bike ${D.bikeMi} mi`, v: r.bikeH },
-    { k: "run" as const, show: D.runMi > 0, label: `Run ${D.runMi} mi`, v: r.runH },
+    { k: "bike" as const, show: D.bikeMi > 0, label: localize(`Bike ${D.bikeMi} mi`), v: r.bikeH },
+    { k: "run" as const, show: D.runMi > 0, label: localize(`Run ${D.runMi} mi`), v: r.runH },
   ]).filter((l) => l.show);
   if (!ATHLETE.hasRace) {
     return (
@@ -476,7 +480,7 @@ export function RaceReadiness() {
       </section>
     );
   }
-  const so = [D.bikeMi > 0 ? `longest ride ${r.longest.bike.toFixed(1)} of ${D.bikeMi} mi` : null, D.runMi > 0 ? `longest run ${r.longest.run.toFixed(1)} of ${D.runMi} mi` : null].filter(Boolean).join(", ");
+  const so = [D.bikeMi > 0 ? `longest ride ${fmtDist(r.longest.bike, 1).replace(/ \w+$/, "")} of ${fmtDist(D.bikeMi, 0)}` : null, D.runMi > 0 ? `longest run ${fmtDist(r.longest.run, 1).replace(/ \w+$/, "")} of ${fmtDist(D.runMi, 1)}` : null].filter(Boolean).join(", ");
   return (
     <section className="card ax-panel" aria-label="Race projection">
       <div className="ax-head"><div><h2>Race projection</h2><p>{r.ready ? "From your longest recent sessions" + (D.swimYd > 0 && D.runMi > 0 ? ", run +12 % off the bike" : "") : "Shows from the Build phase, or when long sessions reach half the race distance"}</p></div><span className="badge">{ATHLETE.race.name}</span></div>

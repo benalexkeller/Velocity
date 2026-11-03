@@ -6,6 +6,7 @@ import bodySeed from "./data/seed/body.json";
 import { ACTIVITIES as SEED_ACTIVITIES, WEEKS as SEED_WEEKS, PHASES as SEED_PHASES, activityLoad as activityLoadIn, activitiesOn as activitiesOnIn, actualByDiscipline as actualByDisciplineIn, plannedByDiscipline, plannedLoad as plannedLoadOf, currentWeek as currentWeekIn, rollingCompliance as rollingComplianceIn, STATUS_CREDIT, weekStatus as weekStatusIn, type Activity, type Phase, type Session, type Sport, type Week } from "./data";
 import { DEFAULT_ATHLETE, DEFAULT_LTHR, hrZone, type Athlete } from "./athlete";
 import { addDays, fromYmd, today, ymd } from "./format";
+import { fmtDist, swimDist } from "./units";
 
 // ---------- body metrics (Garmin) ----------
 export interface BodyDay { date: string; rhr?: number; hrv?: number; sleep_h?: number; sleep_score?: number; stress?: number; vo2?: number; /** WHOOP recovery % */ recovery?: number; /** WHOOP day strain */ strain?: number }
@@ -369,7 +370,9 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
     out.push({ title: "Sessions", text: `${st.done} of ${st.total} sessions this week, ${fmtH(st.actualH)} of ${fmtH(st.plannedH)} planned. Completed sessions, 28 days: ${c.pct == null ? "-" : `${c.pct}%`} (${Math.round(c.done * 2) / 2} of ${c.planned}).` });
     const tt = totals();
     const lr = tt.bests.longestRun, lb = tt.bests.longestRide, ls = tt.bests.longestSwim;
-    out.push({ title: "Long sessions", text: `Longest so far: run ${lr?.mi != null ? lr.mi.toFixed(1) + " mi" : "-"}, ride ${lb?.mi != null ? lb.mi.toFixed(1) + " mi" : "-"}, swim ${ls?.yd != null ? ls.yd.toLocaleString() + " yd" : "-"}. Race day: ${ATHLETE.raceDist.runMi ? ATHLETE.raceDist.runMi + " mi" : "-"}, ${ATHLETE.raceDist.bikeMi ? ATHLETE.raceDist.bikeMi + " mi" : "-"}, ${ATHLETE.raceDist.swimYd ? ATHLETE.raceDist.swimYd.toLocaleString() + " yd" : "-"}.` });
+    const u = ATHLETE.units;
+    const sw = (yd: number) => `${swimDist(yd, u).v.toLocaleString()} ${swimDist(yd, u).u}`;
+    out.push({ title: "Long sessions", text: `Longest so far: run ${lr?.mi != null ? fmtDist(lr.mi, 1, u) : "-"}, ride ${lb?.mi != null ? fmtDist(lb.mi, 1, u) : "-"}, swim ${ls?.yd != null ? sw(ls.yd) : "-"}. Race day: ${ATHLETE.raceDist.runMi ? fmtDist(ATHLETE.raceDist.runMi, 1, u) : "-"}, ${ATHLETE.raceDist.bikeMi ? fmtDist(ATHLETE.raceDist.bikeMi, 0, u) : "-"}, ${ATHLETE.raceDist.swimYd ? sw(ATHLETE.raceDist.swimYd) : "-"}.` });
     return out;
   }
 

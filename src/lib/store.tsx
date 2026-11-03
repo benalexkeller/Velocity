@@ -12,6 +12,7 @@ import type { Availability } from "./data";
 import { EMPTY_DATA, makeBackend, readLocal, type AddedSession, type Backend, type PlanStateJson, type SessionPatch, type ThreadMsg, type UserData } from "./backend";
 import { ACCOUNTS_ON } from "./supabase/env";
 import { addDays, dateFull, fmtPace, fromYmd, today, ymd } from "./format";
+import { fmtDist, fmtSpeed, localize, runPace, setUnits, swimDist, swimPace, units } from "./units";
 import type { CoachReply, Proposal, ProposalStatus } from "./coach/types";
 import { buildCoachContext } from "./coach/context";
 import { logMeals } from "./coach/nutrition-bridge";
@@ -32,7 +33,7 @@ function derive(data: UserData, athlete: Athlete) {
   for (const w of baseWeeks) for (const s of w.sessions) {
     const p = st.patches[s.id];
     if (p?.deleted) continue;
-    const text = p?.text ?? s.text;
+    const text = localize(p?.text ?? s.text, athlete.units); // the plan reads in the athlete's units, whichever it was written in
     const sport = p?.sport ?? (p?.text ? sportOf(text) : s.sport);
     const intensity = p?.intensity ?? (p?.text ? intensityOf(text) : s.intensity);
     base.push({ ...s, date: p?.date ?? s.date, start: p?.start ?? s.start, min: p?.min ?? s.min, sport, intensity, text, title: SPORT_LABEL[sport], detail: sport === "rest" ? "No session" : `${intensity}, ${p?.min ?? s.min} min`, why: whyOf(text, sport), locked: !!p?.locked });
@@ -41,7 +42,7 @@ function derive(data: UserData, athlete: Athlete) {
     // sessions added by hand take the same patches (move, edit, lock) as plan sessions
     const p = st.patches[a.id];
     if (p?.deleted) continue;
-    const sport = p?.sport ?? a.sport, min = p?.min ?? a.min, intensity = p?.intensity ?? a.intensity, text = p?.text ?? a.text;
+    const sport = p?.sport ?? a.sport, min = p?.min ?? a.min, intensity = p?.intensity ?? a.intensity, text = localize(p?.text ?? a.text, athlete.units);
     base.push({ id: a.id, date: p?.date ?? a.date, dayIndex: 0, start: p?.start ?? a.start, min, sport, title: SPORT_LABEL[sport], detail: `${intensity}, ${min} min`, text, intensity, why: whyOf(text, sport), status: "planned", locked: !!p?.locked });
   }
   const weeks: Week[] = baseWeeks.map((w) => {
@@ -158,6 +159,9 @@ export function PlanProvider({ children }: { children: ReactNode }) {
   }, [ready, data.profile, path, router]);
 
   const athlete = useMemo(() => athleteOf(data.profile, data.race, data.plan[0]?.start ?? null, data.availability), [data.profile, data.race, data.plan, data.availability]);
+  // the athlete's Units setting drives every distance, pace and speed in the app (src/lib/units.ts), set here
+  // during render so the same pass that gets the new profile already shows it
+  if (units !== athlete.units) setUnits(athlete.units);
   const d = useMemo(() => derive(data, athlete), [data, athlete]);
 
   // every write: update the working copy first (instant), then the backend
@@ -196,7 +200,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
       buildPlan: async (intake, weeks, race, availability) => {
         const state: PlanStateJson = { ...data.state, patches: {}, added: [], undone: false };
         // the athlete's own zones and thresholds, from the answers just given
-        const zones = deriveZones(intake, athlete.units, race.distance);
+        const zones = deriveZones(intake, intake.units ?? athlete.units, race.distance);
         await be.saveRace(race);
         await be.saveProfile({ availability, ...(zones ? { zones } : {}) });
         await be.savePlan(weeks, intake);
@@ -219,7 +223,8 @@ export function PlanProvider({ children }: { children: ReactNode }) {
       activityInsight: async (id) => {
         const a = data.activities.find((x) => x.id === id); if (!a) return "";
         const planned = d.weeks.flatMap((w) => w.sessions).find((s) => s.date === a.date && fitsSession(s.sport, a));
-        const facts = [`${a.name}, ${a.date}${a.start ? ` ${a.start}` : ""}, ${a.sport}, ${a.min} min`, a.mi != null ? `${a.mi.toFixed(1)} mi` : a.yd != null ? `${a.yd} yd` : null, a.pace_s ? `${fmtPace(a.pace_s)} /mi` : a.mph ? `${a.mph.toFixed(1)} mph` : a.p100_s ? `${fmtPace(a.p100_s)} /100 yd` : null, a.hr ? `${a.hr} bpm` : null, a.exertion ? `effort ${a.exertion}/10` : null, a.note ? `note: ${a.note}` : null].filter(Boolean).join(", ");
+        const u = athlete.units;
+        const facts = [`${a.name}, ${a.date}${a.start ? ` ${a.start}` : ""}, ${a.sport}, ${a.min} min`, a.mi != null ? fmtDist(a.mi, 1, u) : a.yd != null ? `${swimDist(a.yd, u).v} ${swimDist(a.yd, u).u}` : null, a.pace_s ? `${fmtPace(runPace(a.pace_s, u).s)} ${runPace(a.pace_s, u).u}` : a.mph ? fmtSpeed(a.mph, u) : a.p100_s ? `${fmtPace(swimPace(a.p100_s, u).s)} ${swimPace(a.p100_s, u).u}` : null, a.hr ? `${a.hr} bpm` : null, a.exertion ? `effort ${a.exertion}/10` : null, a.note ? `note: ${a.note}` : null].filter(Boolean).join(", ");
         const q = `Review this activity against the planned session: ${facts}.${planned ? ` Planned: ${planned.title}, ${planned.intensity}, ${planned.min} min, "${planned.text}".` : " Nothing was planned that day."} One verdict line, three bullets with the numbers, one next step.`;
         let text: string;
         try {
@@ -231,7 +236,7 @@ export function PlanProvider({ children }: { children: ReactNode }) {
           const diff = planned ? a.min - planned.min : null;
           text = [planned ? `${diff != null && Math.abs(diff) <= 5 ? "On plan." : diff != null && diff > 0 ? "Longer than planned." : "Shorter than planned."}` : "Unplanned session.",
             `- **${a.min} min**${planned ? ` against ${planned.min} min planned` : ""}`,
-            a.pace_s ? `- Pace **${fmtPace(a.pace_s)} /mi**` : a.mph ? `- Speed **${a.mph.toFixed(1)} mph**` : a.p100_s ? `- Pace **${fmtPace(a.p100_s)} /100 yd**` : null,
+            a.pace_s ? `- Pace **${fmtPace(runPace(a.pace_s, u).s)} ${runPace(a.pace_s, u).u}**` : a.mph ? `- Speed **${fmtSpeed(a.mph, u)}**` : a.p100_s ? `- Pace **${fmtPace(swimPace(a.p100_s, u).s)} ${swimPace(a.p100_s, u).u}**` : null,
             a.hr ? `- Average heart rate **${a.hr} bpm**` : null,
             `- Load **${activityLoad(a, storeRef.current?.athlete.lthr ?? undefined)}**`,
           ].filter(Boolean).join("\n");

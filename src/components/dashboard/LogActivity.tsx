@@ -1,9 +1,10 @@
 "use client";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Icon } from "../icons";
 import { SportIcon } from "../SportIcon";
 import { usePlan } from "@/lib/store";
 import { fmtPace, ymd } from "@/lib/format";
+import { TimePicker, TimeWheels, formatClock, parseClock } from "@/components/TimePicker";
 
 type Sport = "swim" | "bike" | "run" | "strength" | "hike" | "other";
 const SPORTS: { k: Sport; label: string }[] = [{ k: "swim", label: "Swim" }, { k: "bike", label: "Bike" }, { k: "run", label: "Run" }, { k: "strength", label: "Strength" }, { k: "hike", label: "Hike" }, { k: "other", label: "Other" }];
@@ -23,27 +24,6 @@ import type { ManualActivity } from "@/lib/store";
 export type { ManualActivity };
 
 /** One column of the duration picker: scroll, arrow keys or the buttons change it; the number can also be typed. */
-function Wheel({ value, max, label, onChange }: { value: number; max: number; label: string; onChange: (v: number) => void }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const [txt, setTxt] = useState<string | null>(null);
-  const clamp = (v: number) => Math.min(max, Math.max(0, v));
-  useEffect(() => {
-    const el = ref.current; if (!el) return;
-    const h = (e: WheelEvent) => { e.preventDefault(); onChange(clamp(value + (e.deltaY > 0 ? 1 : -1))); };
-    el.addEventListener("wheel", h, { passive: false });
-    return () => el.removeEventListener("wheel", h);
-  });
-  const pad = (v: number) => String(v).padStart(2, "0");
-  return (
-    <div className="wh" ref={ref}>
-      <button type="button" tabIndex={-1} onClick={() => onChange(clamp(value - 1))} aria-label={`${label} down`}><Icon name="chevron" /></button>
-      <input value={txt ?? pad(value)} onFocus={(e) => { setTxt(""); e.target.select(); }} onMouseUp={(e) => e.preventDefault()} onChange={(e) => { const t = e.target.value.replace(/\D/g, "").slice(-2); setTxt(t); onChange(t === "" ? 0 : clamp(parseInt(t))); }} onBlur={() => setTxt(null)} onKeyDown={(e) => { if (e.key === "ArrowUp") { e.preventDefault(); onChange(clamp(value + 1)); setTxt(null); } if (e.key === "ArrowDown") { e.preventDefault(); onChange(clamp(value - 1)); setTxt(null); } }} inputMode="numeric" aria-label={label} />
-      <button type="button" tabIndex={-1} onClick={() => onChange(clamp(value + 1))} aria-label={`${label} up`}><Icon name="chevron" /></button>
-      <small>{label}</small>
-    </div>
-  );
-}
-
 // Expanding "bubble" for manual logging. Opens to the left over the hero; fields change with the sport.
 export interface LogInitial { sport?: Sport; date?: string; time?: string; min?: number; name?: string }
 export function LogActivity({ open, onClose, onSaved, initial, inline }: { open: boolean; onClose: () => void; onSaved: (a: ManualActivity) => void; initial?: LogInitial; inline?: boolean }) {
@@ -115,7 +95,6 @@ export function LogActivity({ open, onClose, onSaved, initial, inline }: { open:
   const placeholder = useMemo(() => defaultName(sport, time), [sport, time]);
   const sec = toSec(dur);
   const setDurPart = (h: number, m: number, s: number) => { setDur(hms(h * 3600 + m * 60 + s)); touch("dur"); };
-  const dh = Math.floor(sec / 3600), dm = Math.floor((sec % 3600) / 60), ds = Math.round(sec % 60);
 
   // validation: every number must be a number inside a sensible range; nothing is dropped silently
   const todayStr = ymd(new Date());
@@ -168,18 +147,16 @@ export function LogActivity({ open, onClose, onSaved, initial, inline }: { open:
           <label>Start time<input type="time" step={900} value={time} onChange={(e) => setTime(e.target.value)} /></label>
           <label>Avg. heart rate (bpm)<input value={hr} onChange={(e) => setHr(e.target.value)} placeholder="145" inputMode="numeric" aria-invalid={!!errs.hr} />{err("hr")}</label>
           {(timed || sport === "hike") ? <label>Distance<span className="lf-unit-in"><input value={dist} onChange={(e) => { setDist(e.target.value); touch("dist"); }} placeholder={sport === "swim" ? (metric ? "1500" : "1640") : metric ? "10" : "6.2"} inputMode="decimal" aria-invalid={!!errs.dist} />{units}</span>{err("dist")}</label> : <span />}
-          {timed ? <label>{paceLabel}<input value={pace} onChange={(e) => { setPace(e.target.value); touch("pace"); }} placeholder={sport === "bike" ? (metric ? "28" : "17.5") : sport === "swim" ? (metric ? "2:00" : "1:50") : metric ? "5:55" : "9:30"} inputMode="decimal" aria-invalid={!!errs.pace} />{err("pace")}</label> : <span />}
+          {timed ? <label>{paceLabel}{sport === "bike"
+            ? <input value={pace} onChange={(e) => { setPace(e.target.value); touch("pace"); }} placeholder={metric ? "28" : "17.5"} inputMode="decimal" aria-invalid={!!errs.pace} />
+            : <TimePicker parts="ms" maxMinutes={sport === "swim" ? 6 : 20} seconds={parseClock(pace, "ms")} onChange={(s) => { setPace(s == null ? "" : formatClock(s, "ms")); touch("pace"); }} placeholder={sport === "swim" ? (metric ? "2:00" : "1:50") : metric ? "5:55" : "9:30"} invalid={!!errs.pace} />}{err("pace")}</label> : <span />}
           {(sport === "bike" || sport === "run" || sport === "hike") ? <label>Elevation gain ({elevUnit})<input value={elev} onChange={(e) => setElev(e.target.value)} placeholder="0" inputMode="numeric" aria-invalid={!!errs.elev} />{err("elev")}</label> : <span />}
         </div>
       </div>
       <div className="lf-right">
         <div className="lf-dur" aria-label="Duration">
             <span className="k">Duration</span>
-            <div className="wheels">
-              <Wheel value={dh} max={23} label="h" onChange={(v) => setDurPart(v, dm, ds)} />
-              <Wheel value={dm} max={59} label="min" onChange={(v) => setDurPart(dh, v, ds)} />
-              <Wheel value={ds} max={59} label="s" onChange={(v) => setDurPart(dh, dm, v)} />
-            </div>
+            <TimeWheels parts="hms" seconds={sec} onChange={(s) => setDurPart(Math.floor(s / 3600), Math.floor((s % 3600) / 60), s % 60)} />
             {sec > 0 && err("dur")}
           </div>
         <div>
