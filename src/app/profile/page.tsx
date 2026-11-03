@@ -69,6 +69,15 @@ const FLAG: Record<string, string> = {
   "whoop-off": "WHOOP is not switched on for this site yet.",
   setup: "Wearable connections are not set up on this site yet.",
 };
+// the same four outcomes for the makers on the shared routes
+for (const [k, name, after] of [["fitbit", "Fitbit", "The last 30 days are in; new workouts, sleep and health values arrive on their own through Google."], ["polar", "Polar", "The last 30 days are in; new exercises, nights and Nightly Recharge arrive on their own."], ["wahoo", "Wahoo", "Recent rides and runs are in; new ones arrive on their own."], ["coros", "COROS", "The last 30 days are in; new workouts arrive on their own."], ["suunto", "Suunto", "The last 30 days are in; new workouts arrive on their own."]] as const) {
+  FLAG[`${k}-connected`] = `${name} connected. ${after}`;
+  FLAG[`${k}-denied`] = `${name} was not connected: the permission was not given.`;
+  FLAG[`${k}-error`] = `${name} did not connect. Try again; if it fails twice, send feedback.`;
+  FLAG[`${k}-off`] = `${name} is not switched on for this site yet.`;
+}
+/** A reason the maker gave (set by the callback for two minutes), shown with the flag. */
+const connectNote = () => (typeof document === "undefined" ? "" : decodeURIComponent((document.cookie.match(/(?:^|; )vel_connect_note=([^;]*)/) ?? [])[1] ?? ""));
 
 function ProfileConnections() {
   const { picked } = useWearables();
@@ -76,7 +85,7 @@ function ProfileConnections() {
   // ?wearable=whoop-connected (or garmin-error…) when a maker sends the athlete back; read once
   const [flag] = useState<string | null>(() => (typeof window === "undefined" ? null : new URLSearchParams(window.location.search).get("wearable")));
   useEffect(() => { const u = new URL(window.location.href); if (u.searchParams.has("wearable")) { u.searchParams.delete("wearable"); window.history.replaceState(null, "", u.toString()); } }, []);
-  const note = flag ? FLAG[flag] : null;
+  const note = flag ? [FLAG[flag], flag.endsWith("-error") ? connectNote() : ""].filter(Boolean).join(" ") || null : null;
   const rows = WEARABLES.filter((w) => isLive(w.k) || of(w.k)?.status === "connected" || picked.includes(w.k));
   return (
     <>

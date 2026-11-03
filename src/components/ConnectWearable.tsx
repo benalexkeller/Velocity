@@ -1,8 +1,10 @@
 "use client";
 // "Connect wearable": one button and one sheet, used on the dashboard, Activities, Profile, the set-up screen and
-// the plan builder. One row per maker. Garmin and WHOOP connect for real once the site has their keys (Garmin
-// through Garmin's own program or Junction); Apple Watch connects through the Velocity iPhone app; COROS, Polar,
-// Suunto and Wahoo through Junction. A maker that is not live yet can be "picked" so the athlete hears when it opens.
+// the plan builder. One row per maker: the maker's own mark on the left (public/brand, official files only), the
+// name, and the state or a button. Each maker connects for real once the site has its keys (Garmin through its own
+// program or Junction; Fitbit through Google Health; Polar, Wahoo, COROS and Suunto directly, or the four through
+// Junction); Apple Watch connects through the Velocity iPhone app. A maker that is not live yet can be "picked" so
+// the athlete hears when it opens.
 import { useCallback, useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { Icon } from "./icons";
@@ -19,8 +21,10 @@ const write = (s: Saved) => { try { localStorage.setItem(KEY, JSON.stringify(s))
 const EMPTY_STATUS: ConnectStatus = { live: {}, garmin: false, via: "", connections: [] };
 let statusCache: ConnectStatus | null = null;
 const post = async (path: string, body?: unknown) => { const r = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: body ? JSON.stringify(body) : undefined }); return { ok: r.ok, body: (await r.json().catch(() => ({}))) as Record<string, unknown> }; };
-/** The address that starts a maker's sign-in (COROS, Polar, Suunto and Wahoo go through Junction's Garmin-style page later). */
-export const connectHref = (k: WearableKey, next?: string) => `/api/connect/${k === "whoop" ? "whoop" : "garmin"}?next=${encodeURIComponent(next ?? (typeof window !== "undefined" ? window.location.pathname : "/profile"))}`;
+/** The address that starts a maker's sign-in: /api/connect/<maker>, or Garmin's route for a maker that comes through Junction. */
+export const connectHref = (k: WearableKey, next?: string, via?: string) => `/api/connect/${via === "junction" ? "garmin" : k === "apple" ? "garmin" : k}?next=${encodeURIComponent(next ?? (typeof window !== "undefined" ? window.location.pathname : "/profile"))}`;
+/** The route that serves a maker's sync and disconnect: the maker's own, or Garmin's when it comes through Junction. */
+const routeOf = (k: WearableKey, via: string | undefined) => (via === "junction" ? "garmin" : k);
 
 /** What this site can connect and what the athlete has connected. Fetched once per page load; refresh() after changes. */
 export function useConnections() {
@@ -40,12 +44,12 @@ export function useConnections() {
     /** makers connected right now */
     connected,
     isLive: (k: WearableKey) => !!status.live[k],
-    disconnect: async (k: WearableKey) => { await post(k === "whoop" ? "/api/connect/whoop/disconnect" : "/api/connect/garmin/disconnect"); statusCache = null; await refresh(); },
+    disconnect: async (k: WearableKey) => { await post(`/api/connect/${routeOf(k, status.live[k])}/disconnect`); statusCache = null; await refresh(); },
     disconnectGarmin: async () => { await post("/api/connect/garmin/disconnect"); statusCache = null; await refresh(); },
     /** Pulls history for a maker; returns a short note, or null on failure. */
     sync: async (k: WearableKey, days = 90) => {
       try {
-        const r = await post(k === "whoop" ? "/api/connect/whoop/sync" : "/api/connect/garmin/sync", { days });
+        const r = await post(`/api/connect/${routeOf(k, status.live[k])}/sync`, { days });
         statusCache = null; await refresh();
         if (!r.ok) return typeof r.body.error === "string" ? r.body.error : null;
         if (typeof r.body.note === "string") return r.body.note;
@@ -109,7 +113,7 @@ export function ConnectWearableSheet({ onClose, onPick }: { onClose: () => void;
               return (
                 <li key={w.k} className={connected ? "on" : ""}>
                   <BrandMark k={w.k} />
-                  <div><b>{w.name}</b><span className="muted">{connected ? connectionText(w.k, c, "app") : `${w.brings}. Connects through the Velocity iPhone app, coming soon.`}</span></div>
+                  <div><b>{w.name}</b>{connected && <span className="muted">{connectionText(w.k, c, "app")}</span>}</div>
                   {connected
                     ? <span className="cw-actions"><button type="button" className="btn small ghost" disabled={busy === w.k} onClick={async () => { setBusy(w.k); await disconnect(w.k); setBusy(null); }}>Disconnect</button></span>
                     : pickButton(w.k, on)}
@@ -117,25 +121,25 @@ export function ConnectWearableSheet({ onClose, onPick }: { onClose: () => void;
               );
             }
             if (isLive(w.k)) {
-              // history can be pulled from WHOOP and Junction; Garmin's own Starter tier only pushes new data
-              const canSync = w.k === "whoop" || status.live[w.k] === "junction";
+              // history can be pulled from every maker but Garmin's own Starter tier, which only pushes new data
+              const canSync = w.k !== "garmin" || status.live.garmin === "junction";
               return (
                 <li key={w.k} className={connected ? "on" : ""}>
                   <BrandMark k={w.k} />
-                  <div><b>{w.name}</b><span className="muted">{note[w.k] || connectionText(w.k, c, status.live[w.k]) || w.brings}</span></div>
+                  <div><b>{w.name}</b>{(note[w.k] || connectionText(w.k, c, status.live[w.k])) && <span className="muted">{note[w.k] || connectionText(w.k, c, status.live[w.k])}</span>}</div>
                   {connected
                     ? <span className="cw-actions">
                         {canSync && <button type="button" className="btn small" disabled={busy === w.k} onClick={async () => { setBusy(w.k); setNote((n) => ({ ...n, [w.k]: "" })); const r = await sync(w.k); setNote((n) => ({ ...n, [w.k]: r ?? "Sync failed. Try again." })); setBusy(null); }}>{busy === w.k ? "Syncing…" : "Sync now"}</button>}
                         <button type="button" className="btn small ghost" disabled={busy === w.k} onClick={async () => { setBusy(w.k); await disconnect(w.k); setNote((n) => ({ ...n, [w.k]: "" })); setBusy(null); }}>Disconnect</button>
                       </span>
-                    : <a className="btn small" href={connectHref(w.k)}>{c?.status === "error" ? "Connect again" : "Connect"}</a>}
+                    : <a className="btn small" href={connectHref(w.k, undefined, status.live[w.k])}>{c?.status === "error" ? "Connect again" : "Connect"}</a>}
                 </li>
               );
             }
             return (
               <li key={w.k} className={on ? "on" : ""}>
                 <BrandMark k={w.k} />
-                <div><b>{w.name}</b><span className="muted">{w.brings}</span></div>
+                <div><b>{w.name}</b></div>
                 {pickButton(w.k, on)}
               </li>
             );

@@ -59,6 +59,7 @@ export function System() {
           </tbody>
         </table>
       </section>
+      <WebhookSetup />
       {hooks && hooks.length > 0 && (
         <section className="card" style={{ overflow: "auto" }}>
           <h2>Webhook calls <small>last {hooks.length}</small></h2>
@@ -69,5 +70,33 @@ export function System() {
         </section>
       )}
     </>
+  );
+}
+
+/** Google Health (Fitbit) and Polar take their webhook address by an API call, not a portal setting: one click each,
+ *  once the maker's keys are in Vercel. The others (WHOOP, Garmin, Wahoo, COROS, Suunto) are set in their portals. */
+function WebhookSetup() {
+  const [state, setState] = useState<Record<string, { on?: boolean; registered?: unknown; error?: string }> | null>(null);
+  const [busy, setBusy] = useState<string | null>(null);
+  const [out, setOut] = useState<string | null>(null);
+  const load = () => fetch("/api/admin/wearable-webhooks", { cache: "no-store" }).then((r) => r.json()).then(setState).catch(() => setState({}));
+  useEffect(() => { void load(); }, []);
+  const register = async (maker: "fitbit" | "polar") => {
+    setBusy(maker); setOut(null);
+    try { const r = await fetch("/api/admin/wearable-webhooks", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ maker }) }); const j = await r.json(); setOut(JSON.stringify(j, null, 1).slice(0, 1500)); await load(); }
+    catch (e) { setOut(String((e as Error).message)); }
+    setBusy(null);
+  };
+  const line = (k: "fitbit" | "polar", label: string) => {
+    const st = state?.[k];
+    const text = !state ? "…" : !st?.on ? "keys not in Vercel yet" : st.error ? `error: ${st.error}` : typeof st.registered === "string" ? st.registered : st.registered && JSON.stringify(st.registered) !== "{}" ? "registered" : "not registered";
+    return <tr key={k}><td>{label}</td><td>{text}</td><td>{st?.on && <button type="button" className="btn small ghost" disabled={busy === k} onClick={() => register(k)}>{busy === k ? "…" : "Register webhook"}</button>}</td></tr>;
+  };
+  return (
+    <section className="card" style={{ overflow: "auto" }}>
+      <h2>Webhook set-up <small>Google Health (Fitbit) and Polar register by a call; the rest in their portals</small></h2>
+      <table className="tbl small"><thead><tr><th>Maker</th><th>State</th><th /></tr></thead><tbody>{line("fitbit", "Fitbit, through Google Health")}{line("polar", "Polar")}</tbody></table>
+      {out && <pre className="muted" style={{ fontSize: 11.5, whiteSpace: "pre-wrap", marginTop: 8 }}>{out}</pre>}
+    </section>
   );
 }

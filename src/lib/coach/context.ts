@@ -32,6 +32,15 @@ function zonesIn(z: Zones, u: Units): Zones {
   }
   return out;
 }
+/** Nothing that came from Google reaches an AI model (privacy policy, Data from Google): Fitbit data arrives through
+ *  Google's Health API, so Fitbit workouts and the body values Fitbit set stay out of the coach's context. */
+const fromGoogle = (a: { source?: string }) => a.source === "fitbit";
+function withoutGoogle<T extends { date: string }>(b: T, src: Record<string, string> | undefined): T {
+  if (!src) return b;
+  const out = { ...b } as Record<string, unknown>;
+  for (const [k, maker] of Object.entries(src)) if (maker === "fitbit" && k in out) delete out[k];
+  return out as T;
+}
 const hm = (d: Date) => `${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`;
 
 export function buildCoachContext(p: PlanStore, opts: { whole?: boolean } = {}): CoachContext {
@@ -40,16 +49,17 @@ export function buildCoachContext(p: PlanStore, opts: { whole?: boolean } = {}):
   const next = cur ? p.weeks[cur.week] : undefined; // weeks[] is 0-based; cur.week is 1-based → the next one
   const sessions = [cur, next].filter((w): w is NonNullable<typeof w> => !!w).flatMap((w) => w.sessions).map((s) => ({
     id: s.id, date: s.date, start: s.start, sport: s.sport, intensity: s.intensity, min: s.min, text: s.text, status: s.status, locked: s.locked || undefined,
-    actual: s.actual ? `${s.actual.min} min${distOf(s.actual, u) ? `, ${distOf(s.actual, u)}` : ""}${s.actual.hr ? `, ${s.actual.hr} bpm` : ""}` : undefined,
+    actual: s.actual && !fromGoogle(s.actual) ? `${s.actual.min} min${distOf(s.actual, u) ? `, ${distOf(s.actual, u)}` : ""}${s.actual.hr ? `, ${s.actual.hr} bpm` : ""}` : s.actual ? `${s.actual.min} min` : undefined,
   }));
   const since = ymd(addDays(t, -14));
-  const activities = p.counted.filter((a) => a.date >= since && a.date <= ymd(t)).map((a) => ({
+  const activities = p.counted.filter((a) => a.date >= since && a.date <= ymd(t) && !fromGoogle(a)).map((a) => ({
     date: a.date, start: a.start, sport: a.sport, name: a.name, min: a.min, dist: distOf(a, u), pace: paceOf(a, u), hr: a.hr, exertion: a.exertion, note: a.note,
   }));
   const weeks = (cur ? p.weeks.slice(Math.max(0, cur.week - 4), cur.week) : []).map((w) => {
     const st = p.weekStatus(w);
     const longest: { bike?: number; run?: number; swim?: number } = {};
     for (let i = 0; i < 7; i++) for (const a of p.activitiesOn(ymd(addDays(fromYmd(w.start), i)))) {
+      if (fromGoogle(a)) continue;
       if (a.sport === "bike" || a.sport === "run" || a.sport === "swim") longest[a.sport] = Math.max(longest[a.sport] ?? 0, a.min);
     }
     return { week: w.week, start: w.start, phase: w.phaseShort, plannedH: r1(st.plannedH), doneH: r1(st.actualH), sessions: `${st.done}/${st.total}`, longest };
@@ -72,7 +82,7 @@ export function buildCoachContext(p: PlanStore, opts: { whole?: boolean } = {}):
     },
     plan: cur && p.planRange ? { phase: cur.phase, week: cur.week, weeks: p.weeks.length, start: p.planRange.start, end: p.planRange.end } : null,
     sessions, activities, weeks, ...(plan_all ? { plan_all } : {}),
-    body: body ? { date: body.date, rhr: body.rhr, hrv: body.hrv, sleep_h: body.sleep_h, sleep_score: body.sleep_score, vo2: body.vo2 } : null,
+    body: body ? withoutGoogle({ date: body.date, rhr: body.rhr, hrv: body.hrv, sleep_h: body.sleep_h, sleep_score: body.sleep_score, vo2: body.vo2 }, (body as { src?: Record<string, string> }).src) : null,
     // the meal library, plus food and targets for yesterday and today when this page has the nutrition data
     ...(!opts.whole ? { nutrition } : {}),
   };

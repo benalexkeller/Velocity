@@ -6,7 +6,8 @@ import { supabaseServer } from "@/lib/supabase/server";
 import { GARMIN_ON } from "@/lib/integrations/config";
 import { garminDirectOn } from "@/lib/wearables/garmin";
 import { whoopOn } from "@/lib/wearables/whoop";
-import type { ConnectStatus } from "@/lib/wearables/providers";
+import { DIRECT_KEYS, type ConnectStatus } from "@/lib/wearables/providers";
+import { directLive } from "@/lib/wearables/direct";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,8 +20,10 @@ export async function GET() {
     if (garminDirectOn()) live.garmin = "direct";
     else if (GARMIN_ON) live.garmin = "junction";
     if (whoopOn()) live.whoop = "direct";
-    // other makers come through Junction when it is on
-    if (GARMIN_ON) for (const k of ["coros", "polar", "suunto", "wahoo"] as const) live[k] = "junction";
+    // Fitbit (through Google Health), Polar, Wahoo, COROS and Suunto: their own keys first, else Junction for the four it carries
+    const direct = await directLive();
+    for (const k of DIRECT_KEYS) if (direct[k]) live[k] = "direct";
+    if (GARMIN_ON) for (const k of ["coros", "polar", "suunto", "wahoo"] as const) if (!live[k]) live[k] = "junction";
   }
   const out: ConnectStatus = { live, via: live.garmin ?? "", garmin: !!live.garmin, connections: [] };
   if (!ACCOUNTS_ON) return NextResponse.json(out);
