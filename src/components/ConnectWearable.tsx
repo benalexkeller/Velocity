@@ -72,7 +72,14 @@ export function useWearables() {
     window.addEventListener("velocity-wearables", on);
     return () => window.removeEventListener("velocity-wearables", on);
   }, []);
-  const toggle = (k: string) => { const s = read(); if (s[k]) delete s[k]; else s[k] = new Date().toISOString().slice(0, 10); write(s); };
+  // on this device at once (localStorage), and in the account when signed in, so Pending shows everywhere and the
+  // admin sees which makers athletes are waiting for
+  const toggle = (k: string, next?: boolean) => {
+    const s = read(); const on = next ?? !s[k];
+    if (on) s[k] = new Date().toISOString().slice(0, 10); else delete s[k];
+    write(s);
+    if (ACCOUNTS_ON) void post("/api/wearables/request", { maker: k, on }).then(() => { statusCache = null; window.dispatchEvent(new Event("velocity-wearables")); }).catch(() => undefined);
+  };
   return { saved, picked: Object.keys(saved), toggle };
 }
 
@@ -80,7 +87,7 @@ const day = (iso: string | null | undefined) => (iso ? new Date(iso).toLocaleDat
 
 /** What a connected row says under the maker's name; null when there is no connection to speak of. */
 export function connectionText(k: WearableKey, c: ConnectionRow | null, via: string | undefined) {
-  if (!c || c.status === "disconnected" || c.status === "pending") return null;
+  if (!c || c.status === "disconnected" || c.status === "pending" || c.status === "requested") return null;
   if (c.status === "error") return c.error ? `Connection failed: ${c.error}` : "Connection failed. Try again.";
   const dev = c.device ? `${c.device}, ` : "";
   if (c.last_event_at) return `${dev}Connected, last data ${day(c.last_event_at)}`;
@@ -95,18 +102,19 @@ export function ConnectWearableSheet({ onClose, onPick }: { onClose: () => void;
   const [note, setNote] = useState<Record<string, string>>({});
   useEffect(() => { const k = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); }; window.addEventListener("keydown", k); return () => window.removeEventListener("keydown", k); }, [onClose]);
   const anyLive = Object.keys(status.live).length > 0;
-  const pickButton = (k: string, on: boolean) => <button type="button" className={`btn small${on ? " ghost" : ""}`} aria-pressed={on} onClick={() => { toggle(k); onPick?.(k, !on); }}>{on ? "✓ Picked" : "I use this"}</button>;
+  // "Request access" → "Pending" (a request is kept in the account too; see useWearables)
+  const pickButton = (k: string, on: boolean) => <button type="button" className={`btn small${on ? " ghost" : ""}`} aria-pressed={on} onClick={() => { toggle(k, !on); onPick?.(k, !on); }}>{on ? "Pending" : "Request access"}</button>;
   return createPortal(
     <div className="cw-scrim" onClick={(e) => { e.stopPropagation(); e.preventDefault(); onClose(); }}>
       <section className="card cw-sheet" role="dialog" aria-modal="true" aria-label="Connect a wearable" onClick={(e) => { e.stopPropagation(); }}>
         <div className="cw-head">
-          <div><h2>Connect a wearable</h2><p className="muted">{anyLive ? "A connected device syncs on its own. Pick any other device you use; each connects here when it opens." : "Connections are being set up. Pick the devices you use; each connects here when it opens."}</p></div>
+          <div><h2>Connect a wearable</h2><p className="muted">{anyLive ? "A connected device syncs on its own. For a device that is not open yet, request access; it connects here when it opens." : "Connections are being set up. Request access for the devices you use; each connects here when it opens."}</p></div>
           <button type="button" className="cw-close" aria-label="Close" onClick={onClose}><Icon name="close" /></button>
         </div>
         <ul className="cw-list">
           {WEARABLES.map((w) => {
             const c = of(w.k);
-            const on = !!saved[w.k];
+            const on = !!saved[w.k] || c?.status === "requested";
             const connected = c?.status === "connected";
             // Apple Watch: the iPhone app does the connecting; here it only shows its state
             if (w.k === "apple") {
