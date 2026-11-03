@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CoachBar } from "@/components/CoachBar";
 import { ActivityAnalyzer, ActivityPanel } from "@/components/analysis/Panels";
-import { KpiRow, Observations, Overview, Progress, Quality, RaceReadiness, Recovery, SportRow, Volume, type Range } from "@/components/analysis/Analytics";
+import { KpiRow, Overview, Progress, Quality, RaceReadiness, Recovery, SportRow, Volume, type Range } from "@/components/analysis/Analytics";
 import { addDays, dateFull, rangeLabel, today, ymd } from "@/lib/format";
 import { usePlan } from "@/lib/store";
 import { NutritionProvider } from "@/lib/nutrition/store";
@@ -58,12 +58,11 @@ function Analysis() {
         <ActivityPanel id={sel} onClose={() => setSel(null)} />
         {empty ? <NeedsData /> : (
           <>
-            {/* the six key figures, then volume against the plan, the Sunday facts, trends, then each recent activity */}
+            {/* the six key figures, volume against the plan, each sport, the load model, trends, recent activities, body, the race */}
             <KpiRow />
             <Volume range={range} />
-            <Observations />
-            <Overview range={range} />
             <SportRow />
+            <Overview range={range} />
             <Progress range={range} onPick={pick} />
             <Quality onPick={pick} />
             <Recovery />
