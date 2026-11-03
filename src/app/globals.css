@@ -243,13 +243,14 @@ h2 .at { font-size: 0.72em; letter-spacing: 0; margin-left: 10px; }
 /* charts */
 .chartcard { padding: 16px 20px 14px; display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 16px; }
 .chartcard .head { grid-column: 1 / -1; min-height: 34px; display: flex; align-items: center; justify-content: space-between; }
-.chartcard > div:not(.head):not(.side) { display: flex; flex-direction: column; justify-content: flex-end; } /* the two charts end at the same level */
+.chartcard .plot { display: flex; flex-direction: column; justify-content: flex-end; min-height: 0; } /* the chart fills the room the card gives it, so both charts end on the same line */
+.chartcard .plot svg.chart { display: block; width: 100%; height: auto; }
 .chartcard .side { border-left: 1px solid var(--line-2); padding-left: 18px; display: grid; align-content: space-between; gap: 14px; }
 .chartcard .side .rows { display: grid; gap: 14px; }
 .chartcard .side .drow { display: grid; gap: 5px; }
 .chartcard .side .drow .l { display: flex; justify-content: space-between; font-size: 13px; color: var(--ink-2); }
 .chartcard .side .drow .l b { font-weight: 600; color: var(--ink); }
-.chartcard .side .k { font-size: 13px; color: var(--ink-2); }
+.chartcard .side .k { font-size: 13px; color: var(--ink); font-weight: 600; }
 .chartcard .side .v { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.05; }
 .chartcard .side .u { font-size: 13px; color: var(--muted); }
 .chartcard .side table { font-size: 13px; border-collapse: collapse; width: 100%; }

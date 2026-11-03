@@ -42,3 +42,17 @@ export function useWidth<T extends Element = SVGSVGElement>(fallback: number) {
   }, []);
   return [ref, w] as const;
 }
+
+/** The rendered height of an element (0 until measured), for charts that fill the room their card gives them. */
+export function useHeight<T extends Element = HTMLDivElement>() {
+  const ref = useRef<T>(null);
+  const [h, setH] = useState(0);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || typeof ResizeObserver === "undefined") return;
+    const ro = new ResizeObserver((entries) => setH(Math.round(entries[0].contentRect.height)));
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return [ref, h] as const;
+}
