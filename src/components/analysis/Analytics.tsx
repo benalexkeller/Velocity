@@ -16,6 +16,21 @@ const sign = (n: number | null | undefined, digits = 0, suffix = "") => (n == nu
 /** A stored pace or speed (s/mi, s/100 yd, mph) in the athlete's units, as a number; `fmtV` writes it. */
 const paceDisp = (sp: Sp, v: number) => (sp === "bike" ? speed(v).v : sp === "run" ? runPace(v).s : swimPace(v).s);
 const distDisp = (sp: Sp, v: number) => (sp === "swim" ? swimDist(v).v : dist(v).v);
+/** Four evenly spaced y labels from the lowest to the highest point, rounded outwards to a fine step (1 s, 0.1 mph, 1 bpm). */
+function evenTicks(lo: number, hi: number, kind: "pace" | "speed" | "hr" | "number") {
+  const fine = kind === "speed" ? 0.1 : kind === "pace" ? 0.5 : 1; // the step is a whole number of these, so labels stay round
+  const a = Math.floor(lo / fine + 1e-9) * fine;
+  const step = Math.max(fine, Math.ceil((hi - a) / 3 / fine - 1e-9) * fine);
+  const b = a + 3 * step;
+  return { lo: a, hi: b, step, ticks: [0, 1, 2, 3].map((i) => a + i * step) };
+}
+const wholeStep = (step: number) => Math.abs(step - Math.round(step)) < 1e-6;
+function fmtTick(kind: "pace" | "speed" | "hr" | "number", n: number, step: number) {
+  if (kind === "pace") { const m = Math.floor(n / 60 + 1e-9), sec = n - m * 60; return wholeStep(step) || wholeStep(sec) ? `${m}:${String(Math.round(sec)).padStart(2, "0")}` : `${m}:${sec.toFixed(1).padStart(4, "0")}`; }
+  if (kind === "speed") return n.toFixed(1);
+  return wholeStep(step) || wholeStep(n) ? n.toFixed(0) : n.toFixed(1);
+}
+const titleCase = (t: string) => t.replace(/\b([a-z])([a-z]*)/g, (m, a, rest) => (/^(at|of|per|the|a|an|in|on|to|and)$/.test(m) ? m : a.toUpperCase() + rest));
 const fmtV = (sp: Sp, v: number) => (sp === "bike" ? `${v.toFixed(1)}` : fmtPace(v));
 const unitOf = (sp: Sp) => (sp === "bike" ? speed(0).u : sp === "run" ? runPace(0).u : swimPace(0).u);
 
@@ -70,7 +85,7 @@ function RatioGauge({ ratio, w = 164 }: { ratio: number | null; w?: number }) {
   const pt = (a: number, rr: number) => `${cx + Math.cos(a) * rr} ${cy - Math.sin(a) * rr}`;
   const arc = (a0: number, a1: number) => `M${pt(a0, r)} A${r} ${r} 0 0 1 ${pt(a1, r)}`; // a0 → a1 clockwise (left to right over the top)
   const up = ratio != null && ratio >= 1;
-  const col = ratio == null ? "var(--muted-2)" : up ? "var(--ok)" : "var(--danger)";
+  const col = ratio == null ? "var(--muted-2)" : up ? "var(--accent)" : "var(--danger)";
   const pct = ratio == null ? "–" : `${ratio >= 1 ? "+" : "−"}${Math.abs((ratio - 1) * 100).toFixed(0)}%`;
   const tipR = r + sw / 2 + 6, tx = cx + Math.cos(ang) * tipR, ty = cy - Math.sin(ang) * tipR;
   return (
@@ -94,7 +109,7 @@ export function KpiRow() {
       <div className="card kpi"><div className="k">Week load<Info {...KPI_INFO.load} /></div><div className="row"><div className="v">{k.load.v}<small> / {k.load.planned}</small></div></div><div className="u">{k.load.last != null ? `last week ${k.load.last}` : "first plan week"}</div><Bars pts={k.load.bars} /></div>
       <div className="card kpi"><div className="k">Completed<span className="at">28 d</span><Info {...KPI_INFO.compliance} /></div><div className="row"><div className="v">{k.compliance.v ?? "-"}{k.compliance.v != null && <small>%</small>}</div></div><div className="u">{k.compliance.planned ? `${Math.round(k.compliance.done * 2) / 2} of ${k.compliance.planned} sessions` : "no sessions planned yet"}</div></div>
       <div className="card kpi"><div className="k">Fitness<Info {...KPI_INFO.fitness} /></div><div className="row"><div className="v">{k.fitness.v.toFixed(0)}</div>{pts(k.fitness.d)}</div><div className="u">42-day load</div><Spark pts={k.fitness.spark} /></div>
-      <div className="card kpi gauge-card"><div className="k">Run efficiency<Info {...KPI_INFO.ef} /></div><RatioGauge ratio={k.ef.ratio} /><div className="u">{k.ef.v != null ? (k.ef.ratio != null ? `vs the 4 weeks before, now ${k.ef.v.toFixed(2)} m/min per bpm` : `${k.ef.v.toFixed(2)} m/min per bpm, no baseline yet`) : "no runs with heart rate"}</div></div>
+      <div className="card kpi gauge-card"><div className="k">Run efficiency<Info {...KPI_INFO.ef} /></div><RatioGauge ratio={k.ef.ratio} /></div>
       <div className="card kpi"><div className="k">VO2max<Info title="VO2max" text="Your watch's estimate of the most oxygen your body can use per kilogram per minute, the usual measure of aerobic fitness. Change against the reading 4 weeks ago; the line shows the last readings." /></div><div className="row"><div className="v">{k.vo2.v != null ? k.vo2.v.toFixed(0) : "-"}</div>{k.vo2.v != null && (k.vo2.d != null ? <span className="delta">{k.vo2.d >= 0 ? "+" : "−"}{Math.abs(k.vo2.d).toFixed(0)}, 4 wk</span> : <span className="delta muted">first readings</span>)}</div><div className="u">{k.vo2.date ? `last reading ${dateLabel(k.vo2.date)}` : "no readings yet"}</div>{k.vo2.spark.length > 1 ? <Spark pts={k.vo2.spark} /> : null}</div>
     </div>
   );
@@ -310,38 +325,37 @@ export function axisPicks(n: number, want = 4): number[] {
 function ScoreGauge({ sp }: { sp: Sp }) {
   const an = useAnalysis();
   const sc = an.sessionScore(sp);
-  const w = 96, r = 40, cx = w / 2, cy = w / 2, c = 2 * Math.PI * r, arcLen = c * 0.75;
+  const w = 104, r = 44, cx = w / 2, cy = w / 2, c = 2 * Math.PI * r, arcLen = c * 0.75;
   const f = sc ? sc.score / 100 : 0;
-  const col = !sc ? "var(--muted-2)" : "var(--accent)";
   return (
     <div className={`sgauge${sc ? "" : " empty"}`}>
       <svg viewBox={`0 0 ${w} ${w}`} width={w} height={w} role="img" aria-label={sc ? `${sp} session score ${sc.score}` : `no ${sp} session yet`}>
         <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--accent-soft)" strokeWidth={10} strokeDasharray={`${arcLen} ${c - arcLen}`} strokeLinecap="round" transform={`rotate(135 ${cx} ${cy})`} />
-        {sc && <circle cx={cx} cy={cy} r={r} fill="none" stroke={col} strokeWidth={10} strokeDasharray={`${arcLen * f} ${c - arcLen * f}`} strokeLinecap="round" transform={`rotate(135 ${cx} ${cy})`} />}
-        <text x={cx} y={cy + 8} textAnchor="middle" fontSize={26} fontWeight={600} fill="var(--ink)">{sc ? sc.score : "–"}</text>
+        {sc && <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--accent)" strokeWidth={10} strokeDasharray={`${arcLen * f} ${c - arcLen * f}`} strokeLinecap="round" transform={`rotate(135 ${cx} ${cy})`} />}
+        <text x={cx} y={cy + 9} textAnchor="middle" fontSize={28} fontWeight={600} fill="var(--ink)">{sc ? sc.score : "–"}</text>
       </svg>
-      <div className="sg-text">
-        <b>{sc ? sc.activity.name : "No session yet"}</b>
-        <span className="muted">{sc ? dateLabel(sc.activity.date) : "scores the latest one"}</span>
+      <span className="muted">{sc ? sc.activity.name : "No session yet"}</span>
+      <div className="sg-pop" role="tooltip">
+        <b>Session score</b>
+        <p>Your last {sp} session out of 100: how hard it was against your threshold (40), speed per heartbeat against your 4-week usual (30), and how long it was against your longest (30).</p>
+        {sc && sc.parts.map((p) => <div key={p.k}><span>{p.k}</span><b>{p.pts} / {p.max}</b><small>{p.text}</small></div>)}
+        {sc && sc.missing.length > 0 && <small className="muted">No {sc.missing.join(" or ")} for this session, so the score is scaled to the parts it has.</small>}
       </div>
-      {sc && <div className="sg-pop" role="tooltip">
-        {sc.parts.map((p) => <div key={p.k}><span>{p.k}</span><b>{p.pts} / {p.max}</b><small>{p.text}</small></div>)}
-        {sc.missing.length > 0 && <small className="muted">No {sc.missing.join(" or ")} for this session, so the score is scaled to the parts it has.</small>}
-      </div>}
     </div>
   );
 }
-const weekLabel = (q: { week: number | null; start: string }) => (q.week != null ? `W${q.week}` : shortDate(q.start));
-function MiniTrend({ pts, kind, sp, label, info }: { pts: { week: number | null; start: string; v: number | null }[]; kind: "pace" | "speed" | "hr"; sp: Sp; label: string; info: string }) {
-  const [svgRef, W] = useWidth<SVGSVGElement>(240); const H = 92, L = 42, R = 8, T = 8, B = 18;
+const weekLabel = (q: { week: number }) => `W${q.week}`;
+function MiniTrend({ pts, kind, sp, label, info }: { pts: { week: number; start: string; v: number | null }[]; kind: "pace" | "speed" | "hr"; sp: Sp; label: string; info: string }) {
+  const [svgRef, W] = useWidth<SVGSVGElement>(240); const H = 98, L = 44, R = 8, T = 14, B = 18;
   const disp = pts.map((q) => ({ ...q, v: q.v == null ? null : kind === "pace" ? paceDisp(sp, q.v) : kind === "speed" ? speed(q.v).v : q.v }));
   const v = disp.map((q) => q.v).filter((q): q is number => q != null);
   const lo = v.length ? Math.min(...v) : 0, hi = v.length ? Math.max(...v) : 1;
-  const nt = niceTicks(lo, hi, 2, kind === "pace" ? "pace" : "number");
+  const nt = evenTicks(lo, hi, kind);
   const inv = kind === "pace";
   const y = (n: number) => (inv ? T + ((n - nt.lo) / (nt.hi - nt.lo)) * (H - T - B) : H - B - ((n - nt.lo) / (nt.hi - nt.lo)) * (H - T - B));
   const x = (i: number) => L + (disp.length < 2 ? 0 : (i / (disp.length - 1)) * (W - L - R));
   const f = (n: number) => (kind === "pace" ? fmtPace(n) : kind === "speed" ? n.toFixed(1) : n.toFixed(0));
+  const ft = (n: number) => fmtTick(kind, n, nt.step);
   let d = "", started = false;
   disp.forEach((q, i) => { if (q.v == null) { started = false; return; } d += `${started ? "L" : "M"}${x(i)} ${y(q.v)}`; started = true; });
   const cur = [...disp].reverse().find((q) => q.v != null);
@@ -349,9 +363,9 @@ function MiniTrend({ pts, kind, sp, label, info }: { pts: { week: number | null;
   const picks = axisPicks(disp.length);
   return (
     <div className="insight">
-      <div className="k"><span>{label} <small>({unit})</small></span><Info title={label} text={info} /><b>{cur?.v != null ? f(cur.v) : "-"}</b></div>
+      <div className="k"><span>{titleCase(label)} <small>({unit})</small></span><Info title={label} text={info} /><b>{cur?.v != null ? f(cur.v) : "-"}</b></div>
       <svg ref={svgRef} className="chart mini" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label}>
-        {v.length ? nt.ticks.map((g, i) => <g key={i}><line x1={L} y1={y(g)} x2={W - R} y2={y(g)} stroke="var(--grid)" /><text x={L - 5} y={y(g) + 3} textAnchor="end">{f(g)}</text></g>) : null}
+        {v.length ? nt.ticks.map((g, i) => <g key={i}><line x1={L} y1={y(g)} x2={W - R} y2={y(g)} stroke="var(--grid)" /><text x={L - 5} y={y(g) + 3} textAnchor="end">{ft(g)}</text></g>) : null}
         <line x1={L} y1={H - B} x2={W - R} y2={H - B} stroke="var(--line)" />
         <path d={d} fill="none" stroke="var(--accent)" strokeWidth={1.6} />
         {disp.map((q, i) => q.v != null ? <circle key={i} cx={x(i)} cy={y(q.v)} r={2.4} fill="var(--accent)" stroke="var(--surface)" strokeWidth={1}><title>{`${weekLabel(q)}: ${f(q.v)} ${unit}`}</title></circle> : null)}
@@ -366,11 +380,11 @@ function SportCard({ sp, expert }: { sp: Sp; expert: boolean }) {
   const p = an.sportPerformance(sp);
   const fmtRow = (kind: string, v: number | null) => v == null ? "-" : kind === "pace" ? `${fmtV(sp, paceDisp(sp, v))} ${unitOf(sp)}` : kind === "speed" ? fmtSpeed(v) : kind === "hr" ? `${v.toFixed(0)} bpm` : sp === "swim" ? `${swimDist(v).v.toLocaleString()} ${swimDist(0).u}` : fmtDist(v);
   const good = (kind: string) => (kind === "pace" || kind === "hr" ? "down" : "up");
-  const [svgRef, W] = useWidth<SVGSVGElement>(240); const H = 92, L = 42, R = 8, T = 8, B = 18;
+  const [svgRef, W] = useWidth<SVGSVGElement>(240); const H = 98, L = 44, R = 8, T = 14, B = 18;
   const pts = p.trend.map((q) => ({ ...q, v: q.v == null ? q.v : paceDisp(sp, q.v) })); // in the athlete's units, so the ticks land on round numbers
   const v = pts.map((q) => q.v).filter((q): q is number => q != null);
   const lo = v.length ? Math.min(...v) : 0, hi = v.length ? Math.max(...v) : 1;
-  const nt = niceTicks(lo, hi, 2, sp === "bike" ? "number" : "pace");
+  const nt = evenTicks(lo, hi, sp === "bike" ? "speed" : "pace");
   const ylo = nt.lo, yhi = nt.hi;
   const inv = sp !== "bike";
   const y = (n: number) => (inv ? T + ((n - ylo) / (yhi - ylo)) * (H - T - B) : H - B - ((n - ylo) / (yhi - ylo)) * (H - T - B));
@@ -386,9 +400,9 @@ function SportCard({ sp, expert }: { sp: Sp; expert: boolean }) {
       <ScoreGauge sp={sp} />
       <div className="sh"><SportIcon sport={sp} size={22} /><b>{sp[0].toUpperCase() + sp.slice(1)}</b><span className="muted">{p.sessions ? `last ${p.sessions} session${p.sessions === 1 ? "" : "s"}` : "no sessions yet"}</span></div>
       <table><tbody>{p.rows.map((r) => <tr key={r.k}><td><span className="info-row">{r.k}{ROW_INFO[r.k] && <Info {...ROW_INFO[r.k]} />}</span></td><td><b>{fmtRow(r.kind, r.cur)}</b></td><td><Delta v={r.cur != null && r.prev ? ((r.cur - r.prev) / r.prev) * 100 : null} good={good(r.kind)} /></td></tr>)}</tbody></table>
-      <div className="k">{sp === "bike" ? "Weekly average speed" : "Weekly average pace"} {unitLabel}</div>
+      <div className="k">{sp === "bike" ? "Weekly Average Speed" : "Weekly Average Pace"} {unitLabel}</div>
       <svg ref={svgRef} className="chart mini" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${sp} weekly ${sp === "bike" ? "speed" : "pace"} trend`}>
-        {v.length ? guides.map((g, i) => <g key={i}><line x1={L} y1={y(g)} x2={W - R} y2={y(g)} stroke="var(--grid)" /><text x={L - 5} y={y(g) + 3} textAnchor="end">{fmtV(sp, g)}</text></g>) : null}
+        {v.length ? guides.map((g, i) => <g key={i}><line x1={L} y1={y(g)} x2={W - R} y2={y(g)} stroke="var(--grid)" /><text x={L - 5} y={y(g) + 3} textAnchor="end">{fmtTick(sp === "bike" ? "speed" : "pace", g, nt.step)}</text></g>) : null}
         <line x1={L} y1={H - B} x2={W - R} y2={H - B} stroke="var(--line)" />
         <path d={d} fill="none" stroke="var(--accent)" strokeWidth={1.6} />
         {pts.map((q, i) => q.v != null ? <circle key={i} cx={x(i)} cy={y(q.v)} r={2.4} fill="var(--accent)" stroke="var(--surface)" strokeWidth={1}><title>{`${weekLabel(q)}: ${fmtV(sp, q.v)}`}</title></circle> : null)}
