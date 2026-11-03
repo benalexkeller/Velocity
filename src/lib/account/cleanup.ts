@@ -10,6 +10,7 @@ import { disconnectGarmin } from "@/lib/integrations/junction";
 import { unsealTokens } from "@/lib/wearables/tokens";
 import { whoopRefresh, whoopRevoke } from "@/lib/wearables/whoop";
 import { garminDeregister, garminRefresh } from "@/lib/wearables/garmin";
+import { directProvider } from "@/lib/wearables/direct";
 
 export interface OutsideLinks {
   googleToken?: string | null; calendarId?: string | null; garminId?: string | null;
@@ -38,6 +39,8 @@ export async function cleanupOutside(links: OutsideLinks, tag: string) {
       const t = unsealTokens(w.secret);
       if (w.provider === "whoop") { const n = t.e - 90 > Date.now() / 1000 ? t : await whoopRefresh(t.r); await whoopRevoke(n.a); }
       if (w.provider === "garmin") { const n = t.e - 90 > Date.now() / 1000 ? t : await garminRefresh(t.r); await garminDeregister(n.a); }
+      const p = await directProvider(w.provider);
+      if (p?.revoke) { const n = t.e - 90 > Date.now() / 1000 || !p.refresh ? t : await p.refresh(t.r); await p.revoke(n.a, w.external_user_id ?? ""); }
     } catch (e) { console.error(`[${tag}] ${w.provider}`, e); }
   }
   if (GARMIN_ON && links.garminId) {
