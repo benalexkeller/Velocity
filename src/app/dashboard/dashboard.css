@@ -29,7 +29,7 @@
 /* Garmin: watch hovering on the right of the hero; status lives in the stats row */
 .hero .stat.gm { position: relative; padding-right: 0; border-right: 0; }
 .hero { overflow: hidden; } /* the strap may run past the top edge; it fades there */
-.hero .top .sep { margin: 0 8px; opacity: 0.6; } /* the date sits with the eyebrow on the left; the right is the device's */
+.hero .top { position: relative; z-index: 2; } /* the date stays on top of the device */
 .hero .garmin { position: absolute; left: 50%; bottom: calc(100% + 2px); animation: hover 4s ease-in-out infinite; } /* centred over the wearable column */
 @keyframes hover { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -5px); } }
 /* the device photo: its own soft grey glow, edges faded into the hero, the session drawn on the screen */

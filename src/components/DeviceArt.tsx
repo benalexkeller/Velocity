@@ -6,7 +6,7 @@ export const deviceOf = (key: string | undefined): Device => (key === "fitbit" |
 export interface Face { sport: string; time: string; dist: string; hr?: number }
 const SIZE: Record<Device, [number, number]> = { fitbit: [520, 810], apple: [520, 723], whoop: [520, 710], garmin: [520, 722] };
 
-export function DeviceArt({ device, face, height = 210 }: { device: Device; face: Face | null; height?: number }) {
+export function DeviceArt({ device, face, height = 178 }: { device: Device; face: Face | null; height?: number }) {
   const [W, H] = SIZE[device];
   const width = Math.round((height * W) / H);
   const sport = face?.sport.toUpperCase() ?? "";
