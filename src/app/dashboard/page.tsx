@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Icon } from "@/components/icons";
 import { SportIcon } from "@/components/SportIcon";
 import { MapModal, RouteMap } from "@/components/RouteMap";
-import { Watch } from "@/components/Watch";
+import { DeviceArt, deviceOf } from "@/components/DeviceArt";
 import { ConnectWearable, useConnections } from "@/components/ConnectWearable";
 import { WEARABLES, sourceName } from "@/lib/wearables/providers";
 import { FuelLine } from "@/components/nutrition/SessionFuel";
@@ -109,7 +109,7 @@ function Dashboard() {
                   <div className="stat"><div className="k">Next session</div><div className="v">{next[0].s ? `${next[0].s.title} ${next[0].s.min} min` : "-"}</div><div className="u">{next[0].s ? `${DAYS[(addDays(t, 1).getDay() + 6) % 7]}${next[0].s.start ? `, ${next[0].s.start}` : ""}` : ""}</div></div>
                 </>
               )}
-              <div className="stat gm">{garmin && <div className="garmin" aria-hidden="true"><Watch width={116} time={last ? fmtHMS(last.min) : ""} dist={last?.mi ? fmtDist(last.mi) : last?.yd ? `${swimDist(last.yd).v.toLocaleString()} ${swimDist(last.yd).u}` : ""} hr={last?.hr} /></div>}<div className="k"><i className={`gm-dot${garmin ? " on" : ""}`} aria-label={garmin ? "connected" : "not connected"} />{deviceName}<ConnectWearable variant="dark" label="Connect" /></div><div className="v">{garminLive ? <span className="garmin-date">{lastGarmin ? `Synced ${shortDate(lastGarmin.date)}` : "Connected"}</span> : garmin ? <span className="garmin-date">Imported {shortDate(lastGarmin!.date)}</span> : <span className="dim">Not connected</span>}</div></div>
+              <div className="stat gm">{garmin && <div className="garmin"><DeviceArt device={deviceOf(connected[0]?.provider ?? lastGarmin?.source)} face={last ? { sport: last.sport, time: fmtHMS(last.min), dist: last.mi ? fmtDist(last.mi) : last.yd ? `${swimDist(last.yd).v.toLocaleString()} ${swimDist(last.yd).u}` : "", hr: last.hr } : todayS && todayS.sport !== "rest" ? { sport: todayS.sport, time: fmtHMS(todayS.min), dist: "" } : null} /></div>}<div className="k"><i className={`gm-dot${garmin ? " on" : ""}`} aria-label={garmin ? "connected" : "not connected"} />{deviceName}<ConnectWearable variant="dark" label="Connect" /></div><div className="v">{garminLive ? <span className="garmin-date">{lastGarmin ? `Synced ${shortDate(lastGarmin.date)}` : "Connected"}</span> : garmin ? <span className="garmin-date">Imported {shortDate(lastGarmin!.date)}</span> : <span className="dim">Not connected</span>}</div></div>
             </div>
             {todayS && todayS.sport !== "rest" && <FuelLine s={todayS} />}
           </Link>
