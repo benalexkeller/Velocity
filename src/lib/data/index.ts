@@ -54,8 +54,14 @@ export interface Activity {
   hr?: number;
   elev_ft?: number;
   route?: [number, number][];
-  source: "garmin" | "manual";
+  source: "garmin" | "whoop" | "apple" | "coros" | "polar" | "suunto" | "wahoo" | "manual";
   note?: string;
+  /** workout calories (from a wearable) */
+  kcal?: number;
+  /** WHOOP strain for this workout (0–21) */
+  strain?: number;
+  /** another maker's copy of this session counts instead (this one is excluded); "keep" = the athlete keeps both */
+  dupOf?: string;
   exertion?: number;
   coachNote?: string;
   excluded?: boolean; // kept in the list, but not counted in analysis, volume or session status

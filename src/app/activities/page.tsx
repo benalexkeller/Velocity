@@ -1,4 +1,5 @@
 "use client";
+import { sourceName } from "@/lib/wearables/providers";
 import Link from "next/link";
 import "./activities.css";
 import { Suspense, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
@@ -64,7 +65,7 @@ function Activities() {
   const [tab, setTab] = useState<Tab>("all");
   const [q, setQ] = useState("");
   const [filters, setFilters] = useState(false);
-  const [source, setSource] = useState<"all" | "garmin" | "manual">("all");
+  const [source, setSource] = useState<"all" | "device" | "manual">("all");
   const [gpsOnly, setGpsOnly] = useState(false);
   // the detail panel is always showing one activity: the one from the link, else the most recent; clicking a row swaps it in
   const [sel, setSel] = useState<string | null>(fromUrl ?? ACTIVITIES[ACTIVITIES.length - 1]?.id ?? null);
@@ -81,7 +82,7 @@ function Activities() {
   }, [sel]);
   const list = useMemo(() => {
     const t = q.trim().toLowerCase();
-    return [...ACTIVITIES].reverse().filter((a) => (tab === "all" || a.sport === tab) && (source === "all" || a.source === source) && (!gpsOnly || !!a.route) && (!t || a.name.toLowerCase().includes(t) || a.date.includes(t)));
+    return [...ACTIVITIES].reverse().filter((a) => (tab === "all" || a.sport === tab) && (source === "all" || (source === "manual" ? a.source === "manual" : a.source !== "manual")) && (!gpsOnly || !!a.route) && (!t || a.name.toLowerCase().includes(t) || a.date.includes(t)));
   }, [tab, q, source, gpsOnly, ACTIVITIES]);
   const selected = ACTIVITIES.find((a) => a.id === sel) ?? ACTIVITIES[ACTIVITIES.length - 1] ?? null;
 
@@ -103,7 +104,7 @@ function Activities() {
               {filters && (
                 <div className="menu filters" role="dialog" aria-label="Filters">
                   <div className="k">Source</div>
-                  <div className="pill-group small">{(["all", "garmin", "manual"] as const).map((k) => <button key={k} type="button" className={source === k ? "on" : ""} onClick={() => setSource(k)}>{k === "all" ? "All" : k === "garmin" ? "Garmin" : "Manual"}</button>)}</div>
+                  <div className="pill-group small">{(["all", "device", "manual"] as const).map((k) => <button key={k} type="button" className={source === k ? "on" : ""} onClick={() => setSource(k)}>{k === "all" ? "All" : k === "device" ? "Wearable" : "Manual"}</button>)}</div>
                   <label className="chk"><input type="checkbox" checked={gpsOnly} onChange={(e) => setGpsOnly(e.target.checked)} /> With GPS route only</label>
                   <button type="button" className="btn ghost small" onClick={() => { setSource("all"); setGpsOnly(false); setQ(""); setTab("all"); setFilters(false); }}>Clear filters</button>
                 </div>
@@ -212,7 +213,7 @@ function Drawer({ a, onDeleted }: { a: Activity; onDeleted: () => void }) {
       <h4>Details</h4>
       <div className="kv">
         <div><span>Activity type</span><span>{a.sport === "bike" ? "Ride" : a.sport[0].toUpperCase() + a.sport.slice(1)}</span></div>
-        <div><span>Source</span><span>{a.source === "garmin" ? "Garmin" : "Manual"}</span></div>
+        <div><span>Source</span><span>{sourceName(a.source)}{a.dupOf && a.dupOf !== "keep" ? ", also recorded by another device" : ""}</span></div>
         {a.route && plan.athlete.city && <div><span>Location</span><span>{plan.athlete.city}</span></div>}
         <div><span>Start</span><span>{w.l2 || "-"}</span></div>
       </div>

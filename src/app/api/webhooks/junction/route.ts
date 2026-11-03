@@ -6,6 +6,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase/admin";
 import { WEARABLE_WEBHOOK_SECRET } from "@/lib/integrations/config";
 import { dailyValues, toActivity, verifySignature, workoutRoute, type JunctionWorkout } from "@/lib/integrations/junction";
+import { saveBodyDays, saveWorkouts, type BodyIn } from "@/lib/wearables/import";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -39,19 +40,16 @@ export async function POST(req: NextRequest) {
       await log(true, "connected");
     } else if (/^daily\.data\.workouts\.(created|updated)$/.test(type)) {
       const list = (Array.isArray(ev.data) ? ev.data : [ev.data]) as JunctionWorkout[];
-      let n = 0;
+      const acts = [];
       for (const w of list) {
         const a = toActivity(w);
         if (!a) continue;
         if (w.id) a.route = await workoutRoute(w.id);
-        const { error } = await admin.from("activities").upsert({
-          user_id: uid, id: a.id, date: a.date, start: a.start ?? null, sport: a.sport, name: a.name, min: a.min,
-          mi: a.mi ?? null, yd: a.yd ?? null, pace_s: a.pace_s ?? null, mph: a.mph ?? null, p100_s: a.p100_s ?? null, hr: a.hr ?? null, elev_ft: a.elev_ft ?? null,
-          route: a.route ?? null, source: "garmin",
-        }, { onConflict: "user_id,id" });
-        if (error) throw new Error(error.message);
-        n++;
+        const { source: _s, ...rest } = a;
+        acts.push({ ...rest, externalId: w.id });
       }
+      // through Junction the maker is Garmin; duplicates with other makers are settled like any other
+      const n = await saveWorkouts(admin, uid, "garmin", acts);
       await admin.from("integrations").update({ last_event_at: now, updated_at: now }).eq("user_id", uid).eq("provider", "garmin");
       await log(true, `${n} workouts`);
     } else if (/^daily\.data\.workout_stream\.(created|updated)$/.test(type)) {
@@ -62,20 +60,20 @@ export async function POST(req: NextRequest) {
       }
       await log(true, "stream");
     } else if (/^daily\.data\.(resting_heart_rate|hrv|vo2_max|stress_level)\.(created|updated)$/.test(type)) {
-      const col = ({ resting_heart_rate: "rhr", hrv: "hrv", vo2_max: "vo2", stress_level: "stress" } as Record<string, string>)[type.split(".")[2]];
-      const rows = dailyValues(ev.data).map((v) => ({ user_id: uid, date: v.date, [col]: col === "vo2" ? v.value : Math.round(v.value) }));
-      if (rows.length) { const { error } = await admin.from("body_metrics").upsert(rows, { onConflict: "user_id,date" }); if (error) throw new Error(error.message); }
-      await log(true, `${rows.length} days of ${col}`);
+      const col = ({ resting_heart_rate: "rhr", hrv: "hrv", vo2_max: "vo2", stress_level: "stress" } as Record<string, keyof Omit<BodyIn, "date">>)[type.split(".")[2]];
+      const rows: BodyIn[] = dailyValues(ev.data).map((v) => ({ date: v.date, [col]: v.value }));
+      const n = await saveBodyDays(admin, uid, "garmin", rows);
+      await log(true, `${n} days of ${col}`);
     } else if (/^daily\.data\.sleep\.(created|updated)$/.test(type)) {
       const list = (Array.isArray(ev.data) ? ev.data : [ev.data]) as { calendar_date?: string; date?: string; duration?: number; score?: number | null; efficiency?: number | null; average_hrv?: number | null; hr_lowest?: number | null; hr_average?: number | null }[];
-      const rows = list.filter((s) => s && (s.calendar_date || s.date)).map((s) => ({
-        user_id: uid, date: String(s.calendar_date ?? s.date).slice(0, 10),
-        ...(typeof s.duration === "number" ? { sleep_h: Math.round((s.duration / 3600) * 10) / 10 } : {}),
-        ...(typeof s.score === "number" ? { sleep_score: Math.round(s.score) } : {}),
-        ...(typeof s.average_hrv === "number" ? { hrv: Math.round(s.average_hrv) } : {}),
+      const rows: BodyIn[] = list.filter((s) => s && (s.calendar_date || s.date)).map((s) => ({
+        date: String(s.calendar_date ?? s.date).slice(0, 10),
+        ...(typeof s.duration === "number" ? { sleep_h: s.duration / 3600 } : {}),
+        ...(typeof s.score === "number" ? { sleep_score: s.score } : {}),
+        ...(typeof s.average_hrv === "number" ? { hrv: s.average_hrv } : {}),
       }));
-      if (rows.length) { const { error } = await admin.from("body_metrics").upsert(rows, { onConflict: "user_id,date" }); if (error) throw new Error(error.message); }
-      await log(true, `${rows.length} nights`);
+      const n = await saveBodyDays(admin, uid, "garmin", rows);
+      await log(true, `${n} nights`);
     } else {
       await log(true, "ignored");
     }

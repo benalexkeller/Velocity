@@ -28,7 +28,10 @@ export async function POST(req: NextRequest) {
   const row = (links as { google_token: string | null; google_calendar_id: string | null; garmin_external_id: string | null }[] | null)?.[0];
   // missing function (schema-calendar-accounts.sql not run yet) comes back as an error and no rows
   const { data: other } = await sb.rpc("admin_calendar_accounts", { p_user: user });
-  await cleanupOutside({ googleToken: row?.google_token, calendarId: row?.google_calendar_id, garminId: row?.garmin_external_id, accounts: other as OutsideLinks["accounts"] }, "admin/delete");
+  const { data: wear } = await sb.rpc("admin_wearables", { p_user: user });
+  const wearables = (wear ?? null) as OutsideLinks["wearables"];
+  const junction = wearables?.some((w) => w.provider === "garmin" && w.via === "junction") ?? true;
+  await cleanupOutside({ googleToken: row?.google_token, calendarId: row?.google_calendar_id, garminId: junction ? row?.garmin_external_id : null, accounts: other as OutsideLinks["accounts"], wearables }, "admin/delete");
 
   const { error } = await sb.rpc("admin_delete_user", { p_user: user, p_reason: reason });
   if (error) {

@@ -1,4 +1,5 @@
 "use client";
+import { sourceName } from "@/lib/wearables/providers";
 import { useMemo, useState } from "react";
 import { Icon } from "../icons";
 import { SportIcon } from "../SportIcon";
@@ -263,7 +264,7 @@ export function ActivityPanel({ id, onClose }: { id: string | null; onClose: () 
         <div>
           <div className="eyebrow muted">Activity analysis</div>
           <h2>{a.name}</h2>
-          <div className="muted">{dateLabel(a.date)}{a.start ? `, ${a.start}` : ""}, {a.source === "garmin" ? "Garmin" : "Manual"}{r.planned ? (r.planned.sport === a.sport || r.planned.sport === "brick" ? `, matches plan: ${r.planned.title} ${r.planned.intensity} ${r.planned.min} min` : `, planned that day: ${r.planned.title} ${r.planned.intensity} ${r.planned.min} min (different sport)`) : r.restDay ? ", rest day in the plan" : ", no planned session that day"}</div>
+          <div className="muted">{dateLabel(a.date)}{a.start ? `, ${a.start}` : ""}, {sourceName(a.source)}{r.planned ? (r.planned.sport === a.sport || r.planned.sport === "brick" ? `, matches plan: ${r.planned.title} ${r.planned.intensity} ${r.planned.min} min` : `, planned that day: ${r.planned.title} ${r.planned.intensity} ${r.planned.min} min (different sport)`) : r.restDay ? ", rest day in the plan" : ", no planned session that day"}</div>
         </div>
       </div>
       <div className="an-activity-grid">

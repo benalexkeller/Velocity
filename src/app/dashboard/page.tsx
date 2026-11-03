@@ -6,6 +6,7 @@ import { SportIcon } from "@/components/SportIcon";
 import { MapModal, RouteMap } from "@/components/RouteMap";
 import { Watch } from "@/components/Watch";
 import { ConnectWearable, useConnections } from "@/components/ConnectWearable";
+import { WEARABLES, sourceName } from "@/lib/wearables/providers";
 import { FuelLine } from "@/components/nutrition/SessionFuel";
 import { NutritionProvider } from "@/lib/nutrition/store";
 import { CoachBar } from "@/components/CoachBar";
@@ -58,11 +59,12 @@ function Dashboard() {
   const multiTitle = todayS?.brick ? "Brick" : brickParts.map((s) => s.title).join(" + ");
   const next = [1, 2].map((n) => ({ off: n, s: plan.sessionOn(ymd(addDays(t, n))) }));
   const last = plan.counted[plan.counted.length - 1];
-  // "Connected" only when the Garmin connection is live; otherwise say when the last import happened
-  const lastGarmin = [...plan.activities].reverse().find((a) => a.source === "garmin");
-  const { garmin: gm } = useConnections();
-  const garminLive = gm?.status === "connected";
+  // "Connected" only when a wearable connection is live; otherwise say when the last import happened
+  const lastGarmin = [...plan.activities].reverse().find((a) => a.source !== "manual");
+  const { connected } = useConnections();
+  const garminLive = connected.length > 0;
   const garmin = garminLive || !!lastGarmin;
+  const deviceName = connected.length ? WEARABLES.filter((w) => connected.some((c) => c.provider === w.k)).map((w) => w.name).join(" + ") : lastGarmin ? sourceName(lastGarmin.source) : "Wearable";
   const done = todayS?.status === "done";
   const tgt = todayS ? target(todayS, plan.athlete.zones) : null;
   const PHASES = plan.phases, WEEKS = plan.weeks;
@@ -105,7 +107,7 @@ function Dashboard() {
                   <div className="stat"><div className="k">Next session</div><div className="v">{next[0].s ? `${next[0].s.title} ${next[0].s.min} min` : "-"}</div><div className="u">{next[0].s ? `${DAYS[(addDays(t, 1).getDay() + 6) % 7]}${next[0].s.start ? `, ${next[0].s.start}` : ""}` : ""}</div></div>
                 </>
               )}
-              <div className="stat gm">{garmin && <div className="garmin" aria-hidden="true"><Watch width={116} time={last ? fmtHMS(last.min) : ""} dist={last?.mi ? `${last.mi.toFixed(1)} mi` : last?.yd ? `${last.yd.toLocaleString()} yd` : ""} hr={last?.hr} /></div>}<div className="k"><i className={`gm-dot${garmin ? " on" : ""}`} aria-label={garmin ? "connected" : "not connected"} />{garmin ? "Garmin" : "Wearable"}<ConnectWearable variant="dark" label="Connect" /></div><div className="v">{garminLive ? <span className="garmin-date">{lastGarmin ? `Synced ${shortDate(lastGarmin.date)}` : "Connected"}</span> : garmin ? <span className="garmin-date">Imported {shortDate(lastGarmin!.date)}</span> : <span className="dim">Not connected</span>}</div></div>
+              <div className="stat gm">{garmin && <div className="garmin" aria-hidden="true"><Watch width={116} time={last ? fmtHMS(last.min) : ""} dist={last?.mi ? `${last.mi.toFixed(1)} mi` : last?.yd ? `${last.yd.toLocaleString()} yd` : ""} hr={last?.hr} /></div>}<div className="k"><i className={`gm-dot${garmin ? " on" : ""}`} aria-label={garmin ? "connected" : "not connected"} />{deviceName}<ConnectWearable variant="dark" label="Connect" /></div><div className="v">{garminLive ? <span className="garmin-date">{lastGarmin ? `Synced ${shortDate(lastGarmin.date)}` : "Connected"}</span> : garmin ? <span className="garmin-date">Imported {shortDate(lastGarmin!.date)}</span> : <span className="dim">Not connected</span>}</div></div>
             </div>
             {todayS && todayS.sport !== "rest" && <FuelLine s={todayS} />}
           </Link>
