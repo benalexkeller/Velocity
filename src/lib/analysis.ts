@@ -289,8 +289,8 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
     };
   }
 
-  function zoneDistribution(days = 84) {
-    const t = today(), from = addDays(t, -days);
+  function zoneDistribution(fromYmdS?: string, toYmdS?: string) {
+    const t = toYmdS ? fromYmd(toYmdS) : today(), from = fromYmdS ? fromYmd(fromYmdS) : addDays(t, -84);
     const acts = ACTIVITIES.filter((a) => between(a, from, t));
     const load = [0, 0, 0, 0, 0, 0];
     let total = 0, unknown = 0;
@@ -299,6 +299,7 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
     const zones = [1, 2, 3, 4, 5].map((z) => ({ z, load: Math.round(load[z]), pct: Math.round((load[z] / known) * 100) }));
     const easy = zones[0].pct + zones[1].pct, moderate = zones[2].pct, hard = zones[3].pct + zones[4].pct;
     // previous window for the trend line
+    const days = Math.max(1, Math.round((t.getTime() - from.getTime()) / 86400000));
     const pf = addDays(from, -days);
     const prevActs = ACTIVITIES.filter((a) => between(a, pf, from));
     let pe = 0, pt = 0;
@@ -454,8 +455,8 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
     return { ready: p.ready, daysToRace, legs, total: { mid: sum((l) => l.mid), lo: sum((l) => l.lo), hi: sum((l) => l.hi) }, transitions: p.transitions, goalTotal, longest: p.longest };
   }
 
-  function progressSeries(sp: "swim" | "bike" | "run", metric: Metric, days = 84) {
-    const t = today(), from = addDays(t, -days);
+  function progressSeries(sp: "swim" | "bike" | "run", metric: Metric, fromYmdS?: string, toYmdS?: string) {
+    const t = toYmdS ? fromYmd(toYmdS) : today(), from = fromYmdS ? fromYmd(fromYmdS) : addDays(t, -84);
     const val = (a: Activity): number | null => metric === "pace" ? paceOf(a, sp) : metric === "hr" ? a.hr ?? null : metric === "distance" ? (sp === "swim" ? a.yd ?? null : a.mi ?? null) : metric === "duration" ? a.min : activityLoad(a);
     const pts = ACTIVITIES.filter((a) => a.sport === sp && between(a, from, t)).map((a) => ({ id: a.id, date: a.date, v: val(a) })).filter((p): p is { id: string; date: string; v: number } => p.v != null);
     const cur = pts.length ? pts[pts.length - 1].v : null;

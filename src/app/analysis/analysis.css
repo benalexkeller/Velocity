@@ -232,3 +232,23 @@
 .race-facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 8px 16px; margin-top: 12px; font-size: 13px; }
 .race-facts > div { display: flex; align-items: center; gap: 8px; } .race-facts .sport-icon { color: var(--accent); flex: 0 0 auto; } .race-facts .muted { margin-left: auto; font-size: 12px; }
 @media (max-width: 900px) { .ax-recovery .tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+
+/* ---------- time range with a two-date picker ---------- */
+.ax-range { position: relative; }
+.drp { position: absolute; right: 0; top: calc(100% + 8px); z-index: 40; width: max-content; max-width: calc(100vw - 32px); background: var(--surface); border: 1px solid var(--line); border-radius: 12px; box-shadow: 0 12px 32px rgba(16, 17, 20, .14); padding: 12px; display: grid; gap: 10px; }
+.drp-nav { display: flex; align-items: center; justify-content: space-between; gap: 10px; font-size: 13px; }
+.drp-nav .btn { padding: 4px 10px; font-size: 16px; line-height: 1; }
+.drp-months { display: flex; gap: 20px; }
+.drp-month { width: 252px; }
+.drp-title { font-size: 13px; font-weight: 600; text-align: center; margin-bottom: 6px; }
+.drp-grid { display: grid; grid-template-columns: repeat(7, 36px); gap: 2px 0; justify-content: center; }
+.drp-dow { font-size: 11px; color: var(--muted); text-align: center; padding: 2px 0 4px; }
+.drp-day { height: 34px; border: 0; background: transparent; font: inherit; font-size: 13px; color: var(--ink); cursor: pointer; border-radius: 0; }
+.drp-day:hover:not(:disabled) { background: var(--accent-soft); border-radius: 8px; }
+.drp-day:disabled { color: var(--muted-2); cursor: default; }
+.drp-day.today { font-weight: 700; }
+.drp-day.in { background: var(--accent-soft); }
+.drp-day.edge { background: var(--accent); color: #fff; border-radius: 8px; }
+.drp-day.edge:hover { background: var(--accent-hover); }
+.drp-foot { display: flex; justify-content: flex-end; gap: 8px; }
+@media (max-width: 640px) { .drp { right: auto; left: 0; } .drp-month { width: 100%; } .drp-grid { grid-template-columns: repeat(7, 1fr); } }

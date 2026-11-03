@@ -11,7 +11,18 @@ import { dist, fmtDist, fmtSpeed, localize, runPace, speed, swimDist, swimPace, 
 import { niceTicks, useWidth } from "@/lib/ticks";
 
 type Sp = "swim" | "bike" | "run";
-export type Range = 4 | 12 | 99;
+/** The page's time range: whole months back from today, everything, or two dates the athlete picked. */
+export type RangeKey = "1m" | "3m" | "6m" | "all" | "custom";
+export type Range = { key: RangeKey; from: string; to: string };
+export const RANGE_LABEL: Record<RangeKey, string> = { "1m": "1 month", "3m": "3 months", "6m": "6 months", all: "All", custom: "Custom" };
+export function rangeFor(key: Exclude<RangeKey, "custom">, firstDate: string): Range {
+  const t = today(), to = ymdOf(t);
+  if (key === "all") return { key, from: firstDate < to ? firstDate : to, to };
+  const months = key === "1m" ? 1 : key === "3m" ? 3 : 6;
+  const d = new Date(t.getFullYear(), t.getMonth() - months, t.getDate());
+  return { key, from: ymdOf(d), to };
+}
+export const rangeDays = (r: Range) => Math.max(1, Math.round((fromYmd(r.to).getTime() - fromYmd(r.from).getTime()) / 86400000) + 1);
 const sign = (n: number | null | undefined, digits = 0, suffix = "") => (n == null ? "-" : `${n > 0 ? "+" : ""}${n.toFixed(digits)}${suffix}`);
 /** A stored pace or speed (s/mi, s/100 yd, mph) in the athlete's units, as a number; `fmtV` writes it. */
 const paceDisp = (sp: Sp, v: number) => (sp === "bike" ? speed(v).v : sp === "run" ? runPace(v).s : swimPace(v).s);
@@ -118,8 +129,7 @@ export function KpiRow() {
 // ---------- 2. Performance overview (fitness / fatigue / form) ----------
 export function Overview({ range }: { range: Range }) {
   const { LOAD_SERIES } = useAnalysis();
-  const days = range === 99 ? LOAD_SERIES.length : Math.min(LOAD_SERIES.length, range * 7);
-  const pts = LOAD_SERIES.slice(-days);
+  const pts = LOAD_SERIES.filter((p) => p.date >= range.from && p.date <= range.to);
   const [hover, setHover] = useState<number | null>(null);
   const i = hover ?? pts.length - 1;
   const [svgRef, W] = useWidth<SVGSVGElement>(760); const H = 230, L = 40, R = 16, T = 12, B = 28;
@@ -175,8 +185,7 @@ export function Volume({ range }: { range: Range }) {
   const [grain, setGrain] = useState<Grain>("day"); // opens on this week, day by day
   const [hov, setHov] = useState<number | null>(null);
   const cur = an.currentWeek();
-  const n = range === 99 ? cur.week : Math.min(cur.week, range);
-  const weeks = an.weeks.slice(cur.week - n, cur.week);
+  const weeks = an.weeks.filter((w) => w.week <= cur.week && w.start <= range.to && ymdOf(addDays(fromYmd(w.start), 6)) >= range.from);
   type Sess = (typeof weeks)[number]["sessions"][number];
   // one bucket per bar: its label, the planned sessions in it and the activities done in it
   type Bucket = { key: string; label: string; title: string; sessions: Sess[]; from: Date; to: Date };
@@ -272,7 +281,7 @@ export function Volume({ range }: { range: Range }) {
 // ---------- 4. Load distribution ----------
 export function LoadDistribution({ range }: { range: Range }) {
   const an = useAnalysis();
-  const z = an.zoneDistribution(range === 99 ? 400 : range * 7);
+  const z = an.zoneDistribution(range.from, range.to);
   const colors = ["var(--z1)", "var(--z2)", "var(--z3)", "var(--z4)", "var(--z5)"];
   const r = 52, c = 2 * Math.PI * r;
   let off = 0;
@@ -285,7 +294,7 @@ export function LoadDistribution({ range }: { range: Range }) {
           <svg viewBox="0 0 140 140" className="donut" role="img" aria-label="Load by zone">
             {z.zones.map((zz, i) => { const len = (zz.pct / 100) * c; const el = <circle key={zz.z} cx="70" cy="70" r={r} fill="none" stroke={colors[i]} strokeWidth="18" strokeDasharray={`${len} ${c - len}`} strokeDashoffset={-off} transform="rotate(-90 70 70)" />; off += len; return el; })}
             <text x="70" y="66" textAnchor="middle" className="ink" fontSize="24" fontWeight="600">{z.total}</text>
-            <text x="70" y="84" textAnchor="middle">load, {range === 99 ? "all" : `${range} wk`}</text>
+            <text x="70" y="84" textAnchor="middle">load, {range.key === "all" ? "all" : range.key === "custom" ? `${rangeDays(range)} d` : RANGE_LABEL[range.key].replace(" month", " mo")}</text>
           </svg>
           <table className="zones"><thead><tr><th>Zone<Info {...KPI_INFO.zones} /></th><th>Share</th><th>Load</th></tr></thead><tbody>{z.zones.map((zz, i) => <tr key={zz.z}><td><i style={{ background: colors[i] }} />Zone {zz.z}</td><td>{zz.pct}%</td><td className="muted">{zz.load}</td></tr>)}</tbody></table>
         </div>
@@ -431,7 +440,7 @@ export function Progress({ range, onPick }: { range: Range; onPick: (id: string)
   const an = useAnalysis();
   const [sp, setSp] = useState<Sp | "all">("run");
   const [m, setM] = useState<Metric>("pace");
-  const days = range === 99 ? 400 : range * 7;
+  const days = rangeDays(range);
   const [svgRef, W] = useWidth<SVGSVGElement>(760); const H = 220, L = 46, R = 12, T = 14, B = 26;
   const COLORS: Record<Sp, string> = { swim: "var(--swim)", bike: "var(--bike)", run: "var(--run)" };
   const sports: Sp[] = sp === "all" ? ["swim", "bike", "run"] : [sp];
@@ -439,7 +448,7 @@ export function Progress({ range, onPick }: { range: Range; onPick: (id: string)
   const normalise = sp === "all" && (m === "pace" || m === "distance");
   // bike "pace" is a speed, so its ratio is flipped to keep "faster = up" consistent with run and swim
   const conv = (k: Sp, v: number) => (m === "pace" ? paceDisp(k, v) : m === "distance" ? distDisp(k, v) : v); // stored → the athlete's units
-  const series = sports.map((k) => { const s = an.progressSeries(k, m, days); const base = s.pts[0]?.v ?? 1; return { k, ...s, plot: s.pts.map((q) => ({ ...q, y: normalise ? (m === "pace" && k === "bike" ? (base / q.v) * 100 : (q.v / base) * 100) : conv(k, q.v) })) }; });
+  const series = sports.map((k) => { const s = an.progressSeries(k, m, range.from, range.to); const base = s.pts[0]?.v ?? 1; return { k, ...s, plot: s.pts.map((q) => ({ ...q, y: normalise ? (m === "pace" && k === "bike" ? (base / q.v) * 100 : (q.v / base) * 100) : conv(k, q.v) })) }; });
   const all = series.flatMap((s) => s.plot);
   const inv = m === "pace" && sp !== "bike" && !normalise ? true : normalise && m === "pace";
   const vals = all.map((q) => q.y);
@@ -447,7 +456,7 @@ export function Progress({ range, onPick }: { range: Range; onPick: (id: string)
   const floorZero = !(m === "pace" || m === "hr" || normalise);
   const nt = niceTicks(floorZero ? 0 : rawLo, rawHi, 4, normalise ? "percent" : m === "pace" && sp !== "bike" ? "pace" : m === "duration" ? "number" : "number");
   const lo = nt.lo, hi = nt.hi;
-  const start = all.length ? fromYmd(all.reduce((a, q) => (q.date < a ? q.date : a), all[0].date)) : addDays(today(), -days), end = today();
+  const start = all.length ? fromYmd(all.reduce((a, q) => (q.date < a ? q.date : a), all[0].date)) : addDays(fromYmd(range.to), -days), end = fromYmd(range.to);
   const x = (dt: string) => L + ((fromYmd(dt).getTime() - start.getTime()) / Math.max(1, end.getTime() - start.getTime())) * (W - L - R);
   const y = (n: number) => (inv ? T + ((n - lo) / (hi - lo)) * (H - T - B) : H - B - ((n - lo) / (hi - lo)) * (H - T - B));
   const fmtFor = (k: Sp, n: number) => m === "pace" ? fmtV(k, n) : m === "hr" ? `${n.toFixed(0)}` : m === "distance" ? (k === "swim" ? `${Math.round(n)}` : n.toFixed(1)) : m === "duration" ? fmtHMS(n) : n.toFixed(0);
@@ -535,8 +544,8 @@ function BodyChart({ pts, fmt, w = 300, h = 110, ariaLabel }: { pts: { date: str
 }
 export function Recovery() {
   const an = useAnalysis();
-  const [range, setRange] = useState<Range>(4);
-  const days = range === 99 ? 3650 : range * 7;
+  const [range, setRange] = useState<"1m" | "3m" | "all">("1m");
+  const days = range === "all" ? 3650 : range === "3m" ? 91 : 30;
   const bodySummary = an.bodySummary;
   const w = bodySummary(7), p = bodySummary(7, 7);
   const vo2 = an.bodySeries("vo2", days);
@@ -559,7 +568,7 @@ export function Recovery() {
     <section className="card ax-panel" aria-label="Body">
       <div className="ax-head">
         <div><h2>Body</h2></div>
-        <div className="pill-group" role="group" aria-label="Body time range">{([4, 12, 99] as Range[]).map((r) => <button key={r} type="button" className={range === r ? "on" : ""} onClick={() => setRange(r)}>{r === 99 ? "All" : `Last ${r} weeks`}</button>)}</div>
+        <div className="pill-group" role="group" aria-label="Body time range">{(["1m", "3m", "all"] as const).map((r) => <button key={r} type="button" className={range === r ? "on" : ""} onClick={() => setRange(r)}>{RANGE_LABEL[r]}</button>)}</div>
       </div>
       <div className="ax-recovery">
         <div className="tiles">
