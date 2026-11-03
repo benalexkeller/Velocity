@@ -276,13 +276,16 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
       return w ? x / w : null;
     };
     const efNow = ef(0, 28), efPrev = ef(28, 56);
+    const vo2All = BODY.filter((b) => b.vo2 != null).map((b) => ({ date: b.date, v: b.vo2 as number }));
+    const vo2Now = vo2All.at(-1) ?? null, vo2Ago = [...vo2All].reverse().find((b) => fromYmd(b.date) <= addDays(t, -28)) ?? null;
     return {
+      vo2: { v: vo2Now?.v ?? null, date: vo2Now?.date ?? null, d: vo2Now && vo2Ago ? vo2Now.v - vo2Ago.v : null, since: vo2Ago?.date ?? null, spark: vo2All.slice(-12).map((b) => b.v) },
       week: { done: ws.done, total: ws.total, h: ws.actualH, plannedH: ws.plannedH, bars: recent.map((w) => weekStatus(w).actualH) },
       load: { v: Math.round(actual(cur)), planned: Math.round(planned(cur)), last: prev ? Math.round(actual(prev)) : null, bars: recent.map((w) => actual(w)) },
       fitness: { v: last.fitness, d: baseline ? last.fitness - wkAgo.fitness : null, spark: spark("fitness") },
       form: { v: form, word: formWord, fatigue: last.fatigue, fitness: last.fitness, spark: spark("form") },
       compliance: { v: comp.pct, done: comp.done, planned: comp.planned },
-      ef: { v: efNow, d: efNow != null && efPrev != null ? efNow - efPrev : null },
+      ef: { v: efNow, d: efNow != null && efPrev != null ? efNow - efPrev : null, ratio: efNow != null && efPrev ? efNow / efPrev : null },
     };
   }
 
@@ -304,11 +307,16 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
     return { total: Math.round(total), zones, easy, moderate, hard, prevEasy, sessions: acts.length, withHr: acts.filter((a) => a.hr).length };
   }
 
-  /** Sport cards: current 4 weeks vs the 4 before, plus a 12-week weekly trend. */
+  /** The last `n` calendar weeks (Monday to Sunday) up to the current one, labelled with the plan's week number when inside the plan. */
+  function lastWeeks(n = 12) {
+    const cur = currentWeek();
+    const s0 = fromYmd(cur.start);
+    return Array.from({ length: n }, (_, i) => { const start = addDays(s0, -7 * (n - 1 - i)); const ys = ymd(start); const w = WEEKS.find((x) => x.start === ys); return { start: ys, week: w ? w.week : null }; });
+  }
+  /** Sport cards: the last 5 sessions (fewer when there are fewer) against the 5 before, plus a 12-week weekly trend. */
   function sportPerformance(sp: "swim" | "bike" | "run") {
-    const t = today();
-    const win = (endOffset: number) => ACTIVITIES.filter((a) => a.sport === sp && between(a, addDays(t, -endOffset - 28), addDays(t, -endOffset)));
-    const cur = win(0), prev = win(28);
+    const all = ACTIVITIES.filter((a) => a.sport === sp && fromYmd(a.date) <= today());
+    const cur = all.slice(-5), prev = all.slice(Math.max(0, all.length - 10), Math.max(0, all.length - 5));
     const wavg = (xs: Activity[], f: (a: Activity) => number | null) => { const v = xs.filter((a) => f(a) != null); const w = v.reduce((s, a) => s + a.min, 0); return w ? v.reduce((s, a) => s + (f(a) as number) * a.min, 0) / w : null; };
     const pace = (a: Activity) => paceOf(a, sp);
     const hr = (a: Activity) => a.hr ?? null;
@@ -321,9 +329,126 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
       { k: sp === "swim" ? "Longest swim" : sp === "bike" ? "Longest ride" : "Longest run", cur: longest(cur), prev: longest(prev), kind: "dist" as const },
     ];
     // weekly trend (12 weeks): duration-weighted pace per week
-    const wk = currentWeek();
-    const trend = WEEKS.slice(Math.max(0, wk.week - 12), wk.week).map((w) => { const s = fromYmd(w.start), e = addDays(s, 7); const xs = ACTIVITIES.filter((a) => a.sport === sp && between(a, addDays(s, -1), e)); return { week: w.week, v: wavg(xs, pace) }; });
-    return { rows, trend, sessions: cur.length };
+    const trend = lastWeeks(12).map((w) => { const s = fromYmd(w.start), e = addDays(s, 7); const xs = ACTIVITIES.filter((a) => a.sport === sp && between(a, addDays(s, -1), e)); return { week: w.week, start: w.start, v: wavg(xs, pace) }; });
+    return { rows, trend, sessions: cur.length, prevSessions: prev.length };
+  }
+
+  // ---------- thresholds (from the plan's zones, else the best recent session) ----------
+  /** Threshold pace or speed in storage units (s/mi, s/100 yd, mph). */
+  function thresholdRef(sp: "swim" | "bike" | "run"): number | null {
+    const z = ATHLETE.zones[sp]?.["Tempo"];
+    const r = parseRange(z);
+    if (r && !(sp === "bike" && /W$/.test(z ?? ""))) return sp === "run" ? r[0] : sp === "swim" ? (r[0] + r[1]) / 2 : r[1];
+    const t = today();
+    const v = ACTIVITIES.filter((a) => a.sport === sp && between(a, addDays(t, -56), t) && paceEligible(a, sp)).map((a) => paceOf(a, sp)).filter((x): x is number => x != null);
+    return v.length ? (sp === "bike" ? Math.max(...v) : Math.min(...v)) : null;
+  }
+  const clamp01 = (x: number) => Math.max(0, Math.min(1, x));
+
+  /** A 0-100 score for the latest session of a sport: intensity against threshold (40), efficiency against the
+   *  athlete's own usual (30), duration against the longest recent session (30). Parts without data are left out
+   *  and the score is scaled to what is there. */
+  function sessionScore(sp: "swim" | "bike" | "run") {
+    const t = today();
+    const a = [...ACTIVITIES].reverse().find((x) => x.sport === sp && fromYmd(x.date) <= t && paceEligible(x, sp) && paceOf(x, sp) != null);
+    if (!a) return null;
+    const parts: { k: string; pts: number; max: number; text: string }[] = [];
+    const missing: string[] = [];
+    const pace = paceOf(a, sp) as number, ref = thresholdRef(sp);
+    if (ref) {
+      const ratio = sp === "bike" ? pace / ref : ref / pace;
+      parts.push({ k: "Intensity", pts: clamp01((ratio - 0.8) / 0.2) * 40, max: 40, text: `${Math.round(ratio * 100)}% of threshold ${sp === "bike" ? "speed" : "pace"}` });
+    } else missing.push("threshold");
+    const r = analyzeActivity(a);
+    if (r.ef != null && r.efAvg != null && r.efN >= 2) {
+      const q = r.ef / r.efAvg;
+      parts.push({ k: "Efficiency", pts: q < 1 ? clamp01((q - 0.9) / 0.1) * 20 : 20 + clamp01((q - 1) / 0.1) * 10, max: 30, text: `${q >= 1 ? "+" : ""}${Math.round((q - 1) * 100)}% speed per heartbeat vs your 4-week usual` });
+    } else missing.push("heart rate");
+    const longest = Math.max(...ACTIVITIES.filter((x) => x.sport === sp && between(x, addDays(t, -56), t)).map((x) => x.min), a.min);
+    parts.push({ k: "Duration", pts: clamp01(a.min / longest) * 30, max: 30, text: `${a.min} of your longest ${longest} min` });
+    const max = parts.reduce((x, p) => x + p.max, 0);
+    const score = Math.round((parts.reduce((x, p) => x + p.pts, 0) / max) * 100);
+    return { activity: a, score, parts: parts.map((p) => ({ ...p, pts: Math.round(p.pts) })), missing };
+  }
+
+  /** Expert insights per sport, one point per plan week (last 12), from whole-session values. */
+  function sportInsights(sp: "swim" | "bike" | "run") {
+    const weeks = lastWeeks(12);
+    const inWeek = (w: { start: string }) => { const s0 = fromYmd(w.start); return ACTIVITIES.filter((a) => a.sport === sp && between(a, addDays(s0, -1), addDays(s0, 7))); };
+    const wavg = (xs: { v: number; w: number }[]) => { const w = xs.reduce((s2, x) => s2 + x.w, 0); return w ? xs.reduce((s2, x) => s2 + x.v * x.w, 0) / w : null; };
+    type Series = { k: string; label: string; kind: "pace" | "speed" | "hr"; info: string; pts: { week: number | null; start: string; v: number | null }[] };
+    const out: Series[] = [];
+    const series = (k: string, label: string, kind: Series["kind"], info: string, f: (xs: Activity[]) => number | null) => out.push({ k, label, kind, info, pts: weeks.map((w) => ({ week: w.week, start: w.start, v: f(inWeek(w)) })) });
+    if (sp === "run") {
+      series("thr", "Pace at threshold heart rate", "pace", "What your pace would be at your threshold heart rate, from each steady run's speed per heartbeat (runs of 20 min or more with heart rate). Falling = fitter.",
+        (xs) => wavg(xs.filter((a) => a.hr && a.pace_s && a.min >= 20).map((a) => ({ v: 1609.34 / (((1609.34 / (a.pace_s! / 60)) / a.hr!) * LTHR) * 60, w: a.min }))));
+      const z2 = parseRange(ATHLETE.zones.run?.["Zone 2"]);
+      series("hrEasy", "Heart rate at easy pace", "hr", "Average heart rate of runs at your easy (Zone 2) pace, or within 8% of the week's average pace when none fall in the zone. Falling at the same pace = the same work costs less.",
+        (xs) => { const withHr = xs.filter((a) => a.hr && a.pace_s); const inZone = z2 ? withHr.filter((a) => a.pace_s! >= z2[0] && a.pace_s! <= z2[1]) : []; const avgP = wavg(xs.filter((a) => a.pace_s).map((a) => ({ v: a.pace_s!, w: a.min }))); const near = avgP != null ? withHr.filter((a) => Math.abs(a.pace_s! - avgP) / avgP <= 0.08) : []; return wavg((inZone.length ? inZone : near).map((a) => ({ v: a.hr!, w: a.min }))); });
+      series("long", "Longest run pace", "pace", "Pace of the longest run of the week. Holding pace as the long run grows is race durability.",
+        (xs) => { const l = xs.filter((a) => a.pace_s).sort((a, b) => (b.mi ?? 0) - (a.mi ?? 0))[0]; return l?.pace_s ?? null; });
+    } else if (sp === "bike") {
+      series("thr", "Speed at threshold heart rate", "speed", "What your speed would be at your threshold heart rate, from each steady ride's speed per heartbeat (rides of 20 min or more with heart rate). Rising = fitter. Power curves appear once a power meter is connected.",
+        (xs) => wavg(xs.filter((a) => a.hr && a.mph && a.min >= 20).map((a) => ({ v: (a.mph! / a.hr!) * LTHR, w: a.min }))));
+      const z2 = parseRange(ATHLETE.zones.bike?.["Zone 2"]); const z2mph = z2 && !/W$/.test(ATHLETE.zones.bike?.["Zone 2"] ?? "") ? z2 : null;
+      series("hrEasy", "Heart rate at steady speed", "hr", "Average heart rate of rides at your steady (Zone 2) speed, or within 8% of the week's average speed when none fall in the zone. Falling at the same speed = the same work costs less.",
+        (xs) => { const withHr = xs.filter((a) => a.hr && a.mph); const inZone = z2mph ? withHr.filter((a) => a.mph! >= z2mph[0] && a.mph! <= z2mph[1]) : []; const avgV = wavg(xs.filter((a) => a.mph).map((a) => ({ v: a.mph!, w: a.min }))); const near = avgV != null ? withHr.filter((a) => Math.abs(a.mph! - avgV) / avgV <= 0.08) : []; return wavg((inZone.length ? inZone : near).map((a) => ({ v: a.hr!, w: a.min }))); });
+      series("long", "Longest ride speed", "speed", "Average speed of the longest ride of the week. Holding speed as the ride grows is race durability.",
+        (xs) => { const l = xs.filter((a) => a.mph).sort((a, b) => (b.mi ?? 0) - (a.mi ?? 0))[0]; return l?.mph ?? null; });
+    } else {
+      series("thr", "Threshold pace", "pace", "Best pace of swims of 1,000 yd (900 m) or more in the six weeks up to that week, a stand-in for critical swim speed. Falling = fitter.",
+        (xs) => { if (!xs.length) return null; const end = addDays(fromYmd(xs[0].date), 7); const win = ACTIVITIES.filter((a) => a.sport === "swim" && a.p100_s && (a.yd ?? 0) >= 1000 && between(a, addDays(end, -42), end)); const v = win.map((a) => a.p100_s!); return v.length ? Math.min(...v) : null; });
+      series("long", "Longest swim pace", "pace", "Pace of the longest swim of the week. Holding pace as the swim grows is race durability.",
+        (xs) => { const l = xs.filter((a) => a.p100_s).sort((a, b) => (b.yd ?? 0) - (a.yd ?? 0))[0]; return l?.p100_s ?? null; });
+    }
+    return out.map((sr) => { const vals = sr.pts.filter((p) => p.v != null); return { ...sr, cur: vals.length ? vals[vals.length - 1].v : null }; });
+  }
+
+  /** Body values over a range, for the Body charts. */
+  function bodySeries(k: "rhr" | "hrv" | "sleep_h" | "stress" | "vo2" | "recovery", days: number) {
+    const from = addDays(today(), -days);
+    return BODY.filter((b) => b[k] != null && (days >= 3650 || fromYmd(b.date) > from)).map((b) => ({ date: b.date, v: b[k] as number }));
+  }
+
+  /** Race window: each leg's projection moved by the sport's 8-week pace trend, with a spread from how much the
+   *  sessions scatter; plus the countdown, sessions near goal pace and long-session durability. */
+  function raceWindow() {
+    const p = raceProjection();
+    const D = ATHLETE.raceDist, t = today();
+    const daysToRace = ATHLETE.hasRace ? Math.round((fromYmd(ATHLETE.race.date).getTime() - t.getTime()) / 864e5) : null;
+    const goal = ATHLETE.raceSplits, goalOn = ATHLETE.hasRace && !!ATHLETE.race.goal;
+    const legs = (["swim", "bike", "run"] as const).map((sp) => {
+      const dist = sp === "swim" ? D.swimYd : sp === "bike" ? D.bikeMi : D.runMi;
+      const centre = sp === "swim" ? p.swimH : sp === "bike" ? p.bikeH : p.runH;
+      const xs = ACTIVITIES.filter((a) => a.sport === sp && between(a, addDays(t, -56), t) && paceEligible(a, sp) && paceOf(a, sp) != null);
+      // weighted linear trend of pace against age in days (negative age = earlier), weights = minutes
+      let trend = 0, spread = 0.03;
+      if (xs.length >= 3) {
+        const pts = xs.map((a) => ({ x: -(t.getTime() - fromYmd(a.date).getTime()) / 864e5, y: paceOf(a, sp) as number, w: a.min }));
+        const W = pts.reduce((s2, q) => s2 + q.w, 0), mx = pts.reduce((s2, q) => s2 + q.x * q.w, 0) / W, my = pts.reduce((s2, q) => s2 + q.y * q.w, 0) / W;
+        const sxx = pts.reduce((s2, q) => s2 + q.w * (q.x - mx) ** 2, 0), sxy = pts.reduce((s2, q) => s2 + q.w * (q.x - mx) * (q.y - my), 0);
+        const slope = sxx ? sxy / sxx : 0; // pace units per day
+        const rel = (slope * (daysToRace ?? 0)) / my; // relative change by race day
+        trend = Math.max(-0.05, Math.min(0.05, sp === "bike" ? -rel : rel)); // for time: a faster pace (lower) shortens, a higher speed shortens
+        const resid = Math.sqrt(pts.reduce((s2, q) => s2 + q.w * (q.y - (my + slope * (q.x - mx))) ** 2, 0) / W) / my;
+        spread = Math.max(0.02, Math.min(0.08, resid));
+      }
+      const mid = centre != null && dist > 0 ? centre * (1 + trend) : centre;
+      const goalH = goalOn ? (sp === "swim" ? goal.swim : sp === "bike" ? goal.bike : goal.run) : null;
+      // sessions in the last 28 days within 5% of goal pace
+      let near: { n: number; of: number } | null = null;
+      if (goalH && dist > 0) {
+        const goalPace = sp === "swim" ? (goalH * 3600) / (dist / 100) : sp === "bike" ? dist / goalH : (goalH * 3600) / dist;
+        const recent = ACTIVITIES.filter((a) => a.sport === sp && between(a, addDays(t, -28), t) && paceEligible(a, sp) && paceOf(a, sp) != null);
+        near = { n: recent.filter((a) => Math.abs((paceOf(a, sp) as number) - goalPace) / goalPace <= 0.05).length, of: recent.length };
+      }
+      const longest = sp === "swim" ? p.longest.swim : sp === "bike" ? p.longest.bike : p.longest.run;
+      return { k: sp, show: dist > 0, mid, lo: mid != null ? mid * (1 - spread) : null, hi: mid != null ? mid * (1 + spread) : null, trend, spread, near, durability: dist > 0 ? Math.min(1, longest / dist) : null, goalH };
+    }).filter((l) => l.show);
+    const complete = legs.every((l) => l.mid != null);
+    const sum = (f: (l: (typeof legs)[number]) => number | null) => (complete ? legs.reduce((s2, l) => s2 + (f(l) ?? 0), 0) + p.transitions : null);
+    const goalTotal = goalOn ? goal.swim + goal.bike + goal.run + goal.transitions : null;
+    return { ready: p.ready, daysToRace, legs, total: { mid: sum((l) => l.mid), lo: sum((l) => l.lo), hi: sum((l) => l.hi) }, transitions: p.transitions, goalTotal, longest: p.longest };
   }
 
   function progressSeries(sp: "swim" | "bike" | "run", metric: Metric, days = 84) {
@@ -377,7 +502,7 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
   }
 
 
-  return { activities: ACTIVITIES, weeks: WEEKS, phases: PHASES, athlete: ATHLETE, BODY, bodySummary, corridorAt, activitiesOn, actualByDiscipline, currentWeek, rollingCompliance, weekStatus, LOAD_SERIES, loadNow, loadWeekly, complianceFor, complianceByPhase, paceSeries, weightedAvgPace, volumeWeekly, totals, raceProjection, analyzeActivity, kpis, zoneDistribution, sportPerformance, progressSeries, trainingQuality, raceReadiness, observations };
+  return { activities: ACTIVITIES, weeks: WEEKS, phases: PHASES, athlete: ATHLETE, BODY, bodySummary, corridorAt, activitiesOn, actualByDiscipline, currentWeek, rollingCompliance, weekStatus, LOAD_SERIES, loadNow, loadWeekly, complianceFor, complianceByPhase, paceSeries, weightedAvgPace, volumeWeekly, totals, raceProjection, analyzeActivity, kpis, zoneDistribution, sportPerformance, sportInsights, sessionScore, thresholdRef, bodySeries, raceWindow, progressSeries, trainingQuality, raceReadiness, observations };
 }
 export type Analysis = ReturnType<typeof createAnalysis>;
 /** The seed-only toolkit, for code that runs outside the plan store (content, scripts). */

@@ -61,6 +61,25 @@ export const KPI_INFO = {
 } as const;
 
 // ---------- 1. KPI tiles ----------
+/** A half-circle gauge with 1.00 at the centre: the needle sits left (red) when the ratio is under 1, right (green) above. */
+function RatioGauge({ ratio, w = 120 }: { ratio: number | null; w?: number }) {
+  const h = w * 0.58, cx = w / 2, cy = h - 6, r = w / 2 - 8;
+  const f = ratio == null ? 0.5 : Math.max(0, Math.min(1, (ratio - 0.85) / 0.3)); // 0.85 … 1.15 across the dial
+  const ang = Math.PI - f * Math.PI;
+  const nx = cx + Math.cos(ang) * (r - 4), ny = cy - Math.sin(ang) * (r - 4);
+  const arc = (a0: number, a1: number) => `M${cx + Math.cos(a0) * r} ${cy - Math.sin(a0) * r} A${r} ${r} 0 0 1 ${cx + Math.cos(a1) * r} ${cy - Math.sin(a1) * r}`;
+  const col = ratio == null ? "var(--muted-2)" : ratio >= 1 ? "var(--ok)" : "var(--danger)";
+  return (
+    <svg className="gauge" viewBox={`0 0 ${w} ${h}`} width={w} height={h} role="img" aria-label={ratio == null ? "No baseline yet" : `${ratio.toFixed(2)} of the earlier value`}>
+      <path d={arc(Math.PI, Math.PI / 2)} fill="none" stroke="var(--danger-soft, #fde2e2)" strokeWidth={9} strokeLinecap="round" />
+      <path d={arc(Math.PI / 2, 0)} fill="none" stroke="var(--ok-soft, #dcf3e6)" strokeWidth={9} strokeLinecap="round" />
+      <line x1={cx} y1={cy - r - 6} x2={cx} y2={cy - r + 6} stroke="var(--muted-2)" strokeWidth={1.5} />
+      <line x1={cx} y1={cy} x2={nx} y2={ny} stroke={col} strokeWidth={3} strokeLinecap="round" />
+      <circle cx={cx} cy={cy} r={4} fill={col} />
+      <text x={cx} y={cy - r - 10} textAnchor="middle" fontSize={10} fill="var(--muted)">1.00</text>
+    </svg>
+  );
+}
 export function KpiRow() {
   const an = useAnalysis();
   const k = an.kpis();
@@ -69,10 +88,10 @@ export function KpiRow() {
     <div className="ax-kpis">
       <div className="card kpi"><div className="k">This week<Info {...KPI_INFO.week} /></div><div className="row"><div className="v">{k.week.done}<small> / {k.week.total}</small></div></div><div className="u">{k.week.h.toFixed(1)} of {k.week.plannedH.toFixed(1)} h</div><Bars pts={k.week.bars} /></div>
       <div className="card kpi"><div className="k">Week load<Info {...KPI_INFO.load} /></div><div className="row"><div className="v">{k.load.v}<small> / {k.load.planned}</small></div></div><div className="u">{k.load.last != null ? `last week ${k.load.last}` : "first plan week"}</div><Bars pts={k.load.bars} /></div>
-      <div className="card kpi"><div className="k">Fitness<Info {...KPI_INFO.fitness} /></div><div className="row"><div className="v">{k.fitness.v.toFixed(0)}</div>{pts(k.fitness.d)}</div><div className="u">42-day load</div><Spark pts={k.fitness.spark} /></div>
-      <div className="card kpi"><div className="k">Form<Info {...KPI_INFO.form} /></div><div className="row"><div className="v">{sign(k.form.v)}</div><span className="delta">{k.form.word}</span></div><div className="u">fatigue {k.form.fatigue.toFixed(0)}, fitness {k.form.fitness.toFixed(0)}</div><Spark pts={k.form.spark} color="var(--swim)" /></div>
       <div className="card kpi"><div className="k">Completed<span className="at">28 d</span><Info {...KPI_INFO.compliance} /></div><div className="row"><div className="v">{k.compliance.v ?? "-"}{k.compliance.v != null && <small>%</small>}</div></div><div className="u">{k.compliance.planned ? `${Math.round(k.compliance.done * 2) / 2} of ${k.compliance.planned} sessions` : "no sessions planned yet"}</div></div>
-      <div className="card kpi"><div className="k">Run efficiency<Info {...KPI_INFO.ef} /></div><div className="row"><div className="v">{k.ef.v != null ? k.ef.v.toFixed(2) : "-"}</div>{k.ef.v != null && (k.ef.d != null ? <span className="delta">{k.ef.d >= 0 ? "+" : "−"}{Math.abs(k.ef.d).toFixed(2)}, 4 wk</span> : <span className="delta muted">no baseline yet</span>)}</div><div className="u">{k.ef.v != null ? "m/min per bpm, 4 wk" : "no runs with heart rate"}</div></div>
+      <div className="card kpi"><div className="k">Fitness<Info {...KPI_INFO.fitness} /></div><div className="row"><div className="v">{k.fitness.v.toFixed(0)}</div>{pts(k.fitness.d)}</div><div className="u">42-day load</div><Spark pts={k.fitness.spark} /></div>
+      <div className="card kpi gauge-card"><div className="k">Run efficiency<Info {...KPI_INFO.ef} /></div><div className="row"><div className="v">{k.ef.v != null ? k.ef.v.toFixed(2) : "-"}</div>{k.ef.v != null && (k.ef.d != null ? <span className="delta">{k.ef.d >= 0 ? "+" : "−"}{Math.abs(k.ef.d).toFixed(2)}, 4 wk</span> : <span className="delta muted">no baseline yet</span>)}</div><RatioGauge ratio={k.ef.ratio} /><div className="u">{k.ef.v != null ? (k.ef.ratio != null ? `${k.ef.ratio >= 1 ? "up" : "down"} ${Math.abs((k.ef.ratio - 1) * 100).toFixed(0)}% vs the 4 weeks before` : "m/min per bpm, 4 wk") : "no runs with heart rate"}</div></div>
+      <div className="card kpi"><div className="k">VO2max<Info title="VO2max" text="Your watch's estimate of the most oxygen your body can use per kilogram per minute, the usual measure of aerobic fitness. Change against the reading 4 weeks ago; the line shows the last readings." /></div><div className="row"><div className="v">{k.vo2.v != null ? k.vo2.v.toFixed(0) : "-"}</div>{k.vo2.v != null && (k.vo2.d != null ? <span className="delta">{k.vo2.d >= 0 ? "+" : "−"}{Math.abs(k.vo2.d).toFixed(0)}, 4 wk</span> : <span className="delta muted">first readings</span>)}</div><div className="u">{k.vo2.date ? `last reading ${dateLabel(k.vo2.date)}` : "no readings yet"}</div>{k.vo2.spark.length > 1 ? <Spark pts={k.vo2.spark} /> : null}</div>
     </div>
   );
 }
@@ -134,7 +153,7 @@ const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "
 export function Volume({ range }: { range: Range }) {
   const an = useAnalysis();
   const [mode, setMode] = useState<"hours" | "distance" | "load">("hours");
-  const [grain, setGrain] = useState<Grain>("week");
+  const [grain, setGrain] = useState<Grain>("day"); // opens on this week, day by day
   const [hov, setHov] = useState<number | null>(null);
   const cur = an.currentWeek();
   const n = range === 99 ? cur.week : Math.min(cur.week, range);
@@ -187,7 +206,7 @@ export function Volume({ range }: { range: Range }) {
   return (
     <section className="card ax-panel" aria-label="Training volume">
       <div className="ax-head">
-        <div><h2>Training volume</h2><p className="muted small">{grain === "day" ? "This week, day by day: done against planned" : grain === "month" ? "Per month, done against planned" : "Per week, done against planned"}</p></div>
+        <div><h2>Training volume</h2></div>
         <div className="ax-tools">
           <div className="pill-group">{(["day", "week", "month"] as const).map((g) => <button key={g} type="button" className={grain === g ? "on" : ""} onClick={() => { setGrain(g); setHov(null); }}>{g === "day" ? "Daily" : g === "week" ? "Weekly" : "Monthly"}</button>)}</div>
           <div className="pill-group">{(["hours", "distance", "load"] as const).map((m) => <button key={m} type="button" className={mode === m ? "on" : ""} onClick={() => setMode(m)}>{m === "hours" ? "Hours" : m === "distance" ? "Distance" : "Load"}</button>)}</div>
@@ -266,7 +285,79 @@ export function LoadDistribution({ range }: { range: Range }) {
 }
 
 // ---------- 5. Sport performance ----------
-function SportCard({ sp }: { sp: Sp }) {
+const ROW_INFO: Record<string, { title: string; text: string }> = {
+  Pace: { title: "Pace", text: "Average pace of your last sessions, weighted by how long each one was. Lower is faster." },
+  "Avg speed": { title: "Average speed", text: "Average speed of your last rides, weighted by how long each one was." },
+  "Best pace": { title: "Best pace", text: "The fastest average pace among your last sessions that were long enough to count." },
+  "Best speed": { title: "Best speed", text: "The fastest average speed among your last rides that were long enough to count." },
+  "Heart rate": { title: "Heart rate", text: "Average heart rate of your last sessions, weighted by duration. Lower at the same pace means the work costs less." },
+  "Longest swim": { title: "Longest swim", text: "The longest single swim among your last sessions." },
+  "Longest ride": { title: "Longest ride", text: "The longest single ride among your last sessions." },
+  "Longest run": { title: "Longest run", text: "The longest single run among your last sessions." },
+};
+/** Indexes of the x-axis labels for n points: the first, the last, and up to two in between, spread evenly. */
+export function axisPicks(n: number, want = 4): number[] {
+  if (n <= want) return Array.from({ length: n }, (_, i) => i);
+  const out = new Set<number>();
+  for (let i = 0; i < want; i++) out.add(Math.floor((i * (n - 1)) / (want - 1)));
+  return [...out];
+}
+/** An arc gauge with the score inside: the latest session of a sport, 0-100. */
+function ScoreGauge({ sp }: { sp: Sp }) {
+  const an = useAnalysis();
+  const sc = an.sessionScore(sp);
+  const w = 96, r = 40, cx = w / 2, cy = w / 2, c = 2 * Math.PI * r, arcLen = c * 0.75;
+  const f = sc ? sc.score / 100 : 0;
+  const col = !sc ? "var(--muted-2)" : sc.score >= 75 ? "var(--ok)" : sc.score >= 50 ? "var(--accent)" : "var(--warn)";
+  return (
+    <div className={`sgauge${sc ? "" : " empty"}`}>
+      <svg viewBox={`0 0 ${w} ${w}`} width={w} height={w} role="img" aria-label={sc ? `${sp} session score ${sc.score}` : `no ${sp} session yet`}>
+        <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--track)" strokeWidth={8} strokeDasharray={`${arcLen} ${c - arcLen}`} strokeLinecap="round" transform={`rotate(135 ${cx} ${cy})`} />
+        {sc && <circle cx={cx} cy={cy} r={r} fill="none" stroke={col} strokeWidth={8} strokeDasharray={`${arcLen * f} ${c - arcLen * f}`} strokeLinecap="round" transform={`rotate(135 ${cx} ${cy})`} />}
+        <text x={cx} y={cy + 8} textAnchor="middle" fontSize={26} fontWeight={600} fill="var(--ink)">{sc ? sc.score : "–"}</text>
+      </svg>
+      <div className="sg-text">
+        <b>{sc ? sc.activity.name : "No session yet"}</b>
+        <span className="muted">{sc ? dateLabel(sc.activity.date) : "scores the latest one"}</span>
+      </div>
+      {sc && <div className="sg-pop" role="tooltip">
+        {sc.parts.map((p) => <div key={p.k}><span>{p.k}</span><b>{p.pts} / {p.max}</b><small>{p.text}</small></div>)}
+        {sc.missing.length > 0 && <small className="muted">No {sc.missing.join(" or ")} for this session, so the score is scaled to the parts it has.</small>}
+      </div>}
+    </div>
+  );
+}
+const weekLabel = (q: { week: number | null; start: string }) => (q.week != null ? `W${q.week}` : shortDate(q.start));
+function MiniTrend({ pts, kind, sp, label, info }: { pts: { week: number | null; start: string; v: number | null }[]; kind: "pace" | "speed" | "hr"; sp: Sp; label: string; info: string }) {
+  const [svgRef, W] = useWidth<SVGSVGElement>(240); const H = 92, L = 42, R = 8, T = 8, B = 18;
+  const disp = pts.map((q) => ({ ...q, v: q.v == null ? null : kind === "pace" ? paceDisp(sp, q.v) : kind === "speed" ? speed(q.v).v : q.v }));
+  const v = disp.map((q) => q.v).filter((q): q is number => q != null);
+  const lo = v.length ? Math.min(...v) : 0, hi = v.length ? Math.max(...v) : 1;
+  const nt = niceTicks(lo, hi, 2, kind === "pace" ? "pace" : "number");
+  const inv = kind === "pace";
+  const y = (n: number) => (inv ? T + ((n - nt.lo) / (nt.hi - nt.lo)) * (H - T - B) : H - B - ((n - nt.lo) / (nt.hi - nt.lo)) * (H - T - B));
+  const x = (i: number) => L + (disp.length < 2 ? 0 : (i / (disp.length - 1)) * (W - L - R));
+  const f = (n: number) => (kind === "pace" ? fmtPace(n) : kind === "speed" ? n.toFixed(1) : n.toFixed(0));
+  let d = "", started = false;
+  disp.forEach((q, i) => { if (q.v == null) { started = false; return; } d += `${started ? "L" : "M"}${x(i)} ${y(q.v)}`; started = true; });
+  const cur = [...disp].reverse().find((q) => q.v != null);
+  const unit = kind === "pace" ? (sp === "swim" ? `per 100 ${swimDist(0).u === "m" ? "metres" : "yards"}` : `per ${dist(0).u === "km" ? "km" : "mile"}`) : kind === "speed" ? speed(0).u : "bpm";
+  const picks = axisPicks(disp.length);
+  return (
+    <div className="insight">
+      <div className="k"><span>{label} <small>({unit})</small></span><Info title={label} text={info} /><b>{cur?.v != null ? f(cur.v) : "-"}</b></div>
+      <svg ref={svgRef} className="chart mini" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label}>
+        {v.length ? nt.ticks.map((g, i) => <g key={i}><line x1={L} y1={y(g)} x2={W - R} y2={y(g)} stroke="var(--grid)" /><text x={L - 5} y={y(g) + 3} textAnchor="end">{f(g)}</text></g>) : null}
+        <line x1={L} y1={H - B} x2={W - R} y2={H - B} stroke="var(--line)" />
+        <path d={d} fill="none" stroke="var(--accent)" strokeWidth={1.6} />
+        {disp.map((q, i) => q.v != null ? <circle key={i} cx={x(i)} cy={y(q.v)} r={2.4} fill="var(--accent)" stroke="var(--surface)" strokeWidth={1}><title>{`${weekLabel(q)}: ${f(q.v)} ${unit}`}</title></circle> : null)}
+        {picks.map((i) => <text key={"w" + i} x={x(i)} y={H - 5} textAnchor={i === 0 ? "start" : i === disp.length - 1 ? "end" : "middle"}>{weekLabel(disp[i])}</text>)}
+        {!v.length && <text x={W / 2} y={H / 2} textAnchor="middle">Needs sessions with {kind === "hr" || label.includes("heart") ? "heart rate" : "pace"}</text>}
+      </svg>
+    </div>
+  );
+}
+function SportCard({ sp, expert }: { sp: Sp; expert: boolean }) {
   const an = useAnalysis();
   const p = an.sportPerformance(sp);
   const fmtRow = (kind: string, v: number | null) => v == null ? "-" : kind === "pace" ? `${fmtV(sp, paceDisp(sp, v))} ${unitOf(sp)}` : kind === "speed" ? fmtSpeed(v) : kind === "hr" ? `${v.toFixed(0)} bpm` : sp === "swim" ? `${swimDist(v).v.toLocaleString()} ${swimDist(0).u}` : fmtDist(v);
@@ -283,27 +374,36 @@ function SportCard({ sp }: { sp: Sp }) {
   let d = "", started = false;
   pts.forEach((q, i) => { if (q.v == null) { started = false; return; } d += `${started ? "L" : "M"}${x(i)} ${y(q.v)}`; started = true; });
   const guides = nt.ticks;
+  const picks = axisPicks(pts.length);
+  const unitLabel = sp === "bike" ? `(${speed(0).u})` : sp === "swim" ? `(per 100 ${swimDist(0).u === "m" ? "metres" : "yards"})` : `(per ${dist(0).u === "km" ? "km" : "mile"})`;
+  const insights = expert ? an.sportInsights(sp) : [];
   return (
     <div className="sport">
-      <div className="sh"><SportIcon sport={sp} size={22} /><b>{sp[0].toUpperCase() + sp.slice(1)}</b><span className="muted">{p.sessions} sessions in 4 wk</span></div>
-      <table><tbody>{p.rows.map((r) => <tr key={r.k}><td>{r.k}</td><td><b>{fmtRow(r.kind, r.cur)}</b></td><td><Delta v={r.cur != null && r.prev ? ((r.cur - r.prev) / r.prev) * 100 : null} good={good(r.kind)} /></td></tr>)}</tbody></table>
-      <div className="k">{sp === "bike" ? `Weekly average speed, ${speed(0).u}` : `Weekly average pace per ${unitOf(sp).replace(/^\//, "")}`}{inv ? " (higher is faster)" : ""}</div>
+      <ScoreGauge sp={sp} />
+      <div className="sh"><SportIcon sport={sp} size={22} /><b>{sp[0].toUpperCase() + sp.slice(1)}</b><span className="muted">{p.sessions ? `last ${p.sessions} session${p.sessions === 1 ? "" : "s"}` : "no sessions yet"}</span></div>
+      <table><tbody>{p.rows.map((r) => <tr key={r.k}><td><span className="info-row">{r.k}{ROW_INFO[r.k] && <Info {...ROW_INFO[r.k]} />}</span></td><td><b>{fmtRow(r.kind, r.cur)}</b></td><td><Delta v={r.cur != null && r.prev ? ((r.cur - r.prev) / r.prev) * 100 : null} good={good(r.kind)} /></td></tr>)}</tbody></table>
+      <div className="k">{sp === "bike" ? "Weekly average speed" : "Weekly average pace"} {unitLabel}</div>
       <svg ref={svgRef} className="chart mini" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${sp} weekly ${sp === "bike" ? "speed" : "pace"} trend`}>
         {v.length ? guides.map((g, i) => <g key={i}><line x1={L} y1={y(g)} x2={W - R} y2={y(g)} stroke="var(--grid)" /><text x={L - 5} y={y(g) + 3} textAnchor="end">{fmtV(sp, g)}</text></g>) : null}
         <line x1={L} y1={H - B} x2={W - R} y2={H - B} stroke="var(--line)" />
         <path d={d} fill="none" stroke="var(--accent)" strokeWidth={1.6} />
-        {pts.map((q, i) => q.v != null ? <circle key={i} cx={x(i)} cy={y(q.v)} r={2.4} fill="var(--accent)" stroke="var(--surface)" strokeWidth={1} /> : null)}
-        {pts.map((q, i) => (i === 0 || i === pts.length - 1 || i % 3 === 0) && pts.length > 1 ? <text key={"w" + i} x={x(i)} y={H - 5} textAnchor={i === 0 ? "start" : i === pts.length - 1 ? "end" : "middle"}>W{q.week}</text> : null)}
+        {pts.map((q, i) => q.v != null ? <circle key={i} cx={x(i)} cy={y(q.v)} r={2.4} fill="var(--accent)" stroke="var(--surface)" strokeWidth={1}><title>{`${weekLabel(q)}: ${fmtV(sp, q.v)}`}</title></circle> : null)}
+        {picks.map((i) => <text key={"w" + i} x={x(i)} y={H - 5} textAnchor={i === 0 ? "start" : i === pts.length - 1 ? "end" : "middle"}>{weekLabel(pts[i])}</text>)}
         {!v.length && <text x={W / 2} y={H / 2} textAnchor="middle">No {sp} sessions yet</text>}
       </svg>
+      {expert && insights.map((ins) => <MiniTrend key={ins.k} pts={ins.pts} kind={ins.kind} sp={sp} label={ins.label} info={ins.info} />)}
     </div>
   );
 }
 export function SportRow() {
+  const [expert, setExpert] = useState(false);
   return (
     <section className="card ax-panel" aria-label="Sport performance">
-      <div className="ax-head"><div><h2>Sport performance</h2><p>4 weeks vs the 4 before</p></div></div>
-      <div className="ax-sports"><SportCard sp="swim" /><SportCard sp="bike" /><SportCard sp="run" /></div>
+      <div className="ax-head">
+        <div><h2>Sport performance</h2></div>
+        <div className="pill-group" role="group" aria-label="Detail"><button type="button" className={expert ? "" : "on"} onClick={() => setExpert(false)}>Basic</button><button type="button" className={expert ? "on" : ""} onClick={() => setExpert(true)}>Expert</button></div>
+      </div>
+      <div className="ax-sports"><SportCard sp="swim" expert={expert} /><SportCard sp="bike" expert={expert} /><SportCard sp="run" expert={expert} /></div>
     </section>
   );
 }
@@ -337,6 +437,12 @@ export function Progress({ range, onPick }: { range: Range; onPick: (id: string)
   const unitFor = (k: Sp) => m === "pace" ? unitOf(k) : m === "hr" ? "bpm" : m === "distance" ? (k === "swim" ? swimDist(0).u : dist(0).u) : m === "duration" ? "" : "load";
   const goodDir = m === "pace" ? (sp === "bike" ? "up" : "down") : m === "hr" ? "down" : "up";
   const single = sp !== "all" ? series[0] : null;
+  // hover: the nearest session by date on each series; date labels spread evenly across the range
+  const [hoverX, setHoverX] = useState<number | null>(null);
+  const span = Math.max(1, end.getTime() - start.getTime());
+  const hoverDate = hoverX == null ? null : new Date(start.getTime() + ((hoverX - L) / (W - L - R)) * span);
+  const nearest = hoverDate ? series.map((sr) => { let best: (typeof sr.plot)[number] | null = null, bd = Infinity; for (const q of sr.plot) { const dd = Math.abs(fromYmd(q.date).getTime() - hoverDate.getTime()); if (dd < bd) { bd = dd; best = q; } } return { k: sr.k, q: best }; }).filter((n) => n.q) : [];
+  const labelDates = all.length ? axisPicks(6, 6).map((i) => new Date(start.getTime() + (i / 5) * span)) : [];
   return (
     <section className="card ax-panel" aria-label="Progress over time">
       <div className="ax-head">
@@ -348,7 +454,8 @@ export function Progress({ range, onPick }: { range: Range; onPick: (id: string)
       </div>
       <div className="tabs ax-tabs">{METRICS.map((t) => <button key={t.k} type="button" className={m === t.k ? "on" : ""} onClick={() => setM(t.k)}>{t.label}</button>)}</div>
       <div className="ax-progress">
-        <svg ref={svgRef} className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${sp} ${m} over time`}>
+        <div className="ax-progwrap" onMouseLeave={() => setHoverX(null)}>
+        <svg ref={svgRef} className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${sp} ${m} over time`} onMouseMove={(e) => { const r = (e.currentTarget as SVGSVGElement).getBoundingClientRect(); setHoverX(((e.clientX - r.left) / r.width) * W); }}>
           {nt.ticks.map((t, k) => <g key={k}><line x1={L} y1={y(t)} x2={W - R} y2={y(t)} stroke="var(--grid)" /><text x={L - 6} y={y(t) + 4} textAnchor="end">{fmtAxis(t)}</text></g>)}
           {normalise && <line x1={L} y1={y(100)} x2={W - R} y2={y(100)} stroke="var(--muted-2)" strokeDasharray="4 4" />}
           {series.map((s) => (
@@ -358,8 +465,16 @@ export function Progress({ range, onPick }: { range: Range; onPick: (id: string)
               {s.plot.map((q) => <circle key={q.id} cx={x(q.date)} cy={y(q.y)} r={4} fill={sp === "all" ? COLORS[s.k] : "var(--accent)"} stroke="var(--surface)" strokeWidth={1.5} style={{ cursor: "pointer" }} onClick={() => onPick(q.id)}><title>{`${s.k}, ${dateLabel(q.date)}, ${fmtFor(s.k, q.v)} ${unitFor(s.k)}`}</title></circle>)}
             </g>
           ))}
-          {all.length ? <><text x={L} y={H - 8} textAnchor="start">{shortDate(all.reduce((a, q) => (q.date < a ? q.date : a), all[0].date))}</text><text x={W - R} y={H - 8} textAnchor="end">{shortDate(all.reduce((a, q) => (q.date > a ? q.date : a), all[0].date))}</text></> : <text x={W / 2} y={H / 2} textAnchor="middle">No sessions in range</text>}
+          {all.length ? labelDates.map((dd, i) => <text key={i} x={L + (i / 5) * (W - L - R)} y={H - 8} textAnchor={i === 0 ? "start" : i === 5 ? "end" : "middle"}>{shortDate(ymdOf(dd))}</text>) : <text x={W / 2} y={H / 2} textAnchor="middle">No sessions in range</text>}
+          {nearest.length > 0 && nearest[0].q && <line x1={x(nearest[0].q.date)} y1={T} x2={x(nearest[0].q.date)} y2={H - B} stroke="var(--muted-2)" strokeDasharray="3 3" />}
+          {nearest.map((n) => n.q ? <circle key={n.k} cx={x(n.q.date)} cy={y(n.q.y)} r={6} fill={sp === "all" ? COLORS[n.k] : "var(--accent)"} stroke="var(--surface)" strokeWidth={2} /> : null)}
         </svg>
+        {nearest.length > 0 && nearest[0].q && (() => { const cx = x(nearest[0].q!.date) / W; return (
+          <div className="ax-vtip" style={{ left: `${cx * 100}%`, transform: cx > 0.75 ? "translateX(-100%)" : cx < 0.2 ? "none" : "translateX(-50%)" }}>
+            <div className="d">{dateLabel(nearest[0].q!.date)}</div>
+            {nearest.map((n) => n.q ? <div key={n.k}><span><i style={{ background: sp === "all" ? COLORS[n.k] : "var(--accent)" }} />{n.k[0].toUpperCase() + n.k.slice(1)}</span><b>{fmtFor(n.k, n.q.v)} {unitFor(n.k)}</b><span className="n">{normalise ? `${n.q.y.toFixed(0)}%` : ""}</span></div> : null)}
+          </div>); })()}
+        </div>
         <div className="ax-current">
           {single ? (
             <>
@@ -380,53 +495,65 @@ export function Progress({ range, onPick }: { range: Range; onPick: (id: string)
   );
 }
 
-// ---------- 7. Recovery ----------
-/** VO2max estimates over time (Garmin), one point per reading. Replaces the old home-made health score. */
-function Vo2Chart({ pts }: { pts: { date: string; v: number }[] }) {
-  if (pts.length < 2) return <p className="muted small">{pts.length ? `One reading: ${pts[0].v} on ${dateLabel(pts[0].date)}. The trend appears with the second.` : "No VO2max readings yet. They arrive with the Garmin import."}</p>;
-  const W = 300, H = 120, L = 30, R = 8, T = 10, B = 22;
+// ---------- 7. Body ----------
+/** One body value over time: round y gridlines, dates spread evenly along the x axis. */
+function BodyChart({ pts, fmt, w = 300, h = 110, ariaLabel }: { pts: { date: string; v: number }[]; fmt: (v: number) => string; w?: number; h?: number; ariaLabel: string }) {
+  const [svgRef, W] = useWidth<SVGSVGElement>(w); const H = h, L = 40, R = 8, T = 10, B = 22;
+  if (pts.length < 2) return <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={ariaLabel}><text x={W / 2} y={H / 2} textAnchor="middle">{pts.length ? "One reading so far" : "No readings in this range"}</text></svg>;
   const vs = pts.map((p) => p.v);
-  const lo = Math.floor(Math.min(...vs) - 1), hi = Math.ceil(Math.max(...vs) + 1);
-  const t0 = fromYmd(pts[0].date).getTime(), t1 = fromYmd(pts[pts.length - 1].date).getTime() || t0 + 1;
-  const x = (d: string) => L + ((fromYmd(d).getTime() - t0) / Math.max(1, t1 - t0)) * (W - L - R);
-  const y = (v: number) => T + ((hi - v) / Math.max(1, hi - lo)) * (H - T - B);
-  const ticks = [lo, Math.round((lo + hi) / 2), hi];
+  const nt = niceTicks(Math.min(...vs), Math.max(...vs), 3, "number");
+  const t0 = fromYmd(pts[0].date).getTime(), t1 = Math.max(t0 + 1, fromYmd(pts[pts.length - 1].date).getTime());
+  const x = (d: string) => L + ((fromYmd(d).getTime() - t0) / (t1 - t0)) * (W - L - R);
+  const y = (v: number) => T + ((nt.hi - v) / Math.max(1e-9, nt.hi - nt.lo)) * (H - T - B);
+  const labels = axisPicks(4, 4).map((i) => new Date(t0 + (i / 3) * (t1 - t0)));
   return (
-    <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="VO2max over time">
-      {ticks.map((v) => <g key={v}><line x1={L} x2={W - R} y1={y(v)} y2={y(v)} stroke="var(--grid)" /><text x={L - 6} y={y(v) + 4} textAnchor="end">{v}</text></g>)}
+    <svg ref={svgRef} className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={ariaLabel}>
+      {nt.ticks.map((v) => <g key={v}><line x1={L} x2={W - R} y1={y(v)} y2={y(v)} stroke="var(--grid)" /><text x={L - 6} y={y(v) + 4} textAnchor="end">{fmt(v)}</text></g>)}
       <polyline fill="none" stroke="var(--accent)" strokeWidth="2" points={pts.map((p) => `${x(p.date)},${y(p.v)}`).join(" ")} />
-      {pts.map((p) => <circle key={p.date} cx={x(p.date)} cy={y(p.v)} r="3" fill="var(--accent)" />)}
-      <text x={L} y={H - 6}>{shortDate(pts[0].date)}</text>
-      <text x={W - R} y={H - 6} textAnchor="end">{shortDate(pts[pts.length - 1].date)}</text>
+      {pts.length <= 60 && pts.map((p) => <circle key={p.date} cx={x(p.date)} cy={y(p.v)} r="2.5" fill="var(--accent)"><title>{`${dateLabel(p.date)}: ${fmt(p.v)}`}</title></circle>)}
+      {labels.map((dd, i) => <text key={i} x={L + (i / 3) * (W - L - R)} y={H - 6} textAnchor={i === 0 ? "start" : i === 3 ? "end" : "middle"}>{shortDate(ymdOf(dd))}</text>)}
     </svg>
   );
 }
 export function Recovery() {
   const an = useAnalysis();
+  const [range, setRange] = useState<Range>(4);
+  const days = range === 99 ? 3650 : range * 7;
   const bodySummary = an.bodySummary;
   const w = bodySummary(7), p = bodySummary(7, 7);
-  const vo2 = an.BODY.filter((b) => b.vo2 != null).map((b) => ({ date: b.date, v: b.vo2 as number }));
-  const vNow = vo2.at(-1), v4 = [...vo2].reverse().find((b) => fromYmd(b.date) <= addDays(today(), -28));
+  const vo2 = an.bodySeries("vo2", days);
+  const vNow = vo2.at(-1), vFirst = vo2[0];
   const lastOf = (k: "rhr" | "hrv" | "sleep_h" | "stress") => [...an.BODY].reverse().find((b) => b[k] != null)?.date;
-  const bars = (k: "rhr" | "hrv" | "sleep_h" | "stress") => [...Array(14)].map((_, i) => { const day = bodySummary(1, 13 - i); return k === "rhr" ? day.rhr ?? 0 : k === "hrv" ? day.hrv ?? 0 : k === "sleep_h" ? day.sleep ?? 0 : day.stress ?? 0; }).map((v) => v ?? 0);
-  const tile = (label: string, v: string | null, delta: number | null, good: "up" | "down", k: "rhr" | "hrv" | "sleep_h" | "stress", suffix = "", digits = 0) => (
-    <div className="rt"><div className="k">{label}</div><div className="v">{v ?? "-"}</div>{v != null && <Delta v={delta} good={good} suffix={suffix} digits={digits} />}<div className="u">{v != null ? "7-day average" : lastOf(k) ? `No data in 7 days, last ${dateLabel(lastOf(k) as string)}` : "No data yet"}</div>{v != null && <Bars pts={bars(k)} w={120} h={26} />}</div>
-  );
   const pct = (a: number | null, b: number | null) => (a != null && b ? ((a - b) / b) * 100 : null);
+  const tile = (label: string, v: string | null, delta: number | null, good: "up" | "down", k: "rhr" | "hrv" | "sleep_h" | "stress", fmt: (x: number) => string) => {
+    const pts = an.bodySeries(k, days);
+    return (
+      <div className="rt">
+        <div className="k">{label}</div>
+        <div className="v">{v ?? "-"}</div>
+        {v != null ? <Delta v={delta} good={good} /> : null}
+        <div className="u">{v != null ? "7-day average" : lastOf(k) ? `Last data ${dateLabel(lastOf(k) as string)}` : "No data yet"}</div>
+        <BodyChart pts={pts} fmt={fmt} w={220} h={96} ariaLabel={`${label} over time`} />
+      </div>
+    );
+  };
   return (
-    <section className="card ax-panel" aria-label="Recovery">
-      <div className="ax-head"><div><h2>Body</h2><p>From Garmin</p></div></div>
+    <section className="card ax-panel" aria-label="Body">
+      <div className="ax-head">
+        <div><h2>Body</h2></div>
+        <div className="pill-group" role="group" aria-label="Body time range">{([4, 12, 99] as Range[]).map((r) => <button key={r} type="button" className={range === r ? "on" : ""} onClick={() => setRange(r)}>{r === 99 ? "All" : `Last ${r} weeks`}</button>)}</div>
+      </div>
       <div className="ax-recovery">
         <div className="tiles">
-          {tile("Sleep", w.sleep != null ? `${Math.floor(w.sleep)} h ${Math.round((w.sleep % 1) * 60)} m` : null, pct(w.sleep, p.sleep), "up", "sleep_h")}
-          {tile("HRV", w.hrv != null ? `${w.hrv.toFixed(0)} ms` : null, pct(w.hrv, p.hrv), "up", "hrv")}
-          {tile("Resting HR", w.rhr != null ? `${w.rhr.toFixed(0)} bpm` : null, pct(w.rhr, p.rhr), "down", "rhr")}
-          {tile("Stress", w.stress != null ? w.stress.toFixed(0) : null, pct(w.stress, p.stress), "down", "stress")}
+          {tile("Sleep", w.sleep != null ? `${Math.floor(w.sleep)} h ${Math.round((w.sleep % 1) * 60)} m` : null, pct(w.sleep, p.sleep), "up", "sleep_h", (x) => `${x.toFixed(1)} h`)}
+          {tile("HRV", w.hrv != null ? `${w.hrv.toFixed(0)} ms` : null, pct(w.hrv, p.hrv), "up", "hrv", (x) => x.toFixed(0))}
+          {tile("Resting HR", w.rhr != null ? `${w.rhr.toFixed(0)} bpm` : null, pct(w.rhr, p.rhr), "down", "rhr", (x) => x.toFixed(0))}
+          {tile("Stress", w.stress != null ? w.stress.toFixed(0) : null, pct(w.stress, p.stress), "down", "stress", (x) => x.toFixed(0))}
         </div>
         <div className="score vo2">
-          <div className="k">VO2max<span className="at">ml/kg/min, Garmin estimate</span></div>
-          <div className="vo2-now"><b>{vNow ? vNow.v : "-"}</b>{vNow && <span className="muted">{v4 ? `${vNow.v - v4.v >= 0 ? "+" : ""}${(vNow.v - v4.v).toFixed(0)} vs 4 weeks ago, ` : ""}last reading {dateLabel(vNow.date)}</span>}</div>
-          <Vo2Chart pts={vo2} />
+          <div className="k">VO2max<span className="at">ml/kg/min</span></div>
+          <div className="vo2-now"><b>{vNow ? vNow.v : "-"}</b>{vNow && <span className="muted">{vFirst && vFirst.date !== vNow.date ? `${vNow.v - vFirst.v >= 0 ? "+" : ""}${(vNow.v - vFirst.v).toFixed(0)} since ${dateLabel(vFirst.date)}` : `last reading ${dateLabel(vNow.date)}`}</span>}</div>
+          <BodyChart pts={vo2} fmt={(x) => x.toFixed(0)} ariaLabel="VO2max over time" />
         </div>
       </div>
     </section>
@@ -460,19 +587,15 @@ export function Quality({ onPick }: { onPick: (id: string) => void }) {
   );
 }
 
-// ---------- 9. Race readiness ----------
+// ---------- 9. Race projection ----------
 export function RaceReadiness() {
   const an = useAnalysis();
   const ATHLETE = an.athlete;
-  const r = an.raceReadiness();
+  const r = an.raceWindow();
   const D = ATHLETE.raceDist;
   const h = (x: number | null | undefined) => (x == null ? "-" : fmtHMS(x * 60));
   const swimLabel = localize(D.swimYd >= 1760 ? `${(D.swimYd / 1760).toFixed(1)} mi` : `${D.swimYd.toLocaleString()} yd`);
-  const legs = ([
-    { k: "swim" as const, show: D.swimYd > 0, label: `Swim ${swimLabel}`, v: r.swimH },
-    { k: "bike" as const, show: D.bikeMi > 0, label: localize(`Bike ${D.bikeMi} mi`), v: r.bikeH },
-    { k: "run" as const, show: D.runMi > 0, label: localize(`Run ${D.runMi} mi`), v: r.runH },
-  ]).filter((l) => l.show);
+  const legLabel = (k: Sp) => (k === "swim" ? `Swim ${swimLabel}` : k === "bike" ? localize(`Bike ${D.bikeMi} mi`) : localize(`Run ${D.runMi} mi`));
   if (!ATHLETE.hasRace) {
     return (
       <section className="card ax-panel" aria-label="Race projection">
@@ -480,18 +603,39 @@ export function RaceReadiness() {
       </section>
     );
   }
-  const so = [D.bikeMi > 0 ? `longest ride ${fmtDist(r.longest.bike, 1).replace(/ \w+$/, "")} of ${fmtDist(D.bikeMi, 0)}` : null, D.runMi > 0 ? `longest run ${fmtDist(r.longest.run, 1).replace(/ \w+$/, "")} of ${fmtDist(D.runMi, 1)}` : null].filter(Boolean).join(", ");
+  const countdown = r.daysToRace == null ? "" : r.daysToRace > 1 ? `${r.daysToRace} days to go` : r.daysToRace === 1 ? "Tomorrow" : r.daysToRace === 0 ? "Race day" : "Raced";
+  const wk = r.daysToRace != null && r.daysToRace > 13 ? `${Math.floor(r.daysToRace / 7)} weeks` : null;
+  // the window bar: every leg's window and the goal on one time axis
+  const spanLo = Math.min(...r.legs.map((l) => l.lo ?? Infinity), r.goalTotal ?? Infinity, r.total.lo ?? Infinity);
+  const spanHi = Math.max(...r.legs.map((l) => l.hi ?? 0), r.goalTotal ?? 0, r.total.hi ?? 0);
+  const trendWord = (t: number) => (Math.abs(t) < 0.005 ? "flat" : t < 0 ? `trending ${Math.abs(t * 100).toFixed(0)}% faster` : `trending ${(t * 100).toFixed(0)}% slower`);
   return (
     <section className="card ax-panel" aria-label="Race projection">
-      <div className="ax-head"><div><h2>Race projection</h2><p>{r.ready ? "From your longest recent sessions" + (D.swimYd > 0 && D.runMi > 0 ? ", run +12 % off the bike" : "") : "Shows from the Build phase, or when long sessions reach half the race distance"}</p></div><span className="badge">{ATHLETE.race.name}</span></div>
+      <div className="ax-head">
+        <div><h2>Race projection</h2>{r.ready ? null : <p>Shows from the Build phase, or when long sessions reach half the race distance</p>}</div>
+        <div className="race-count"><b>{countdown}</b>{wk && <span className="muted">{wk}, {dateLabel(ATHLETE.race.date)}</span>}<span className="badge">{ATHLETE.race.name}</span></div>
+      </div>
       {!r.ready ? (
-        <p className="ax-note">Last 8 weeks: {so || "no long sessions yet"}.</p>
-      ) : (
         <div className="ax-race">
-          {legs.map((l) => <div key={l.k} className="leg"><SportIcon sport={l.k} size={22} /><div><div className="k">{l.label}</div><div className="v">{h(l.v)}</div></div></div>)}
-          <div className="leg total"><div><div className="k">Projected finish</div><div className="v">{h(r.total)}</div>{r.transitions > 0 && <div className="u">incl. {h(r.transitions)} transitions</div>}</div></div>
-          {r.goalTotal != null && r.total != null && <div className="leg"><div><div className="k">Goal</div><div className="v">{h(r.goalTotal)}</div><div className="u">{Math.abs(Math.round(r.gapMin ?? 0))} min {(r.gapMin ?? 0) <= 0 ? "under" : "over"}</div></div></div>}
+          {r.legs.map((l) => <div key={l.k} className="leg"><SportIcon sport={l.k} size={22} /><div><div className="k">{legLabel(l.k)}</div><div className="v">{l.durability != null ? `${Math.round(l.durability * 100)}%` : "-"}</div><div className="u">longest session of the race distance</div></div></div>)}
         </div>
+      ) : (
+        <>
+          <div className="ax-race">
+            {r.legs.map((l) => <div key={l.k} className="leg"><SportIcon sport={l.k} size={22} /><div><div className="k">{legLabel(l.k)}</div><div className="v">{h(l.lo)}<small> to </small>{h(l.hi)}</div><div className="u">{trendWord(l.trend)}, 8 weeks</div></div></div>)}
+            <div className="leg total"><div><div className="k">Finish window</div><div className="v">{h(r.total.lo)}<small> to </small>{h(r.total.hi)}</div>{r.transitions > 0 && <div className="u">incl. {h(r.transitions)} transitions</div>}</div></div>
+            {r.goalTotal != null && r.total.mid != null && <div className="leg"><div><div className="k">Goal</div><div className="v">{h(r.goalTotal)}</div><div className="u">{r.goalTotal >= (r.total.lo ?? 0) && r.goalTotal <= (r.total.hi ?? 0) ? "inside the window" : r.goalTotal < (r.total.lo ?? 0) ? `${Math.round(((r.total.lo ?? 0) - r.goalTotal) * 60)} min faster than the window` : `${Math.round((r.goalTotal - (r.total.hi ?? 0)) * 60)} min inside the window`}</div></div></div>}
+          </div>
+          {isFinite(spanLo) && spanHi > spanLo && (
+            <div className="race-bar" aria-hidden="true">
+              {r.total.lo != null && r.total.hi != null && <div className="win" style={{ left: `${((r.total.lo - spanLo) / (spanHi - spanLo)) * 100}%`, width: `${((r.total.hi - r.total.lo) / (spanHi - spanLo)) * 100}%` }}><span>{h(r.total.lo)}</span><span>{h(r.total.hi)}</span></div>}
+              {r.goalTotal != null && <div className="goal" style={{ left: `${((r.goalTotal - spanLo) / (spanHi - spanLo)) * 100}%` }}><i /><span>goal {h(r.goalTotal)}</span></div>}
+            </div>
+          )}
+          <div className="race-facts">
+            {r.legs.map((l) => <div key={l.k}><SportIcon sport={l.k} size={16} /><span>{l.near ? `${l.near.n} of ${l.near.of} sessions in 4 weeks near goal pace` : "no goal pace set"}</span><span className="muted">longest {l.durability != null ? `${Math.round(l.durability * 100)}%` : "-"} of race distance</span></div>)}
+          </div>
+        </>
       )}
     </section>
   );
