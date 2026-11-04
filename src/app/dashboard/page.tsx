@@ -68,7 +68,9 @@ function Dashboard() {
   const garmin = garminLive || !!lastGarmin;
   const deviceName = connected.length ? WEARABLES.filter((w) => connected.some((c) => c.provider === w.k)).map((w) => w.name).join(" + ") : lastGarmin ? sourceName(lastGarmin.source) : "Wearable";
   const done = todayS?.status === "done";
-  const tgt = todayS ? target(todayS, plan.athlete.zones) : null;
+  const [partIdx, setPartIdx] = useState(0);
+  const shown = brickParts.length >= 2 ? (brickParts[partIdx] ?? brickParts[0]) : todayS; // the session the facts describe
+  const tgt = shown ? target(shown, plan.athlete.zones) : null;
   const PHASES = plan.phases, WEEKS = plan.weeks;
   const phase = PHASES.find((p) => cur.week >= p.from && cur.week <= p.to);
   const stops = ["Base", "Build", "Peak", "Race"];
@@ -90,16 +92,17 @@ function Dashboard() {
             <div>
               <div className="title">{isBrick ? multiTitle : todayS ? todayS.title : plan.hasPlan ? "Rest" : "No session"}</div>
               {isBrick ? (
-                <div className="sub brick-parts">{brickParts.map((s) => <span key={s.id}><b>{s.start}</b> {s.title}, {s.min} min, {s.intensity}</span>)}</div>
+                <div className="sub brick-parts">{brickParts.map((s, i) => <span key={s.id} className={i === partIdx ? "on" : ""} onMouseEnter={() => setPartIdx(i)} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setPartIdx(i); }}><b>{s.start}</b> {s.title}, {s.min} min, {s.intensity}</span>)}</div>
               ) : (
                 <div className="sub">{todayS ? heroSub(todayS) : plan.hasPlan ? "No plan for today" : "No plan yet. Build one in Plan"}</div>
               )}
             </div>
             <div className="stats">
+              <div className="facts">
               {todayS && todayS.sport !== "rest" ? (
                 <>
-                  <div className="stat"><div className="k">Duration</div><div className="v">{isBrick ? brickParts.reduce((a, s) => a + s.min, 0) : todayS.min} min</div></div>
-                  <div className="stat"><div className="k">Intensity</div><div className="v">{todayS.intensity}</div></div>
+                  <div className="stat"><div className="k">Duration</div><div className="v">{(shown ?? todayS).min} min</div></div>
+                  <div className="stat"><div className="k">Intensity</div><div className="v">{(shown ?? todayS).intensity}</div></div>
                   {tgt && <div className="stat"><div className="k">{tgt.k}</div><div className="v">{tgt.v}</div><div className="u">{tgt.u}</div></div>}
                 </>
               ) : (
@@ -109,7 +112,12 @@ function Dashboard() {
                   <div className="stat"><div className="k">Next session</div><div className="v">{next[0].s ? `${next[0].s.title} ${next[0].s.min} min` : "-"}</div><div className="u">{next[0].s ? `${DAYS[(addDays(t, 1).getDay() + 6) % 7]}${next[0].s.start ? `, ${next[0].s.start}` : ""}` : ""}</div></div>
                 </>
               )}
-              <div className="stat gm">{garmin && <div className="garmin"><DeviceArt device={deviceOf(connected[0]?.provider ?? lastGarmin?.source)} face={last ? { sport: last.sport, time: fmtHMS(last.min), dist: last.mi ? fmtDist(last.mi) : last.yd ? `${swimDist(last.yd).v.toLocaleString()} ${swimDist(last.yd).u}` : "", hr: last.hr } : todayS && todayS.sport !== "rest" ? { sport: todayS.sport, time: fmtHMS(todayS.min), dist: "" } : null} /></div>}<div className="k"><i className={`gm-dot${garmin ? " on" : ""}`} aria-label={garmin ? "connected" : "not connected"} />{deviceName}<ConnectWearable variant="dark" label="Connect" /></div><div className="v">{garminLive ? <span className="garmin-date">{lastGarmin ? `Synced ${shortDate(lastGarmin.date)}` : "Connected"}</span> : garmin ? <span className="garmin-date">Imported {shortDate(lastGarmin!.date)}</span> : <span className="dim">Not connected</span>}</div></div>
+              </div>
+              <div className="stat gm">
+                {garmin && <div className="garmin"><DeviceArt device={deviceOf(connected[0]?.provider ?? lastGarmin?.source)} sport={(shown ?? todayS)?.sport ?? last?.sport} face={last ? { sport: last.sport, time: fmtHMS(last.min), dist: last.mi ? fmtDist(last.mi) : last.yd ? `${swimDist(last.yd).v.toLocaleString()} ${swimDist(last.yd).u}` : "", hr: last.hr } : todayS && todayS.sport !== "rest" ? { sport: todayS.sport, time: fmtHMS(todayS.min), dist: "" } : null} /></div>}
+                <div className="k"><i className={`gm-dot${garmin ? " on" : ""}`} aria-label={garmin ? "connected" : "not connected"} />{deviceName}</div>
+                <div className="v"><ConnectWearable variant="dark" label={garminLive ? "Connected" : garmin ? `Imported ${shortDate(lastGarmin!.date)}` : "Connect"} /></div>
+              </div>
             </div>
             {todayS && todayS.sport !== "rest" && <FuelLine s={todayS} />}
           </Link>
