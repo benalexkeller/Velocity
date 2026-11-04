@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
 import DateRangePicker from "../DateRangePicker";
 import { SportIcon } from "../SportIcon";
@@ -145,52 +145,71 @@ function DayStrip({ days, w = 110, h = 30 }: { days: { date: string; state: stri
   );
 }
 type KpiKey = "week" | "load" | "compliance" | "fitness" | "ef" | "vo2";
-const KPI_WINDOWS = [["4w", "4 wk", 28], ["12w", "12 wk", 84], ["6m", "6 mo", 182], ["all", "All", 3650]] as const;
+const KPI_WINDOWS = [["4w", "4w", 28], ["12w", "12w", 84], ["6m", "6m", 182], ["all", "All", 3650]] as const;
+/** A ring that fills with the share completed, the percent in its middle. */
+function Ring({ pct, size = 64 }: { pct: number | null; size?: number }) {
+  const r = size / 2 - 5, c = 2 * Math.PI * r, f = pct == null ? 0 : Math.max(0, Math.min(1, pct / 100));
+  return (
+    <svg className="ring" viewBox={`0 0 ${size} ${size}`} width={size} height={size} role="img" aria-label={pct == null ? "No sessions planned yet" : `${pct}% of sessions completed`}>
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--accent-soft)" strokeWidth={6} />
+      {pct != null && <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--accent)" strokeWidth={6} strokeLinecap="round" strokeDasharray={`${c * f} ${c}`} transform={`rotate(-90 ${size / 2} ${size / 2})`} />}
+      <text x={size / 2} y={size / 2 + 1} textAnchor="middle" dominantBaseline="middle" fontSize={size * 0.26} fontWeight={600} fill="var(--ink)">{pct == null ? "-" : `${pct}%`}</text>
+    </svg>
+  );
+}
 export function KpiRow() {
   const an = useAnalysis();
   const k = an.kpis();
-  const [open, setOpen] = useState<KpiKey | null>(null);
+  const grid = useRef<HTMLDivElement>(null);
+  const [open, setOpen] = useState<{ key: KpiKey; left: number; top: number; w: number; h: number } | null>(null);
   const [win, setWin] = useState<(typeof KPI_WINDOWS)[number][0]>("12w");
   const days = KPI_WINDOWS.find((x) => x[0] === win)![2];
   const since = ymdOf(addDays(today(), -days));
-  const toggle = (key: KpiKey) => setOpen((o) => (o === key ? null : key));
-  const cardProps = (key: KpiKey) => ({ role: "button" as const, tabIndex: 0, "aria-expanded": open === key, onClick: (e: React.MouseEvent) => { if ((e.target as HTMLElement).closest(".info")) return; toggle(key); }, onKeyDown: (e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(key); } } });
-  const cls = (key: KpiKey, extra = "") => `card kpi${extra ? ` ${extra}` : ""}${open === key ? " open" : ""}`;
+  // the clicked card grows in place, on top of the others, to about 1.5 times its area; a second click shrinks it back
+  const toggle = (key: KpiKey) => (e: React.MouseEvent | React.KeyboardEvent) => {
+    if ((e.target as HTMLElement).closest(".info")) return;
+    if (open?.key === key) { setOpen(null); return; }
+    const g = grid.current?.getBoundingClientRect(), c = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    if (!g) return;
+    const w = Math.min(g.width, Math.round(c.width * 1.5)), h = Math.round(c.height);
+    const left = Math.max(0, Math.min(g.width - w, c.left - g.left));
+    setOpen({ key, left, top: c.top - g.top, w, h });
+  };
+  const cardProps = (key: KpiKey) => ({ role: "button" as const, tabIndex: 0, "aria-expanded": open?.key === key, onClick: toggle(key), onKeyDown: (e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(key)(e); } } });
   const pts = (v: number | null, unit = " pts", digits = 0) => (v == null ? <span className="delta muted">no baseline yet</span> : <span className="delta">{v > 0 ? "+" : v < 0 ? "−" : "±"}{Math.abs(v).toFixed(digits)}{unit}, 7 d</span>);
   const load = an.LOAD_SERIES.filter((p) => p.date >= since);
   const wk = an.currentWeek();
   const dayBars = Array.from({ length: 7 }, (_, i) => { const d = ymdOf(addDays(fromYmd(wk.start), i)); const plannedH = wk.sessions.filter((s) => s.date === d && s.sport !== "rest").reduce((x, s) => x + s.min, 0) / 60; const doneH = an.activitiesOn(d).reduce((x, a) => x + a.min, 0) / 60; const plannedL = wk.sessions.filter((s) => s.date === d).reduce((x, s) => x + plannedLoad(s), 0); const doneL = an.activitiesOn(d).reduce((x, a) => x + activityLoad(a), 0); return { date: d, plannedH, doneH, plannedL, doneL }; });
+  const title: Record<KpiKey, string> = { week: "This week by day", load: "Load by day", compliance: "Last 28 days", fitness: "Fitness, fatigue, form", ef: "Run efficiency", vo2: "VO2max" };
   return (
-    <>
-    <div className="ax-kpis">
-      <div className={cls("week")} {...cardProps("week")}><div className="k">This week<Info {...KPI_INFO.week} /></div><div className="row"><div className="v">{k.week.done}<small> / {k.week.total}</small></div></div><div className="u">{k.week.h.toFixed(1)} of {k.week.plannedH.toFixed(1)} h</div><Bars pts={k.week.bars} /></div>
-      <div className={cls("load")} {...cardProps("load")}><div className="k">Week load<Info {...KPI_INFO.load} /></div><div className="row"><div className="v">{k.load.v}<small> / {k.load.planned}</small></div></div><div className="u">{k.load.last != null ? `last week ${k.load.last}` : "first plan week"}</div><Bars pts={k.load.bars} /></div>
-      <div className={cls("compliance")} {...cardProps("compliance")}><div className="k">Completed<span className="at">28 d</span><Info {...KPI_INFO.compliance} /></div><div className="row"><div className="v">{k.compliance.v ?? "-"}{k.compliance.v != null && <small>%</small>}</div></div><div className="u">{k.compliance.planned ? `${Math.round(k.compliance.done * 2) / 2} of ${k.compliance.planned} sessions` : "no sessions planned yet"}</div><DayStrip days={k.compliance.days} /></div>
-      <div className={cls("fitness")} {...cardProps("fitness")}><div className="k">Fitness<Info {...KPI_INFO.fitness} /></div><div className="row"><div className="v">{k.fitness.v.toFixed(0)}</div>{pts(k.fitness.d)}</div><div className="u">42-day load</div><Spark pts={k.fitness.spark} /></div>
-      <div className={cls("ef", "gauge-card")} {...cardProps("ef")}><div className="k">Run efficiency<Info {...KPI_INFO.ef} /></div><RatioGauge ratio={k.ef.ratio} /></div>
-      <div className={cls("vo2")} {...cardProps("vo2")}><div className="k">VO2max<Info title="VO2max" text="Your watch's estimate of the most oxygen your body can use per kilogram per minute, the usual measure of aerobic fitness. Change against the reading 4 weeks ago; the line shows the last readings." /></div><div className="row"><div className="v">{k.vo2.v != null ? k.vo2.v.toFixed(0) : "-"}</div>{k.vo2.v != null && (k.vo2.d != null ? <span className="delta">{k.vo2.d >= 0 ? "+" : "−"}{Math.abs(k.vo2.d).toFixed(0)}, 4 wk</span> : <span className="delta muted">first readings</span>)}</div><div className="u">{k.vo2.date ? `last reading ${dateLabel(k.vo2.date)}` : "no readings yet"}</div>{k.vo2.spark.length > 1 ? <Spark pts={k.vo2.spark} /> : null}</div>
-    </div>
-    {open && (
-      <div className="card kpi-detail" aria-label="Opened card">
-        <div className="kd-head">
-          <b>{{ week: "This week, day by day", load: "This week's load, day by day", compliance: "Completed, the last 28 days", fitness: "Fitness, fatigue and form", ef: "Run efficiency, every steady run", vo2: "VO2max readings" }[open]}</b>
-          {(open === "fitness" || open === "ef" || open === "vo2") && <div className="pill-group">{KPI_WINDOWS.map(([key, label]) => <button key={key} type="button" className={win === key ? "on" : ""} onClick={() => setWin(key)}>{label}</button>)}</div>}
-          <button type="button" className="kd-close" aria-label="Close" onClick={() => setOpen(null)}>×</button>
+    <div className="ax-kpis" ref={grid}>
+      <div className="card kpi" {...cardProps("week")}><div className="k">This week<Info {...KPI_INFO.week} /></div><div className="row"><div className="v">{k.week.done}<small> / {k.week.total}</small></div></div><div className="u">{k.week.h.toFixed(1)} of {k.week.plannedH.toFixed(1)} h</div><Bars pts={k.week.bars} /></div>
+      <div className="card kpi" {...cardProps("load")}><div className="k">Week load<Info {...KPI_INFO.load} /></div><div className="row"><div className="v">{k.load.v}<small> / {k.load.planned}</small></div></div><div className="u">{k.load.last != null ? `last week ${k.load.last}` : "first plan week"}</div><Bars pts={k.load.bars} /></div>
+      <div className="card kpi ring-card" {...cardProps("compliance")}><div className="k">Completed<span className="at">28 d</span><Info {...KPI_INFO.compliance} /></div><div className="ring-row"><Ring pct={k.compliance.v} /><div className="u">{k.compliance.planned ? `${Math.round(k.compliance.done * 2) / 2} of ${k.compliance.planned} sessions` : "no sessions planned yet"}</div></div></div>
+      <div className="card kpi" {...cardProps("fitness")}><div className="k">Fitness<Info {...KPI_INFO.fitness} /></div><div className="row"><div className="v">{k.fitness.v.toFixed(0)}</div>{pts(k.fitness.d)}</div><div className="u">42-day load</div><Spark pts={k.fitness.spark} /></div>
+      <div className="card kpi gauge-card" {...cardProps("ef")}><div className="k">Run efficiency<Info {...KPI_INFO.ef} /></div><RatioGauge ratio={k.ef.ratio} /></div>
+      <div className="card kpi" {...cardProps("vo2")}><div className="k">VO2max<Info title="VO2max" text="Your watch's estimate of the most oxygen your body can use per kilogram per minute, the usual measure of aerobic fitness. Change against the reading 4 weeks ago; the line shows the last readings." /></div><div className="row"><div className="v">{k.vo2.v != null ? k.vo2.v.toFixed(0) : "-"}</div>{k.vo2.v != null && (k.vo2.d != null ? <span className="delta">{k.vo2.d >= 0 ? "+" : "−"}{Math.abs(k.vo2.d).toFixed(0)}, 4 wk</span> : <span className="delta muted">first readings</span>)}</div><div className="u">{k.vo2.date ? `last reading ${dateLabel(k.vo2.date)}` : "no readings yet"}</div>{k.vo2.spark.length > 1 ? <Spark pts={k.vo2.spark} /> : null}</div>
+      {open && (
+        <div className="card kpi-zoom" style={{ left: open.left, top: open.top, width: open.w, minHeight: open.h }} role="dialog" aria-label={title[open.key]}>
+          <div className="kd-head">
+            <b>{title[open.key]}</b>
+            {(open.key === "fitness" || open.key === "ef" || open.key === "vo2") && <div className="pill-group">{KPI_WINDOWS.map(([key, label]) => <button key={key} type="button" className={win === key ? "on" : ""} onClick={() => setWin(key)}>{label}</button>)}</div>}
+            <button type="button" className="kd-close" aria-label="Close" onClick={() => setOpen(null)}>×</button>
+          </div>
+          {open.key === "week" && <DayBars bars={dayBars.map((d) => ({ date: d.date, planned: d.plannedH, done: d.doneH }))} fmt={(v) => `${v.toFixed(1)} h`} />}
+          {open.key === "load" && <DayBars bars={dayBars.map((d) => ({ date: d.date, planned: d.plannedL, done: d.doneL }))} fmt={(v) => v.toFixed(0)} />}
+          {open.key === "compliance" && <div className="kd-strip"><div className="ring-row"><Ring pct={k.compliance.v} size={84} /><div><b>{k.compliance.planned ? `${Math.round(k.compliance.done * 2) / 2} of ${k.compliance.planned} sessions` : "No sessions planned yet"}</b><p className="muted">{k.compliance.days.filter((d) => d.state === "done").length} days done, {k.compliance.days.filter((d) => d.state === "missed").length} missed, {k.compliance.days.filter((d) => d.state === "rest").length} with nothing planned</p></div></div><DayStrip days={k.compliance.days} w={360} h={44} /><div className="kd-legend"><span><i className="dot" />Done</span><span><i className="dot half" />Partial or another sport</span><span><i className="dot miss" />Missed</span><span><i className="dot rest" />Nothing planned</span></div></div>}
+          {open.key === "fitness" && <LinesChart series={[{ k: "Fitness", color: "var(--accent)", pts: load.map((p) => ({ date: p.date, v: p.fitness })) }, { k: "Fatigue", color: "var(--ink)", pts: load.map((p) => ({ date: p.date, v: p.fatigue })) }, { k: "Form", color: "var(--muted)", pts: load.map((p) => ({ date: p.date, v: p.form })) }]} fmt={(v) => v.toFixed(0)} h={98} />}
+          {open.key === "ef" && <LinesChart series={[{ k: "Efficiency", color: "var(--accent)", pts: k.ef.points.filter((p) => p.date >= since) }]} fmt={(v) => v.toFixed(2)} unit="m/min per bpm" h={98} />}
+          {open.key === "vo2" && <LinesChart series={[{ k: "VO2max", color: "var(--accent)", pts: k.vo2.points.filter((p) => p.date >= since) }]} fmt={(v) => v.toFixed(0)} unit="ml/kg/min" h={98} />}
         </div>
-        {open === "week" && <DayBars bars={dayBars.map((d) => ({ date: d.date, planned: d.plannedH, done: d.doneH }))} fmt={(v) => `${v.toFixed(1)} h`} />}
-        {open === "load" && <DayBars bars={dayBars.map((d) => ({ date: d.date, planned: d.plannedL, done: d.doneL }))} fmt={(v) => v.toFixed(0)} />}
-        {open === "compliance" && <div className="kd-strip"><DayStrip days={k.compliance.days} w={560} h={80} /><div className="kd-legend"><span><i className="dot" />Done</span><span><i className="dot half" />Partial or another sport</span><span><i className="dot miss" />Missed</span><span><i className="dot rest" />Nothing planned</span></div><p className="muted">{k.compliance.days.filter((d) => d.state === "done").length} days done, {k.compliance.days.filter((d) => d.state === "missed").length} missed, {k.compliance.days.filter((d) => d.state === "rest").length} with nothing planned.</p></div>}
-        {open === "fitness" && <LinesChart series={[{ k: "Fitness", color: "var(--accent)", pts: load.map((p) => ({ date: p.date, v: p.fitness })) }, { k: "Fatigue", color: "var(--ink)", pts: load.map((p) => ({ date: p.date, v: p.fatigue })) }, { k: "Form", color: "var(--muted)", pts: load.map((p) => ({ date: p.date, v: p.form })) }]} fmt={(v) => v.toFixed(0)} />}
-        {open === "ef" && <LinesChart series={[{ k: "Efficiency", color: "var(--accent)", pts: k.ef.points.filter((p) => p.date >= since) }]} fmt={(v) => v.toFixed(2)} unit="m/min per bpm" />}
-        {open === "vo2" && <LinesChart series={[{ k: "VO2max", color: "var(--accent)", pts: k.vo2.points.filter((p) => p.date >= since) }]} fmt={(v) => v.toFixed(0)} unit="ml/kg/min" />}
-      </div>
-    )}
-    </>
+      )}
+    </div>
   );
 }
 /** Seven bars for this week, planned behind done, with the values. */
 function DayBars({ bars, fmt }: { bars: { date: string; planned: number; done: number }[]; fmt: (v: number) => string }) {
-  const [svgRef, W] = useWidth<SVGSVGElement>(560); const H = 150, L = 36, R = 8, T = 12, B = 24;
+  const [svgRef, W] = useWidth<SVGSVGElement>(560); const H = 100, L = 36, R = 8, T = 12, B = 22;
   const hi = Math.max(0.1, ...bars.map((b) => Math.max(b.planned, b.done)));
   const colW = (W - L - R) / 7, y = (v: number) => H - B - (v / hi) * (H - T - B);
   const DN = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
@@ -208,8 +227,8 @@ function DayBars({ bars, fmt }: { bars: { date: string; planned: number; done: n
   );
 }
 /** Lines with points over time; hover shows the date and each value. */
-function LinesChart({ series, fmt, unit = "" }: { series: { k: string; color: string; pts: { date: string; v: number }[] }[]; fmt: (v: number) => string; unit?: string }) {
-  const [svgRef, W] = useWidth<SVGSVGElement>(560); const H = 170, L = 44, R = 8, T = 12, B = 24;
+function LinesChart({ series, fmt, unit = "", h = 170 }: { series: { k: string; color: string; pts: { date: string; v: number }[] }[]; fmt: (v: number) => string; unit?: string; h?: number }) {
+  const [svgRef, W] = useWidth<SVGSVGElement>(560); const H = h, L = 44, R = 8, T = 12, B = 24;
   const [hx, setHx] = useState<number | null>(null);
   const all = series.flatMap((s) => s.pts);
   if (all.length < 2) return <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Not enough readings"><text x={W / 2} y={H / 2} textAnchor="middle">{all.length ? "One reading in this window" : "No readings in this window"}</text></svg>;
@@ -217,7 +236,8 @@ function LinesChart({ series, fmt, unit = "" }: { series: { k: string; color: st
   const vs = all.map((p) => p.v); const nt = niceTicks(Math.min(...vs), Math.max(...vs), 4, "number");
   const x = (d: string) => L + ((fromYmd(d).getTime() - t0) / (t1 - t0)) * (W - L - R);
   const y = (v: number) => T + ((nt.hi - v) / Math.max(1e-9, nt.hi - nt.lo)) * (H - T - B);
-  const labels = axisPicks(5, 5).map((i) => new Date(t0 + (i / 4) * (t1 - t0)));
+  const nl = W < 400 ? 3 : 5;
+  const labels = axisPicks(nl, nl).map((i) => new Date(t0 + (i / (nl - 1)) * (t1 - t0)));
   const hoverT = hx == null ? null : t0 + ((hx - L) / (W - L - R)) * (t1 - t0);
   const near = hoverT == null ? [] : series.map((s) => { let best: { date: string; v: number } | null = null, bd = Infinity; for (const p of s.pts) { const dd = Math.abs(fromYmd(p.date).getTime() - hoverT); if (dd < bd) { bd = dd; best = p; } } return { k: s.k, color: s.color, p: best }; }).filter((n) => n.p);
   const cx = near.length && near[0].p ? x(near[0].p.date) / W : 0;
@@ -229,7 +249,7 @@ function LinesChart({ series, fmt, unit = "" }: { series: { k: string; color: st
           <polyline fill="none" stroke={s.color} strokeWidth="2" points={s.pts.map((p) => `${x(p.date)},${y(p.v)}`).join(" ")} />
           {s.pts.length <= 120 && s.pts.map((p) => <circle key={p.date} cx={x(p.date)} cy={y(p.v)} r="3" fill={s.color} stroke="var(--surface)" strokeWidth="1.5" />)}
         </g>)}
-        {labels.map((dd, i) => ({ i, t: shortDate(ymdOf(dd)) })).filter((l, j, arr) => j === 0 || l.t !== arr[j - 1].t).map(({ i, t }) => <text key={i} x={L + (i / 4) * (W - L - R)} y={H - 6} textAnchor={i === 0 ? "start" : i === 4 ? "end" : "middle"}>{t}</text>)}
+        {labels.map((dd, i) => ({ i, t: shortDate(ymdOf(dd)) })).filter((l, j, arr) => j === 0 || l.t !== arr[j - 1].t).map(({ i, t }) => <text key={i} x={L + (i / (nl - 1)) * (W - L - R)} y={H - 6} textAnchor={i === 0 ? "start" : i === nl - 1 ? "end" : "middle"}>{t}</text>)}
         {near.length > 0 && near[0].p && <line x1={x(near[0].p.date)} y1={T} x2={x(near[0].p.date)} y2={H - B} stroke="var(--muted-2)" strokeDasharray="3 3" />}
         {near.map((n) => n.p ? <circle key={n.k} cx={x(n.p.date)} cy={y(n.p.v)} r={5.5} fill={n.color} stroke="var(--surface)" strokeWidth={2} /> : null)}
       </svg>
