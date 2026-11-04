@@ -1,6 +1,6 @@
 "use client";
 import { usePlan } from "@/lib/store";
-import type { Session } from "@/lib/data";
+import { isTraining, type Session } from "@/lib/data";
 import { DAYS, addDays, fromYmd, today, ymd } from "@/lib/format";
 import { SportIcon } from "../SportIcon";
 
@@ -21,7 +21,7 @@ export function MonthGrid({ year, month, onPick, selectedId }: { year: number; m
       {DAYS.map((d) => <div key={d} className="mg-h">{d.toUpperCase()}</div>)}
       {cells.map((d) => {
         const ds = ymd(d), dim = d.getMonth() !== month, isT = d.getTime() === t.getTime();
-        const acts = plan.activitiesOn(ds), sessions = sessionsOn(ds);
+        const acts = plan.activitiesOn(ds).filter(isTraining), sessions = sessionsOn(ds);
         const done = acts.length > 0;
         return (
           <div key={ds} className={`mg-c${dim ? " dim" : ""}${isT ? " today" : ""}${done ? " done" : ""}`}>

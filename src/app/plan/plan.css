@@ -294,3 +294,9 @@ svg.ramp { width: 100%; height: auto; display: block; }
   .wl-st.missed { color: var(--danger); } .wl-st.partial, .wl-st.substituted { color: var(--ink-2); }
   .wl-lk { width: 14px; height: 14px; display: inline-flex; color: var(--ink-2); } .wl-lk svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.8; }
 }
+
+/* add activity: manual activity or session; the grid itself has a plain cursor, only blocks grab */
+.add-activity { display: grid; gap: 10px; }
+.add-activity > .pill-group { justify-self: start; }
+.wg-col { cursor: default; }
+.wg-ev.extra { cursor: pointer; }

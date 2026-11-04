@@ -154,6 +154,8 @@ export type PlanWeekJson = { week: number; start: string; phase: string; focus: 
 export const PLAN_SEED = planSeed as PlanWeekJson[];
 
 /** Does this activity count for this session? Same sport; a brick takes a bike or a run. */
+/** An activity that belongs on the training calendar: a swim, ride, run, strength or brick session (a walk, a dance class or a yoga session does not stand in for training). */
+export const isTraining = (a: { sport: Sport; name?: string }) => ["swim", "bike", "run", "strength", "brick"].includes(a.sport) && !/yoga|pilates|stretch|meditat|dance|walk|barre/i.test(a.name ?? "");
 export const fitsSession = (sportPlanned: Sport, a: Activity) => a.sport === sportPlanned || (sportPlanned === "brick" && (a.sport === "bike" || a.sport === "run"));
 /** Status of one session from the activity paired with it (if any) and the other activities logged that day. */
 export function statusOf(s: { sport: Sport; min: number; date: string }, paired: Activity | undefined, othersThatDay: Activity[]): Status {
