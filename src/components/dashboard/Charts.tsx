@@ -6,7 +6,7 @@ import { usePlan } from "@/lib/store";
 import { fmtPace, fromYmd, shortDate, today, addDays, fmtHours, ymd } from "@/lib/format";
 import { paceEligible } from "@/lib/analysis";
 import { runPace, speed, swimPace } from "@/lib/units";
-import { niceTicks, useWidth } from "@/lib/ticks";
+import { niceTicks, useHeight, useWidth } from "@/lib/ticks";
 
 type Sp = "swim" | "bike" | "run";
 function paceOf(a: Activity, sp: Sp): number | null {
@@ -24,7 +24,7 @@ export function PaceChart() {
   const since = addDays(today(), -56);
   const pts = plan.counted.filter((a) => a.sport === sp && fromYmd(a.date) >= since && paceEligible(a, sp)).map((a) => ({ date: a.date, v: paceOf(a, sp), min: a.min })).filter((p): p is { date: string; v: number; min: number } => p.v != null);
   const inv = sp !== "bike"; // pace: faster (lower seconds) plotted higher, like the mock
-  const [svgRef, W] = useWidth<SVGSVGElement>(420); const H = 190, L = 44, R = 10, T = 12, B = 26;
+  const [svgRef, W] = useWidth<SVGSVGElement>(420); const [wrapRef, room] = useHeight(); const H = Math.max(190, room - 20), L = 44, R = 10, T = 12, B = 26;
   const nt = niceTicks(pts.length ? Math.min(...pts.map((p) => p.v)) : 0, pts.length ? Math.max(...pts.map((p) => p.v)) : 1, 4, sp === "bike" ? "number" : "pace");
   const lo = nt.lo, hi = nt.hi;
   // time-based x over the fixed eight-week window, so the axis and its labels stay put when the sport changes
@@ -48,7 +48,7 @@ export function PaceChart() {
           {(["swim", "bike", "run"] as Sp[]).map((k) => <button key={k} type="button" className={sp === k ? "on" : ""} onClick={() => setSp(k)}>{k[0].toUpperCase() + k.slice(1)}</button>)}
         </div>
       </div>
-      <div>
+      <div className="plot" ref={wrapRef}>
         <div className="muted" style={{ fontSize: 12, marginBottom: 2 }}>{unitOf(sp)}</div>
         <svg ref={svgRef} className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${sp} pace over the last eight weeks`}>
           {pts.length > 0 && nt.ticks.map((v, k) => (
@@ -65,9 +65,9 @@ export function PaceChart() {
         </svg>
       </div>
       <div className="side">
-        <div><div className="k">This week</div><div className="v">{tw != null ? fmt(tw) : "-"}</div><div className="u">{unitOf(sp)}</div></div>
-        <div><div className="k">Best in 4 weeks</div><div className="v">{best != null ? fmt(best) : "-"}</div><div className="u">{unitOf(sp)}, {last4.length} sessions</div></div>
-        <div><div className="k">4-week avg</div><div className="v">{m4 != null ? fmt(m4) : "-"}</div><div className="u">{unitOf(sp)}</div></div>
+        <div><div className="k">This week</div><div className="v">{tw != null ? fmt(tw) : "-"}</div></div>
+        <div><div className="k">Best in 4 weeks</div><div className="v">{best != null ? fmt(best) : "-"}</div></div>
+        <div><div className="k">4-week avg</div><div className="v">{m4 != null ? fmt(m4) : "-"}</div></div>
       </div>
     </div>
   );
@@ -79,7 +79,7 @@ export function VolumeChart() {
   const wk = plan.currentWeek();
   const a = actualByDiscipline(wk, plan.counted), p = plannedByDiscipline(wk);
   const rows = [["Swim", a.swim, p.swim], ["Bike", a.bike, p.bike], ["Run", a.run, p.run]] as const;
-  const [svgRef, W] = useWidth<SVGSVGElement>(420); const H = 190, L = 34, R = 10, T = 12, B = 26;
+  const [svgRef, W] = useWidth<SVGSVGElement>(420); const [wrapRef, room] = useHeight(); const H = Math.max(190, room - 20), L = 34, R = 10, T = 12, B = 26;
   const max = Math.max(2, Math.ceil(Math.max(...rows.flatMap((r) => [r[1], r[2]])) / 2) * 2);
   const y = (h: number) => H - B - (h / max) * (H - T - B);
   const gw = (W - L - R) / 3, bw = 40;
@@ -90,7 +90,7 @@ export function VolumeChart() {
         <span className="eyebrow">Weekly volume vs plan</span>
         <span className="lgd"><span><i style={{ background: "var(--accent)" }} />Actual</span><span><i className="hollow" />Planned</span></span>
       </div>
-      <div>
+      <div className="plot" ref={wrapRef}>
         <div className="muted" style={{ fontSize: 12, marginBottom: 2 }}>Hours</div>
         <svg ref={svgRef} className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="This week's hours by discipline, actual versus planned">
           {Array.from({ length: max / 2 + 1 }, (_, k) => k * 2).map((h) => (

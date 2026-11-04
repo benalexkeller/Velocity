@@ -243,13 +243,14 @@ h2 .at { font-size: 0.72em; letter-spacing: 0; margin-left: 10px; }
 /* charts */
 .chartcard { padding: 16px 20px 14px; display: grid; grid-template-columns: minmax(0, 1fr) 150px; gap: 16px; }
 .chartcard .head { grid-column: 1 / -1; min-height: 34px; display: flex; align-items: center; justify-content: space-between; }
-.chartcard > div:not(.head):not(.side) { display: flex; flex-direction: column; justify-content: flex-end; } /* the two charts end at the same level */
+.chartcard .plot { display: flex; flex-direction: column; justify-content: flex-end; min-height: 0; } /* the chart fills the room the card gives it, so both charts end on the same line */
+.chartcard .plot svg.chart { display: block; width: 100%; height: auto; }
 .chartcard .side { border-left: 1px solid var(--line-2); padding-left: 18px; display: grid; align-content: space-between; gap: 14px; }
 .chartcard .side .rows { display: grid; gap: 14px; }
 .chartcard .side .drow { display: grid; gap: 5px; }
 .chartcard .side .drow .l { display: flex; justify-content: space-between; font-size: 13px; color: var(--ink-2); }
 .chartcard .side .drow .l b { font-weight: 600; color: var(--ink); }
-.chartcard .side .k { font-size: 13px; color: var(--ink-2); }
+.chartcard .side .k { font-size: 13px; color: var(--ink); font-weight: 600; }
 .chartcard .side .v { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.05; }
 .chartcard .side .u { font-size: 13px; color: var(--muted); }
 .chartcard .side table { font-size: 13px; border-collapse: collapse; width: 100%; }
@@ -409,9 +410,19 @@ svg.chart .accent { fill: var(--accent); }
 .cw-actions .btn { min-width: 0; }
 
 /* ---------- Session fuel (dashboard hero line, plan session panel block) ---------- */
-.fuel-line { margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.14); font-size: 13px; line-height: 18px; color: rgba(255,255,255,0.82); }
-.fuel-line b { color: #fff; font-weight: 600; margin-right: 6px; }
-.fuel-line.muted { color: rgba(255,255,255,0.6); }
+/* fuel strip on the hero: icon, label, value per phase, dividers between, link at the right */
+.fuel-strip { margin-top: 16px; padding-top: 14px; border-top: 1px solid rgba(255,255,255,0.14); display: flex; flex-wrap: wrap; align-items: center; row-gap: 10px; color: #fff; }
+.fuel-strip .fs-cell { display: flex; align-items: center; gap: 10px; padding: 0 14px; border-left: 1px solid rgba(255,255,255,0.22); min-width: 0; cursor: pointer; }
+.fuel-strip .fs-cell:hover .fs-v { text-decoration: underline; text-underline-offset: 3px; }
+.fuel-strip .fs-cell:first-child { padding-left: 0; border-left: 0; }
+.fuel-strip .fs-icon { display: inline-flex; width: 22px; height: 22px; flex: none; }
+.fuel-strip .fs-icon svg { width: 22px; height: 22px; fill: none; stroke: #fff; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+.fuel-strip .fs-k { font-size: 12px; line-height: 16px; color: rgba(255,255,255,0.72); }
+.fuel-strip .fs-v { font-size: 15px; line-height: 20px; font-weight: 600; white-space: nowrap; }
+.fuel-strip .fs-note { font-size: 13px; color: rgba(255,255,255,0.72); }
+.fuel-strip .fs-link { margin-left: auto; padding-left: 16px; font-size: 14px; font-weight: 600; color: #7AA7FF; white-space: nowrap; cursor: pointer; }
+.fuel-strip .fs-link:hover { text-decoration: underline; }
+@media (max-width: 640px) { .fuel-strip .fs-cell { padding: 0 14px; } .fuel-strip .fs-link { width: 100%; padding-left: 0; margin-left: 0; } }
 .sp-fuel { margin: 14px 0 4px; padding: 12px 14px; border-radius: 12px; background: var(--surface-2); }
 .sp-fuel dl { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 6px 12px; margin: 8px 0 0; font-size: 14px; line-height: 20px; }
 .sp-fuel dt { color: var(--muted); }
