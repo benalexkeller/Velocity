@@ -215,7 +215,7 @@ export function KpiRow() {
             {(open.key === "fitness" || open.key === "ef" || open.key === "vo2") && <div className="pill-group">{KPI_WINDOWS.map(([key, label]) => <button key={key} type="button" className={win === key ? "on" : ""} onClick={() => setWin(key)}>{label}</button>)}</div>}
             <button type="button" className="kd-close" aria-label="Close" onClick={() => setOpen(null)}>×</button>
           </div>
-          {open.key === "week" && <><div className="row"><div className="v">{wkSt.done}<small> / {wkSt.total}</small></div><span className="delta muted">sessions done</span><span className="delta">{wkSt.total ? `${Math.round((wkSt.done / wkSt.total) * 100)}% compliance` : ""}</span></div><DayBars bars={dayBars.map((d) => ({ date: d.date, planned: d.plannedH, done: d.doneH }))} fmt={(v) => `${v.toFixed(1)} h`} pct /></>}
+          {open.key === "week" && <><div className="row"><div className="v">{wkSt.done}<small> / {wkSt.total}</small></div><span className="delta muted">sessions done</span></div><DayBars bars={dayBars.map((d) => ({ date: d.date, planned: d.plannedH, done: d.doneH }))} fmt={(v) => `${v.toFixed(1)} h`} pct={wkSt.total ? `${Math.round((wkSt.done / wkSt.total) * 100)}%` : "–"} /></>}
           {open.key === "load" && <><div className="row"><div className="v">{Math.round(dayBars.reduce((x, d) => x + d.doneL, 0))}<small> / {Math.round(dayBars.reduce((x, d) => x + d.plannedL, 0))}</small></div><span className="delta muted">load done of planned</span></div><div className="u">{wk.week > 1 ? `week before ${k.load.bars.length >= 2 && wk.week === cur.week ? Math.round(k.load.bars[k.load.bars.length - 2]) : "-"}` : "first plan week"}</div><DayBars bars={dayBars.map((d) => ({ date: d.date, planned: d.plannedL, done: d.doneL }))} fmt={(v) => v.toFixed(0)} /></>}
           {open.key === "compliance" && <div className="kd-strip"><div className="ring-row"><div><div className="v">{k.compliance.planned ? <>{Math.round(k.compliance.done * 2) / 2}<small> / {k.compliance.planned}</small></> : "-"}</div><div className="u">sessions</div></div><Ring pct={k.compliance.v} size={84} /><div><p className="muted">{k.compliance.days.filter((d) => d.state === "done").length} days done, {k.compliance.days.filter((d) => d.state === "missed").length} missed, {k.compliance.days.filter((d) => d.state === "rest").length} with nothing planned</p></div></div><DayStrip days={k.compliance.days} w={360} h={56} /><div className="kd-legend"><span><i className="dot" />Done</span><span><i className="dot half" />Partial or another sport</span><span><i className="dot miss" />Missed</span><span><i className="dot rest" />Nothing planned</span></div></div>}
           {open.key === "fitness" && <><div className="row"><div className="v">{k.fitness.v.toFixed(0)}</div>{pts(k.fitness.d)}</div><div className="u">42-day load</div></>}
@@ -230,21 +230,22 @@ export function KpiRow() {
   );
 }
 /** Seven bars for this week: the planned amount above each dashed box, what was done in white inside the filled bar, and (when asked) the share done in grey at the top. */
-function DayBars({ bars, fmt, pct }: { bars: { date: string; planned: number; done: number }[]; fmt: (v: number) => string; pct?: boolean }) {
-  const [svgRef, W] = useWidth<SVGSVGElement>(560); const H = 170, L = 36, R = 8, T = pct ? 44 : 28, B = 22;
+function DayBars({ bars, fmt, pct }: { bars: { date: string; planned: number; done: number }[]; fmt: (v: number) => string; pct?: string }) {
+  const [svgRef, W] = useWidth<SVGSVGElement>(560); const H = 170, L = 42, R = 8, T = pct ? 44 : 28, B = 22;
   const hi = Math.max(0.1, ...bars.map((b) => Math.max(b.planned, b.done)));
   const colW = (W - L - R) / 7, y = (v: number) => H - B - (v / hi) * (H - T - B);
   const DN = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   return (
     <svg ref={svgRef} className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="This week, day by day">
       {[0, 0.5, 1].map((f) => <g key={f}><line x1={L} x2={W - R} y1={y(hi * f)} y2={y(hi * f)} stroke="var(--grid)" /><text x={L - 6} y={y(hi * f) + 4} textAnchor="end">{fmt(hi * f)}</text></g>)}
+      {pct && <text x={L - 6} y={14} textAnchor="end" fontSize={11} fontWeight={600} style={{ fill: "var(--ink)" }}>{pct}</text>}
       {bars.map((b, i) => { const x0 = L + i * colW + colW * 0.2, bw = colW * 0.6, cx = x0 + bw / 2, barH = y(0) - y(b.done); return (
         <g key={b.date}>
-          {pct && b.planned > 0 && <text x={cx} y={14} textAnchor="middle" fill="var(--muted)" fontSize={11}>{Math.round((b.done / b.planned) * 100)}%</text>}
+          {pct && <text x={cx} y={14} textAnchor="middle" fontSize={11} style={{ fill: "var(--muted)" }}>{b.planned > 0 ? `${Math.round((b.done / b.planned) * 100)}%` : b.done > 0 ? "extra" : "–"}</text>}
           {b.planned > 0 && <rect x={x0} y={y(b.planned)} width={bw} height={Math.max(0, y(0) - y(b.planned))} fill="none" stroke="var(--accent)" strokeDasharray="3 3" rx={3} />}
-          {b.planned > 0 && <text x={cx} y={y(b.planned) - 5} textAnchor="middle" fill="var(--ink-2)" fontSize={11}>{fmt(b.planned)}</text>}
+          {b.planned > 0 && <text x={cx} y={y(b.planned) - 5} textAnchor="middle" fontSize={11} style={{ fill: "var(--ink-2)" }}>{fmt(b.planned)}</text>}
           {b.done > 0 && <rect x={x0} y={y(b.done)} width={bw} height={Math.max(0, barH)} fill="var(--accent)" rx={3}><title>{`${DN[i]}: ${fmt(b.done)} of ${fmt(b.planned)} planned`}</title></rect>}
-          {b.done > 0 && (barH >= 18 ? <text x={cx} y={y(b.done) + barH / 2 + 4} textAnchor="middle" fill="#fff" fontWeight={600} fontSize={11}>{fmt(b.done)}</text> : <text x={cx} y={y(b.done) - 5} textAnchor="middle" fill="var(--ink)" fontWeight={600} fontSize={11}>{fmt(b.done)}</text>)}
+          {b.done > 0 && (barH >= 18 ? <text x={cx} y={y(b.done) + barH / 2 + 4} textAnchor="middle" fontWeight={600} fontSize={11} style={{ fill: "#fff" }}>{fmt(b.done)}</text> : <text x={cx} y={y(b.done) - 5} textAnchor="middle" fontWeight={600} fontSize={11} style={{ fill: "var(--ink)" }}>{fmt(b.done)}</text>)}
           <text x={cx} y={H - 6} textAnchor="middle">{DN[i]}</text>
         </g>); })}
     </svg>
