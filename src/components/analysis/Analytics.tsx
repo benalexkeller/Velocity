@@ -166,7 +166,7 @@ export function KpiRow() {
   const days = KPI_WINDOWS.find((x) => x[0] === win)![2];
   const since = ymdOf(addDays(today(), -days));
   // the clicked card grows in place, on top of the others, to about 1.5 times its area; a second click shrinks it back
-  // a card at either end grows sideways into the row; one in the middle grows to both sides and downwards
+  // every card grows downwards; one at either end grows sideways into the row, one in the middle to both sides
   const KEYS: KpiKey[] = ["week", "load", "compliance", "fitness", "ef", "vo2"];
   const toggle = (key: KpiKey) => (e: React.MouseEvent | React.KeyboardEvent) => {
     if ((e.target as HTMLElement).closest(".info")) return;
@@ -174,7 +174,7 @@ export function KpiRow() {
     const g = grid.current?.getBoundingClientRect(), c = (e.currentTarget as HTMLElement).getBoundingClientRect();
     if (!g) return;
     const i = KEYS.indexOf(key), edge = i === 0 || i === KEYS.length - 1;
-    const w = Math.min(g.width, Math.round(c.width * (edge ? 1.5 : 1.3))), h = Math.round(c.height * (edge ? 1 : 1.15));
+    const w = Math.min(g.width, Math.round(c.width * 1.3)), h = Math.round(c.height * 1.15);
     const want = edge ? (i === 0 ? c.left - g.left : c.right - g.left - w) : c.left - g.left - (w - c.width) / 2;
     const left = Math.max(0, Math.min(g.width - w, want));
     setOpen({ key, left, top: c.top - g.top, w, h });
