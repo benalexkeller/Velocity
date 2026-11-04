@@ -10,6 +10,7 @@
 /* hero */
 .hero { container: hero / inline-size; position: relative; display: grid; color: #fff; cursor: pointer; background: var(--hero); color: #fff; border-radius: var(--radius); padding: 22px 28px 24px; display: grid; gap: 12px; grid-template-rows: auto 1fr auto; min-height: 350px; }
 .hero.done { background: var(--hero-done); }
+.hero > .top + div { min-height: 172px; } /* room above the stats for the device, whatever else the hero holds */
 .hero .top { display: flex; justify-content: space-between; font-size: 12px; letter-spacing: 0.04em; text-transform: uppercase; opacity: 0.9; }
 .hero .title { font-size: 56px; font-weight: 600; letter-spacing: -0.03em; line-height: 0.95; }
 .hero .sub { font-size: 28px; font-weight: 400; opacity: 0.9; letter-spacing: -0.02em; margin-top: 4px; }
@@ -30,11 +31,10 @@
 .hero .stat.gm { position: relative; padding-right: 0; border-right: 0; }
 .hero { overflow: hidden; } /* the strap may run past the top edge; it fades there */
 .hero .top { position: relative; z-index: 2; } /* the date stays on top of the device */
-.hero .garmin { position: absolute; left: 50%; bottom: calc(100% + 2px); animation: hover 4s ease-in-out infinite; } /* centred over the wearable column */
+.hero .garmin { position: absolute; left: 50%; bottom: calc(100% + 6px); animation: hover 4s ease-in-out infinite; } /* centred over the wearable column */
 @keyframes hover { 0%, 100% { transform: translate(-50%, 0); } 50% { transform: translate(-50%, -5px); } }
-/* the device photo: its own soft grey glow, edges faded into the hero, the session drawn on the screen */
-.dev { position: relative; -webkit-mask-image: radial-gradient(farthest-corner, #000 60%, transparent 90%); mask-image: radial-gradient(farthest-corner, #000 60%, transparent 90%); }
-.dev::before { content: ""; position: absolute; inset: 12% 18%; border-radius: 50%; background: radial-gradient(closest-side, rgba(255,255,255,0.16), rgba(255,255,255,0)); }
+/* the device, cut out of its photo, with the soft grey glow around it and the session drawn on the screen */
+.dev { position: relative; filter: drop-shadow(0 0 10px rgba(255,255,255,0.22)) drop-shadow(0 0 34px rgba(255,255,255,0.26)) drop-shadow(0 16px 22px rgba(0,0,0,0.55)); }
 .dev img { position: relative; display: block; width: 100%; height: 100%; }
 .dev .dev-face { position: absolute; inset: 0; width: 100%; height: 100%; font-family: inherit; }
 .hero .stat.gm .v { display: inline-flex; align-items: center; gap: 9px; font-size: 28px; height: 34px; }
