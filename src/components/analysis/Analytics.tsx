@@ -603,6 +603,13 @@ function SportCard({ sp, expert }: { sp: Sp; expert: boolean }) {
   const unitLabel = sp === "bike" ? `(${speed(0).u})` : sp === "swim" ? `(per 100 ${swimDist(0).u === "m" ? "metres" : "yards"})` : `(per ${dist(0).u === "km" ? "km" : "mile"})`;
   const insights = expert ? an.sportInsights(sp) : [];
   const hov = useChartHover(pts.length, L, R, W);
+  // Trends: the average of the weeks shown, and a least-squares line through them (its slope = change per week)
+  const [trends, setTrends] = useState(false);
+  const known = pts.map((q, i) => ({ i, v: q.v })).filter((q): q is { i: number; v: number } => q.v != null);
+  const mean = known.length ? known.reduce((a, q) => a + q.v, 0) / known.length : null;
+  const fit = (() => { if (known.length < 3) return null; const mx = known.reduce((a, q) => a + q.i, 0) / known.length, my = mean!; let sxy = 0, sxx = 0; for (const q of known) { sxy += (q.i - mx) * (q.v - my); sxx += (q.i - mx) ** 2; } const b = sxx ? sxy / sxx : 0; return { b, a: my - b * mx, i0: known[0].i, i1: known[known.length - 1].i }; })();
+  const better = fit ? (sp === "bike" ? fit.b > 0 : fit.b < 0) : false;
+  const slopeText = fit ? (sp === "bike" ? `${fit.b >= 0 ? "+" : "−"}${Math.abs(fit.b).toFixed(1)} ${speed(0).u} per week` : `${fit.b >= 0 ? "+" : "−"}${Math.abs(Math.round(fit.b))} s per week`) : "";
   return (
     <div className="sport">
       <ScoreGauge sp={sp} />
@@ -615,7 +622,14 @@ function SportCard({ sp, expert }: { sp: Sp; expert: boolean }) {
         </span>}
       </div>
       <table><tbody>{p.rows.map((r) => <tr key={r.k}><td><span className="info-row">{r.k}{ROW_INFO[r.k] && <Info {...ROW_INFO[r.k]} />}</span></td><td><b>{fmtRow(r.kind, r.cur)}</b></td><td><Delta v={r.cur != null && r.prev ? ((r.cur - r.prev) / r.prev) * 100 : null} good={good(r.kind)} /></td></tr>)}</tbody></table>
-      <div className="k">{sp === "bike" ? "Weekly Average Speed" : "Weekly Average Pace"} {unitLabel}</div>
+      <div className="k wk-head">{sp === "bike" ? "Weekly Average Speed" : "Weekly Average Pace"} {unitLabel}{known.length >= 3 && <button type="button" className={`trend-btn${trends ? " on" : ""}`} aria-pressed={trends} onClick={() => setTrends((t) => !t)}>Trends</button>}</div>
+      <div className="wk-chart">
+      {trends && mean != null && fit && (
+        <div className="trend-call" aria-live="polite">
+          <div><i className="sw avg" />Average <b>{fmtV(sp, mean)}</b></div>
+          <div><i className="sw fit" />Trend <b className={better ? "good" : "bad"}>{slopeText}</b></div>
+        </div>
+      )}
       <svg ref={svgRef} className="chart mini" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${sp} weekly ${sp === "bike" ? "speed" : "pace"} trend`} onMouseMove={hov.onMove} onMouseLeave={hov.onLeave}>
         {v.length ? guides.map((g, i) => <g key={i}><line x1={L} y1={y(g)} x2={W - R} y2={y(g)} stroke="var(--grid)" /><text x={L - 5} y={y(g) + 3} textAnchor="end">{fmtTick(sp === "bike" ? "speed" : "pace", g, nt.step)}</text></g>) : null}
         <line x1={L} y1={H - B} x2={W - R} y2={H - B} stroke="var(--line)" />
@@ -623,8 +637,11 @@ function SportCard({ sp, expert }: { sp: Sp; expert: boolean }) {
         {pts.map((q, i) => q.v != null ? <circle key={i} cx={x(i)} cy={y(q.v)} r={2.4} fill="var(--accent)" stroke="var(--surface)" strokeWidth={1}><title>{`${weekLabel(q)}: ${fmtV(sp, q.v)}`}</title></circle> : null)}
         {picks.map((i) => <text key={"w" + i} x={x(i)} y={H - 5} textAnchor={i === 0 ? "start" : i === pts.length - 1 ? "end" : "middle"}>{weekLabel(pts[i])}</text>)}
         {!v.length && <text x={W / 2} y={H / 2} textAnchor="middle">No {sp} sessions yet</text>}
+        {trends && mean != null && <line x1={L} x2={W - R} y1={y(mean)} y2={y(mean)} stroke="#E8A400" strokeWidth={1.6} strokeDasharray="5 4" />}
+        {trends && fit && <line x1={x(fit.i0)} x2={x(fit.i1)} y1={y(fit.a + fit.b * fit.i0)} y2={y(fit.a + fit.b * fit.i1)} stroke="var(--ink)" strokeWidth={1.6} />}
         {hov.i != null && pts[hov.i] && <HoverMark i={hov.i} x={x} y={y} v={pts[hov.i].v} W={W} H={H} T={T} B={B} label={weekLabel(pts[hov.i])} value={pts[hov.i].v != null ? `${fmtV(sp, pts[hov.i].v!)} ${unitOf(sp)}` : "-"} />}
       </svg>
+      </div>
       {expert && insights.map((ins) => <MiniTrend key={ins.k} pts={ins.pts} kind={ins.kind} sp={sp} label={ins.label} info={ins.info} />)}
     </div>
   );
