@@ -148,11 +148,11 @@ type KpiKey = "week" | "load" | "compliance" | "fitness" | "ef" | "vo2";
 const KPI_WINDOWS = [["4w", "4w", 28], ["12w", "12w", 84], ["6m", "6m", 182], ["all", "All", 3650]] as const;
 /** A ring that fills with the share completed, the percent in its middle. */
 function Ring({ pct, size = 64 }: { pct: number | null; size?: number }) {
-  const r = size / 2 - 5, c = 2 * Math.PI * r, f = pct == null ? 0 : Math.max(0, Math.min(1, pct / 100));
+  const sw = Math.max(6, Math.round(size * 0.11)), r = size / 2 - sw / 2 - 1, c = 2 * Math.PI * r, f = pct == null ? 0 : Math.max(0, Math.min(1, pct / 100));
   return (
     <svg className="ring" viewBox={`0 0 ${size} ${size}`} width={size} height={size} role="img" aria-label={pct == null ? "No sessions planned yet" : `${pct}% of sessions completed`}>
-      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--accent-soft)" strokeWidth={6} />
-      {pct != null && <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--accent)" strokeWidth={6} strokeLinecap="round" strokeDasharray={`${c * f} ${c}`} transform={`rotate(-90 ${size / 2} ${size / 2})`} />}
+      <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--accent-soft)" strokeWidth={sw} />
+      {pct != null && <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--accent)" strokeWidth={sw} strokeLinecap="round" strokeDasharray={`${c * f} ${c}`} transform={`rotate(-90 ${size / 2} ${size / 2})`} />}
       <text x={size / 2} y={size / 2 + 1} textAnchor="middle" dominantBaseline="middle" fontSize={size * 0.27} fontWeight={700} style={{ fill: "#101114" }}>{pct == null ? "-" : `${pct}%`}</text>
     </svg>
   );
