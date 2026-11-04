@@ -21,7 +21,7 @@
 .hero .sub.brick-parts span { cursor: pointer; opacity: 0.55; transition: opacity .15s; } .hero .sub.brick-parts span.on { opacity: 1; }
 /* three facts spread evenly over the left part; the wearable column takes what is left, the device centred above it */
 .hero .stats { display: grid; grid-template-columns: minmax(0, 1fr) minmax(150px, auto); align-items: flex-start; min-width: 0; }
-.hero .facts { display: flex; justify-content: space-between; gap: 24px; min-width: 0; padding-right: 32px; }
+.hero .facts { display: flex; justify-content: flex-start; gap: clamp(28px, 6cqw, 56px); min-width: 0; padding-right: 24px; }
 .hero .stat { min-width: 0; }
 .hero .stat .k { font-size: 14px; opacity: 0.75; }
 .hero .stat .v { font-size: 28px; font-weight: 600; letter-spacing: -0.02em; line-height: 1.1; white-space: nowrap; }

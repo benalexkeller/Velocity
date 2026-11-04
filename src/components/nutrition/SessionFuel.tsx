@@ -19,6 +19,8 @@ export function perHourInProducts(perHour: number, fluidLh: number) {
   return `${perHour} g carbs per hour: ${fluidLh} L of 6 % drink mix${gels ? ` + ${gels} gel${gels > 1 ? "s" : ""}` : ""}`;
 }
 
+/** Water for the whole session, to the nearest quarter litre: "0.5 L water", "1 L water". */
+const litres = (perHour: number | undefined, min: number) => { if (!perHour) return "Water"; const l = Math.max(0.25, Math.round((perHour * min) / 60 / 0.25) * 0.25); return `${String(l).replace(/\.0$/, "")} L water`; };
 /** The fuel strip on today's hero: one cell per fuel item (icon, phase, value); every cell opens the fuel timing under Nutrition. */
 export function FuelLine({ s }: { s: Session }) {
   const nut = useNutrition();
@@ -29,9 +31,9 @@ export function FuelLine({ s }: { s: Session }) {
   if (!nut.hasWeight) return <div className="fuel-strip"><span className="fs-note">Add your weight under Nutrition to get session fuel</span><span className="fs-link" {...linkProps}>Set up nutrition →</span></div>;
   const f = nut.fuelFor(s);
   const cells: { k: string; icon: IconName; v: string }[] = [
-    { k: "Before", icon: "fork", v: f.before ? `${f.before} g carbs` : "Normal meal" },
+    { k: "Before", icon: "gel", v: f.before ? `${f.before} g carbs` : "Normal meal" },
     ...(f.perHour ? [{ k: "During", icon: "gel" as IconName, v: `${f.perHour} g carbs/h` }] : []),
-    { k: f.perHour ? "Fluid" : "During", icon: "bottle", v: f.fluidLh ? `${f.perHour ? "" : "Water, "}${f.fluidLh} L/h` : "Water" },
+    { k: f.perHour ? "Fluid" : "During", icon: "bottle", v: litres(f.fluidLh, s.min) },
     { k: "After", icon: "bowl", v: f.after.carbs ? `${f.after.carbs} g carbs + ${f.after.protein} g protein` : `${f.after.protein} g protein` },
   ];
   return (

@@ -92,7 +92,7 @@ function Dashboard() {
             <div>
               <div className="title">{isBrick ? multiTitle : todayS ? todayS.title : plan.hasPlan ? "Rest" : "No session"}</div>
               {isBrick ? (
-                <div className="sub brick-parts">{brickParts.map((s, i) => <span key={s.id} className={i === partIdx ? "on" : ""} onMouseEnter={() => setPartIdx(i)} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setPartIdx(i); }}><b>{s.start}</b> {s.title}, {s.min} min, {s.intensity}</span>)}</div>
+                <div className="sub brick-parts">{brickParts.map((s, i) => <span key={s.id} className={i === partIdx ? "on" : ""} onMouseEnter={() => setPartIdx(i)} onClick={(e) => { e.preventDefault(); e.stopPropagation(); setPartIdx(i); }}><b>{s.start}</b> {s.title}</span>)}</div>
               ) : (
                 <div className="sub">{todayS ? heroSub(todayS) : plan.hasPlan ? "No plan for today" : "No plan yet. Build one in Plan"}</div>
               )}
