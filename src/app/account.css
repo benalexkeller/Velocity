@@ -6,12 +6,12 @@
 .auth .sub { font-size: 13px; color: var(--muted); margin-top: -8px; }
 
 .form { display: grid; gap: 12px; }
-.form label { display: grid; gap: 5px; font-size: 12px; color: var(--muted); }
+.form label { display: grid; gap: 5px; font-size: 12px; color: var(--muted); align-content: start; } /* a hint under one field never pushes its neighbour down or stretches it */
 .form label b { color: var(--ink); font-weight: 600; font-size: 13px; }
 .form input, .form select, .form textarea { font: inherit; font-size: 14px; color: var(--ink); border: 1px solid var(--line); border-radius: 9px; padding: 9px 11px; background: var(--surface); outline: none; width: 100%; }
 .form input:focus, .form select:focus, .form textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
 .form input[aria-invalid="true"] { border-color: var(--danger); }
-.form .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.form .two { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; align-items: start; }
 .form .three { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
 .form .row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; } .form .row .grow { flex: 1; }
 .form .hint { font-size: 12px; color: var(--muted); }
