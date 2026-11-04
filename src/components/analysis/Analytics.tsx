@@ -1,5 +1,5 @@
 "use client";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import DateRangePicker from "../DateRangePicker";
 import { SportIcon } from "../SportIcon";
@@ -166,15 +166,27 @@ export function KpiRow() {
   const days = KPI_WINDOWS.find((x) => x[0] === win)![2];
   const since = ymdOf(addDays(today(), -days));
   // the clicked card grows in place, on top of the others, to about 1.5 times its area; a second click shrinks it back
+  // a card at either end grows sideways into the row; one in the middle grows to both sides and downwards
+  const KEYS: KpiKey[] = ["week", "load", "compliance", "fitness", "ef", "vo2"];
   const toggle = (key: KpiKey) => (e: React.MouseEvent | React.KeyboardEvent) => {
     if ((e.target as HTMLElement).closest(".info")) return;
     if (open?.key === key) { setOpen(null); return; }
     const g = grid.current?.getBoundingClientRect(), c = (e.currentTarget as HTMLElement).getBoundingClientRect();
     if (!g) return;
-    const w = Math.min(g.width, Math.round(c.width * 1.5)), h = Math.round(c.height);
-    const left = Math.max(0, Math.min(g.width - w, c.left - g.left));
+    const i = KEYS.indexOf(key), edge = i === 0 || i === KEYS.length - 1;
+    const w = Math.min(g.width, Math.round(c.width * (edge ? 1.5 : 1.3))), h = Math.round(c.height * (edge ? 1 : 1.15));
+    const want = edge ? (i === 0 ? c.left - g.left : c.right - g.left - w) : c.left - g.left - (w - c.width) / 2;
+    const left = Math.max(0, Math.min(g.width - w, want));
     setOpen({ key, left, top: c.top - g.top, w, h });
   };
+  // a click anywhere else shrinks it back
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: MouseEvent) => { if (!(e.target as HTMLElement).closest(".kpi-zoom")) setOpen(null); };
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") setOpen(null); };
+    document.addEventListener("mousedown", away); document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("mousedown", away); document.removeEventListener("keydown", esc); };
+  }, [open]);
   const cardProps = (key: KpiKey) => ({ role: "button" as const, tabIndex: 0, "aria-expanded": open?.key === key, onClick: toggle(key), onKeyDown: (e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(key)(e); } } });
   const pts = (v: number | null, unit = " pts", digits = 0) => (v == null ? <span className="delta muted">no baseline yet</span> : <span className="delta">{v > 0 ? "+" : v < 0 ? "−" : "±"}{Math.abs(v).toFixed(digits)}{unit}, 7 d</span>);
   const load = an.LOAD_SERIES.filter((p) => p.date >= since);
@@ -190,7 +202,7 @@ export function KpiRow() {
       <div className="card kpi gauge-card" {...cardProps("ef")}><div className="k">Run efficiency<Info {...KPI_INFO.ef} /></div><RatioGauge ratio={k.ef.ratio} /></div>
       <div className="card kpi" {...cardProps("vo2")}><div className="k">VO2max<Info title="VO2max" text="Your watch's estimate of the most oxygen your body can use per kilogram per minute, the usual measure of aerobic fitness. Change against the reading 4 weeks ago; the line shows the last readings." /></div><div className="row"><div className="v">{k.vo2.v != null ? k.vo2.v.toFixed(0) : "-"}</div>{k.vo2.v != null && (k.vo2.d != null ? <span className="delta">{k.vo2.d >= 0 ? "+" : "−"}{Math.abs(k.vo2.d).toFixed(0)}, 4 wk</span> : <span className="delta muted">first readings</span>)}</div><div className="u">{k.vo2.date ? `last reading ${dateLabel(k.vo2.date)}` : "no readings yet"}</div>{k.vo2.spark.length > 1 ? <Spark pts={k.vo2.spark} /> : null}</div>
       {open && (
-        <div className="card kpi-zoom" style={{ left: open.left, top: open.top, width: open.w, minHeight: open.h }} role="dialog" aria-label={title[open.key]}>
+        <div className="card kpi-zoom" style={{ left: open.left, top: open.top, width: open.w, minHeight: open.h }} role="dialog" aria-label={title[open.key]} onClick={(e) => { if (!(e.target as HTMLElement).closest(".pill-group")) setOpen(null); }}>
           <div className="kd-head">
             <b>{title[open.key]}</b>
             {(open.key === "fitness" || open.key === "ef" || open.key === "vo2") && <div className="pill-group">{KPI_WINDOWS.map(([key, label]) => <button key={key} type="button" className={win === key ? "on" : ""} onClick={() => setWin(key)}>{label}</button>)}</div>}
