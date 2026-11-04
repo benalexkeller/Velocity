@@ -304,3 +304,11 @@ svg.ramp { width: 100%; height: auto; display: block; }
 .wo-grid .k.ic { display: flex; align-items: center; gap: 6px; }
 .wo-grid .k.ic .sport-icon { color: var(--accent); }
 .wo-grid .k { display: flex; align-items: center; min-height: 18px; } /* every label row the height of the icon, so all figures sit on one line */
+
+/* the small add card: beside the clicked spot (or under the Add activity button), only as big as its content */
+.slot-card { position: fixed; z-index: 60; padding: 14px 16px 12px; max-height: calc(100vh - 24px); overflow: auto; box-shadow: 0 1px 2px rgba(16,17,20,0.04), 0 0 0 1px var(--line), 0 16px 40px rgba(16,17,20,0.18); }
+.slot-card .slot-x { position: absolute; top: 10px; right: 10px; width: 28px; height: 28px; border: 0; border-radius: 50%; background: var(--surface-2); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; z-index: 1; }
+.slot-card .slot-x svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
+.slot-card .add-activity { gap: 8px; } .slot-card .add-activity > .pill-group { margin-right: 36px; }
+.slot-card .card { box-shadow: none; padding: 0; border: 0; } .slot-card .two, .slot-card .three { grid-template-columns: 1fr 1fr; }
+.wg-pending { background: var(--accent); color: #fff; border-left-color: var(--accent); box-shadow: 0 6px 16px rgba(36,89,254,0.3); z-index: 3; pointer-events: none; }

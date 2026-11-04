@@ -1,4 +1,5 @@
 "use client";
+import "./log-activity.css";
 import { useEffect, useMemo, useState } from "react";
 import { Icon } from "../icons";
 import { SportIcon } from "../SportIcon";

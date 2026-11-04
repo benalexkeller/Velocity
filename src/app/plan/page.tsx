@@ -1,5 +1,5 @@
 "use client";
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import "./plan.css";
@@ -8,7 +8,7 @@ import { SportIcon } from "@/components/SportIcon";
 import { CoachRail } from "@/components/CoachRail";
 import { CoachBar } from "@/components/CoachBar";
 import { useCoachDock } from "@/components/CoachDock";
-import { WeekGrid, weekRange } from "@/components/plan/WeekGrid";
+import { WeekGrid, type SlotAnchor, weekRange } from "@/components/plan/WeekGrid";
 import { SessionPanel } from "@/components/plan/SessionPanel";
 import { LogActivity } from "@/components/dashboard/LogActivity";
 import { MonthGrid } from "@/components/plan/MonthGrid";
@@ -76,6 +76,29 @@ function AddActivity({ week, at, onDone }: { week: Week; at?: { date?: string; s
   );
 }
 
+/** A floating card beside a calendar slot: on the side of the day column with more room, as tall as its content needs (scrolls only when the window is short). Closes on a click elsewhere or Escape. */
+function SlotCard({ anchor, onClose, children, below }: { anchor: SlotAnchor; onClose: () => void; children: React.ReactNode; below?: boolean }) {
+  const box = useRef<HTMLDivElement>(null);
+  const [h, setH] = useState(0);
+  const W = 400, gap = 10, vw = typeof window !== "undefined" ? window.innerWidth : 1200, vh = typeof window !== "undefined" ? window.innerHeight : 800;
+  const right = vw - anchor.right, left = anchor.left;
+  const x = below ? Math.max(8, Math.min(anchor.right - W, vw - W - 8)) : right >= W + gap + 8 || right >= left ? Math.min(anchor.right + gap, vw - W - 8) : Math.max(8, anchor.left - gap - W);
+  const top = below ? anchor.y + 8 : Math.max(12, Math.min(anchor.y - 40, vh - (h || 420) - 12));
+  useEffect(() => {
+    if (box.current) setH(box.current.offsetHeight);
+    const away = (e: MouseEvent) => { const t = e.target as HTMLElement; if (box.current?.contains(t) || t.closest(".wg-col, .add-btn")) return; onClose(); };
+    const esc = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    document.addEventListener("mousedown", away); document.addEventListener("keydown", esc);
+    return () => { document.removeEventListener("mousedown", away); document.removeEventListener("keydown", esc); };
+  }, [onClose]);
+  return (
+    <div className="slot-card card" ref={box} style={{ left: x, top, width: W }} role="dialog" aria-label="Add at this time">
+      <button type="button" className="slot-x" aria-label="Close" onClick={onClose}><Icon name="close" /></button>
+      {children}
+    </div>
+  );
+}
+
 // Overview of a week picked on the road-to-race chart: hours per sport, sessions, load, phase.
 function WeekOverview({ week, onClose, onOpenWeek }: { week: Week; onClose: () => void; onOpenWeek: () => void }) {
   const plan = usePlan();
@@ -122,7 +145,9 @@ function Plan() {
   const [sel, setSel] = useState<string | null>(fromUrl);
   const [wk, setWk] = useState(plan.findSession(fromUrl)?.w.week ?? cur.week);
   const [view, setView] = useState<"week" | "month">("week");
-  const [adding, setAdding] = useState<{ date?: string; start?: string } | null>(null);
+  const [adding, setAdding] = useState<{ anchor: SlotAnchor } | null>(null);
+  // a click on an empty spot of the calendar: a small card beside that spot, like Google Calendar
+  const [slot, setSlot] = useState<{ date: string; start: string; anchor: SlotAnchor } | null>(null);
   const [overview, setOverview] = useState<number | null>(null);
   const [phaseSel, setPhaseSel] = useState<string | null>(null);
   useEffect(() => { if (fromUrl) { setSel(fromUrl); const hit = plan.findSession(fromUrl); if (hit) setWk(hit.w.week); } }, [fromUrl, plan]);
@@ -152,7 +177,7 @@ function Plan() {
           </div>
           <CalendarBadge />
           {!plan.hasPlan && <Link href="/plan/new" className="btn ghost">Build plan</Link>}
-          <button className="btn" type="button" onClick={() => setAdding((a) => (a ? null : {}))} aria-expanded={!!adding}><Icon name="plus" />Add activity</button>
+          <button className="btn add-btn" type="button" onClick={(e) => { const r = (e.currentTarget as HTMLElement).getBoundingClientRect(); setSlot(null); setAdding((a) => (a ? null : { anchor: { left: r.left, right: r.right, y: r.bottom } })); }} aria-expanded={!!adding}><Icon name="plus" />Add activity</button>
         </div>
 
         {!plan.hasPlan && (
@@ -162,9 +187,10 @@ function Plan() {
           </section>
         )}
 
-        {adding && <AddActivity week={week} at={adding} onDone={(id) => { setAdding(null); if (id) { setSel(id); const hit = plan.findSession(id); if (hit) setWk(hit.w.week); } }} />}
+        {slot && <SlotCard anchor={slot.anchor} onClose={() => setSlot(null)}><AddActivity week={week} at={slot} onDone={(id) => { setSlot(null); if (id) { setSel(id); const hit = plan.findSession(id); if (hit) setWk(hit.w.week); } }} /></SlotCard>}
+        {adding && <SlotCard below anchor={adding.anchor} onClose={() => setAdding(null)}><AddActivity week={week} onDone={(id) => { setAdding(null); if (id) { setSel(id); const hit = plan.findSession(id); if (hit) setWk(hit.w.week); } }} /></SlotCard>}
 
-        {view === "week" ? <WeekGrid week={week} selectedId={sel} onPick={(x) => setSel(x.id)} onAddAt={(date, start) => { setSel(null); setAdding({ date, start }); }} /> : <MonthGrid year={mo.y} month={mo.m} selectedId={sel} onPick={(x) => { pick(x.id); setView("week"); }} />}
+        {view === "week" ? <WeekGrid week={week} selectedId={sel} onPick={(x) => setSel(x.id)} pending={slot} onAddAt={(date, start, anchor) => { setSel(null); setAdding(null); setSlot({ date, start, anchor }); }} /> : <MonthGrid year={mo.y} month={mo.m} selectedId={sel} onPick={(x) => { pick(x.id); setView("week"); }} />}
         <SessionPanel key={sel ?? "none"} id={sel} onClose={() => setSel(null)} />
 
         <section className="section">
