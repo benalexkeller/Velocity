@@ -201,7 +201,7 @@
 .sgauge .sg-sport { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 104px; font-size: 18px; font-weight: 600; color: var(--ink); } .sgauge .sg-sport .sport-icon { color: var(--accent); width: 24px !important; height: 24px !important; }
 .sgauge.empty svg text { fill: var(--muted-2); }
 .sgauge .sg-pop { display: none; position: absolute; left: calc(50% + 60px); top: 0; z-index: 30; width: 280px; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 12px; box-shadow: 0 8px 24px rgba(16, 17, 20, .12); }
-.sgauge:hover .sg-pop { display: grid; gap: 6px; }
+.sgauge > svg:hover ~ .sg-pop { display: grid; gap: 6px; } /* only over the ring and its number, not the whole width of the card */
 .sgauge .sg-pop > b { font-size: 13px; }
 .sgauge .sg-pop > p { margin: 0; color: var(--muted); }
 .sgauge .sg-pop > div { display: grid; grid-template-columns: minmax(0, 1fr) auto; column-gap: 14px; row-gap: 2px; align-items: start; }
