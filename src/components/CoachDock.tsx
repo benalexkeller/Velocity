@@ -1,14 +1,14 @@
 "use client";
 // Where the coach panel lives. On the Plan page (wide screens) it is docked as the right column and can be
-// closed; the choice is remembered. Everywhere else, and on narrow screens, clicking the coach bar opens the
-// same panel on the right side as a drawer.
+// closed; the choice is remembered. Everywhere else it floats over the page, starting where the Plan column
+// sits; it can be dragged and resized (remembered on this device). Typing in the bar opens it.
 import { createContext, useCallback, useContext, useEffect, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import { CoachRail } from "./CoachRail";
 
 const KEY = "velocity.coach.v1";
-interface Dock { open: boolean; docked: boolean; setOpen: (v: boolean) => void }
-const Ctx = createContext<Dock>({ open: false, docked: false, setOpen: () => {} });
+interface Dock { open: boolean; docked: boolean; setOpen: (v: boolean) => void; seed: string; openWith: (text: string) => void; takeSeed: () => string }
+const Ctx = createContext<Dock>({ open: false, docked: false, setOpen: () => {}, seed: "", openWith: () => {}, takeSeed: () => "" });
 export const useCoachDock = () => useContext(Ctx);
 
 function useWide() {
@@ -35,6 +35,10 @@ export function CoachDockProvider({ children }: { children: ReactNode }) {
     else setDrawer(v);
     if (v) setTimeout(() => document.getElementById("coach-input")?.focus(), 60);
   }, [docked]);
+  // typing in the bar opens the panel with what was typed already in its box
+  const [seed, setSeed] = useState("");
+  const openWith = useCallback((text: string) => { setSeed(text); setOpen(true); }, [setOpen]);
+  const takeSeed = useCallback(() => { const t = seed; setSeed(""); return t; }, [seed]);
   // drawer sits over the page on the right; Esc closes it
   useEffect(() => {
     const on = !docked && drawer;
@@ -45,7 +49,7 @@ export function CoachDockProvider({ children }: { children: ReactNode }) {
     return () => { window.removeEventListener("keydown", k); document.body.classList.remove("coach-drawer"); };
   }, [docked, drawer]);
   return (
-    <Ctx.Provider value={{ open, docked, setOpen }}>
+    <Ctx.Provider value={{ open, docked, setOpen, seed, openWith, takeSeed }}>
       {children}
       {!docked && drawer && <CoachRail drawer onClose={() => setDrawer(false)} />}
     </Ctx.Provider>
