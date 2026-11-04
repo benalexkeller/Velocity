@@ -12,6 +12,7 @@ import { NutritionProvider } from "@/lib/nutrition/store";
 import { CoachBar } from "@/components/CoachBar";
 import { LogActivity } from "@/components/dashboard/LogActivity";
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { PaceChart, VolumeChart } from "@/components/dashboard/Charts";
 import { weekLoad, type Session } from "@/lib/data";
 import { usePlan } from "@/lib/store";
@@ -48,6 +49,7 @@ export default function DashboardPage() {
 
 function Dashboard() {
   const plan = usePlan();
+  const router = useRouter();
   const t = today();
   const ds = ymd(t);
   const cur = plan.currentWeek();
@@ -187,7 +189,7 @@ function Dashboard() {
           </div>
         </div>
 
-        <section className="card phase" aria-label="Training phase">
+        <section className="card phase linked" aria-label="Training phase, open the plan" role="link" tabIndex={0} onClick={() => router.push("/plan")} onKeyDown={(e) => { if (e.key === "Enter") router.push("/plan"); }}>
           <div><div className="eyebrow">Training phase</div><div className="pos">{plan.hasPlan ? <>{phase?.short ?? cur.phaseShort}<span className="at">Week {cur.week} of {WEEKS.length}</span></> : "No plan yet"}</div></div>
           {plan.hasPlan && <div className="track">
             <div className="line" /><div className="fill" style={{ width: `${pos * 100}%` }} />

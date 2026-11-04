@@ -245,7 +245,7 @@ h2 .at { font-size: 0.72em; letter-spacing: 0; margin-left: 10px; }
 .chartcard .head { grid-column: 1 / -1; min-height: 34px; display: flex; align-items: center; justify-content: space-between; }
 .chartcard .plot { display: flex; flex-direction: column; justify-content: flex-end; min-height: 0; } /* the chart fills the room the card gives it, so both charts end on the same line */
 .chartcard .plot svg.chart { display: block; width: 100%; height: auto; }
-.chartcard .side { border-left: 1px solid var(--line-2); padding-left: 18px; display: grid; align-content: space-between; gap: 14px; }
+.chartcard .side { border-left: 1px solid var(--line-2); padding-left: 18px; display: grid; align-content: start; gap: 18px; }
 .chartcard .side .rows { display: grid; gap: 14px; }
 .chartcard .side .drow { display: grid; gap: 5px; }
 .chartcard .side .drow .l { display: flex; justify-content: space-between; font-size: 13px; color: var(--ink-2); }

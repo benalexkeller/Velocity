@@ -216,7 +216,7 @@ export function SessionPanel({ id, onClose }: { id: string | null; onClose: () =
               <div className="eyebrow muted">Logged that day</div>
               {acts.map((a) => (
                 <Link key={a.id} href={`/activities?a=${a.id}`} className="sp-act">
-                  <SportIcon sport={a.sport} size={22} />
+                  <SportIcon sport={a.sport} name={a.name} size={22} />
                   <div className="t"><b>{a.name}</b><small>{a.start ? `${a.start}, ` : ""}{fmtHMS(a.min)}{a.sport === "swim" && a.yd ? `, ${swimDist(a.yd).v.toLocaleString()} ${swimDist(0).u}` : a.mi ? `, ${fmtDist(a.mi)}` : ""}{a.sport === "run" && a.pace_s ? `, ${fmtPace(runPace(a.pace_s).s)}${runPace(0).u}` : a.sport === "bike" && a.mph ? `, ${fmtSpeed(a.mph)}` : a.sport === "swim" && a.p100_s ? `, ${fmtPace(swimPace(a.p100_s).s)}${swimPace(0).u}` : ""}{a.hr ? `, ${a.hr} bpm` : ""}{a.elev_ft ? `, ${elev(a.elev_ft).v} ${elev(0).u}` : ""}, load {activityLoad(a, plan.athlete.lthr ?? undefined)}</small></div>
                   {a.route && <div className="thumb"><RouteMap route={a.route} height={40} bg="var(--surface-2)" pad={0.1} /></div>}
                 </Link>

@@ -261,7 +261,7 @@ export function ActivityPanel({ id, onClose }: { id: string | null; onClose: () 
     <section className="card an-activity" aria-label="Activity analysis">
       <button className="close" type="button" onClick={onClose} aria-label="Close"><Icon name="close" /></button>
       <div className="hd">
-        <SportIcon sport={a.sport} size={40} />
+        <SportIcon sport={a.sport} name={a.name} size={40} />
         <div>
           <div className="eyebrow muted">Activity analysis</div>
           <h2>{a.name}</h2>

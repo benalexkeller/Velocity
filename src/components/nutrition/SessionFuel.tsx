@@ -39,7 +39,6 @@ export function FuelLine({ s }: { s: Session }) {
   return (
     <div className="fuel-strip" aria-label="Fuel for today's session">
       {cells.map((c) => <div key={c.k} className="fs-cell" {...linkProps} aria-label={`${c.k}: ${c.v}, open fuel plan`}><span className="fs-icon"><Icon name={c.icon} /></span><div><div className="fs-k">{c.k}</div><div className="fs-v">{c.v}</div></div></div>)}
-      <span className="fs-link" {...linkProps}>Fuel this workout →</span>
     </div>
   );
 }
