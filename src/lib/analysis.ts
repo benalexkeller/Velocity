@@ -328,9 +328,10 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
     return Array.from({ length: n }, (_, i) => { const start = addDays(s0, -7 * (n - 1 - i)); const ys = ymd(start); const w = WEEKS.find((x) => x.start === ys); return { start: ys, week: w ? w.week : plan0 != null ? Math.round((start.getTime() - plan0) / 604800000) + 1 : i + 1 }; }); // weeks before the plan count down: W0, W-1 …
   }
   /** Sport cards: the last 5 sessions (fewer when there are fewer) against the 5 before, plus a 12-week weekly trend. */
-  function sportPerformance(sp: "swim" | "bike" | "run") {
+  /** `back` picks the comparison: the 5 sessions that ended `back` sessions ago (5 = the 5 right before these, 10 = the 5 before those …). */
+  function sportPerformance(sp: "swim" | "bike" | "run", back = 5) {
     const all = ACTIVITIES.filter((a) => a.sport === sp && fromYmd(a.date) <= today());
-    const cur = all.slice(-5), prev = all.slice(Math.max(0, all.length - 10), Math.max(0, all.length - 5));
+    const cur = all.slice(-5), prev = all.slice(Math.max(0, all.length - back - 5), Math.max(0, all.length - back));
     const wavg = (xs: Activity[], f: (a: Activity) => number | null) => { const v = xs.filter((a) => f(a) != null); const w = v.reduce((s, a) => s + a.min, 0); return w ? v.reduce((s, a) => s + (f(a) as number) * a.min, 0) / w : null; };
     const pace = (a: Activity) => paceOf(a, sp);
     const hr = (a: Activity) => a.hr ?? null;
@@ -344,7 +345,7 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
     ];
     // weekly trend (12 weeks): duration-weighted pace per week
     const trend = lastWeeks(12).map((w) => { const s = fromYmd(w.start), e = addDays(s, 7); const xs = ACTIVITIES.filter((a) => a.sport === sp && between(a, addDays(s, -1), e)); return { week: w.week, start: w.start, v: wavg(xs, pace) }; }).filter((q, i, arr) => arr.slice(0, i + 1).some((z) => z.v != null)); // starts at the first week with data
-    return { rows, trend, sessions: cur.length, prevSessions: prev.length };
+    return { rows, trend, sessions: cur.length, prevSessions: prev.length, total: all.length };
   }
 
   // ---------- thresholds (from the plan's zones, else the best recent session) ----------
