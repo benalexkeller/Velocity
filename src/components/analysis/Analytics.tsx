@@ -571,7 +571,10 @@ function MiniTrend({ pts, kind, sp, label, info }: { pts: { week: number; start:
 }
 function SportCard({ sp, expert }: { sp: Sp; expert: boolean }) {
   const an = useAnalysis();
-  const p = an.sportPerformance(sp);
+  const [back, setBack] = useState(5); // which earlier 5 sessions the last 5 are compared with
+  const [cmpOpen, setCmpOpen] = useState(false);
+  const p = an.sportPerformance(sp, back);
+  const backs = Array.from({ length: Math.max(1, Math.min(8, Math.floor((p.total - 1) / 5))) }, (_, i) => (i + 1) * 5);
   const fmtRow = (kind: string, v: number | null) => v == null ? "-" : kind === "pace" ? `${fmtV(sp, paceDisp(sp, v))} ${unitOf(sp)}` : kind === "speed" ? fmtSpeed(v) : kind === "hr" ? `${v.toFixed(0)} bpm` : sp === "swim" ? `${swimDist(v).v.toLocaleString()} ${swimDist(0).u}` : fmtDist(v);
   const good = (kind: string) => (kind === "pace" || kind === "hr" ? "down" : "up");
   const [svgRef, W] = useWidth<SVGSVGElement>(240); const H = 98, L = 44, R = 8, T = 14, B = 18;
@@ -593,7 +596,14 @@ function SportCard({ sp, expert }: { sp: Sp; expert: boolean }) {
   return (
     <div className="sport">
       <ScoreGauge sp={sp} />
-      <div className="sh"><b>{p.sessions ? `Last ${p.sessions} Session${p.sessions === 1 ? "" : "s"}` : "No Sessions Yet"}</b></div>
+      <div className="sh"><b>{p.sessions ? `Last ${p.sessions} Session${p.sessions === 1 ? "" : "s"}` : "No Sessions Yet"}</b>
+        {p.total > 5 && <span className="cmp" onMouseLeave={() => setCmpOpen(false)}>
+          <button type="button" className={`cmp-pill${cmpOpen ? " on" : ""}`} aria-haspopup="listbox" aria-expanded={cmpOpen} title={back === 5 ? "Compared with the 5 sessions before these" : `Compared with the 5 sessions ${back} back`} onClick={() => setCmpOpen((o) => !o)}>−{back}</button>
+          {cmpOpen && <ul className="cmp-menu" role="listbox" aria-label="Compare with">
+            {backs.map((b) => <li key={b}><button type="button" role="option" aria-selected={b === back} className={b === back ? "on" : ""} onClick={() => { setBack(b); setCmpOpen(false); }}>−{b}<small>{b === 5 ? "the 5 before these" : `sessions ${b + 1} to ${b + 5} back`}</small></button></li>)}
+          </ul>}
+        </span>}
+      </div>
       <table><tbody>{p.rows.map((r) => <tr key={r.k}><td><span className="info-row">{r.k}{ROW_INFO[r.k] && <Info {...ROW_INFO[r.k]} />}</span></td><td><b>{fmtRow(r.kind, r.cur)}</b></td><td><Delta v={r.cur != null && r.prev ? ((r.cur - r.prev) / r.prev) * 100 : null} good={good(r.kind)} /></td></tr>)}</tbody></table>
       <div className="k">{sp === "bike" ? "Weekly Average Speed" : "Weekly Average Pace"} {unitLabel}</div>
       <svg ref={svgRef} className="chart mini" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${sp} weekly ${sp === "bike" ? "speed" : "pace"} trend`} onMouseMove={hov.onMove} onMouseLeave={hov.onLeave}>
