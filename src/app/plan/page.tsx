@@ -102,9 +102,9 @@ function WeekOverview({ week, onClose, onOpenWeek }: { week: Week; onClose: () =
       <div className="wo-grid">
         <div><div className="k">Sessions</div><div className="v">{sessions.length}</div><div className="u">{count("swim")} swim, {count("bike") + count("brick")} bike, {count("run")} run{count("strength") ? `, ${count("strength")} strength` : ""}</div></div>
         <div><div className="k">Planned hours</div><div className="v">{fmtHours(week.plannedMin / 60)}</div><div className="u">{past ? `${fmtHours(st.actualH)} done` : "planned"}</div></div>
-        <div><SportIcon sport="swim" size={18} /><div className="k">Swim</div><div className="v">{fmtHours(p.swim)}</div><div className="u">{past ? `${fmtHours(st.bySport.swim)} done` : n(count("swim"))}</div></div>
-        <div><SportIcon sport="bike" size={18} /><div className="k">Bike</div><div className="v">{fmtHours(p.bike)}</div><div className="u">{past ? `${fmtHours(st.bySport.bike)} done` : n(count("bike") + count("brick"))}</div></div>
-        <div><SportIcon sport="run" size={18} /><div className="k">Run</div><div className="v">{fmtHours(p.run)}</div><div className="u">{past ? `${fmtHours(st.bySport.run)} done` : n(count("run"))}</div></div>
+        <div><div className="k ic"><SportIcon sport="swim" size={18} />Swim</div><div className="v">{fmtHours(p.swim)}</div><div className="u">{past ? `${fmtHours(st.bySport.swim)} done` : n(count("swim"))}</div></div>
+        <div><div className="k ic"><SportIcon sport="bike" size={18} />Bike</div><div className="v">{fmtHours(p.bike)}</div><div className="u">{past ? `${fmtHours(st.bySport.bike)} done` : n(count("bike") + count("brick"))}</div></div>
+        <div><div className="k ic"><SportIcon sport="run" size={18} />Run</div><div className="v">{fmtHours(p.run)}</div><div className="u">{past ? `${fmtHours(st.bySport.run)} done` : n(count("run"))}</div></div>
         <div><div className="k">Planned load</div><div className="v">{load}</div><div className="u">{past ? `${st.done} of ${st.total} sessions done` : longest ? `longest: ${longest.title} ${longest.min} min` : ""}</div></div>
       </div>
       <ul className="wo-list">
