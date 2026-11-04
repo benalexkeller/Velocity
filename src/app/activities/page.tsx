@@ -129,7 +129,7 @@ function Activities() {
                   <FragmentRow key={a.id} showGroup={showGroup} group={g}>
                     <tr className={`row${sel === a.id ? " sel" : ""}${a.excluded ? " excluded" : ""}`} tabIndex={0} aria-label={`${a.name}, ${a.date}`} onClick={() => { setSel(a.id); window.scrollTo({ top: 0, behavior: "smooth" }); }} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); setSel(a.id); } }}>
                       <td className="when">{w.l1}<small>{w.l2}</small></td>
-                      <td><div className="act"><SportIcon sport={a.sport} size={30} /><div><b>{a.name}{a.excluded && <span className="tag">Excluded</span>}</b><small>{subtitle(a)}</small></div></div></td>
+                      <td><div className="act"><SportIcon sport={a.sport} name={a.name} size={30} /><div><b>{a.name}{a.excluded && <span className="tag">Excluded</span>}</b><small>{subtitle(a)}</small></div></div></td>
                       <td className="num">{distance(a)}</td>
                       <td className="num">{fmtHMS(a.min)}</td>
                       <td className="num hide-sm">{pp.v}<small>{pp.u}</small></td>
@@ -173,7 +173,7 @@ function Drawer({ a, onDeleted }: { a: Activity; onDeleted: () => void }) {
     <aside className="card drawer" aria-label="Activity detail">
       {big && a.route && <MapModal route={a.route} title={a.name} sub={`${w.l1}, ${distance(a)}, ${fmtHMS(a.min)}`} onClose={() => setBig(false)} />}
       <div className="hd">
-        <SportIcon sport={a.sport} size={40} />
+        <SportIcon sport={a.sport} name={a.name} size={40} />
         <div><b>{a.name}</b><small>{w.l1}{w.l2 ? `, ${w.l2}` : ""}</small><small>{subtitle(a)}{a.excluded ? ", excluded from analysis" : ""}</small></div>
         <span className="act-more">
           <button type="button" className="iconbtn more" aria-label="More options" aria-haspopup="menu" aria-expanded={menu} onClick={() => { setMenu((m) => !m); setConfirm(false); }}><Icon name="kebab" /></button>
