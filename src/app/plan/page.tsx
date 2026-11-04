@@ -10,6 +10,7 @@ import { CoachBar } from "@/components/CoachBar";
 import { useCoachDock } from "@/components/CoachDock";
 import { WeekGrid, weekRange } from "@/components/plan/WeekGrid";
 import { SessionPanel } from "@/components/plan/SessionPanel";
+import { LogActivity } from "@/components/dashboard/LogActivity";
 import { MonthGrid } from "@/components/plan/MonthGrid";
 import { PeriodStepper } from "@/components/PeriodStepper";
 import { RampChart } from "@/components/plan/RampChart";
@@ -30,11 +31,11 @@ export default function PlanPage() {
 }
 
 // "+ Add session": creates a session in the local plan.
-function AddWorkout({ week, onDone }: { week: Week; onDone: (id: string | null) => void }) {
+function AddWorkout({ week, onDone, at }: { week: Week; onDone: (id: string | null) => void; at?: { date?: string; start?: string } }) {
   const plan = usePlan();
   const [sport, setSport] = useState<Sport>("run");
-  const [date, setDate] = useState(week.start);
-  const [start, setStart] = useState("06:30");
+  const [date, setDate] = useState(at?.date ?? week.start);
+  const [start, setStart] = useState(at?.start ?? "06:30");
   const [min, setMin] = useState("45");
   const [intensity, setIntensity] = useState("Zone 2");
   const [text, setText] = useState("");
@@ -55,6 +56,23 @@ function AddWorkout({ week, onDone }: { week: Week; onDone: (id: string | null) 
       </div>
       <div className="row"><button type="submit" className="btn">Add to plan</button><button type="button" className="btn ghost" onClick={() => onDone(null)}>Cancel</button></div>
     </form>
+  );
+}
+
+/** "+ Add activity": a manual activity (something already done) first, or a session for the plan; from the button or a click on an empty spot of the calendar. */
+function AddActivity({ week, at, onDone }: { week: Week; at?: { date?: string; start?: string }; onDone: (sessionId: string | null) => void }) {
+  const plan = usePlan();
+  const [mode, setMode] = useState<"activity" | "session">("activity");
+  return (
+    <div className="add-activity">
+      <div className="pill-group" role="tablist" aria-label="What to add">
+        <button type="button" role="tab" aria-selected={mode === "activity"} className={mode === "activity" ? "on" : ""} onClick={() => setMode("activity")}>Manual activity</button>
+        <button type="button" role="tab" aria-selected={mode === "session"} className={mode === "session" ? "on" : ""} onClick={() => setMode("session")}>Session</button>
+      </div>
+      {mode === "activity"
+        ? <LogActivity inline open onClose={() => onDone(null)} initial={{ date: at?.date, time: at?.start }} onSaved={(a) => { plan.logActivity(a); onDone(null); }} />
+        : <AddWorkout week={week} at={at} onDone={onDone} />}
+    </div>
   );
 }
 
@@ -104,7 +122,7 @@ function Plan() {
   const [sel, setSel] = useState<string | null>(fromUrl);
   const [wk, setWk] = useState(plan.findSession(fromUrl)?.w.week ?? cur.week);
   const [view, setView] = useState<"week" | "month">("week");
-  const [adding, setAdding] = useState(false);
+  const [adding, setAdding] = useState<{ date?: string; start?: string } | null>(null);
   const [overview, setOverview] = useState<number | null>(null);
   const [phaseSel, setPhaseSel] = useState<string | null>(null);
   useEffect(() => { if (fromUrl) { setSel(fromUrl); const hit = plan.findSession(fromUrl); if (hit) setWk(hit.w.week); } }, [fromUrl, plan]);
@@ -134,7 +152,7 @@ function Plan() {
           </div>
           <CalendarBadge />
           {!plan.hasPlan && <Link href="/plan/new" className="btn ghost">Build plan</Link>}
-          <button className="btn" type="button" onClick={() => setAdding((a) => !a)} aria-expanded={adding}><Icon name="plus" />Add session</button>
+          <button className="btn" type="button" onClick={() => setAdding((a) => (a ? null : {}))} aria-expanded={!!adding}><Icon name="plus" />Add activity</button>
         </div>
 
         {!plan.hasPlan && (
@@ -144,9 +162,9 @@ function Plan() {
           </section>
         )}
 
-        {adding && <AddWorkout week={week} onDone={(id) => { setAdding(false); if (id) { setSel(id); const hit = plan.findSession(id); if (hit) setWk(hit.w.week); } }} />}
+        {adding && <AddActivity week={week} at={adding} onDone={(id) => { setAdding(null); if (id) { setSel(id); const hit = plan.findSession(id); if (hit) setWk(hit.w.week); } }} />}
 
-        {view === "week" ? <WeekGrid week={week} selectedId={sel} onPick={(x) => setSel(x.id)} /> : <MonthGrid year={mo.y} month={mo.m} selectedId={sel} onPick={(x) => { pick(x.id); setView("week"); }} />}
+        {view === "week" ? <WeekGrid week={week} selectedId={sel} onPick={(x) => setSel(x.id)} onAddAt={(date, start) => { setSel(null); setAdding({ date, start }); }} /> : <MonthGrid year={mo.y} month={mo.m} selectedId={sel} onPick={(x) => { pick(x.id); setView("week"); }} />}
         <SessionPanel key={sel ?? "none"} id={sel} onClose={() => setSel(null)} />
 
         <section className="section">

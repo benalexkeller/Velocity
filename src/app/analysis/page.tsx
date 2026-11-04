@@ -4,9 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { CoachBar } from "@/components/CoachBar";
 import { ActivityAnalyzer, ActivityPanel } from "@/components/analysis/Panels";
-import { KpiRow, Overview, Progress, Quality, RaceReadiness, Recovery, SportRow, Volume, RANGE_LABEL, rangeFor, type Range } from "@/components/analysis/Analytics";
-import { dateFull, rangeLabel, today, ymd } from "@/lib/format";
-import DateRangePicker from "@/components/DateRangePicker";
+import { KpiRow, Overview, Progress, Quality, RaceReadiness, Recovery, SportRow, Volume, RangePills, rangeFor, type Range } from "@/components/analysis/Analytics";
+
 import { usePlan } from "@/lib/store";
 import { NutritionProvider } from "@/lib/nutrition/store";
 
@@ -37,7 +36,6 @@ function Analysis() {
   const empty = plan.ready && plan.activities.length === 0 && plan.body.length === 0;
   const firstDate = plan.activities.length ? plan.activities.reduce((m, a) => (a.date < m ? a.date : m), plan.activities[0].date) : ATHLETE.planStart;
   const [range, setRange] = useState<Range>(() => rangeFor("3m", firstDate));
-  const [picking, setPicking] = useState(false);
   const [sel, setSel] = useState<string | null>(null);
   // the Activities page's Analyze button lands here with ?activity=<id>
   useEffect(() => { const id = new URLSearchParams(window.location.search).get("activity"); if (id) setSel(id); }, []);
@@ -50,14 +48,7 @@ function Analysis() {
             <h1>Analysis</h1>
           </div>
           <span className="grow" />
-          <div className="ax-range">
-            <div className="pill-group" role="group" aria-label="Time range">
-              {(["1m", "3m", "6m", "all"] as const).map((r) => <button key={r} type="button" className={range.key === r ? "on" : ""} onClick={() => { setPicking(false); setRange(rangeFor(r, firstDate)); }}>{RANGE_LABEL[r]}</button>)}
-              <button type="button" className={range.key === "custom" ? "on" : ""} onClick={() => setPicking((v) => !v)} aria-expanded={picking}>Custom</button>
-            </div>
-            {picking && <DateRangePicker from={range.from} to={range.to} max={ymd(today())} onApply={(from, to) => { setRange({ key: "custom", from, to }); setPicking(false); }} onClose={() => setPicking(false)} />}
-          </div>
-          <span className="badge muted">{range.key === "all" ? `Since ${dateFull(range.from)}` : rangeLabel(range.from, range.to)}</span>
+          <RangePills value={range} onChange={setRange} firstDate={firstDate} />
           <ActivityAnalyzer selectedId={sel} onSelect={setSel} />
         </div>
 
@@ -68,8 +59,8 @@ function Analysis() {
             <KpiRow />
             <Volume range={range} />
             <SportRow />
-            <Overview range={range} />
-            <Progress range={range} onPick={pick} />
+            <Overview range={range} firstDate={firstDate} />
+            <Progress range={range} firstDate={firstDate} onPick={pick} />
             <Quality onPick={pick} />
             <Recovery />
             <RaceReadiness />

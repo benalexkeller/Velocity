@@ -66,7 +66,7 @@
 /* 5. sport cards */
 .ax-sports { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .sport { border: 1px solid var(--line-2); border-radius: 12px; padding: 14px 16px 10px; }
-.sport .sh { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; } .sport .sh b { font-size: 14px; } .sport .sh .muted { font-size: 12px; margin-left: auto; }
+.sport .sh { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; } .sport .sh b { font-size: 14px; color: var(--ink); }
 .sport .sh .sport-icon { color: var(--accent); }
 .sport table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .sport td { padding: 4px 0; border-bottom: 1px solid var(--line-2); } .sport td b { font-weight: 600; font-size: 13px; } .sport td:first-child { color: var(--muted); } .sport td:nth-child(2) { text-align: right; } .sport td:nth-child(3) { text-align: right; width: 64px; }
@@ -198,7 +198,7 @@
 .kpi.gauge-card { grid-template-rows: auto auto auto; }
 .kpi .gauge { display: block; margin: 0 auto; max-width: 100%; height: auto; }
 .sgauge { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; margin: -2px 0 10px; }
-.sgauge > .muted { font-size: 12px; }
+.sgauge .sg-sport { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--ink); } .sgauge .sg-sport .sport-icon { color: var(--accent); }
 .sgauge.empty svg text { fill: var(--muted-2); }
 .sgauge .sg-pop { display: none; position: absolute; left: calc(50% + 60px); top: 0; z-index: 30; width: 280px; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 12px; box-shadow: 0 8px 24px rgba(16, 17, 20, .12); }
 .sgauge:hover .sg-pop { display: grid; gap: 6px; }
@@ -252,3 +252,33 @@
 .drp-day.edge:hover { background: var(--accent-hover); }
 .drp-foot { display: flex; justify-content: flex-end; gap: 8px; }
 @media (max-width: 640px) { .drp { right: auto; left: 0; } .drp-month { width: 100%; } .drp-grid { grid-template-columns: repeat(7, 1fr); } }
+
+/* the popup's title is white on the dark popup, wherever the (i) sits (the insight header styles its own b) */
+.info .info-pop b, .insight .k .info-pop b { color: #fff; margin-left: 0; font-size: 13px; }
+/* hover value on the small weekly charts */
+.mt-tip { position: absolute; top: 2px; z-index: 5; pointer-events: none; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 18px rgba(16, 17, 20, .10); padding: 5px 8px; font-size: 12px; color: var(--ink); white-space: nowrap; }
+.mt-tip .d { color: var(--muted); margin-right: 6px; }
+
+/* ---------- KPI cards: the Completed ring, and a card that grows in place when clicked ---------- */
+.ax-kpis { position: relative; }
+.kpi[role="button"] { cursor: pointer; transition: box-shadow .15s; }
+.kpi[role="button"]:hover { box-shadow: 0 1px 2px rgba(16,17,20,0.04), 0 0 0 1px var(--line), 0 8px 22px rgba(16,17,20,0.08); }
+.kpi .ring-row { display: flex; align-items: center; gap: 12px; margin-top: 2px; }
+.kpi .ring { flex: none; }
+.kpi-zoom { position: absolute; z-index: 20; padding: 14px 16px 12px; display: grid; gap: 8px; align-content: start; box-shadow: 0 1px 2px rgba(16,17,20,0.04), 0 0 0 1px var(--line), 0 18px 48px rgba(16,17,20,0.18); animation: kpi-grow .16s ease-out; }
+@keyframes kpi-grow { from { transform: scale(.9); opacity: .6; } to { transform: none; opacity: 1; } }
+.kd-head { display: flex; align-items: center; gap: 10px; }
+.kd-head b { font-size: 13px; }
+.kd-head .pill-group { margin-left: auto; flex: none; } .kd-head .pill-group button { padding: 3px 8px; font-size: 12px; white-space: nowrap; }
+.kd-head b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.kd-close { border: 0; background: var(--surface-2); color: var(--ink-2); width: 24px; height: 24px; border-radius: 50%; font-size: 16px; line-height: 1; cursor: pointer; flex: none; }
+.kd-head > .kd-close:first-of-type { margin-left: auto; } .kd-head .pill-group + .kd-close { margin-left: 0; }
+.kd-strip { display: grid; gap: 8px; }
+.kd-strip .ring-row { display: flex; align-items: center; gap: 14px; } .kd-strip .ring-row b { font-size: 14px; } .kd-strip .ring-row p { margin: 2px 0 0; font-size: 12px; }
+.kd-strip .strip { width: 100%; height: 44px; }
+.kd-legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--ink-2); }
+.kd-legend span { display: inline-flex; align-items: center; gap: 6px; }
+.kd-legend .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--accent); display: inline-block; }
+.kd-legend .dot.half { opacity: .45; } .kd-legend .dot.miss { background: none; border: 1.5px solid var(--danger); } .kd-legend .dot.rest { background: var(--track); width: 6px; height: 6px; }
+.kpi-zoom .chart { width: 100%; height: auto; }
+.ax-recovery { grid-template-columns: 1fr; }

@@ -2,12 +2,13 @@
 import { useEffect, useRef, useState } from "react";
 import { Icon } from "../icons";
 import { SportIcon } from "../SportIcon";
-import { SPORT_LABEL, STATUS_LABEL, type Session, type Week } from "@/lib/data";
+import { SPORT_LABEL, STATUS_LABEL, isTraining, type Session, type Week } from "@/lib/data";
 import { usePlan } from "@/lib/store";
 import { useNow } from "@/lib/useNow";
 import { DAYS, addDays, fromYmd, hoursToClock, rangeLabel, today, ymd } from "@/lib/format";
 import { useOtherEvents } from "@/lib/calendar/client";
 import type { OtherEvent } from "@/lib/calendar/events";
+import { useRouter } from "next/navigation";
 
 const H0 = 0, H1 = 24, ROW = 20; // the grid covers the whole day, 00:00–24:00; the box shows 16 hours and scrolls for the rest
 const VIEW0 = 5, VIEW_H = 16; // opens at 05:00 showing 05:00–21:00, like before
@@ -19,8 +20,16 @@ const clock = (h: number) => `${String(Math.floor(h)).padStart(2, "0")}:${String
 
 interface Drag { id: string; day: number; h: number; colW: number } // where the block is right now while dragging
 
-export function WeekGrid({ week, selectedId, onPick }: { week: Week; selectedId?: string | null; onPick?: (s: Session) => void }) {
+export function WeekGrid({ week, selectedId, onPick, onAddAt }: { week: Week; selectedId?: string | null; onPick?: (s: Session) => void; onAddAt?: (date: string, start: string) => void }) {
   const plan = usePlan();
+  const router = useRouter();
+  // a click on an empty spot of a day column: that day and time, snapped to 15 minutes
+  const onColClick = (i: number) => (e: React.MouseEvent) => {
+    if (!onAddAt || !body.current || (e.target as HTMLElement).closest(".wg-ev, .wg-oe, .wg-now")) return;
+    const r = body.current.getBoundingClientRect();
+    const h = Math.min(H1 - 0.25, Math.max(H0, Math.floor((H0 + (e.clientY - r.top) / ROW) / SNAP) * SNAP));
+    onAddAt(ymd(addDays(start, i)), clock(h));
+  };
   const start = fromYmd(week.start);
   const t = today();
   const nowD = useNow();
@@ -46,7 +55,7 @@ export function WeekGrid({ week, selectedId, onPick }: { week: Week; selectedId?
   };
   const grab = useRef<{ id: string; x: number; y: number; offPx: number; moved: boolean; last?: { day: number; h: number } } | null>(null);
   const onDown = (s: Session) => (e: React.PointerEvent) => {
-    if (e.button !== 0 || s.locked || s.status === "done" || s.status === "partial") return;
+    if (e.button !== 0 || s.locked || s.status === "done" || s.status === "partial" || (s.status === "substituted" && s.actual)) return;
     const r = body.current!.getBoundingClientRect();
     grab.current = { id: s.id, x: e.clientX, y: e.clientY, offPx: e.clientY - r.top - y(toH(s.start)), moved: false };
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
@@ -116,10 +125,17 @@ export function WeekGrid({ week, selectedId, onPick }: { week: Week; selectedId?
           const tops = topsOf(sessions, y);
           // other events: where one meets a session, the session keeps the left side and the event takes the right
           const ext = layoutOther(other.list.filter((e) => !e.allDay && e.date === ymd(date)), sessions, tops, y);
+          // training done that no session accounts for (a run on a rest day, a second swim): shown as done, in black
+          const extra = plan.activitiesOn(ymd(date)).filter((a) => isTraining(a) && !sessions.some((s) => s.actual?.id === a.id));
           return (
-            <div key={i} className={`wg-col${isT ? " today" : ""}${drag && drag.day === i ? " target" : ""}`}>
+            <div key={i} className={`wg-col${isT ? " today" : ""}${drag && drag.day === i ? " target" : ""}`} onClick={onColClick(i)}>
               {ext.items.map((o) => <OtherBlock key={o.e.id} o={o} y={y} />)}
-              {sessions.map((s) => <Block key={s.id} s={s} y={y} top={tops.get(s.id)} narrow={ext.narrow.has(s.id) && drag?.id !== s.id} selected={s.id === selectedId} drag={drag?.id === s.id ? drag : null} onDown={onDown(s)} onMove={onMove(s)} onUp={onUp(s)} onLock={() => plan.toggleLock(s.id)} onPick={onPick} />)}
+              {extra.map((a) => { const h0 = toH(a.start ?? "06:30"); return (
+                <div key={a.id} className={`wg-ev ${a.sport} done extra`} style={{ top: y(h0) + 2, height: Math.max(44, (a.min / 60) * ROW - 4) }} role="button" tabIndex={0} title={`${a.name}, ${a.min} min, not in the plan`} aria-label={`${a.name}, ${a.min} minutes, done, not in the plan`} onClick={(e) => { e.stopPropagation(); router.push(`/analysis?activity=${a.id}`); }} onKeyDown={(e) => { if (e.key === "Enter") router.push(`/analysis?activity=${a.id}`); }}>
+                  <SportIcon sport={a.sport} name={a.name} size={20} />
+                  <div className="txt"><b><span className="t">{SPORT_LABEL[a.sport]}</span><span className="ck"><Icon name="check" /></span><span className="at">{a.start ?? ""}</span></b><small><span className="t">{a.name}</span><span className="at">{a.min} min, unplanned</span></small></div>
+                </div>); })}
+              {sessions.filter((s) => !(s.sport === "rest" && extra.length)).map((s) => <Block key={s.id} s={s} y={y} top={tops.get(s.id)} narrow={ext.narrow.has(s.id) && drag?.id !== s.id} selected={s.id === selectedId} drag={drag?.id === s.id ? drag : null} onDown={onDown(s)} onMove={onMove(s)} onUp={onUp(s)} onLock={() => plan.toggleLock(s.id)} onPick={onPick} />)}
               {isT && nowH >= H0 && nowH <= H1 && (
                 <div className="wg-now" style={{ top: y(nowH) }}>
                   <span><b className="now-w">NOW </b>{hoursToClock(nowH)}</span>
@@ -236,7 +252,7 @@ function OtherBlock({ o, y }: { o: OtherPlaced; y: (h: number) => number }) {
 
 function Block({ s, y, top, narrow, selected, drag, onDown, onMove, onUp, onLock, onPick }: { s: Session; y: (h: number) => number; top?: number; narrow?: boolean; selected?: boolean; drag: Drag | null; onDown: (e: React.PointerEvent) => void; onMove: (e: React.PointerEvent) => void; onUp: (e: React.PointerEvent) => void; onLock: () => void; onPick?: (s: Session) => void }) {
   const onKey = (e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onPick?.(s); } };
-  const done = s.status === "done" || s.status === "partial";
+  const done = s.status === "done" || s.status === "partial" || (s.status === "substituted" && !!s.actual);
   const a = done ? s.actual : undefined;
   // what was actually done replaces the plan on the block: sport, name and length from the logged activity
   const sport = a?.sport ?? s.sport;
@@ -246,8 +262,8 @@ function Block({ s, y, top, narrow, selected, drag, onDown, onMove, onUp, onLock
   const dx = drag ? (drag.day - s.dayIndex) * drag.colW : 0;
   const dy = drag && s.sport !== "rest" ? (drag.h - h0) * ROW : 0;
   const style: React.CSSProperties = drag ? { transform: `translate(${dx}px, ${dy}px)` } : {};
-  const cls = `wg-ev ${sport}${done ? " done" : ""}${s.status === "partial" ? " partial" : ""}${s.status === "substituted" ? " substituted" : ""}${selected ? " sel" : ""}${s.locked ? " locked" : ""}${drag ? " drag" : ""}${narrow ? " nar" : ""}`;
-  const handlers = { onPointerDown: onDown, onPointerMove: onMove, onPointerUp: onUp, onPointerCancel: onUp };
+  const cls = `wg-ev ${sport}${done ? " done" : ""}${s.status === "partial" ? " partial" : ""}${s.status === "substituted" && !a ? " substituted" : ""}${selected ? " sel" : ""}${s.locked ? " locked" : ""}${drag ? " drag" : ""}${narrow ? " nar" : ""}`;
+  const handlers = { onPointerDown: onDown, onPointerMove: onMove, onPointerUp: onUp, onPointerCancel: onUp, onClick: (e: React.MouseEvent) => e.stopPropagation() };
   const lock = !done && <button type="button" className="lk" onPointerDown={(e) => e.stopPropagation()} onPointerUp={(e) => e.stopPropagation()} onClick={(e) => { e.stopPropagation(); onLock(); }} aria-label={s.locked ? "Unlock session" : "Lock session"} title={s.locked ? "Locked, click to unlock" : "Lock in place"}><Icon name={s.locked ? "lock" : "unlock"} /></button>;
   if (s.sport === "rest") {
     return (

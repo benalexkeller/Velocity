@@ -276,16 +276,28 @@ export function createAnalysis(ACTIVITIES: Activity[], WEEKS: Week[], inputs: An
       return w ? x / w : null;
     };
     const efNow = ef(0, 28), efPrev = ef(28, 56);
+    // every steady run's efficiency, for the opened card
+    const efPoints = ACTIVITIES.filter((a) => a.sport === "run" && a.hr && a.pace_s && a.min >= 20 && hrZone("run", a.hr, LTHR) <= 3).map((a) => ({ date: a.date, v: (1609.34 / (a.pace_s! / 60)) / a.hr! }));
+    // the last 28 days, one state each, for the completion strip: done / partial / missed / rest (nothing planned) / today (still open)
+    const dayState = (d: Date): "done" | "partial" | "missed" | "rest" | "today" => {
+      const ds = ymd(d); const ss = WEEKS.flatMap((w) => w.sessions).filter((x) => x.date === ds && x.sport !== "rest");
+      if (!ss.length) return "rest";
+      if (ss.some((x) => x.status === "done")) return "done";
+      if (ss.some((x) => x.status === "partial" || x.status === "substituted")) return "partial";
+      if (d.getTime() === t.getTime()) return "today";
+      return "missed";
+    };
+    const days = Array.from({ length: 28 }, (_, i) => { const d = addDays(t, i - 27); return { date: ymd(d), state: dayState(d) }; });
     const vo2All = BODY.filter((b) => b.vo2 != null).map((b) => ({ date: b.date, v: b.vo2 as number }));
     const vo2Now = vo2All.at(-1) ?? null, vo2Ago = [...vo2All].reverse().find((b) => fromYmd(b.date) <= addDays(t, -28)) ?? null;
     return {
-      vo2: { v: vo2Now?.v ?? null, date: vo2Now?.date ?? null, d: vo2Now && vo2Ago ? vo2Now.v - vo2Ago.v : null, since: vo2Ago?.date ?? null, spark: vo2All.slice(-12).map((b) => b.v) },
+      vo2: { v: vo2Now?.v ?? null, date: vo2Now?.date ?? null, d: vo2Now && vo2Ago ? vo2Now.v - vo2Ago.v : null, since: vo2Ago?.date ?? null, spark: vo2All.slice(-12).map((b) => b.v), points: vo2All },
       week: { done: ws.done, total: ws.total, h: ws.actualH, plannedH: ws.plannedH, bars: recent.map((w) => weekStatus(w).actualH) },
       load: { v: Math.round(actual(cur)), planned: Math.round(planned(cur)), last: prev ? Math.round(actual(prev)) : null, bars: recent.map((w) => actual(w)) },
       fitness: { v: last.fitness, d: baseline ? last.fitness - wkAgo.fitness : null, spark: spark("fitness") },
       form: { v: form, word: formWord, fatigue: last.fatigue, fitness: last.fitness, spark: spark("form") },
-      compliance: { v: comp.pct, done: comp.done, planned: comp.planned },
-      ef: { v: efNow, d: efNow != null && efPrev != null ? efNow - efPrev : null, ratio: efNow != null && efPrev ? efNow / efPrev : null },
+      compliance: { v: comp.pct, done: comp.done, planned: comp.planned, days },
+      ef: { v: efNow, d: efNow != null && efPrev != null ? efNow - efPrev : null, ratio: efNow != null && efPrev ? efNow / efPrev : null, points: efPoints },
     };
   }
 

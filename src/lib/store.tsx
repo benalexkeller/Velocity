@@ -3,7 +3,7 @@
 // working copy in memory, writes every change straight back. Everything the pages read comes from here.
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { ACTIVITIES as SEED_ACTIVITIES, PLAN_SEED, SPORT_LABEL, STATUS_CREDIT, activityLoad, buildWeeks, fitsSession, intensityOf, isRaceDay, phasesOf, sportOf, statusOf, sumH, virtualWeeks, whyOf, type Activity, type Phase, type PlanWeekJson, type Session, type Sport, type Week } from "./data";
+import { ACTIVITIES as SEED_ACTIVITIES, PLAN_SEED, SPORT_LABEL, STATUS_CREDIT, activityLoad, buildWeeks, fitsSession, isTraining, intensityOf, isRaceDay, phasesOf, sportOf, statusOf, sumH, virtualWeeks, whyOf, type Activity, type Phase, type PlanWeekJson, type Session, type Sport, type Week } from "./data";
 import { BODY_SEED, type BodyDay } from "./analysis";
 import { athleteOf, type Athlete, type Profile, type Race } from "./athlete";
 import type { Intake } from "./plan/intake";
@@ -50,20 +50,22 @@ function derive(data: UserData, athlete: Athlete) {
     const inWeek = base.filter((s) => { const d = fromYmd(s.date); return d >= start && d <= addDays(start, 6); });
     // pair each day's sessions with what was logged: same sport only (brick = bike or run), longest first.
     // An activity of another sport never completes a session; it makes the session "substituted".
-    const actualOf = new Map<string, Activity>();
+    const actualOf = new Map<string, Activity>(); const substOf = new Map<string, Activity>();
     for (const date of new Set(inWeek.map((s) => s.date))) {
       const acts = [...on(date)].sort((a, b) => b.min - a.min);
       const ss = inWeek.filter((s) => s.date === date && s.sport !== "rest").sort((a, b) => b.min - a.min);
       const free = new Set(acts.map((a) => a.id));
       for (const s of ss) { const a = acts.find((x) => free.has(x.id) && fitsSession(s.sport, x)); if (a) { actualOf.set(s.id, a); free.delete(a.id); } }
+      // a session nothing matched takes the day's other training activity (a swim instead of the planned run): shown as what was done, counted as a substitute
+      for (const s of ss) { if (actualOf.has(s.id)) continue; const a = acts.find((x) => free.has(x.id) && isTraining(x) && x.min >= 30); if (a) { substOf.set(s.id, a); free.delete(a.id); } }
     }
     const sessions = inWeek.map((s) => {
       const d = fromYmd(s.date);
       const dayIndex = Math.round((d.getTime() - start.getTime()) / 86400000);
-      const paired = actualOf.get(s.id);
+      const paired = actualOf.get(s.id), subst = substOf.get(s.id);
       const others = on(s.date).filter((a) => a !== paired && ![...actualOf.values()].includes(a));
       const status: Session["status"] = statusOf(s, paired, others);
-      return { ...s, dayIndex, status, actual: paired };
+      return { ...s, dayIndex, status, actual: paired ?? (status === "done" || status === "substituted" ? subst : undefined) };
     }).sort((a, b) => a.dayIndex - b.dayIndex || (a.start ?? "").localeCompare(b.start ?? ""));
     return { ...w, sessions, plannedMin: sessions.reduce((x, s) => x + (s.min || 0), 0) - (w.race ? sessions.filter((s) => isRaceDay(s.text)).reduce((x, s) => x + s.min, 0) : 0) };
   });
