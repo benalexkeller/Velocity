@@ -153,7 +153,7 @@ function Ring({ pct, size = 64 }: { pct: number | null; size?: number }) {
     <svg className="ring" viewBox={`0 0 ${size} ${size}`} width={size} height={size} role="img" aria-label={pct == null ? "No sessions planned yet" : `${pct}% of sessions completed`}>
       <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--accent-soft)" strokeWidth={6} />
       {pct != null && <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="var(--accent)" strokeWidth={6} strokeLinecap="round" strokeDasharray={`${c * f} ${c}`} transform={`rotate(-90 ${size / 2} ${size / 2})`} />}
-      <text x={size / 2} y={size / 2 + 1} textAnchor="middle" dominantBaseline="middle" fontSize={size * 0.26} fontWeight={600} fill="var(--ink)">{pct == null ? "-" : `${pct}%`}</text>
+      <text x={size / 2} y={size / 2 + 1} textAnchor="middle" dominantBaseline="middle" fontSize={size * 0.27} fontWeight={700} fill="#101114">{pct == null ? "-" : `${pct}%`}</text>
     </svg>
   );
 }
@@ -203,7 +203,7 @@ export function KpiRow() {
     <div className="ax-kpis" ref={grid}>
       <div className="card kpi" {...cardProps("week")}><div className="k">This week<Info {...KPI_INFO.week} /></div><div className="row"><div className="v">{k.week.done}<small> / {k.week.total}</small></div></div><div className="u">{k.week.h.toFixed(1)} of {k.week.plannedH.toFixed(1)} h</div><Bars pts={eight(k.week.bars)} /></div>
       <div className="card kpi" {...cardProps("load")}><div className="k">Week load<Info {...KPI_INFO.load} /></div><div className="row"><div className="v">{k.load.v}<small> / {k.load.planned}</small></div></div><div className="u">{k.load.last != null ? `last week ${k.load.last}` : "first plan week"}</div><Bars pts={eight(k.load.bars)} /></div>
-      <div className="card kpi ring-card" {...cardProps("compliance")}><div className="k">Completed<span className="at">28 d</span><Info {...KPI_INFO.compliance} /></div><div className="ring-row"><div><div className="v">{k.compliance.planned ? <>{Math.round(k.compliance.done * 2) / 2}<small> / {k.compliance.planned}</small></> : "-"}</div><div className="u">sessions</div></div><Ring pct={k.compliance.v} size={58} /></div></div>
+      <div className="card kpi ring-card" {...cardProps("compliance")}><div className="k">Completed<span className="at">28 d</span><Info {...KPI_INFO.compliance} /></div><div className="ring-row"><Ring pct={k.compliance.v} size={56} /><div className="figs"><div className="v">{k.compliance.planned ? <>{Math.round(k.compliance.done * 2) / 2}<small> / {k.compliance.planned}</small></> : "-"}</div><div className="u">sessions</div></div></div></div>
       <div className="card kpi" {...cardProps("fitness")}><div className="k">Fitness<Info {...KPI_INFO.fitness} /></div><div className="row"><div className="v">{k.fitness.v.toFixed(0)}</div>{pts(k.fitness.d)}</div><div className="u">42-day load</div><Spark pts={k.fitness.spark} /></div>
       <div className="card kpi gauge-card" {...cardProps("ef")}><div className="k">Run efficiency<Info {...KPI_INFO.ef} /></div><RatioGauge ratio={k.ef.ratio} /></div>
       <div className="card kpi" {...cardProps("vo2")}><div className="k">VO2max<Info title="VO2max" text="Your watch's estimate of the most oxygen your body can use per kilogram per minute, the usual measure of aerobic fitness. Change against the reading 4 weeks ago; the line shows the last readings." /></div><div className="row"><div className="v">{k.vo2.v != null ? k.vo2.v.toFixed(0) : "-"}</div>{k.vo2.v != null && (k.vo2.d != null ? <span className={`delta ${k.vo2.d > 0 ? "up" : k.vo2.d < 0 ? "down" : ""}`}>{signed(k.vo2.d)}, 4 wk</span> : <span className="delta muted">first readings</span>)}</div><div className="u">{k.vo2.date ? `last reading ${dateLabel(k.vo2.date)}` : "no readings yet"}</div>{k.vo2.spark.length > 1 ? <Spark pts={k.vo2.spark} /> : null}</div>
@@ -215,7 +215,7 @@ export function KpiRow() {
             {(open.key === "fitness" || open.key === "ef" || open.key === "vo2") && <div className="pill-group">{KPI_WINDOWS.map(([key, label]) => <button key={key} type="button" className={win === key ? "on" : ""} onClick={() => setWin(key)}>{label}</button>)}</div>}
             <button type="button" className="kd-close" aria-label="Close" onClick={() => setOpen(null)}>×</button>
           </div>
-          {open.key === "week" && <><div className="row"><div className="v">{wkSt.done}<small> / {wkSt.total}</small></div><span className="delta muted">sessions done</span><span className="delta">{wkSt.total ? `${Math.round((wkSt.done / wkSt.total) * 100)}% compliance` : ""}</span></div><DayBars bars={dayBars.map((d) => ({ date: d.date, planned: d.plannedH, done: d.doneH }))} fmt={(v) => `${v.toFixed(1)} h`} pct /></>}
+          {open.key === "week" && <><div className="row"><div className="v">{wkSt.done}<small> / {wkSt.total}</small></div><span className="delta muted">sessions done</span></div><DayBars bars={dayBars.map((d) => ({ date: d.date, planned: d.plannedH, done: d.doneH }))} fmt={(v) => `${v.toFixed(1)} h`} pct={wkSt.total ? `${Math.round((wkSt.done / wkSt.total) * 100)}%` : "–"} /></>}
           {open.key === "load" && <><div className="row"><div className="v">{Math.round(dayBars.reduce((x, d) => x + d.doneL, 0))}<small> / {Math.round(dayBars.reduce((x, d) => x + d.plannedL, 0))}</small></div><span className="delta muted">load done of planned</span></div><div className="u">{wk.week > 1 ? `week before ${k.load.bars.length >= 2 && wk.week === cur.week ? Math.round(k.load.bars[k.load.bars.length - 2]) : "-"}` : "first plan week"}</div><DayBars bars={dayBars.map((d) => ({ date: d.date, planned: d.plannedL, done: d.doneL }))} fmt={(v) => v.toFixed(0)} /></>}
           {open.key === "compliance" && <div className="kd-strip"><div className="ring-row"><div><div className="v">{k.compliance.planned ? <>{Math.round(k.compliance.done * 2) / 2}<small> / {k.compliance.planned}</small></> : "-"}</div><div className="u">sessions</div></div><Ring pct={k.compliance.v} size={84} /><div><p className="muted">{k.compliance.days.filter((d) => d.state === "done").length} days done, {k.compliance.days.filter((d) => d.state === "missed").length} missed, {k.compliance.days.filter((d) => d.state === "rest").length} with nothing planned</p></div></div><DayStrip days={k.compliance.days} w={360} h={56} /><div className="kd-legend"><span><i className="dot" />Done</span><span><i className="dot half" />Partial or another sport</span><span><i className="dot miss" />Missed</span><span><i className="dot rest" />Nothing planned</span></div></div>}
           {open.key === "fitness" && <><div className="row"><div className="v">{k.fitness.v.toFixed(0)}</div>{pts(k.fitness.d)}</div><div className="u">42-day load</div></>}
@@ -230,21 +230,22 @@ export function KpiRow() {
   );
 }
 /** Seven bars for this week: the planned amount above each dashed box, what was done in white inside the filled bar, and (when asked) the share done in grey at the top. */
-function DayBars({ bars, fmt, pct }: { bars: { date: string; planned: number; done: number }[]; fmt: (v: number) => string; pct?: boolean }) {
-  const [svgRef, W] = useWidth<SVGSVGElement>(560); const H = 170, L = 36, R = 8, T = pct ? 44 : 28, B = 22;
+function DayBars({ bars, fmt, pct }: { bars: { date: string; planned: number; done: number }[]; fmt: (v: number) => string; pct?: string }) {
+  const [svgRef, W] = useWidth<SVGSVGElement>(560); const H = 170, L = 42, R = 8, T = pct ? 44 : 28, B = 22;
   const hi = Math.max(0.1, ...bars.map((b) => Math.max(b.planned, b.done)));
   const colW = (W - L - R) / 7, y = (v: number) => H - B - (v / hi) * (H - T - B);
   const DN = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   return (
     <svg ref={svgRef} className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="This week, day by day">
       {[0, 0.5, 1].map((f) => <g key={f}><line x1={L} x2={W - R} y1={y(hi * f)} y2={y(hi * f)} stroke="var(--grid)" /><text x={L - 6} y={y(hi * f) + 4} textAnchor="end">{fmt(hi * f)}</text></g>)}
+      {pct && <text x={L - 6} y={14} textAnchor="end" fontSize={11} fontWeight={600} style={{ fill: "var(--ink)" }}>{pct}</text>}
       {bars.map((b, i) => { const x0 = L + i * colW + colW * 0.2, bw = colW * 0.6, cx = x0 + bw / 2, barH = y(0) - y(b.done); return (
         <g key={b.date}>
-          {pct && b.planned > 0 && <text x={cx} y={14} textAnchor="middle" fill="var(--muted)" fontSize={11}>{Math.round((b.done / b.planned) * 100)}%</text>}
+          {pct && <text x={cx} y={14} textAnchor="middle" fontSize={11} style={{ fill: "var(--muted)" }}>{b.planned > 0 ? `${Math.round((b.done / b.planned) * 100)}%` : b.done > 0 ? "extra" : "–"}</text>}
           {b.planned > 0 && <rect x={x0} y={y(b.planned)} width={bw} height={Math.max(0, y(0) - y(b.planned))} fill="none" stroke="var(--accent)" strokeDasharray="3 3" rx={3} />}
-          {b.planned > 0 && <text x={cx} y={y(b.planned) - 5} textAnchor="middle" fill="var(--ink-2)" fontSize={11}>{fmt(b.planned)}</text>}
+          {b.planned > 0 && <text x={cx} y={y(b.planned) - 5} textAnchor="middle" fontSize={11} style={{ fill: "var(--ink-2)" }}>{fmt(b.planned)}</text>}
           {b.done > 0 && <rect x={x0} y={y(b.done)} width={bw} height={Math.max(0, barH)} fill="var(--accent)" rx={3}><title>{`${DN[i]}: ${fmt(b.done)} of ${fmt(b.planned)} planned`}</title></rect>}
-          {b.done > 0 && (barH >= 18 ? <text x={cx} y={y(b.done) + barH / 2 + 4} textAnchor="middle" fill="#fff" fontWeight={600} fontSize={11}>{fmt(b.done)}</text> : <text x={cx} y={y(b.done) - 5} textAnchor="middle" fill="var(--ink)" fontWeight={600} fontSize={11}>{fmt(b.done)}</text>)}
+          {b.done > 0 && (barH >= 18 ? <text x={cx} y={y(b.done) + barH / 2 + 4} textAnchor="middle" fontWeight={600} fontSize={11} style={{ fill: "#fff" }}>{fmt(b.done)}</text> : <text x={cx} y={y(b.done) - 5} textAnchor="middle" fontWeight={600} fontSize={11} style={{ fill: "var(--ink)" }}>{fmt(b.done)}</text>)}
           <text x={cx} y={H - 6} textAnchor="middle">{DN[i]}</text>
         </g>); })}
     </svg>
