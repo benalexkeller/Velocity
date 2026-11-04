@@ -20,7 +20,8 @@ const clock = (h: number) => `${String(Math.floor(h)).padStart(2, "0")}:${String
 
 interface Drag { id: string; day: number; h: number; colW: number } // where the block is right now while dragging
 
-export function WeekGrid({ week, selectedId, onPick, onAddAt }: { week: Week; selectedId?: string | null; onPick?: (s: Session) => void; onAddAt?: (date: string, start: string) => void }) {
+export type SlotAnchor = { left: number; right: number; y: number };
+export function WeekGrid({ week, selectedId, onPick, onAddAt, pending }: { week: Week; selectedId?: string | null; onPick?: (s: Session) => void; onAddAt?: (date: string, start: string, anchor: SlotAnchor) => void; pending?: { date?: string; start?: string } | null }) {
   const plan = usePlan();
   const router = useRouter();
   // a click on an empty spot of a day column: that day and time, snapped to 15 minutes
@@ -28,7 +29,8 @@ export function WeekGrid({ week, selectedId, onPick, onAddAt }: { week: Week; se
     if (!onAddAt || !body.current || (e.target as HTMLElement).closest(".wg-ev, .wg-oe, .wg-now")) return;
     const r = body.current.getBoundingClientRect();
     const h = Math.min(H1 - 0.25, Math.max(H0, Math.floor((H0 + (e.clientY - r.top) / ROW) / SNAP) * SNAP));
-    onAddAt(ymd(addDays(start, i)), clock(h));
+    const col = (e.currentTarget as HTMLElement).getBoundingClientRect();
+    onAddAt(ymd(addDays(start, i)), clock(h), { left: col.left, right: col.right, y: r.top + (h - H0) * ROW });
   };
   const start = fromYmd(week.start);
   const t = today();
@@ -130,6 +132,7 @@ export function WeekGrid({ week, selectedId, onPick, onAddAt }: { week: Week; se
           return (
             <div key={i} className={`wg-col${isT ? " today" : ""}${drag && drag.day === i ? " target" : ""}`} onClick={onColClick(i)}>
               {ext.items.map((o) => <OtherBlock key={o.e.id} o={o} y={y} />)}
+              {pending?.date === ymd(date) && pending.start && <div className="wg-ev wg-pending" style={{ top: y(toH(pending.start)) + 2, height: ROW * 2 - 4 }} aria-hidden="true"><div className="txt"><b><span className="t">New</span><span className="at">{pending.start}</span></b></div></div>}
               {extra.map((a) => { const h0 = toH(a.start ?? "06:30"); return (
                 <div key={a.id} className={`wg-ev ${a.sport} done extra`} style={{ top: y(h0) + 2, height: Math.max(44, (a.min / 60) * ROW - 4) }} role="button" tabIndex={0} title={`${a.name}, ${a.min} min, not in the plan`} aria-label={`${a.name}, ${a.min} minutes, done, not in the plan`} onClick={(e) => { e.stopPropagation(); router.push(`/analysis?activity=${a.id}`); }} onKeyDown={(e) => { if (e.key === "Enter") router.push(`/analysis?activity=${a.id}`); }}>
                   <SportIcon sport={a.sport} name={a.name} size={20} />

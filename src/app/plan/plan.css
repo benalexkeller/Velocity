@@ -241,7 +241,7 @@ svg.ramp { width: 100%; height: auto; display: block; }
 .wo-head p { margin: 0; font-size: 13px; }
 .wo-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px; }
 .wo-grid > div { border: 1px solid var(--line-2); border-radius: 10px; padding: 10px 12px; }
-.wo-grid .sport-icon { color: var(--accent); margin-bottom: 4px; }
+.wo-grid .sport-icon { color: var(--accent); }
 .wo-grid .k { font-size: 12px; color: var(--muted); } .wo-grid .v { font-size: 20px; font-weight: 600; letter-spacing: -0.02em; } .wo-grid .u { font-size: 12px; color: var(--muted); margin-top: 2px; }
 .wo-list { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 4px 20px; font-size: 13px; }
 .wo-list li { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid var(--line-2); }
@@ -300,3 +300,15 @@ svg.ramp { width: 100%; height: auto; display: block; }
 .add-activity > .pill-group { justify-self: start; }
 .wg-col { cursor: default; }
 .wg-ev.extra { cursor: pointer; }
+/* week overview: the sport icon sits beside its label, so every card's figures start on the same line */
+.wo-grid .k.ic { display: flex; align-items: center; gap: 6px; }
+.wo-grid .k.ic .sport-icon { color: var(--accent); }
+.wo-grid .k { display: flex; align-items: center; min-height: 18px; } /* every label row the height of the icon, so all figures sit on one line */
+
+/* the small add card: beside the clicked spot (or under the Add activity button), only as big as its content */
+.slot-card { position: fixed; z-index: 60; padding: 14px 16px 12px; max-height: calc(100vh - 24px); overflow: auto; box-shadow: 0 1px 2px rgba(16,17,20,0.04), 0 0 0 1px var(--line), 0 16px 40px rgba(16,17,20,0.18); }
+.slot-card .slot-x { position: absolute; top: 10px; right: 10px; width: 28px; height: 28px; border: 0; border-radius: 50%; background: var(--surface-2); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; z-index: 1; }
+.slot-card .slot-x svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
+.slot-card .add-activity { gap: 8px; } .slot-card .add-activity > .pill-group { margin-right: 36px; }
+.slot-card .card { box-shadow: none; padding: 0; border: 0; } .slot-card .two, .slot-card .three { grid-template-columns: 1fr 1fr; }
+.wg-pending { background: var(--accent); color: #fff; border-left-color: var(--accent); box-shadow: 0 6px 16px rgba(36,89,254,0.3); z-index: 3; pointer-events: none; }
