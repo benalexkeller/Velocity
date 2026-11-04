@@ -162,6 +162,8 @@ export function statusOf(s: { sport: Sport; min: number; date: string }, paired:
   const isPast = fromYmd(s.date) < today();
   if (s.sport === "rest") return isPast ? "done" : "planned";
   if (paired) return paired.min >= 0.7 * s.min ? "done" : "partial";
+  // a different sport instead of the planned one still counts as the session done, once it is 30 minutes or more of swimming, riding or running
+  if (othersThatDay.some((a) => a.min >= 30 && isTraining(a) && a.sport !== "strength")) return "done";
   if (othersThatDay.some((a) => a.min >= 30)) return "substituted";
   return isPast ? "missed" : "planned";
 }

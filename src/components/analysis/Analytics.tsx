@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import Link from "next/link";
+import DateRangePicker from "../DateRangePicker";
 import { SportIcon } from "../SportIcon";
 import { CoachNote } from "../CoachNote";
 import { activityLoad, plannedLoad } from "@/lib/data";
@@ -21,6 +22,25 @@ export function rangeFor(key: Exclude<RangeKey, "custom">, firstDate: string): R
   const months = key === "1m" ? 1 : key === "3m" ? 3 : 6;
   const d = new Date(t.getFullYear(), t.getMonth() - months, t.getDate());
   return { key, from: ymdOf(d), to };
+}
+/** The range pills (1 month … All, Custom with a two-date picker): the master at the top, and the same on panels that keep their own. */
+export function RangePills({ value, onChange, firstDate, label = "Time range" }: { value: Range; onChange: (r: Range) => void; firstDate: string; label?: string }) {
+  const [picking, setPicking] = useState(false);
+  return (
+    <div className="ax-range">
+      <div className="pill-group" role="group" aria-label={label}>
+        {(["1m", "3m", "6m", "all"] as const).map((r) => <button key={r} type="button" className={value.key === r ? "on" : ""} onClick={() => { setPicking(false); onChange(rangeFor(r, firstDate)); }}>{RANGE_LABEL[r]}</button>)}
+        <button type="button" className={value.key === "custom" ? "on" : ""} onClick={() => setPicking((v) => !v)} aria-expanded={picking}>Custom</button>
+      </div>
+      {picking && <DateRangePicker from={value.from} to={value.to} max={ymdOf(today())} onApply={(from, to) => { onChange({ key: "custom", from, to }); setPicking(false); }} onClose={() => setPicking(false)} />}
+    </div>
+  );
+}
+/** A panel's own range: follows the master until the panel picks its own, and follows the master again when that changes. */
+function useOwnRange(master: Range): [Range, (r: Range) => void] {
+  const [own, setOwn] = useState<{ base: Range; r: Range } | null>(null);
+  const eff = own && own.base === master ? own.r : master;
+  return [eff, (r) => setOwn({ base: master, r })];
 }
 export const rangeDays = (r: Range) => Math.max(1, Math.round((fromYmd(r.to).getTime() - fromYmd(r.from).getTime()) / 86400000) + 1);
 const sign = (n: number | null | undefined, digits = 0, suffix = "") => (n == null ? "-" : `${n > 0 ? "+" : ""}${n.toFixed(digits)}${suffix}`);
@@ -127,8 +147,9 @@ export function KpiRow() {
 }
 
 // ---------- 2. Performance overview (fitness / fatigue / form) ----------
-export function Overview({ range }: { range: Range }) {
+export function Overview({ range: master, firstDate }: { range: Range; firstDate: string }) {
   const { LOAD_SERIES } = useAnalysis();
+  const [range, setRange] = useOwnRange(master);
   const pts = LOAD_SERIES.filter((p) => p.date >= range.from && p.date <= range.to);
   const [hover, setHover] = useState<number | null>(null);
   const i = hover ?? pts.length - 1;
@@ -147,7 +168,10 @@ export function Overview({ range }: { range: Range }) {
     <section className="card ax-panel" aria-label="Performance overview">
       <div className="ax-head">
         <div><h2>Performance overview</h2></div>
-        <span className="lgd"><span><i style={{ background: "var(--accent)" }} />Fitness</span><span><i style={{ background: "var(--ink)" }} />Fatigue</span><span><i style={{ background: "var(--muted)" }} />Form</span></span>
+        <div className="ax-tools">
+          <span className="lgd"><span><i style={{ background: "var(--accent)" }} />Fitness</span><span><i style={{ background: "var(--ink)" }} />Fatigue</span><span><i style={{ background: "var(--muted)" }} />Form</span></span>
+          <RangePills value={range} onChange={setRange} firstDate={firstDate} label="Performance overview range" />
+        </div>
       </div>
       <div className="ax-overview">
         <svg ref={svgRef} className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Fitness, fatigue and form" onMouseLeave={() => setHover(null)} onMouseMove={(e) => { const r = (e.currentTarget as SVGSVGElement).getBoundingClientRect(); const px = ((e.clientX - r.left) / r.width) * W; const j = Math.round(((px - L) / (W - L - R)) * (pts.length - 1)); setHover(Math.max(0, Math.min(pts.length - 1, j))); }}>
@@ -459,7 +483,8 @@ export function SportRow() {
 }
 
 // ---------- 6. Progress over time ----------
-export function Progress({ range, onPick }: { range: Range; onPick: (id: string) => void }) {
+export function Progress({ range: master, firstDate, onPick }: { range: Range; firstDate: string; onPick: (id: string) => void }) {
+  const [range, setRange] = useOwnRange(master);
   const an = useAnalysis();
   const [sp, setSp] = useState<Sp | "all">("run");
   const [m, setM] = useState<Metric>("pace");
@@ -500,6 +525,7 @@ export function Progress({ range, onPick }: { range: Range; onPick: (id: string)
         <div className="ax-tools">
           {sp === "all" && <span className="lgd">{sports.map((k) => <span key={k}><i style={{ background: COLORS[k] }} />{k[0].toUpperCase() + k.slice(1)}</span>)}</span>}
           <div className="pill-group">{(["all", "swim", "bike", "run"] as const).map((k) => <button key={k} type="button" className={sp === k ? "on" : ""} onClick={() => setSp(k)}>{k === "all" ? "All" : k[0].toUpperCase() + k.slice(1)}</button>)}</div>
+          <RangePills value={range} onChange={setRange} firstDate={firstDate} label="Progress range" />
         </div>
       </div>
       <div className="tabs ax-tabs">{METRICS.map((t) => <button key={t.k} type="button" className={m === t.k ? "on" : ""} onClick={() => setM(t.k)}>{t.label}</button>)}</div>
