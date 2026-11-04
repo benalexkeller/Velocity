@@ -82,3 +82,6 @@
 .drawer .act-actions { display: flex; gap: 8px; align-items: center; margin: 14px 0 4px; }
 .drawer h4 .linkbtn { margin-left: 8px; font-weight: 500; text-transform: none; letter-spacing: 0; }
 .drawer .note .coach-text { gap: 4px; }
+
+/* the Connect wearable button matches the search box and the filter button in height */
+.acts-head .cw-btn { height: 42px; padding: 0 16px; font-size: 14px; border-radius: 12px; }

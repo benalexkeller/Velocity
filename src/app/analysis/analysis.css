@@ -66,7 +66,7 @@
 /* 5. sport cards */
 .ax-sports { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
 .sport { border: 1px solid var(--line-2); border-radius: 12px; padding: 14px 16px 10px; }
-.sport .sh { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; } .sport .sh b { font-size: 14px; } .sport .sh .muted { font-size: 12px; margin-left: auto; }
+.sport .sh { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; } .sport .sh b { font-size: 14px; color: var(--ink); }
 .sport .sh .sport-icon { color: var(--accent); }
 .sport table { width: 100%; border-collapse: collapse; font-size: 12px; }
 .sport td { padding: 4px 0; border-bottom: 1px solid var(--line-2); } .sport td b { font-weight: 600; font-size: 13px; } .sport td:first-child { color: var(--muted); } .sport td:nth-child(2) { text-align: right; } .sport td:nth-child(3) { text-align: right; width: 64px; }
@@ -198,7 +198,7 @@
 .kpi.gauge-card { grid-template-rows: auto auto auto; }
 .kpi .gauge { display: block; margin: 0 auto; max-width: 100%; height: auto; }
 .sgauge { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; margin: -2px 0 10px; }
-.sgauge > .muted { font-size: 12px; }
+.sgauge .sg-sport { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--ink); } .sgauge .sg-sport .sport-icon { color: var(--accent); }
 .sgauge.empty svg text { fill: var(--muted-2); }
 .sgauge .sg-pop { display: none; position: absolute; left: calc(50% + 60px); top: 0; z-index: 30; width: 280px; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 12px; box-shadow: 0 8px 24px rgba(16, 17, 20, .12); }
 .sgauge:hover .sg-pop { display: grid; gap: 6px; }
@@ -252,3 +252,9 @@
 .drp-day.edge:hover { background: var(--accent-hover); }
 .drp-foot { display: flex; justify-content: flex-end; gap: 8px; }
 @media (max-width: 640px) { .drp { right: auto; left: 0; } .drp-month { width: 100%; } .drp-grid { grid-template-columns: repeat(7, 1fr); } }
+
+/* the popup's title is white on the dark popup, wherever the (i) sits (the insight header styles its own b) */
+.info .info-pop b, .insight .k .info-pop b { color: #fff; margin-left: 0; font-size: 13px; }
+/* hover value on the small weekly charts */
+.mt-tip { position: absolute; top: 2px; z-index: 5; pointer-events: none; background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 6px 18px rgba(16, 17, 20, .10); padding: 5px 8px; font-size: 12px; color: var(--ink); white-space: nowrap; }
+.mt-tip .d { color: var(--muted); margin-right: 6px; }

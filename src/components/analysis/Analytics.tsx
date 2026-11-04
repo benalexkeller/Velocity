@@ -343,9 +343,9 @@ function ScoreGauge({ sp }: { sp: Sp }) {
         {sc && <circle cx={cx} cy={cy} r={r} fill="none" stroke="var(--accent)" strokeWidth={10} strokeDasharray={`${arcLen * f} ${c - arcLen * f}`} strokeLinecap="round" transform={`rotate(135 ${cx} ${cy})`} />}
         <text x={cx} y={cy + 9} textAnchor="middle" fontSize={28} fontWeight={600} fill="var(--ink)">{sc ? sc.score : "–"}</text>
       </svg>
-      <span className="muted">{sc ? sc.activity.name : "No session yet"}</span>
+      <span className="sg-sport"><SportIcon sport={sp} size={20} />{sp[0].toUpperCase() + sp.slice(1)}</span>
       <div className="sg-pop" role="tooltip">
-        <b>Session score</b>
+        <b>Session score{sc ? `: ${sc.activity.name}, ${dateLabel(sc.activity.date)}` : ""}</b>
         <p>Your last {sp} session out of 100: how hard it was against your threshold (40), speed per heartbeat against your 4-week usual (30), and how long it was against your longest (30).</p>
         {sc && sc.parts.map((p) => <div key={p.k}><span>{p.k}</span><b>{p.pts} / {p.max}</b><small>{p.text}</small></div>)}
         {sc && sc.missing.length > 0 && <small className="muted">No {sc.missing.join(" or ")} for this session, so the score is scaled to the parts it has.</small>}
@@ -354,6 +354,25 @@ function ScoreGauge({ sp }: { sp: Sp }) {
   );
 }
 const weekLabel = (q: { week: number }) => `W${q.week}`;
+/** Hover on a small weekly chart: the nearest week's index from the pointer's x, cleared when the pointer leaves. */
+function useChartHover(n: number, L: number, R: number, W: number) {
+  const [i, setI] = useState<number | null>(null);
+  const onMove = (e: React.MouseEvent<SVGSVGElement>) => { if (n < 1) return; const r = e.currentTarget.getBoundingClientRect(); const px = ((e.clientX - r.left) / r.width) * W; setI(Math.max(0, Math.min(n - 1, Math.round(((px - L) / Math.max(1, W - L - R)) * (n - 1))))); };
+  return { i, onMove, onLeave: () => setI(null) };
+}
+function HoverMark({ i, x, y, v, W, H, T, B, label, value }: { i: number | null; x: (i: number) => number; y: (n: number) => number; v: number | null | undefined; W: number; H: number; T: number; B: number; label: string; value: string }) {
+  if (i == null || v == null) return null;
+  const cx = x(i) / W;
+  return (
+    <>
+      <line x1={x(i)} y1={T} x2={x(i)} y2={H - B} stroke="var(--muted-2)" strokeDasharray="3 3" />
+      <circle cx={x(i)} cy={y(v)} r={4.5} fill="var(--accent)" stroke="var(--surface)" strokeWidth={2} />
+      <foreignObject x={0} y={0} width={W} height={H} style={{ pointerEvents: "none", overflow: "visible" }}>
+        <div className="mt-tip" style={{ left: `${cx * 100}%`, transform: cx > 0.7 ? "translateX(-100%)" : cx < 0.2 ? "none" : "translateX(-50%)" }}><span className="d">{label}</span>{value}</div>
+      </foreignObject>
+    </>
+  );
+}
 function MiniTrend({ pts, kind, sp, label, info }: { pts: { week: number; start: string; v: number | null }[]; kind: "pace" | "speed" | "hr"; sp: Sp; label: string; info: string }) {
   const [svgRef, W] = useWidth<SVGSVGElement>(240); const H = 98, L = 44, R = 8, T = 14, B = 18;
   const disp = pts.map((q) => ({ ...q, v: q.v == null ? null : kind === "pace" ? paceDisp(sp, q.v) : kind === "speed" ? speed(q.v).v : q.v }));
@@ -370,16 +389,18 @@ function MiniTrend({ pts, kind, sp, label, info }: { pts: { week: number; start:
   const cur = [...disp].reverse().find((q) => q.v != null);
   const unit = kind === "pace" ? (sp === "swim" ? `per 100 ${swimDist(0).u === "m" ? "metres" : "yards"}` : `per ${dist(0).u === "km" ? "km" : "mile"}`) : kind === "speed" ? speed(0).u : "bpm";
   const picks = axisPicks(disp.length);
+  const hov = useChartHover(disp.length, L, R, W);
   return (
     <div className="insight">
       <div className="k"><span>{titleCase(label)} <small>({unit})</small></span><Info title={label} text={info} /><b>{cur?.v != null ? f(cur.v) : "-"}</b></div>
-      <svg ref={svgRef} className="chart mini" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label}>
+      <svg ref={svgRef} className="chart mini" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={label} onMouseMove={hov.onMove} onMouseLeave={hov.onLeave}>
         {v.length ? nt.ticks.map((g, i) => <g key={i}><line x1={L} y1={y(g)} x2={W - R} y2={y(g)} stroke="var(--grid)" /><text x={L - 5} y={y(g) + 3} textAnchor="end">{ft(g)}</text></g>) : null}
         <line x1={L} y1={H - B} x2={W - R} y2={H - B} stroke="var(--line)" />
         <path d={d} fill="none" stroke="var(--accent)" strokeWidth={1.6} />
         {disp.map((q, i) => q.v != null ? <circle key={i} cx={x(i)} cy={y(q.v)} r={2.4} fill="var(--accent)" stroke="var(--surface)" strokeWidth={1}><title>{`${weekLabel(q)}: ${f(q.v)} ${unit}`}</title></circle> : null)}
         {picks.map((i) => <text key={"w" + i} x={x(i)} y={H - 5} textAnchor={i === 0 ? "start" : i === disp.length - 1 ? "end" : "middle"}>{weekLabel(disp[i])}</text>)}
         {!v.length && <text x={W / 2} y={H / 2} textAnchor="middle">Needs sessions with {kind === "hr" || label.includes("heart") ? "heart rate" : "pace"}</text>}
+        {hov.i != null && disp[hov.i] && <HoverMark i={hov.i} x={x} y={y} v={disp[hov.i].v} W={W} H={H} T={T} B={B} label={weekLabel(disp[hov.i])} value={disp[hov.i].v != null ? `${f(disp[hov.i].v!)} ${kind === "speed" ? speed(0).u : kind === "hr" ? "bpm" : unitOf(sp)}` : "-"} />}
       </svg>
     </div>
   );
@@ -404,19 +425,21 @@ function SportCard({ sp, expert }: { sp: Sp; expert: boolean }) {
   const picks = axisPicks(pts.length);
   const unitLabel = sp === "bike" ? `(${speed(0).u})` : sp === "swim" ? `(per 100 ${swimDist(0).u === "m" ? "metres" : "yards"})` : `(per ${dist(0).u === "km" ? "km" : "mile"})`;
   const insights = expert ? an.sportInsights(sp) : [];
+  const hov = useChartHover(pts.length, L, R, W);
   return (
     <div className="sport">
       <ScoreGauge sp={sp} />
-      <div className="sh"><SportIcon sport={sp} size={22} /><b>{sp[0].toUpperCase() + sp.slice(1)}</b><span className="muted">{p.sessions ? `last ${p.sessions} session${p.sessions === 1 ? "" : "s"}` : "no sessions yet"}</span></div>
+      <div className="sh"><b>{p.sessions ? `Last ${p.sessions} Session${p.sessions === 1 ? "" : "s"}` : "No Sessions Yet"}</b></div>
       <table><tbody>{p.rows.map((r) => <tr key={r.k}><td><span className="info-row">{r.k}{ROW_INFO[r.k] && <Info {...ROW_INFO[r.k]} />}</span></td><td><b>{fmtRow(r.kind, r.cur)}</b></td><td><Delta v={r.cur != null && r.prev ? ((r.cur - r.prev) / r.prev) * 100 : null} good={good(r.kind)} /></td></tr>)}</tbody></table>
       <div className="k">{sp === "bike" ? "Weekly Average Speed" : "Weekly Average Pace"} {unitLabel}</div>
-      <svg ref={svgRef} className="chart mini" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${sp} weekly ${sp === "bike" ? "speed" : "pace"} trend`}>
+      <svg ref={svgRef} className="chart mini" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={`${sp} weekly ${sp === "bike" ? "speed" : "pace"} trend`} onMouseMove={hov.onMove} onMouseLeave={hov.onLeave}>
         {v.length ? guides.map((g, i) => <g key={i}><line x1={L} y1={y(g)} x2={W - R} y2={y(g)} stroke="var(--grid)" /><text x={L - 5} y={y(g) + 3} textAnchor="end">{fmtTick(sp === "bike" ? "speed" : "pace", g, nt.step)}</text></g>) : null}
         <line x1={L} y1={H - B} x2={W - R} y2={H - B} stroke="var(--line)" />
         <path d={d} fill="none" stroke="var(--accent)" strokeWidth={1.6} />
         {pts.map((q, i) => q.v != null ? <circle key={i} cx={x(i)} cy={y(q.v)} r={2.4} fill="var(--accent)" stroke="var(--surface)" strokeWidth={1}><title>{`${weekLabel(q)}: ${fmtV(sp, q.v)}`}</title></circle> : null)}
         {picks.map((i) => <text key={"w" + i} x={x(i)} y={H - 5} textAnchor={i === 0 ? "start" : i === pts.length - 1 ? "end" : "middle"}>{weekLabel(pts[i])}</text>)}
         {!v.length && <text x={W / 2} y={H / 2} textAnchor="middle">No {sp} sessions yet</text>}
+        {hov.i != null && pts[hov.i] && <HoverMark i={hov.i} x={x} y={y} v={pts[hov.i].v} W={W} H={H} T={T} B={B} label={weekLabel(pts[hov.i])} value={pts[hov.i].v != null ? `${fmtV(sp, pts[hov.i].v!)} ${unitOf(sp)}` : "-"} />}
       </svg>
       {expert && insights.map((ins) => <MiniTrend key={ins.k} pts={ins.pts} kind={ins.kind} sp={sp} label={ins.label} info={ins.info} />)}
     </div>
@@ -430,7 +453,7 @@ export function SportRow() {
         <div><h2>Sport performance</h2></div>
         <div className="pill-group" role="group" aria-label="Detail"><button type="button" className={expert ? "" : "on"} onClick={() => setExpert(false)}>Basic</button><button type="button" className={expert ? "on" : ""} onClick={() => setExpert(true)}>Expert</button></div>
       </div>
-      <div className="ax-sports"><SportCard sp="swim" expert={expert} /><SportCard sp="bike" expert={expert} /><SportCard sp="run" expert={expert} /></div>
+      <div className="ax-sports"><SportCard sp="run" expert={expert} /><SportCard sp="bike" expert={expert} /><SportCard sp="swim" expert={expert} /></div>
     </section>
   );
 }
