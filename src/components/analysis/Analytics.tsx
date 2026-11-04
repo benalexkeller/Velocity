@@ -166,7 +166,7 @@ export function KpiRow() {
   const days = KPI_WINDOWS.find((x) => x[0] === win)![2];
   const since = ymdOf(addDays(today(), -days));
   // the clicked card grows in place, on top of the others, to about 1.5 times its area; a second click shrinks it back
-  // every card grows to about three times its area (two columns wide, half again as tall); one at either end grows sideways into the row, one in the middle to both sides
+  // every card grows to about 3.5 times its area (two columns wide, 1.7 times as tall); one at either end grows sideways into the row, one in the middle to both sides
   const KEYS: KpiKey[] = ["week", "load", "compliance", "fitness", "ef", "vo2"];
   const toggle = (key: KpiKey) => (e: React.MouseEvent | React.KeyboardEvent) => {
     if ((e.target as HTMLElement).closest(".info")) return;
@@ -175,7 +175,7 @@ export function KpiRow() {
     const g = grid.current?.getBoundingClientRect(), c = (e.currentTarget as HTMLElement).getBoundingClientRect();
     if (!g) return;
     const i = KEYS.indexOf(key), edge = i === 0 || i === KEYS.length - 1;
-    const w = Math.min(g.width, Math.round(c.width * 2 + 12)), h = Math.round(c.height * 1.5);
+    const w = Math.min(g.width, Math.round(c.width * 2 + 12)), h = Math.round(c.height * 1.72);
     const want = edge ? (i === 0 ? c.left - g.left : c.right - g.left - w) : c.left - g.left - (w - c.width) / 2;
     const left = Math.max(0, Math.min(g.width - w, want));
     setOpen({ key, left, top: c.top - g.top, w, h });
@@ -189,7 +189,8 @@ export function KpiRow() {
     return () => { document.removeEventListener("mousedown", away); document.removeEventListener("keydown", esc); };
   }, [open]);
   const cardProps = (key: KpiKey) => ({ role: "button" as const, tabIndex: 0, "aria-expanded": open?.key === key, onClick: toggle(key), onKeyDown: (e: React.KeyboardEvent) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(key)(e); } } });
-  const pts = (v: number | null, unit = " pts", digits = 0) => (v == null ? <span className="delta muted">no baseline yet</span> : <span className="delta">{v > 0 ? "+" : v < 0 ? "−" : "±"}{Math.abs(v).toFixed(digits)}{unit}, 7 d</span>);
+  const signed = (v: number) => { const d = Math.abs(v) < 1 && v !== 0 ? 1 : 0; return `${v > 0 ? "+" : v < 0 ? "−" : "±"}${Math.abs(v).toFixed(d)}`; };
+  const pts = (v: number | null, unit = " pts") => (v == null ? <span className="delta muted">no baseline yet</span> : <span className={`delta ${v > 0 ? "up" : v < 0 ? "down" : ""}`}>{signed(v)}{unit}, 7 d</span>);
   const load = an.LOAD_SERIES.filter((p) => p.date >= since);
   const cur = an.currentWeek();
   const [wkNo, setWkNo] = useState<number | null>(null); // null = this week; set by the arrows in the opened card
@@ -202,47 +203,49 @@ export function KpiRow() {
     <div className="ax-kpis" ref={grid}>
       <div className="card kpi" {...cardProps("week")}><div className="k">This week<Info {...KPI_INFO.week} /></div><div className="row"><div className="v">{k.week.done}<small> / {k.week.total}</small></div></div><div className="u">{k.week.h.toFixed(1)} of {k.week.plannedH.toFixed(1)} h</div><Bars pts={eight(k.week.bars)} /></div>
       <div className="card kpi" {...cardProps("load")}><div className="k">Week load<Info {...KPI_INFO.load} /></div><div className="row"><div className="v">{k.load.v}<small> / {k.load.planned}</small></div></div><div className="u">{k.load.last != null ? `last week ${k.load.last}` : "first plan week"}</div><Bars pts={eight(k.load.bars)} /></div>
-      <div className="card kpi ring-card" {...cardProps("compliance")}><div className="k">Completed<span className="at">28 d</span><Info {...KPI_INFO.compliance} /></div><div className="ring-row"><Ring pct={k.compliance.v} /><div className="u">{k.compliance.planned ? `${Math.round(k.compliance.done * 2) / 2} of ${k.compliance.planned} sessions` : "no sessions planned yet"}</div></div></div>
+      <div className="card kpi ring-card" {...cardProps("compliance")}><div className="k">Completed<span className="at">28 d</span><Info {...KPI_INFO.compliance} /></div><div className="ring-row"><div><div className="v">{k.compliance.planned ? <>{Math.round(k.compliance.done * 2) / 2}<small> / {k.compliance.planned}</small></> : "-"}</div><div className="u">sessions</div></div><Ring pct={k.compliance.v} size={58} /></div></div>
       <div className="card kpi" {...cardProps("fitness")}><div className="k">Fitness<Info {...KPI_INFO.fitness} /></div><div className="row"><div className="v">{k.fitness.v.toFixed(0)}</div>{pts(k.fitness.d)}</div><div className="u">42-day load</div><Spark pts={k.fitness.spark} /></div>
       <div className="card kpi gauge-card" {...cardProps("ef")}><div className="k">Run efficiency<Info {...KPI_INFO.ef} /></div><RatioGauge ratio={k.ef.ratio} /></div>
-      <div className="card kpi" {...cardProps("vo2")}><div className="k">VO2max<Info title="VO2max" text="Your watch's estimate of the most oxygen your body can use per kilogram per minute, the usual measure of aerobic fitness. Change against the reading 4 weeks ago; the line shows the last readings." /></div><div className="row"><div className="v">{k.vo2.v != null ? k.vo2.v.toFixed(0) : "-"}</div>{k.vo2.v != null && (k.vo2.d != null ? <span className="delta">{k.vo2.d >= 0 ? "+" : "−"}{Math.abs(k.vo2.d).toFixed(0)}, 4 wk</span> : <span className="delta muted">first readings</span>)}</div><div className="u">{k.vo2.date ? `last reading ${dateLabel(k.vo2.date)}` : "no readings yet"}</div>{k.vo2.spark.length > 1 ? <Spark pts={k.vo2.spark} /> : null}</div>
+      <div className="card kpi" {...cardProps("vo2")}><div className="k">VO2max<Info title="VO2max" text="Your watch's estimate of the most oxygen your body can use per kilogram per minute, the usual measure of aerobic fitness. Change against the reading 4 weeks ago; the line shows the last readings." /></div><div className="row"><div className="v">{k.vo2.v != null ? k.vo2.v.toFixed(0) : "-"}</div>{k.vo2.v != null && (k.vo2.d != null ? <span className={`delta ${k.vo2.d > 0 ? "up" : k.vo2.d < 0 ? "down" : ""}`}>{signed(k.vo2.d)}, 4 wk</span> : <span className="delta muted">first readings</span>)}</div><div className="u">{k.vo2.date ? `last reading ${dateLabel(k.vo2.date)}` : "no readings yet"}</div>{k.vo2.spark.length > 1 ? <Spark pts={k.vo2.spark} /> : null}</div>
       {open && (
-        <div className="card kpi-zoom" style={{ left: open.left, top: open.top, width: open.w, minHeight: open.h }} role="dialog" aria-label={title[open.key]} onClick={(e) => { if (!(e.target as HTMLElement).closest(".pill-group")) setOpen(null); }}>
+        <div className="card kpi-zoom" style={{ left: open.left, top: open.top, width: open.w, minHeight: open.h }} role="dialog" aria-label={title[open.key]} onClick={(e) => { if (!(e.target as HTMLElement).closest(".pill-group, .kd-weeks")) setOpen(null); }}>
           <div className="kd-head">
             <b>{title[open.key]}</b>
-            {(open.key === "week" || open.key === "load") && <div className="kd-weeks"><button type="button" className="kd-arrow" aria-label="Earlier week" disabled={wk.week <= 1} onClick={() => setWkNo(wk.week - 1)}>‹</button><span>Week {wk.week}, {rangeLabel(wk.start, ymdOf(addDays(fromYmd(wk.start), 6)))}{wk.week === cur.week ? " (this week)" : ""}</span><button type="button" className="kd-arrow" aria-label="Later week" disabled={wk.week >= an.weeks.length} onClick={() => setWkNo(wk.week + 1)}>›</button></div>}
+            {(open.key === "week" || open.key === "load") && <div className="kd-weeks"><span>Week {wk.week}{wk.week === cur.week ? " (current)" : ""}</span><button type="button" className="kd-arrow" aria-label="Earlier week" disabled={wk.week <= 1} onClick={() => setWkNo(wk.week - 1)}>‹</button><button type="button" className="kd-arrow" aria-label="Later week" disabled={wk.week >= an.weeks.length} onClick={() => setWkNo(wk.week + 1)}>›</button></div>}
             {(open.key === "fitness" || open.key === "ef" || open.key === "vo2") && <div className="pill-group">{KPI_WINDOWS.map(([key, label]) => <button key={key} type="button" className={win === key ? "on" : ""} onClick={() => setWin(key)}>{label}</button>)}</div>}
             <button type="button" className="kd-close" aria-label="Close" onClick={() => setOpen(null)}>×</button>
           </div>
-          {open.key === "week" && <><div className="row"><div className="v">{wkSt.done}<small> / {wkSt.total}</small></div><span className="delta muted">sessions done</span></div><div className="u">{wkSt.actualH.toFixed(1)} of {wkSt.plannedH.toFixed(1)} h</div><DayBars bars={dayBars.map((d) => ({ date: d.date, planned: d.plannedH, done: d.doneH }))} fmt={(v) => `${v.toFixed(1)} h`} /></>}
+          {open.key === "week" && <><div className="row"><div className="v">{wkSt.done}<small> / {wkSt.total}</small></div><span className="delta muted">sessions done</span><span className="delta">{wkSt.total ? `${Math.round((wkSt.done / wkSt.total) * 100)}% compliance` : ""}</span></div><DayBars bars={dayBars.map((d) => ({ date: d.date, planned: d.plannedH, done: d.doneH }))} fmt={(v) => `${v.toFixed(1)} h`} pct /></>}
           {open.key === "load" && <><div className="row"><div className="v">{Math.round(dayBars.reduce((x, d) => x + d.doneL, 0))}<small> / {Math.round(dayBars.reduce((x, d) => x + d.plannedL, 0))}</small></div><span className="delta muted">load done of planned</span></div><div className="u">{wk.week > 1 ? `week before ${k.load.bars.length >= 2 && wk.week === cur.week ? Math.round(k.load.bars[k.load.bars.length - 2]) : "-"}` : "first plan week"}</div><DayBars bars={dayBars.map((d) => ({ date: d.date, planned: d.plannedL, done: d.doneL }))} fmt={(v) => v.toFixed(0)} /></>}
-          {open.key === "compliance" && <div className="kd-strip"><div className="ring-row"><Ring pct={k.compliance.v} size={84} /><div><b>{k.compliance.planned ? `${Math.round(k.compliance.done * 2) / 2} of ${k.compliance.planned} sessions` : "No sessions planned yet"}</b><p className="muted">{k.compliance.days.filter((d) => d.state === "done").length} days done, {k.compliance.days.filter((d) => d.state === "missed").length} missed, {k.compliance.days.filter((d) => d.state === "rest").length} with nothing planned</p></div></div><DayStrip days={k.compliance.days} w={360} h={56} /><div className="kd-legend"><span><i className="dot" />Done</span><span><i className="dot half" />Partial or another sport</span><span><i className="dot miss" />Missed</span><span><i className="dot rest" />Nothing planned</span></div></div>}
+          {open.key === "compliance" && <div className="kd-strip"><div className="ring-row"><div><div className="v">{k.compliance.planned ? <>{Math.round(k.compliance.done * 2) / 2}<small> / {k.compliance.planned}</small></> : "-"}</div><div className="u">sessions</div></div><Ring pct={k.compliance.v} size={84} /><div><p className="muted">{k.compliance.days.filter((d) => d.state === "done").length} days done, {k.compliance.days.filter((d) => d.state === "missed").length} missed, {k.compliance.days.filter((d) => d.state === "rest").length} with nothing planned</p></div></div><DayStrip days={k.compliance.days} w={360} h={56} /><div className="kd-legend"><span><i className="dot" />Done</span><span><i className="dot half" />Partial or another sport</span><span><i className="dot miss" />Missed</span><span><i className="dot rest" />Nothing planned</span></div></div>}
           {open.key === "fitness" && <><div className="row"><div className="v">{k.fitness.v.toFixed(0)}</div>{pts(k.fitness.d)}</div><div className="u">42-day load</div></>}
           {open.key === "fitness" && <LinesChart series={[{ k: "Fitness", color: "var(--accent)", pts: load.map((p) => ({ date: p.date, v: p.fitness })) }, { k: "Fatigue", color: "var(--ink)", pts: load.map((p) => ({ date: p.date, v: p.fatigue })) }, { k: "Form", color: "var(--muted)", pts: load.map((p) => ({ date: p.date, v: p.form })) }]} fmt={(v) => v.toFixed(0)} h={160} />}
           {open.key === "ef" && <div className="row"><div className="v">{k.ef.ratio != null ? `${k.ef.ratio >= 1 ? "+" : "−"}${Math.abs((k.ef.ratio - 1) * 100).toFixed(0)}%` : "-"}</div><span className="delta muted">{k.ef.v != null ? `vs the 4 weeks before, now ${k.ef.v.toFixed(2)} m/min per bpm` : "no runs with heart rate"}</span></div>}
           {open.key === "ef" && <LinesChart series={[{ k: "Efficiency", color: "var(--accent)", pts: k.ef.points.filter((p) => p.date >= since) }]} fmt={(v) => v.toFixed(2)} unit="m/min per bpm" h={160} />}
-          {open.key === "vo2" && <div className="row"><div className="v">{k.vo2.v != null ? k.vo2.v.toFixed(0) : "-"}</div>{k.vo2.v != null && (k.vo2.d != null ? <span className="delta">{k.vo2.d >= 0 ? "+" : "−"}{Math.abs(k.vo2.d).toFixed(0)}, 4 wk</span> : <span className="delta muted">no reading 4 weeks ago</span>)}<span className="delta muted">{k.vo2.date ? `last reading ${dateLabel(k.vo2.date)}` : ""}</span></div>}
+          {open.key === "vo2" && <div className="row"><div className="v">{k.vo2.v != null ? k.vo2.v.toFixed(0) : "-"}</div>{k.vo2.v != null && (k.vo2.d != null ? <span className={`delta ${k.vo2.d > 0 ? "up" : k.vo2.d < 0 ? "down" : ""}`}>{signed(k.vo2.d)}, 4 wk</span> : <span className="delta muted">no reading 4 weeks ago</span>)}<span className="delta muted">{k.vo2.date ? `last reading ${dateLabel(k.vo2.date)}` : ""}</span></div>}
           {open.key === "vo2" && <LinesChart series={[{ k: "VO2max", color: "var(--accent)", pts: k.vo2.points.filter((p) => p.date >= since) }]} fmt={(v) => v.toFixed(0)} unit="ml/kg/min" h={160} />}
         </div>
       )}
     </div>
   );
 }
-/** Seven bars for this week, planned behind done, with the values. */
-function DayBars({ bars, fmt }: { bars: { date: string; planned: number; done: number }[]; fmt: (v: number) => string }) {
-  const [svgRef, W] = useWidth<SVGSVGElement>(560); const H = 150, L = 36, R = 8, T = 14, B = 22;
+/** Seven bars for this week: the planned amount above each dashed box, what was done in white inside the filled bar, and (when asked) the share done in grey at the top. */
+function DayBars({ bars, fmt, pct }: { bars: { date: string; planned: number; done: number }[]; fmt: (v: number) => string; pct?: boolean }) {
+  const [svgRef, W] = useWidth<SVGSVGElement>(560); const H = 170, L = 36, R = 8, T = pct ? 44 : 28, B = 22;
   const hi = Math.max(0.1, ...bars.map((b) => Math.max(b.planned, b.done)));
   const colW = (W - L - R) / 7, y = (v: number) => H - B - (v / hi) * (H - T - B);
   const DN = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
   return (
     <svg ref={svgRef} className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="This week, day by day">
       {[0, 0.5, 1].map((f) => <g key={f}><line x1={L} x2={W - R} y1={y(hi * f)} y2={y(hi * f)} stroke="var(--grid)" /><text x={L - 6} y={y(hi * f) + 4} textAnchor="end">{fmt(hi * f)}</text></g>)}
-      {bars.map((b, i) => { const x0 = L + i * colW + colW * 0.2, bw = colW * 0.6; return (
+      {bars.map((b, i) => { const x0 = L + i * colW + colW * 0.2, bw = colW * 0.6, cx = x0 + bw / 2, barH = y(0) - y(b.done); return (
         <g key={b.date}>
-          <rect x={x0} y={y(b.planned)} width={bw} height={Math.max(0, y(0) - y(b.planned))} fill="none" stroke="var(--accent)" strokeDasharray="3 3" rx={3} />
-          <rect x={x0} y={y(b.done)} width={bw} height={Math.max(0, y(0) - y(b.done))} fill="var(--accent)" rx={3}><title>{`${DN[i]}: ${fmt(b.done)} of ${fmt(b.planned)} planned`}</title></rect>
-          {b.done > 0 && <text x={x0 + bw / 2} y={y(b.done) - 4} textAnchor="middle" fontWeight={600} fill="var(--ink)">{fmt(b.done)}</text>}
-          <text x={x0 + bw / 2} y={H - 6} textAnchor="middle">{DN[i]}</text>
+          {pct && b.planned > 0 && <text x={cx} y={14} textAnchor="middle" fill="var(--muted)" fontSize={11}>{Math.round((b.done / b.planned) * 100)}%</text>}
+          {b.planned > 0 && <rect x={x0} y={y(b.planned)} width={bw} height={Math.max(0, y(0) - y(b.planned))} fill="none" stroke="var(--accent)" strokeDasharray="3 3" rx={3} />}
+          {b.planned > 0 && <text x={cx} y={y(b.planned) - 5} textAnchor="middle" fill="var(--ink-2)" fontSize={11}>{fmt(b.planned)}</text>}
+          {b.done > 0 && <rect x={x0} y={y(b.done)} width={bw} height={Math.max(0, barH)} fill="var(--accent)" rx={3}><title>{`${DN[i]}: ${fmt(b.done)} of ${fmt(b.planned)} planned`}</title></rect>}
+          {b.done > 0 && (barH >= 18 ? <text x={cx} y={y(b.done) + barH / 2 + 4} textAnchor="middle" fill="#fff" fontWeight={600} fontSize={11}>{fmt(b.done)}</text> : <text x={cx} y={y(b.done) - 5} textAnchor="middle" fill="var(--ink)" fontWeight={600} fontSize={11}>{fmt(b.done)}</text>)}
+          <text x={cx} y={H - 6} textAnchor="middle">{DN[i]}</text>
         </g>); })}
     </svg>
   );
@@ -712,6 +715,7 @@ export function Progress({ range: master, firstDate, onPick }: { range: Range; f
 /** One body value over time: round y gridlines, dates spread evenly along the x axis. */
 function BodyChart({ pts, fmt, w = 300, h = 110, ariaLabel }: { pts: { date: string; v: number }[]; fmt: (v: number) => string; w?: number; h?: number; ariaLabel: string }) {
   const [svgRef, W] = useWidth<SVGSVGElement>(w); const H = h, L = 40, R = 8, T = 10, B = 22;
+  const [hx, setHx] = useState<number | null>(null);
   if (pts.length < 2) return <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={ariaLabel}><text x={W / 2} y={H / 2} textAnchor="middle">{pts.length ? "One reading so far" : "No readings in this range"}</text></svg>;
   const vs = pts.map((p) => p.v);
   const nt = niceTicks(Math.min(...vs), Math.max(...vs), 3, "number");
@@ -719,25 +723,34 @@ function BodyChart({ pts, fmt, w = 300, h = 110, ariaLabel }: { pts: { date: str
   const x = (d: string) => L + ((fromYmd(d).getTime() - t0) / (t1 - t0)) * (W - L - R);
   const y = (v: number) => T + ((nt.hi - v) / Math.max(1e-9, nt.hi - nt.lo)) * (H - T - B);
   const labels = axisPicks(4, 4).map((i) => new Date(t0 + (i / 3) * (t1 - t0)));
+  // hover: the nearest reading to the pointer
+  const hoverT = hx == null ? null : t0 + ((hx - L) / (W - L - R)) * (t1 - t0);
+  let near: { date: string; v: number } | null = null;
+  if (hoverT != null) { let bd = Infinity; for (const p of pts) { const dd = Math.abs(fromYmd(p.date).getTime() - hoverT); if (dd < bd) { bd = dd; near = p; } } }
+  const cx = near ? x(near.date) / W : 0;
   return (
-    <svg ref={svgRef} className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={ariaLabel}>
+    <div className="ax-progwrap" onMouseLeave={() => setHx(null)}>
+    <svg ref={svgRef} className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label={ariaLabel} onMouseMove={(e) => { const r = (e.currentTarget as SVGSVGElement).getBoundingClientRect(); setHx(((e.clientX - r.left) / r.width) * W); }}>
       {nt.ticks.map((v) => <g key={v}><line x1={L} x2={W - R} y1={y(v)} y2={y(v)} stroke="var(--grid)" /><text x={L - 6} y={y(v) + 4} textAnchor="end">{fmt(v)}</text></g>)}
       <polyline fill="none" stroke="var(--accent)" strokeWidth="2" points={pts.map((p) => `${x(p.date)},${y(p.v)}`).join(" ")} />
-      {pts.length <= 60 && pts.map((p) => <circle key={p.date} cx={x(p.date)} cy={y(p.v)} r="2.5" fill="var(--accent)"><title>{`${dateLabel(p.date)}: ${fmt(p.v)}`}</title></circle>)}
+      {pts.length <= 60 && pts.map((p) => <circle key={p.date} cx={x(p.date)} cy={y(p.v)} r="2.5" fill="var(--accent)" />)}
       {labels.map((dd, i) => <text key={i} x={L + (i / 3) * (W - L - R)} y={H - 6} textAnchor={i === 0 ? "start" : i === 3 ? "end" : "middle"}>{shortDate(ymdOf(dd))}</text>)}
+      {near && <><line x1={x(near.date)} y1={T} x2={x(near.date)} y2={H - B} stroke="var(--muted-2)" strokeDasharray="3 3" /><circle cx={x(near.date)} cy={y(near.v)} r={4.5} fill="var(--accent)" stroke="var(--surface)" strokeWidth={2} /></>}
     </svg>
+    {near && <div className="mt-tip" style={{ left: `${cx * 100}%`, transform: cx > 0.7 ? "translateX(-100%)" : cx < 0.2 ? "none" : "translateX(-50%)" }}><span className="d">{shortDate(near.date)}</span>{fmt(near.v)}</div>}
+    </div>
   );
 }
 export function Recovery() {
   const an = useAnalysis();
-  const [range, setRange] = useState<"1m" | "3m" | "all">("1m");
-  const days = range === "all" ? 3650 : range === "3m" ? 91 : 30;
+  const firstBody = an.BODY.length ? an.BODY[0].date : ymdOf(today());
+  const [range, setRange] = useState<Range>(() => rangeFor("1m", firstBody));
   const bodySummary = an.bodySummary;
   const w = bodySummary(7), p = bodySummary(7, 7);
   const lastOf = (k: "rhr" | "hrv" | "sleep_h" | "stress") => [...an.BODY].reverse().find((b) => b[k] != null)?.date;
   const pct = (a: number | null, b: number | null) => (a != null && b ? ((a - b) / b) * 100 : null);
   const tile = (label: string, v: string | null, delta: number | null, good: "up" | "down", k: "rhr" | "hrv" | "sleep_h" | "stress", fmt: (x: number) => string) => {
-    const pts = an.bodySeries(k, days);
+    const pts = an.bodySeries(k, 3650).filter((q) => q.date >= range.from && q.date <= range.to);
     return (
       <div className="rt">
         <div className="k">{label}</div>
@@ -752,7 +765,7 @@ export function Recovery() {
     <section className="card ax-panel" aria-label="Body">
       <div className="ax-head">
         <div><h2>Body</h2></div>
-        <div className="pill-group" role="group" aria-label="Body time range">{(["1m", "3m", "all"] as const).map((r) => <button key={r} type="button" className={range === r ? "on" : ""} onClick={() => setRange(r)}>{RANGE_LABEL[r]}</button>)}</div>
+        <RangePills value={range} onChange={setRange} firstDate={firstBody} label="Body time range" />
       </div>
       <div className="ax-recovery">
         <div className="tiles">

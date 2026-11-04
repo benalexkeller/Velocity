@@ -198,7 +198,7 @@
 .kpi.gauge-card { grid-template-rows: auto auto auto; }
 .kpi .gauge { display: block; margin: 0 auto; max-width: 100%; height: auto; }
 .sgauge { position: relative; display: flex; flex-direction: column; align-items: center; gap: 2px; margin: -2px 0 10px; }
-.sgauge .sg-sport { display: inline-flex; align-items: center; gap: 6px; font-size: 14px; font-weight: 600; color: var(--ink); } .sgauge .sg-sport .sport-icon { color: var(--accent); }
+.sgauge .sg-sport { display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 104px; font-size: 18px; font-weight: 600; color: var(--ink); } .sgauge .sg-sport .sport-icon { color: var(--accent); width: 24px !important; height: 24px !important; }
 .sgauge.empty svg text { fill: var(--muted-2); }
 .sgauge .sg-pop { display: none; position: absolute; left: calc(50% + 60px); top: 0; z-index: 30; width: 280px; background: var(--surface); color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 12px; box-shadow: 0 8px 24px rgba(16, 17, 20, .12); }
 .sgauge:hover .sg-pop { display: grid; gap: 6px; }
@@ -290,3 +290,6 @@
 .kd-arrow:disabled { opacity: .35; cursor: default; }
 .kd-head .kd-weeks + .kd-close { margin-left: 0; }
 .kd-strip .strip { height: 56px; }
+.kpi .delta.up, .kpi-zoom .delta.up { color: var(--ok); } .kpi .delta.down, .kpi-zoom .delta.down { color: var(--danger); }
+.kd-weeks { gap: 4px; } .kd-weeks span { margin-right: 4px; }
+.rt .ax-progwrap { position: relative; }
