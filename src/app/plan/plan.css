@@ -8,7 +8,7 @@
 
 /* week grid */
 .wg { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden; }
-.wg-head { display: grid; grid-template-columns: 52px repeat(7, 1fr); }
+.wg-head { display: grid; grid-template-columns: 52px repeat(7, minmax(0, 1fr)); } /* a long all-day event is cut off, never widens its day */
 .wg-day { padding: 8px 8px 6px; text-align: center; border-left: 1px solid var(--line-2); }
 .wg-day span { display: block; font-size: 12px; letter-spacing: 0.1em; color: var(--muted); font-weight: 600; }
 .wg-day b { display: block; font-size: 20px; font-weight: 600; margin-top: 1px; }
@@ -17,7 +17,7 @@
 /* no visible scrollbar: it would narrow the body columns and knock them out of line with the day headers */
 .wg-scroll { overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
 .wg-scroll::-webkit-scrollbar { display: none; }
-.wg-body { display: grid; grid-template-columns: 52px repeat(7, 1fr); position: relative; }
+.wg-body { display: grid; grid-template-columns: 52px repeat(7, minmax(0, 1fr)); position: relative; }
 .wg-hours { position: relative; }
 .wg-hours span { position: absolute; right: 8px; transform: translateY(-50%); font-size: 12px; color: var(--muted); }
 .wg-hours span.first { transform: none; } .wg-hours span.last { transform: translateY(-100%); }
@@ -180,7 +180,7 @@ svg.ramp { width: 100%; height: auto; display: block; }
 .phw-d { margin-left: 5px; font-size: 12px; font-weight: 500; }
 .phw-d.up { color: var(--ink-2); } .phw-d.down { color: var(--muted); }
 .phw-row .c-q { display: flex; flex-wrap: wrap; gap: 4px 6px; font-size: 13px; color: var(--ink-2); min-width: 0; }
-.phw-row .c-q > span { background: var(--surface-2); border-radius: 6px; padding: 1px 7px; white-space: nowrap; }
+.phw-row .c-q > span { background: var(--surface); box-shadow: 0 0 0 1px var(--line); border-radius: 6px; padding: 1px 7px; white-space: nowrap; } /* white boxes, so they stay visible on the hovered (grey) row */
 .phw.now .phw-row .c-q > span { background: var(--surface); }
 .phw-tag { font-style: normal; font-size: 12px; font-weight: 600; border-radius: 6px; padding: 1px 7px; background: var(--strength-soft); color: var(--ink-2); white-space: nowrap; }
 .phw-tag.now { background: var(--accent); color: #fff; }
@@ -206,7 +206,7 @@ svg.ramp { width: 100%; height: auto; display: block; }
 }
 
 @media (max-width: 900px) {
-  .wg-head, .wg-body { grid-template-columns: 40px repeat(7, 1fr); }
+  .wg-head, .wg-body { grid-template-columns: 40px repeat(7, minmax(0, 1fr)); }
   .wg-ev { padding: 4px 5px; font-size: 12px; } .wg-ev small { display: none; } .wg-ev b { font-size: 12px; }
   .pe { grid-template-columns: 1fr; }
   .pe li { grid-template-columns: 20px 1fr; } .pe li .muted { grid-column: 2; }

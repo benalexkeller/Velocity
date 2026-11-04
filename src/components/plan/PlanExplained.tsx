@@ -26,20 +26,21 @@ const real = (s: Session) => s.sport !== "rest" && !isRaceDay(s.text); // race d
 const longest = (w: Week, sport: "bike" | "run" | "swim") => Math.max(0, ...w.sessions.filter(real).map((s) => (sport === "bike" ? bikeMin(s) : s.sport === sport ? s.min : 0)));
 const range = (a: string, b: string) => { const x = fromYmd(a), y = fromYmd(b); return x.getMonth() === y.getMonth() ? `${x.getDate()}-${y.getDate()} ${MON[y.getMonth()]}` : `${short(a)} - ${short(b)}`; };
 
-const words = (x: string) => x.toLowerCase().replace(/^@\s*/, "").replace(/^at /, "").replace(/\bim\b/g, "IM").trim();
-/** The set of a quality session in a few words: "4×1 min tempo pickups", "15 min tempo", "race sim". */
-function setOf(s: Session) {
-  const t = s.text.replace(/^(AM|PM):\s*/i, "");
+const cap = (x: string) => x[0].toUpperCase() + x.slice(1);
+/** What kind of quality session it is, in a word: intervals, tempo, threshold, race pace, race sim, brick, hills, sprints. */
+function kindOf(s: Session) {
+  const t = s.text;
   if (isRaceDay(t)) return "race";
   if (/race sim/i.test(t)) return "race sim";
-  const iv = t.match(/(\d+)\s*x\s*(\d+)\s*(s|sec|min|m|yd)?\b\s*([@A-Za-z][@A-Za-z0-9 -]*?)?\s*(?=[.,;—(+]|PM:|$)/i);
-  if (iv) return `${iv[1]}×${iv[2]}${iv[3] ? ` ${iv[3].replace(/^sec$/, "s")}` : ""} ${words(iv[4] ?? "")}`.trim();
-  const part = t.match(/(last|first|middle) (hour|\d+ ?min) @ ?(im|race|70\.3)( run)? effort/i); if (part) return `${part[1].toLowerCase()} ${part[2].replace(/(\d)min/, "$1 min")} ${words(part[3] + (part[4] ?? "") + " effort")}`;
-  const last = t.match(/last (\d+) min at race (pace|effort)/i); if (last) return `last ${last[1]} min race ${last[2]}`;
-  const mid = t.match(/middle (\d+:\d+) at race (pace|effort)/i); if (mid) return `${mid[1]} race ${mid[2]}`;
-  const incl = t.match(/(\d+)\s*min\s*(tempo|threshold|continuous @ ?[a-z0-9. ]+?effort)/i); if (incl) return `${incl[1]} min ${words(incl[2].replace(/continuous @ ?/i, "continuous "))}`;
-  if (/at race (effort|pace)/i.test(t)) return "race effort";
-  return s.intensity.toLowerCase();
+  if (/sprint/i.test(t)) return "sprints";
+  if (/hill/i.test(t)) return "hills";
+  if (/vo2/i.test(t)) return "VO2 intervals";
+  if (/sweet ?spot/i.test(t)) return "sweet spot";
+  if (s.intensity === "Intervals" || /interval|\d+\s*x\s*\d+/i.test(t)) return "intervals";
+  if (s.intensity === "Threshold" || /threshold/i.test(t)) return "threshold";
+  if (s.intensity === "Tempo" || /tempo|pickups/i.test(t)) return "tempo";
+  if (s.intensity === "Race" || /race (pace|effort)|@ ?im\b|im (run )?effort|70\.3 effort/i.test(t)) return "race pace";
+  return "quality";
 }
 const sportWord = (s: Session) => (s.sport === "brick" ? (/run off|brick/i.test(s.text) ? "brick" : "bike") : s.sport);
 
@@ -75,7 +76,7 @@ function WeekRow({ w, prev, cur, open, onToggle, onOpenWeek }: { w: Week; prev: 
         <span className="c-l">{L.ride ? <><b>{hm(L.ride)}</b><Delta v={L.ride - P.ride} /></> : <i>-</i>}</span>
         <span className="c-l">{L.run ? <><b>{hm(L.run)}</b><Delta v={L.run - P.run} /></> : <i>-</i>}</span>
         <span className="c-l">{L.swim ? <><b>{hm(L.swim)}</b><Delta v={L.swim - P.swim} /></> : <i>-</i>}</span>
-        <span className="c-q">{w.recovery && <em className="phw-tag">Recovery</em>}{q.length ? q.map((s) => <span key={s.id}>{DAYS[s.dayIndex]} {sportWord(s)} {setOf(s)}</span>) : !w.recovery && <i>all easy</i>}</span>
+        <span className="c-q">{w.recovery && <em className="phw-tag">Recovery</em>}{q.length ? q.map((s) => <span key={s.id}>{DAYS[s.dayIndex]}: {cap(sportWord(s))} {kindOf(s)}</span>) : !w.recovery && <i>all easy</i>}</span>
         <span className="c-st">{w.week === cur ? <em className="phw-tag now">This week</em> : st ? `${st.done} of ${st.total} done` : ""}<Icon name="chevron" /></span>
         {note && <span className="c-note">{note}</span>}
       </button>
@@ -119,7 +120,7 @@ export function PhaseDetail({ selected, onSelect, onOpenWeek }: { selected: stri
       </div>
       <div className="phd-head">
         <b>{p.short}</b>
-        <span className="muted">Weeks {p.from}{p.to !== p.from ? `-${p.to}` : ""}, {short(first.start)} - {short(ymd(addDays(fromYmd(last.start), 6)))}{isNow ? `, week ${cur - p.from + 1} of ${p.to - p.from + 1}` : ""}</span>
+        <span className="muted">Weeks {p.from}{p.to !== p.from ? `-${p.to}` : ""}, {short(first.start)} - {short(ymd(addDays(fromYmd(last.start), 6)))}</span>
         <button type="button" className="linkbtn" onClick={() => onOpenWeek(isNow ? cur : p.from)}>Open week {isNow ? cur : p.from} →</button>
       </div>
       {p.purpose && <p className="phd-purpose">{p.purpose}</p>}
