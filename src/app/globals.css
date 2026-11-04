@@ -461,3 +461,13 @@ tr.row:focus-visible { outline-offset: -2px; }
 .tp-pop.up { top: auto; bottom: calc(100% + 6px); }
 .tp-pop.right { left: auto; right: 0; }
 @media (max-width: 640px) { .tp-col { flex: 1; } .tp-list { width: 100%; min-width: 64px; } .tp-list > div { font-size: 18px; } }
+
+/* the coach off the Plan page: a floating card that starts where the Plan column sits, moved by its header, sized by its corner */
+.coach.float { right: auto; bottom: auto; border: 0; border-radius: 16px; background: var(--surface); padding: 6px 16px 12px; box-shadow: 0 1px 2px rgba(16,17,20,0.04), 0 0 0 1px var(--line), 0 18px 48px rgba(16,17,20,0.18); }
+.coach.float .head { cursor: grab; user-select: none; touch-action: none; }
+body.coach-moving, body.coach-moving * { cursor: grabbing !important; user-select: none !important; }
+.coach-grip { position: absolute; right: 4px; bottom: 4px; width: 16px; height: 16px; cursor: nwse-resize; touch-action: none; background: linear-gradient(135deg, transparent 0 45%, var(--muted-2) 45% 52%, transparent 52% 65%, var(--muted-2) 65% 72%, transparent 72%); border-radius: 0 0 12px 0; }
+.coachbar { cursor: text; }
+.coachbar .ph-in { flex: 1; min-width: 0; border: 0; outline: 0; background: transparent; font: inherit; font-size: 16px; color: var(--ink); }
+.coachbar .ph-in::placeholder { color: var(--muted-2); }
+@media (max-width: 700px) { .coach.float { left: 8px !important; right: 8px !important; width: auto !important; top: 64px !important; height: calc(100vh - 72px) !important; } .coach-grip { display: none; } }

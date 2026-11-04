@@ -1,8 +1,9 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { Icon } from "./icons";
 import { CoachText } from "./CoachNote";
 import { usePlan } from "@/lib/store";
+import { useCoachDock } from "./CoachDock";
 import { today, ymd, dateLabel } from "@/lib/format";
 import { SPORT_LABEL } from "@/lib/data";
 import type { PlanChange } from "@/lib/coach/types";
@@ -31,7 +32,40 @@ function changeLine(c: PlanChange, name: (id?: string) => string) {
 // Docked on the Plan page; a drawer everywhere else (see CoachDock).
 export function CoachRail({ onClose, drawer = false }: { onClose: () => void; drawer?: boolean }) {
   const plan = usePlan();
-  const [draft, setDraft] = useState("");
+  const dock = useCoachDock();
+  const [draft, setDraft] = useState(() => dock.seed);
+  useEffect(() => { if (dock.seed) dock.takeSeed(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // the box takes the keyboard the moment the panel appears, so typing that started in the bar carries on here
+  useLayoutEffect(() => { const el = document.getElementById("coach-input") as HTMLInputElement | null; if (el && dock.seed) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // floating (every tab but Plan): where it sits and how big, moved by its header and sized by its corner grip
+  const FKEY = "velocity.coach.float.v1";
+  const [box, setBox] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+  useEffect(() => {
+    if (!drawer) return;
+    const vw = window.innerWidth, vh = window.innerHeight, w = 360, h = Math.max(360, vh - 88);
+    let b = { x: vw - w - 16, y: 72, w, h };
+    try { const v = JSON.parse(localStorage.getItem(FKEY) || "null"); if (v && v.w) b = v; } catch { /* storage off */ }
+    const fit = (q: typeof b) => ({ w: Math.min(Math.max(300, q.w), vw - 16), h: Math.min(Math.max(320, q.h), vh - 16), x: Math.min(Math.max(8, q.x), vw - Math.min(Math.max(300, q.w), vw - 16) - 8), y: Math.min(Math.max(64, q.y), vh - 120) });
+    setBox(fit(b));
+    setTimeout(() => { const el = document.getElementById("coach-input") as HTMLInputElement | null; if (el) { el.focus(); el.setSelectionRange(el.value.length, el.value.length); } }, 30);
+  }, [drawer]); // eslint-disable-line react-hooks/exhaustive-deps
+  const save = (b: { x: number; y: number; w: number; h: number }) => { try { localStorage.setItem(FKEY, JSON.stringify(b)); } catch { /* storage off */ } };
+  const drag = (mode: "move" | "size") => (e: React.PointerEvent) => {
+    if (!box || e.button !== 0 || (mode === "move" && (e.target as HTMLElement).closest("button, .menu"))) return;
+    e.preventDefault();
+    const sx = e.clientX, sy = e.clientY, start = box, vw = window.innerWidth, vh = window.innerHeight;
+    let last = start;
+    const mv = (ev: PointerEvent) => {
+      const dx = ev.clientX - sx, dy = ev.clientY - sy;
+      last = mode === "move"
+        ? { ...start, x: Math.min(Math.max(8, start.x + dx), vw - start.w - 8), y: Math.min(Math.max(64, start.y + dy), vh - 120) }
+        : { ...start, w: Math.min(Math.max(300, start.w + dx), vw - start.x - 8), h: Math.min(Math.max(320, start.h + dy), vh - start.y - 8) };
+      setBox(last);
+    };
+    const up = () => { window.removeEventListener("pointermove", mv); window.removeEventListener("pointerup", up); document.body.classList.remove("coach-moving"); save(last); };
+    document.body.classList.add("coach-moving");
+    window.addEventListener("pointermove", mv); window.addEventListener("pointerup", up);
+  };
   const [menu, setMenu] = useState(false);
   const endRef = useRef<HTMLDivElement>(null);
   const day = ymd(today());
@@ -45,8 +79,8 @@ export function CoachRail({ onClose, drawer = false }: { onClose: () => void; dr
   }
   const name = (id?: string) => { const f = plan.findSession(id ?? null); return f ? `${f.s.title} ${dateLabel(f.s.date)}${f.s.start ? ` ${f.s.start}` : ""}` : "session"; };
   return (
-    <aside className={`coach${drawer ? " drawer" : ""}`} aria-label="Coach">
-      <div className="head">
+    <aside className={`coach${drawer ? " drawer float" : ""}`} aria-label="Coach" style={drawer && box ? { left: box.x, top: box.y, width: box.w, height: box.h } : undefined}>
+      <div className="head" onPointerDown={drawer ? drag("move") : undefined} title={drawer ? "Drag to move" : undefined}>
         <span className="eyebrow">Coach<span className="at">today</span></span>
         <span className="coach-tools">
           {plan.coachOn && plan.hasPlan && <button type="button" className="coach-ic wide" title="The whole remaining plan checked against your recent training; comes back as one proposal" disabled={plan.busy} onClick={() => void plan.reviewPlan()}>Review my plan</button>}
@@ -120,6 +154,7 @@ export function CoachRail({ onClose, drawer = false }: { onClose: () => void; dr
         <input id="coach-input" value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Ask your coach…" aria-label="Message your coach" disabled={plan.busy} />
         <button className="send" type="submit" aria-label="Send" disabled={plan.busy}><span style={{ width: 18, height: 18, display: "inline-flex" }}><Icon name="arrow" /></span></button>
       </form>
+      {drawer && <span className="coach-grip" onPointerDown={drag("size")} aria-label="Resize the coach" role="separator" title="Drag to resize" />}
     </aside>
   );
 }
