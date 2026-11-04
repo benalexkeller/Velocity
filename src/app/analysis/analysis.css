@@ -266,9 +266,9 @@
 .kpi[role="button"]:hover { box-shadow: 0 1px 2px rgba(16,17,20,0.04), 0 0 0 1px var(--line), 0 8px 22px rgba(16,17,20,0.08); }
 /* Completed: the ring on the left, its bottom level with the other cards' charts; the figures on the right at the height of the other cards' numbers */
 .kpi .ring-row { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 12px; align-items: start; height: 92px; } /* 87 px: the height of number + unit + chart on the other cards, so the ring ends level with their charts */
-.kpi .ring-row .ring { align-self: end; width: 56px; height: 56px; }
-.kpi .ring-row .figs { display: grid; gap: 4px; align-content: start; }
-.kpi .ring-row .v { white-space: nowrap; }
+.kpi .ring-row .ring { align-self: end; width: 92px; height: 92px; } /* top at the numbers' line, bottom at the charts' bottom */
+.kpi .ring-row .figs { display: grid; gap: 4px; align-content: start; justify-items: end; text-align: right; }
+.kpi .ring-row .v { white-space: nowrap; font-size: 24px; } .kpi .ring-row .v small { font-size: 13px; }
 .kpi-zoom { position: absolute; z-index: 20; padding: 14px 18px 14px; display: grid; gap: 6px; align-content: start; box-shadow: 0 1px 2px rgba(16,17,20,0.04), 0 0 0 1px var(--line), 0 18px 48px rgba(16,17,20,0.18); animation: kpi-grow .16s ease-out; }
 @keyframes kpi-grow { from { transform: scale(.9); opacity: .6; } to { transform: none; opacity: 1; } }
 .kd-head { display: flex; align-items: center; gap: 10px; }
