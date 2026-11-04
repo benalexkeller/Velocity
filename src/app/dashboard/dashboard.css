@@ -144,8 +144,8 @@
 /* next days */
 .next { padding: 14px 20px 14px; display: grid; gap: 6px; grid-template-rows: auto minmax(0, 1fr); color: var(--ink); cursor: pointer; }
 .tw { display: block; color: var(--ink); cursor: pointer; }
-.chartcard.linked { cursor: pointer; }
-.chartcard.linked:hover, .tw:hover, .next:hover, .hero:hover { box-shadow: 0 1px 2px rgba(16,17,20,0.04), 0 0 0 1px var(--line), 0 10px 26px rgba(16,17,20,0.10); text-decoration: none; }
+.chartcard.linked, .phase.linked { cursor: pointer; }
+.chartcard.linked:hover, .phase.linked:hover, .tw:hover, .next:hover, .hero:hover { box-shadow: 0 1px 2px rgba(16,17,20,0.04), 0 0 0 1px var(--line), 0 10px 26px rgba(16,17,20,0.10); text-decoration: none; }
 /* cards that are links keep their text color on hover (host pages sometimes restyle links) */
 a.hero, a.hero:hover, a.hero:focus, a.hero:hover *, a.hero:focus * { color: #fff; text-decoration: none; }
 a.hero .stat .k, a.hero:hover .stat .k { color: rgba(255,255,255,0.75); }
