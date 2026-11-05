@@ -67,7 +67,7 @@ function Facts({ facts, ink, muted, gap = 28 }: { facts: Fact[]; ink: string; mu
 
 const WORD_ZONE: Record<string, number> = { Recovery: 2, Technique: 2, Aerobic: 2, "Zone 2": 2, Endurance: 2, Tempo: 3, Race: 3, Threshold: 4, Intervals: 5 };
 /** Intensity is always the heart rate zone to be in, Zone 2 to Zone 5. */
-function zoneOfSession(s: Session, zones: Record<string, Record<string, string>> | null) {
+export function zoneOfSession(s: Session, zones: Record<string, Record<string, string>> | null) {
   const step = zones ? hardestStep(s, zones) : null;
   return Math.min(5, Math.max(2, step?.seg.zone ?? WORD_ZONE[s.intensity] ?? 2));
 }
