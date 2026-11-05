@@ -41,7 +41,7 @@ export default function Progress() {
             <View style={[s.row, { borderColor: c.line }]}>
               <View style={{ flex: 1 }}>
                 <Text style={[type.body, { color: c.ink }]} numberOfLines={1}>{a.name}</Text>
-                <Text style={[type.small, { color: c.muted }]}>{shortDate(a.date)}{a.start ? ` · ${a.start}` : ""}</Text>
+                <Text style={[type.small, { color: c.muted }]}>{shortDate(a.date)}{a.start ? `, ${a.start}` : ""}</Text>
               </View>
               <Text style={[type.small, { color: c.ink2 }]}>{fmtDur(a.min)}</Text>
             </View>

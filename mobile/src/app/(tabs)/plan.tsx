@@ -14,7 +14,7 @@ export default function Plan() {
   return (
     <Screen title="Plan">
       <Placeholder label="Week calendar (Google Calendar style)" h={64} />
-      {week && <Text style={[type.small, { color: c.muted }]}>Week {week.week} · {week.phase}</Text>}
+      {week && <Text style={[type.small, { color: c.muted }]}>Week {week.week}, {week.phase}</Text>}
       {week?.sessions.filter((x) => x.sport !== "rest").map((x) => (
         <View key={x.id} style={[s.row, { borderColor: c.line }]}>
           <Text style={[type.small, s.day, { color: x.date === d ? c.accent : c.muted }]}>{DAYS[x.dayIndex]}</Text>

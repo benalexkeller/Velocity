@@ -21,7 +21,7 @@ export default function ActivityScreen() {
       </View>
       {a && (
         <ScrollView contentContainerStyle={s.body}>
-          <Text style={[type.small, { color: c.muted }]}>{dateFull(a.date)}{a.start ? ` · ${a.start}` : ""}</Text>
+          <Text style={[type.small, { color: c.muted }]}>{dateFull(a.date)}{a.start ? `, ${a.start}` : ""}</Text>
           <Text style={[type.title, { color: c.ink }]}>{a.name}</Text>
           <View style={s.facts}>
             {doneFacts(a).map((f) => (

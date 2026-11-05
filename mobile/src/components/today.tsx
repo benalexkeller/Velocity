@@ -1,14 +1,16 @@
-// The parts of the Today screen, top to bottom: week strip, session card, last result, body this morning,
-// training volume, and sessions / load / race with the phase bar.
+// The parts of the Today screen, top to bottom: week cards, session card, last result, body this morning,
+// weekly volume chart, and sessions / load / race with the phase bar.
 import { router } from "expo-router";
-import { Image, Pressable, StyleSheet, Text, View } from "react-native";
-import Svg, { Circle } from "react-native-svg";
+import { Image, Platform, Pressable, StyleSheet, Text, View } from "react-native";
+import Svg, { Circle, G, Line, Path, Rect, Text as SvgText } from "react-native-svg";
+import { zoneOfIn } from "@shared/analysis";
 import type { Activity, Phase, Session, Week } from "@shared/data";
 import { DAYS, fmtDur, fmtHMS, fmtPace, fromYmd, shortDate } from "@shared/format";
 import { sessionFuel } from "@shared/nutrition/targets";
 import { fmtDist, fmtSpeed, localize, runPace, swimDist, swimPace, unitWords } from "@shared/units";
 import { hardestStep } from "@shared/workout";
-import { Icon, sportIcon } from "./Icon";
+import { Icon } from "./Icon";
+import { SportIcon } from "./SportIcon";
 import type { BodyRow } from "@/lib/athlete";
 import { radius, space, type Palette } from "@/lib/theme";
 
@@ -22,26 +24,25 @@ const DEVICE_IMG: Record<string, number> = {
   whoop: require("../../assets/devices/whoop.webp"),
 };
 const DEVICE_NAME: Record<string, string> = { garmin: "Garmin", apple: "Apple Watch", fitbit: "Fitbit", whoop: "WHOOP", coros: "COROS", polar: "Polar", suunto: "Suunto", wahoo: "Wahoo" };
+const ymdOf = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+const daysOf = (week: Week) => Array.from({ length: 7 }, (_, i) => { const d = fromYmd(week.start); d.setDate(d.getDate() + i); return ymdOf(d); });
 
 /** The one session shown for a day (double days show the first). */
 export const mainOf = (sessions: Session[]) => sessions.filter((s) => s.sport !== "rest").sort((a, b) => (a.start ?? "").localeCompare(b.start ?? ""))[0];
 
-// ---------- week strip ----------
+// ---------- week cards ----------
 export function WeekStrip({ week, selected, today, onPick, c }: { week: Week; selected: string; today: string; onPick: (d: string) => void; c: Palette }) {
-  const days = Array.from({ length: 7 }, (_, i) => { const d = fromYmd(week.start); d.setDate(d.getDate() + i); return d; });
   return (
     <View style={st.strip}>
-      {days.map((d, i) => {
-        const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      {daysOf(week).map((key, i) => {
         const s = mainOf(week.sessions.filter((x) => x.date === key));
-        const on = key === selected, isToday = key === today, done = !!s?.actual;
-        const fg = on ? "#fff" : key < today && !done ? c.muted : c.ink;
+        const on = key === selected, isToday = key === today;
+        const fg = on ? c.accent : key < today && !s?.actual ? c.muted : c.ink;
         return (
-          <Pressable key={key} onPress={() => onPick(key)} style={[st.day, on && { backgroundColor: c.accent }, !on && isToday && { borderColor: c.accent, borderWidth: 1 }]} accessibilityLabel={`${DAYS[i]} ${d.getDate()}${s ? `, ${SPORT[s.sport]}` : ", rest"}`}>
-            <Text style={[st.dow, { color: on ? "#ffffffcc" : c.muted }]}>{DAYS[i].slice(0, 1)}</Text>
-            <Text style={[st.dnum, { color: fg }]}>{d.getDate()}</Text>
-            {s ? <Icon name={sportIcon(s.sport)} size={15} color={fg} stroke={done ? 2.2 : 1.6} /> : <View style={{ height: 15 }} />}
-            <Text style={[st.dtime, { color: on ? "#ffffffcc" : c.muted }]}>{s?.start ?? " "}</Text>
+          <Pressable key={key} onPress={() => onPick(key)} style={[st.day, { backgroundColor: on ? c.accentSoft : c.surface2 }, !on && isToday && { borderColor: c.accent }]} accessibilityLabel={`${DAYS[i]} ${fromYmd(key).getDate()}${s ? `, ${SPORT[s.sport]}` : ", rest"}`}>
+            <Text style={[st.dow, { color: on ? c.accent : c.ink2 }]}>{DAYS[i]}</Text>
+            <Text style={[st.dnum, { color: on ? c.accent : c.ink }]}>{fromYmd(key).getDate()}</Text>
+            <View style={st.dicon}>{s && <SportIcon sport={s.sport} size={20} color={fg} />}</View>
           </Pressable>
         );
       })}
@@ -51,9 +52,9 @@ export function WeekStrip({ week, selected, today, onPick, c }: { week: Week; se
 
 // ---------- facts ----------
 type Fact = { k: string; v: string; u?: string };
-function Facts({ facts, ink, muted }: { facts: Fact[]; ink: string; muted: string }) {
+function Facts({ facts, ink, muted, gap = 28 }: { facts: Fact[]; ink: string; muted: string; gap?: number }) {
   return (
-    <View style={st.facts}>
+    <View style={[st.facts, { columnGap: gap }]}>
       {facts.map((f) => (
         <View key={f.k}>
           <Text style={[st.fk, { color: muted }]}>{f.k}</Text>
@@ -64,20 +65,25 @@ function Facts({ facts, ink, muted }: { facts: Fact[]; ink: string; muted: strin
   );
 }
 
+const WORD_ZONE: Record<string, number> = { Recovery: 2, Technique: 2, Aerobic: 2, "Zone 2": 2, Endurance: 2, Tempo: 3, Race: 3, Threshold: 4, Intervals: 5 };
+/** Intensity is always the heart rate zone to be in, Zone 2 to Zone 5. */
+function zoneOfSession(s: Session, zones: Record<string, Record<string, string>> | null) {
+  const step = zones ? hardestStep(s, zones) : null;
+  return Math.min(5, Math.max(2, step?.seg.zone ?? WORD_ZONE[s.intensity] ?? 2));
+}
+
 function plannedFacts(s: Session, zones: Record<string, Record<string, string>> | null): Fact[] {
-  const out: Fact[] = [];
-  if (s.start) out.push({ k: "Start", v: s.start });
-  out.push({ k: "Duration", v: fmtDur(s.min) }, { k: "Intensity", v: s.intensity });
+  const out: Fact[] = [{ k: "Duration", v: fmtDur(s.min) }, { k: "Intensity", v: `Zone ${zoneOfSession(s, zones)}` }];
   if (zones) {
     const key = hardestStep(s, zones);
     const strip = (x: string) => x.replace(/\s*\/(mi|km|100 yd|100 m)$/, "");
     const t = key && /\d/.test(key.seg.target) ? strip(key.seg.target) : null;
     const w = unitWords();
-    if (s.sport === "run") { const z = zones.run?.[s.intensity] ?? zones.run?.["Zone 2"]; const v = t ?? (z ? strip(localize(`${z} /mi`)) : null); if (v) out.push({ k: "Target", v, u: w.perDist }); }
-    else if (s.sport === "bike" || s.sport === "brick") { const z = zones.bike?.[s.intensity] ?? zones.bike?.["Zone 2"]; const v = t ?? (z ? localize(z) : null); if (v) out.push({ k: "Target", v }); }
-    else if (s.sport === "swim") { const z = zones.swim?.[s.intensity] ?? zones.swim?.Aerobic; const v = t ?? (z ? strip(localize(`${z} /100 yd`)) : null); if (v) out.push({ k: "Target", v, u: w.perSwim }); }
+    if (s.sport === "run") { const z = zones.run?.[s.intensity] ?? zones.run?.["Zone 2"]; const v = t ?? (z ? strip(localize(`${z} /mi`)) : null); if (v) out.push({ k: "Target pace", v, u: w.perDist }); }
+    else if (s.sport === "bike" || s.sport === "brick") { const z = zones.bike?.[s.intensity] ?? zones.bike?.["Zone 2"]; const v = t ?? (z ? localize(z) : null); if (v) out.push({ k: "Target speed", v }); }
+    else if (s.sport === "swim") { const z = zones.swim?.[s.intensity] ?? zones.swim?.Aerobic; const v = t ?? (z ? strip(localize(`${z} /100 yd`)) : null); if (v) out.push({ k: "Target pace", v, u: w.perSwim.replace("per ", "/") }); }
   }
-  return out.slice(0, 4);
+  return out;
 }
 
 export function doneFacts(a: Activity): Fact[] {
@@ -92,7 +98,7 @@ export function doneFacts(a: Activity): Fact[] {
   return out.slice(0, 4);
 }
 
-// ---------- score ring ----------
+// ---------- score ring (done card) and gauge (last result) ----------
 export function ScoreRing({ score, size, color, track, ink }: { score: number; size: number; color: string; track: string; ink: string }) {
   const w = Math.max(4, size * 0.1), r = (size - w) / 2, C = 2 * Math.PI * r;
   return (
@@ -106,6 +112,23 @@ export function ScoreRing({ score, size, color, track, ink }: { score: number; s
   );
 }
 
+function Gauge({ score, size, color, track, ink }: { score: number; size: number; color: string; track: string; ink: string }) {
+  // a 270° arc open at the bottom, filled to the score
+  const w = size * 0.1, r = (size - w) / 2, cx = size / 2, cy = size / 2;
+  const at = (deg: number) => { const a = ((deg - 90) * Math.PI) / 180; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; };
+  const arc = (from: number, to: number) => { const [x1, y1] = at(from), [x2, y2] = at(to); return `M ${x1} ${y1} A ${r} ${r} 0 ${to - from > 180 ? 1 : 0} 1 ${x2} ${y2}`; };
+  const end = -135 + (270 * Math.max(1, score)) / 100;
+  return (
+    <View style={{ width: size, height: size, alignItems: "center", justifyContent: "center" }}>
+      <Svg width={size} height={size} style={StyleSheet.absoluteFill}>
+        <Path d={arc(-135, 135)} stroke={track} strokeWidth={w} fill="none" strokeLinecap="round" />
+        <Path d={arc(-135, end)} stroke={color} strokeWidth={w} fill="none" strokeLinecap="round" />
+      </Svg>
+      <Text style={{ color: ink, fontSize: size * 0.34, fontWeight: "700", letterSpacing: -0.5 }}>{score}</Text>
+    </View>
+  );
+}
+
 // ---------- session card ----------
 export function SessionCard({ s, label, zones, device, weightKg, score, c }: {
   s: Session | undefined; label: string | null; zones: Record<string, Record<string, string>> | null;
@@ -114,7 +137,7 @@ export function SessionCard({ s, label, zones, device, weightKg, score, c }: {
   const done = s?.actual; // completed, partly done or swapped: the card shows what was actually done
   if (!s) {
     return (
-      <View style={[st.card, { backgroundColor: c.hero }]}>
+      <View style={[st.card, st.tall, { backgroundColor: c.hero }]}>
         {label && <Text style={st.when}>{label}</Text>}
         <Text style={[st.sport, { color: "#fff" }]}>Rest</Text>
         <Text style={{ color: "#9AA1AD", ...st.small }}>No session planned</Text>
@@ -138,43 +161,49 @@ export function SessionCard({ s, label, zones, device, weightKg, score, c }: {
             </View>
           )}
         </View>
-        <Facts facts={doneFacts(a)} ink={c.ink} muted={c.muted} />
+        <Facts facts={doneFacts(a)} ink={c.ink} muted={c.muted} gap={16} />
       </Pressable>
     );
   }
   const f = sessionFuel(s, weightKg);
   const dev = device.key === "garmin" ? `garmin-${s.sport === "bike" || s.sport === "brick" ? "bike" : s.sport === "swim" ? "swim" : "run"}` : device.key;
   const litres = Math.round(((f.fluidLh * s.min) / 60) * 10) / 10;
+  const during = [f.perHour ? `${f.perHour} g/h` : null, litres ? `${litres} L` : null].filter(Boolean).join(", ") || "Water";
   return (
-    <View style={[st.card, { backgroundColor: c.hero }]}>
+    <View style={[st.card, st.tall, { backgroundColor: c.hero }]}>
       <View style={st.top}>
         <View style={{ flex: 1 }}>
           {label && <Text style={st.when}>{label}</Text>}
           <Text style={[st.sport, { color: "#fff" }]}>{SPORT[s.sport] ?? s.title}</Text>
         </View>
-        <Pressable onPress={() => router.push("/profile")} style={st.device} accessibilityLabel="Wearable connection">
-          {DEVICE_IMG[dev] && device.status !== "none" && <Image source={DEVICE_IMG[dev]} style={{ height: 58, width: 42 }} resizeMode="contain" />}
-          <View>
-            <View style={st.conn}>
-              <View style={[st.dot, { backgroundColor: device.status === "none" ? "#6B7280" : "#3FB97A" }]} />
-              <Text style={st.connText}>{device.status === "connected" ? "Connected" : device.status === "imported" ? "Imported" : "Connect"}</Text>
+        <View style={st.device}>
+          {DEVICE_IMG[dev] && device.status !== "none" && <Image source={DEVICE_IMG[dev]} style={{ height: 62, width: 45 }} resizeMode="contain" />}
+          <Pressable onPress={() => router.push("/profile")} style={({ pressed }) => [st.connBtn, pressed && { opacity: 0.7 }]} accessibilityRole="button" accessibilityLabel="Wearable connection">
+            <View>
+              <View style={st.conn}>
+                <View style={[st.dot, { backgroundColor: device.status === "none" ? "#6B7280" : "#3FB97A" }]} />
+                <Text style={st.connText}>{device.status === "connected" ? "Connected" : device.status === "imported" ? "Imported" : "Connect"}</Text>
+              </View>
+              {device.status !== "none" && <Text style={st.devName}>{DEVICE_NAME[device.key] ?? device.key}</Text>}
             </View>
-            {device.status !== "none" && <Text style={st.devName}>{DEVICE_NAME[device.key] ?? device.key}</Text>}
-          </View>
-        </Pressable>
+            <Icon name="chevron" size={14} color="#9AA1AD" stroke={2} />
+          </Pressable>
+        </View>
       </View>
       <Facts facts={plannedFacts(s, zones)} ink="#fff" muted="#9AA1AD" />
       {s.sport !== "strength" && (
         <View style={st.fuel}>
-          <View style={st.fuelCell}>
-            <Icon name="gel" size={18} color="#D6D9DF" />
-            <View><Text style={st.fuelK}>Before</Text><Text style={st.fuelV}>{f.before ? `${f.before} g carbs · ${f.beforeAt}` : "Nothing extra"}</Text></View>
-          </View>
+          <Pressable onPress={() => router.push("/fuel")} style={st.fuelCell} accessibilityRole="button" accessibilityLabel="Fuel before">
+            <Icon name="gel" size={22} color="#D6D9DF" />
+            <View><Text style={st.fuelK}>Before</Text><Text style={st.fuelV}>{f.before ? `${f.before} g carbs` : "Normal meal"}</Text></View>
+            <View style={st.fuelGo}><Icon name="chevron" size={13} color="#6B7280" stroke={2} /></View>
+          </Pressable>
           <View style={st.fuelDiv} />
-          <View style={st.fuelCell}>
-            <Icon name="bottle" size={18} color="#D6D9DF" />
-            <View><Text style={st.fuelK}>During</Text><Text style={st.fuelV}>{[f.perHour ? `${f.perHour} g/h` : null, litres ? `${litres} L` : null].filter(Boolean).join(" · ") || "Water"}</Text></View>
-          </View>
+          <Pressable onPress={() => router.push("/fuel")} style={st.fuelCell} accessibilityRole="button" accessibilityLabel="Fuel during">
+            <Icon name="bottle" size={22} color="#D6D9DF" />
+            <View><Text style={st.fuelK}>During</Text><Text style={st.fuelV}>{during}</Text></View>
+            <View style={st.fuelGo}><Icon name="chevron" size={13} color="#6B7280" stroke={2} /></View>
+          </Pressable>
         </View>
       )}
       <Pressable style={({ pressed }) => [st.start, pressed && { opacity: 0.7 }]} accessibilityRole="button" onPress={() => {}}>
@@ -186,16 +215,33 @@ export function SessionCard({ s, label, zones, device, weightKg, score, c }: {
 }
 
 // ---------- last result ----------
-export function LastResult({ a, score, c }: { a: Activity; score: number | null; c: Palette }) {
-  const facts = doneFacts(a).filter((f) => f.k !== "Time").slice(0, 3).map((f) => `${f.v}${f.u ? ` ${f.u}` : ""}`);
+/** Garmin names a session after where it was ("Munich Running"); that place is shown under the sport. */
+const GENERIC = /^(pool|trainer|indoor|treadmill|virtual|easy|long|tempo|recovery|morning|afternoon|evening|lunch|night|open water|interval|threshold|zone \d|base|aerobic)$/i;
+const placeOf = (name: string) => { const p = name.match(/^(.+?)\s+(running|run|cycling|ride|riding|swim|swimming)$/i)?.[1]; return p && !GENERIC.test(p) ? p : null; };
+
+export function LastResult({ a, score, lthr, c }: { a: Activity; score: number | null; lthr: number | null; c: Palette }) {
+  const z = zoneOfIn(a, lthr ?? undefined);
+  const dist = a.mi != null ? fmtDist(a.mi).split(" ") : a.yd != null ? [swimDist(a.yd).v.toLocaleString(), swimDist(a.yd).u] : null;
+  const pace = a.pace_s ? [fmtPace(runPace(a.pace_s).s), runPace(a.pace_s).u] : a.mph ? fmtSpeed(a.mph).split(" ") : a.p100_s ? [fmtPace(swimPace(a.p100_s).s), swimPace(a.p100_s).u] : null;
+  const facts = [dist, [fmtHMS(a.min), ""], pace, z ? [`Zone ${z}`, ""] : null].filter(Boolean) as string[][];
+  const when = [shortDate(a.date), a.start, placeOf(a.name)].filter(Boolean).join(", ");
   return (
-    <Pressable onPress={() => router.push(`/activity/${encodeURIComponent(a.id)}`)} style={[st.row, { backgroundColor: c.surface, borderColor: c.line }]}>
-      {score != null ? <ScoreRing score={score} size={42} color={c.accent} track={c.surface2} ink={c.ink} /> : <View style={[st.iconBox, { backgroundColor: c.surface2 }]}><Icon name={sportIcon(a.sport)} size={20} color={c.ink} /></View>}
-      <View style={{ flex: 1 }}>
-        <Text style={[st.rowTitle, { color: c.ink }]} numberOfLines={1}>{a.name} <Text style={{ color: c.muted, fontWeight: "400" }}>· {shortDate(a.date)}</Text></Text>
-        <Text style={[st.small, { color: c.muted }]} numberOfLines={1}>{facts.join("  ·  ")}</Text>
+    <Pressable onPress={() => router.push(`/activity/${encodeURIComponent(a.id)}`)} style={[st.last, { backgroundColor: c.surface, borderColor: c.line }]}>
+      {score != null ? <Gauge score={score} size={58} color={c.accent} track={c.accentSoft} ink={c.ink} /> : <View style={[st.iconBox, { backgroundColor: c.surface2 }]}><SportIcon sport={a.sport} size={26} color={c.ink} /></View>}
+      <View style={[st.vline, { backgroundColor: c.line }]} />
+      <View style={{ flex: 1, gap: 2 }}>
+        <Text style={[st.lastTitle, { color: c.ink }]}>{SPORT[a.sport] ?? a.name}</Text>
+        <Text style={[st.small, { color: c.muted }]} numberOfLines={1}>{when}</Text>
+        <View style={st.lastFacts}>
+          {facts.map(([v, u], i) => (
+            <View key={i} style={st.lastFact}>
+              {i > 0 && <View style={[st.sep, { backgroundColor: c.line }]} />}
+              <Text style={[st.lastV, { color: c.ink }]}>{v}{u ? <Text style={[st.lastU, { color: c.muted }]}> {u}</Text> : null}</Text>
+            </View>
+          ))}
+        </View>
       </View>
-      <Icon name="chevron" size={16} color={c.muted} />
+      <Icon name="chevron" size={14} color={c.muted} />
     </Pressable>
   );
 }
@@ -224,21 +270,48 @@ export function BodyToday({ body, today, c }: { body: BodyRow[]; today: string; 
   );
 }
 
-// ---------- training volume ----------
-export function Volume({ done, planned, bySport, c }: { done: number; planned: number; bySport: { swim: number; bike: number; run: number; other: number }; c: Palette }) {
-  const total = Math.max(planned, done, 0.01);
-  const parts = [["swim", c.swim], ["bike", c.bike], ["run", c.run], ["other", c.muted]] as const;
+// ---------- weekly volume chart ----------
+const SVG_FONT = Platform.OS === "web" ? "system-ui, -apple-system, Segoe UI, sans-serif" : undefined;
+const hm = (h: number) => { const m = Math.round(h * 60); return m % 60 ? `${Math.floor(m / 60)}h ${m % 60}m` : `${m / 60}h`; };
+
+export function WeeklyVolume({ week, activities, width, c }: { week: Week; activities: Activity[]; width: number; c: Palette }) {
+  const days = daysOf(week);
+  const planned = days.map((d) => week.sessions.filter((s) => s.date === d && s.sport !== "rest").reduce((x, s) => x + s.min, 0) / 60);
+  const done = days.map((d) => activities.filter((a) => a.date === d).reduce((x, a) => x + a.min, 0) / 60);
+  const top = Math.max(1, Math.ceil(Math.max(...planned, ...done)));
+  const H = 138, T = 8, L = 26, B = 20, W = width, plotW = W - L, plotH = H - B - T, slot = plotW / 7, bw = Math.min(12, slot * 0.26);
+  const y = (h: number) => T + plotH - (h / top) * plotH;
+  const ticks = Array.from({ length: top + 1 }, (_, i) => i).filter((i) => top <= 3 || i % Math.ceil(top / 3) === 0 || i === top);
   return (
     <View style={[st.block, { backgroundColor: c.surface, borderColor: c.line }]}>
-      <Text style={[st.fk, { color: c.muted }]}>Training volume this week</Text>
-      <Text style={[st.big, { color: c.ink }]}>{done.toFixed(1)}<Text style={[st.fu, { color: c.muted }]}> of {planned.toFixed(1)} h</Text></Text>
-      <View style={[st.bar, { backgroundColor: c.surface2 }]}>
-        {parts.map(([k, col]) => bySport[k] > 0 && <View key={k} style={{ width: `${(bySport[k] / total) * 100}%`, backgroundColor: col }} />)}
+      <View style={st.volHead}>
+        <View>
+          <Text style={[st.h2, { color: c.ink }]}>Weekly volume</Text>
+          <Text style={[st.small, { color: c.muted }]}>Completed vs planned</Text>
+        </View>
+        <Text style={[st.volTotal, { color: c.ink }]}>{hm(done.reduce((a, b) => a + b, 0))}<Text style={[st.fu, { color: c.muted }]}> / {hm(planned.reduce((a, b) => a + b, 0))}</Text></Text>
       </View>
-      <View style={st.legend}>
-        {parts.filter(([k]) => k !== "other").map(([k, col]) => (
-          <View key={k} style={st.leg}><View style={[st.legDot, { backgroundColor: col }]} /><Text style={[st.tiny, { color: c.muted }]}>{SPORT[k]} {bySport[k].toFixed(1)} h</Text></View>
+      <Svg width={W} height={H}>
+        {ticks.map((t) => (
+          <Line key={t} x1={L} x2={W} y1={y(t)} y2={y(t)} stroke={c.line} strokeWidth={1} />
         ))}
+        {ticks.map((t) => (
+          <SvgText key={`l${t}`} x={0} y={y(t) + 4} fontSize={11} fill={c.muted} fontFamily={SVG_FONT}>{`${t}h`}</SvgText>
+        ))}
+        {days.map((d, i) => {
+          const x0 = L + slot * i + slot / 2;
+          return (
+            <G key={d}>
+              {done[i] > 0 && <Rect x={x0 - bw - 1} y={y(done[i])} width={bw} height={T + plotH - y(done[i])} rx={3} fill={c.accent} />}
+              {planned[i] > 0 && <Rect x={x0 + 1} y={y(planned[i])} width={bw} height={T + plotH - y(planned[i])} rx={3} fill={c.accentSoft} />}
+              <SvgText x={x0} y={H - 4} fontSize={11} fill={c.muted} textAnchor="middle" fontFamily={SVG_FONT}>{DAYS[i]}</SvgText>
+            </G>
+          );
+        })}
+      </Svg>
+      <View style={st.legend}>
+        <View style={st.leg}><View style={[st.legSq, { backgroundColor: c.accent }]} /><Text style={[st.small, { color: c.ink2 }]}>Completed</Text></View>
+        <View style={st.leg}><View style={[st.legSq, { backgroundColor: c.accentSoft }]} /><Text style={[st.small, { color: c.ink2 }]}>Planned</Text></View>
       </View>
     </View>
   );
@@ -277,46 +350,56 @@ export function WeekAndRace({ sessions, load, race, phases, weekNo, c }: {
 }
 
 const st = StyleSheet.create({
-  strip: { flexDirection: "row", justifyContent: "space-between", gap: 4 },
-  day: { flex: 1, alignItems: "center", gap: 2, paddingVertical: 6, borderRadius: radius.m, borderWidth: 1, borderColor: "transparent" },
-  dow: { fontSize: 9, fontWeight: "600" },
-  dnum: { fontSize: 14, fontWeight: "600" },
-  dtime: { fontSize: 9 },
+  strip: { flexDirection: "row", gap: 6 },
+  day: { flex: 1, alignItems: "center", gap: 3, paddingVertical: 9, borderRadius: radius.m, borderWidth: 1, borderColor: "transparent" },
+  dow: { fontSize: 12, fontWeight: "500" },
+  dnum: { fontSize: 18, fontWeight: "700" },
+  dicon: { height: 22, justifyContent: "center" },
   card: { borderRadius: radius.xl, padding: space.l, gap: space.l },
+  tall: { paddingVertical: 22, paddingHorizontal: 20, gap: 22 },
   top: { flexDirection: "row", alignItems: "flex-start", gap: space.m },
   when: { color: "#9AA1AD", fontSize: 12, marginBottom: 2 },
-  sport: { fontSize: 38, fontWeight: "800", letterSpacing: -1.2, lineHeight: 42 },
+  sport: { fontSize: 40, fontWeight: "800", letterSpacing: -1.2, lineHeight: 44 },
   device: { flexDirection: "row", alignItems: "center", gap: 8 },
-  conn: { flexDirection: "row", alignItems: "center", gap: 5 },
+  connBtn: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 7, paddingLeft: 11, paddingRight: 8, borderRadius: radius.m, borderWidth: 1, borderColor: "rgba(255,255,255,0.18)", backgroundColor: "rgba(255,255,255,0.06)" },
+  conn: { flexDirection: "row", alignItems: "center", gap: 6 },
   dot: { width: 7, height: 7, borderRadius: 4 },
-  connText: { color: "#fff", fontSize: 12, fontWeight: "600" },
-  devName: { color: "#9AA1AD", fontSize: 12, marginLeft: 12 },
-  facts: { flexDirection: "row", flexWrap: "wrap", columnGap: 16, rowGap: 10 },
-  fk: { fontSize: 11, letterSpacing: 0.2 },
-  fv: { fontSize: 18, fontWeight: "700", letterSpacing: -0.4, marginTop: 1 },
+  connText: { color: "#fff", fontSize: 13, fontWeight: "600" },
+  devName: { color: "#9AA1AD", fontSize: 12, marginLeft: 13 },
+  facts: { flexDirection: "row", flexWrap: "wrap", rowGap: 10 },
+  fk: { fontSize: 12, letterSpacing: 0.2 },
+  fv: { fontSize: 20, fontWeight: "700", letterSpacing: -0.4, marginTop: 2 },
   fu: { fontSize: 12, fontWeight: "500" },
-  fuel: { flexDirection: "row", alignItems: "center", borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "#2A2D35", paddingTop: space.m },
-  fuelCell: { flex: 1, flexDirection: "row", alignItems: "center", gap: 8 },
-  fuelDiv: { width: StyleSheet.hairlineWidth, alignSelf: "stretch", backgroundColor: "#2A2D35", marginHorizontal: space.m },
-  fuelK: { color: "#9AA1AD", fontSize: 11 },
-  fuelV: { color: "#fff", fontSize: 13, fontWeight: "600" },
-  start: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, height: 44, borderRadius: radius.m, backgroundColor: "rgba(255,255,255,0.1)" },
-  startText: { color: "#fff", fontSize: 14, fontWeight: "600" },
+  fuel: { flexDirection: "row", alignItems: "center", borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "#2A2D35", paddingTop: 18 },
+  fuelCell: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 },
+  fuelGo: { marginLeft: 2 },
+  fuelDiv: { width: StyleSheet.hairlineWidth, alignSelf: "stretch", backgroundColor: "#2A2D35" },
+  fuelK: { color: "#9AA1AD", fontSize: 12 },
+  fuelV: { color: "#fff", fontSize: 15, fontWeight: "600" },
+  start: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, height: 48, borderRadius: radius.m, backgroundColor: "rgba(255,255,255,0.1)" },
+  startText: { color: "#fff", fontSize: 15, fontWeight: "600" },
   small: { fontSize: 13 },
   tiny: { fontSize: 11 },
-  row: { flexDirection: "row", alignItems: "center", gap: space.m, padding: space.m, borderRadius: radius.l, borderWidth: StyleSheet.hairlineWidth },
-  rowTitle: { fontSize: 15, fontWeight: "600" },
-  iconBox: { width: 42, height: 42, borderRadius: 21, alignItems: "center", justifyContent: "center" },
+  h2: { fontSize: 18, fontWeight: "700" },
+  last: { flexDirection: "row", alignItems: "center", gap: space.s, paddingVertical: space.m, paddingHorizontal: space.m, borderRadius: radius.l, borderWidth: StyleSheet.hairlineWidth },
+  vline: { width: StyleSheet.hairlineWidth, alignSelf: "stretch", marginVertical: 4 },
+  lastTitle: { fontSize: 17, fontWeight: "700" },
+  lastFacts: { flexDirection: "row", alignItems: "center", marginTop: 6 },
+  lastFact: { flexDirection: "row", alignItems: "center" },
+  sep: { width: 1, height: 14, marginHorizontal: 5 },
+  lastV: { fontSize: 13, fontWeight: "700" },
+  lastU: { fontSize: 10, fontWeight: "500" },
+  iconBox: { width: 58, height: 58, borderRadius: 29, alignItems: "center", justifyContent: "center" },
   tiles: { flexDirection: "row", gap: space.s },
   tile: { flex: 1, padding: space.m, borderRadius: radius.l, borderWidth: StyleSheet.hairlineWidth, gap: 2 },
   tileV: { fontSize: 22, fontWeight: "700", letterSpacing: -0.5 },
   block: { padding: space.l, borderRadius: radius.l, borderWidth: StyleSheet.hairlineWidth, gap: space.m },
-  big: { fontSize: 28, fontWeight: "700", letterSpacing: -0.8, marginTop: -6 },
+  volHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },
+  volTotal: { fontSize: 20, fontWeight: "700", letterSpacing: -0.4 },
   mid: { fontSize: 22, fontWeight: "700", letterSpacing: -0.5, marginTop: 1 },
-  bar: { height: 8, borderRadius: 4, overflow: "hidden", flexDirection: "row" },
-  legend: { flexDirection: "row", gap: space.l },
-  leg: { flexDirection: "row", alignItems: "center", gap: 5 },
-  legDot: { width: 7, height: 7, borderRadius: 4 },
+  legend: { flexDirection: "row", justifyContent: "center", gap: space.xl },
+  leg: { flexDirection: "row", alignItems: "center", gap: 6 },
+  legSq: { width: 12, height: 12, borderRadius: 3 },
   three: { flexDirection: "row" },
   phaseBar: { flexDirection: "row", gap: 3, alignItems: "center", height: 12 },
   marker: { position: "absolute", width: 12, height: 12, borderRadius: 6, borderWidth: 2, marginLeft: -6, top: 0 },
