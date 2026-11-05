@@ -20,8 +20,8 @@ export default function Profile() {
       <View style={s.body}>
         <Text style={[type.h2, { color: c.ink }]}>{data?.raw.profile?.name ?? ""}</Text>
         <Text style={[type.small, { color: c.muted }]}>{session?.user.email}</Text>
-        <Placeholder label="Connections and settings" h={160} />
-        <Pressable onPress={signOut} style={[s.out, { borderColor: c.line }]}><Text style={[type.body, { color: c.danger }]}>Sign out</Text></Pressable>
+        <Placeholder label="Connections and Settings" h={160} />
+        <Pressable onPress={signOut} style={[s.out, { borderColor: c.line }]}><Text style={[type.body, { color: c.danger }]}>Sign Out</Text></Pressable>
       </View>
     </SafeAreaView>
   );

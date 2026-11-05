@@ -19,6 +19,7 @@ const SHAPES: Record<string, Shape> = {
   bottle: { d: ["M10 2.5h4v3M9 5.5h6l1.5 3v9.5a3 3 0 0 1-3 3h-3a3 3 0 0 1-3-3V8.5zM8.5 12h7M8.5 15h7"] },
   play: { d: ["M8 5.5v13l10.5-6.5z"] },
   chevron: { d: ["M9 6l6 6-6 6"] },
+  plus: { d: ["M12 5v14M5 12h14"] },
 };
 export type IconName = keyof typeof SHAPES;
 export const sportIcon = (sport: string): IconName => (sport === "brick" ? "bike" : sport in SHAPES ? sport : "run");

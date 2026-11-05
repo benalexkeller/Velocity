@@ -6,7 +6,7 @@ import { createAnalysis } from "@shared/analysis";
 import { weekStatus } from "@shared/data";
 import { dateFull, today as todayDate, ymd } from "@shared/format";
 import { Screen } from "@/components/Screen";
-import { BodyToday, LastResult, SessionCard, WeekAndRace, WeekStrip, WeeklyVolume, mainOf } from "@/components/today";
+import { AddManually, BodyToday, LastResult, SessionCard, WeekAndRace, WeekStrip, WeeklyVolume, mainOf } from "@/components/today";
 import { useAthlete } from "@/lib/athlete";
 import { type, useTheme } from "@/lib/theme";
 
@@ -45,8 +45,9 @@ export default function Today() {
         s={s} label={picked === t ? null : dateFull(picked)} zones={data.raw.profile?.zones ?? null}
         device={device} weightKg={data.raw.weightKg ?? 70} score={scoreOf(s?.actual?.id, s?.actual?.sport)} c={c}
       />
+      <AddManually c={c} />
       {last && <LastResult a={last} score={scoreOf(last.id, last.sport)} lthr={null} c={c} />}
-      <BodyToday body={data.raw.body ?? []} today={t} c={c} />
+      <BodyToday body={data.raw.body ?? []} today={t} width={Math.min(width, 520) - 32} c={c} />
       {week && <WeeklyVolume week={week} activities={data.activities} width={Math.min(width, 520) - 64} c={c} />}
       {ws && <WeekAndRace sessions={{ done: ws.done, total: ws.total }} load={ws.load} race={race} phases={data.phases} weekNo={week?.week ?? null} c={c} />}
       {!week && <Text style={[type.body, { color: c.muted }]}>No plan yet</Text>}

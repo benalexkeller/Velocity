@@ -12,7 +12,7 @@ import { hardestStep } from "@shared/workout";
 import { Icon } from "./Icon";
 import { SportIcon } from "./SportIcon";
 import type { BodyRow } from "@/lib/athlete";
-import { radius, space, type Palette } from "@/lib/theme";
+import { LIGHT, radius, space, useTheme, type Palette } from "@/lib/theme";
 
 const SPORT: Record<string, string> = { swim: "Swim", bike: "Bike", run: "Run", brick: "Bike", strength: "Strength", rest: "Rest" };
 const DEVICE_IMG: Record<string, number> = {
@@ -79,9 +79,9 @@ function plannedFacts(s: Session, zones: Record<string, Record<string, string>> 
     const strip = (x: string) => x.replace(/\s*\/(mi|km|100 yd|100 m)$/, "");
     const t = key && /\d/.test(key.seg.target) ? strip(key.seg.target) : null;
     const w = unitWords();
-    if (s.sport === "run") { const z = zones.run?.[s.intensity] ?? zones.run?.["Zone 2"]; const v = t ?? (z ? strip(localize(`${z} /mi`)) : null); if (v) out.push({ k: "Target pace", v, u: w.perDist }); }
-    else if (s.sport === "bike" || s.sport === "brick") { const z = zones.bike?.[s.intensity] ?? zones.bike?.["Zone 2"]; const v = t ?? (z ? localize(z) : null); if (v) out.push({ k: "Target speed", v }); }
-    else if (s.sport === "swim") { const z = zones.swim?.[s.intensity] ?? zones.swim?.Aerobic; const v = t ?? (z ? strip(localize(`${z} /100 yd`)) : null); if (v) out.push({ k: "Target pace", v, u: w.perSwim.replace("per ", "/") }); }
+    if (s.sport === "run") { const z = zones.run?.[s.intensity] ?? zones.run?.["Zone 2"]; const v = t ?? (z ? strip(localize(`${z} /mi`)) : null); if (v) out.push({ k: "Target Pace", v, u: w.perDist }); }
+    else if (s.sport === "bike" || s.sport === "brick") { const z = zones.bike?.[s.intensity] ?? zones.bike?.["Zone 2"]; const v = t ?? (z ? localize(z) : null); if (v) out.push({ k: "Target Speed", v }); }
+    else if (s.sport === "swim") { const z = zones.swim?.[s.intensity] ?? zones.swim?.Aerobic; const v = t ?? (z ? strip(localize(`${z} /100 yd`)) : null); if (v) out.push({ k: "Target Pace", v, u: w.perSwim.replace("per ", "/") }); }
   }
   return out;
 }
@@ -93,7 +93,7 @@ export function doneFacts(a: Activity): Fact[] {
   if (a.pace_s) { const p = runPace(a.pace_s); out.push({ k: "Pace", v: fmtPace(p.s), u: p.u }); }
   else if (a.mph) { const [v, u] = fmtSpeed(a.mph).split(" "); out.push({ k: "Speed", v, u }); }
   else if (a.p100_s) { const p = swimPace(a.p100_s); out.push({ k: "Pace", v: fmtPace(p.s), u: p.u }); }
-  if (a.hr) out.push({ k: "Heart rate", v: String(a.hr), u: "bpm" });
+  if (a.hr) out.push({ k: "Heart Rate", v: String(a.hr), u: "bpm" });
   out.push({ k: "Time", v: fmtHMS(a.min) });
   return out.slice(0, 4);
 }
@@ -130,38 +130,47 @@ function Gauge({ score, size, color, track, ink }: { score: number; size: number
 }
 
 // ---------- session card ----------
+/** Card colours: black on a light screen, white on a dark screen, so the session always stands out. */
+function heroInk(dark: boolean) {
+  return dark
+    ? { bg: "#FFFFFF", ink: "#101114", muted: "#6B7280", sub: "#27282D", line: "#E6E8EC", btnBg: "rgba(16,17,20,0.03)", btnLine: "rgba(16,17,20,0.16)", chev: "#9AA1AD" }
+    : { bg: "#101114", ink: "#FFFFFF", muted: "#9AA1AD", sub: "#D6D9DF", line: "#2A2D35", btnBg: "rgba(255,255,255,0.06)", btnLine: "rgba(255,255,255,0.18)", chev: "#6B7280" };
+}
+
 export function SessionCard({ s, label, zones, device, weightKg, score, c }: {
   s: Session | undefined; label: string | null; zones: Record<string, Record<string, string>> | null;
   device: { key: string; status: "connected" | "imported" | "none" }; weightKg: number; score: number | null; c: Palette;
 }) {
+  const { dark } = useTheme();
+  const h = heroInk(dark);
   const done = s?.actual; // completed, partly done or swapped: the card shows what was actually done
   if (!s) {
     return (
-      <View style={[st.card, st.tall, { backgroundColor: c.hero }]}>
-        {label && <Text style={st.when}>{label}</Text>}
-        <Text style={[st.sport, { color: "#fff" }]}>Rest</Text>
-        <Text style={{ color: "#9AA1AD", ...st.small }}>No session planned</Text>
+      <View style={[st.card, { backgroundColor: h.bg }]}>
+        {label && <Text style={[st.when, { color: h.muted }]}>{label}</Text>}
+        <Text style={[st.sport, { color: h.ink }]}>Rest</Text>
+        <Text style={[st.small, { color: h.muted }]}>No Session Planned</Text>
       </View>
     );
   }
   if (done) {
-    const a = done;
+    const a = done, k = dark ? LIGHT : c; // the finished card is white in both modes
     return (
-      <Pressable onPress={() => router.push(`/activity/${encodeURIComponent(a.id)}`)} style={[st.card, { backgroundColor: c.surface, borderColor: c.line, borderWidth: StyleSheet.hairlineWidth }]}>
+      <Pressable onPress={() => router.push(`/activity/${encodeURIComponent(a.id)}`)} style={[st.card, { backgroundColor: k.surface, borderColor: k.line, borderWidth: StyleSheet.hairlineWidth }]}>
         <View style={st.top}>
           <View style={{ flex: 1 }}>
-            {label && <Text style={[st.when, { color: c.muted }]}>{label}</Text>}
-            <Text style={[st.sport, { color: c.ink }]}>{SPORT[a.sport] ?? a.name}</Text>
-            <Text style={[st.small, { color: c.muted }]} numberOfLines={1}>{a.name}</Text>
+            {label && <Text style={[st.when, { color: k.muted }]}>{label}</Text>}
+            <Text style={[st.sport, { color: k.ink }]}>{SPORT[a.sport] ?? a.name}</Text>
+            <Text style={[st.small, { color: k.muted }]} numberOfLines={1}>{a.name}</Text>
           </View>
           {score != null && (
             <View style={{ alignItems: "center", gap: 4 }}>
-              <ScoreRing score={score} size={64} color={c.accent} track={c.surface2} ink={c.ink} />
-              <Text style={[st.fk, { color: c.muted }]}>Score</Text>
+              <ScoreRing score={score} size={64} color={k.accent} track={k.surface2} ink={k.ink} />
+              <Text style={[st.fk, { color: k.muted }]}>Score</Text>
             </View>
           )}
         </View>
-        <Facts facts={doneFacts(a)} ink={c.ink} muted={c.muted} gap={16} />
+        <Facts facts={doneFacts(a)} ink={k.ink} muted={k.muted} gap={16} />
       </Pressable>
     );
   }
@@ -170,47 +179,53 @@ export function SessionCard({ s, label, zones, device, weightKg, score, c }: {
   const litres = Math.round(((f.fluidLh * s.min) / 60) * 10) / 10;
   const during = [f.perHour ? `${f.perHour} g/h` : null, litres ? `${litres} L` : null].filter(Boolean).join(", ") || "Water";
   return (
-    <View style={[st.card, st.tall, { backgroundColor: c.hero }]}>
-      <View style={st.top}>
+    <View style={[st.card, { backgroundColor: h.bg }, dark && st.lift]}>
+      <View style={[st.top, st.topGap]}>
         <View style={{ flex: 1 }}>
-          {label && <Text style={st.when}>{label}</Text>}
-          <Text style={[st.sport, { color: "#fff" }]}>{SPORT[s.sport] ?? s.title}</Text>
+          {label && <Text style={[st.when, { color: h.muted }]}>{label}</Text>}
+          <Text style={[st.sport, { color: h.ink }]}>{SPORT[s.sport] ?? s.title}</Text>
         </View>
         <View style={st.device}>
-          {DEVICE_IMG[dev] && device.status !== "none" && <Image source={DEVICE_IMG[dev]} style={{ height: 62, width: 45 }} resizeMode="contain" />}
-          <Pressable onPress={() => router.push("/profile")} style={({ pressed }) => [st.connBtn, pressed && { opacity: 0.7 }]} accessibilityRole="button" accessibilityLabel="Wearable connection">
+          {DEVICE_IMG[dev] && device.status !== "none" && <Image source={DEVICE_IMG[dev]} style={{ height: 58, width: 42 }} resizeMode="contain" />}
+          <Pressable onPress={() => router.push("/profile")} style={({ pressed }) => [st.connBtn, { backgroundColor: h.btnBg, borderColor: h.btnLine }, pressed && { opacity: 0.7 }]} accessibilityRole="button" accessibilityLabel="Wearable connection">
             <View>
               <View style={st.conn}>
-                <View style={[st.dot, { backgroundColor: device.status === "none" ? "#6B7280" : "#3FB97A" }]} />
-                <Text style={st.connText}>{device.status === "connected" ? "Connected" : device.status === "imported" ? "Imported" : "Connect"}</Text>
+                <View style={[st.dot, { backgroundColor: device.status === "none" ? "#6B7280" : dark ? "#157347" : "#3FB97A" }]} />
+                <Text style={[st.connText, { color: h.ink }]}>{device.status === "connected" ? "Connected" : device.status === "imported" ? "Imported" : "Connect"}</Text>
               </View>
-              {device.status !== "none" && <Text style={st.devName}>{DEVICE_NAME[device.key] ?? device.key}</Text>}
+              {device.status !== "none" && <Text style={[st.devName, { color: h.muted }]}>{DEVICE_NAME[device.key] ?? device.key}</Text>}
             </View>
-            <Icon name="chevron" size={14} color="#9AA1AD" stroke={2} />
+            <Icon name="chevron" size={14} color={h.muted} stroke={2} />
           </Pressable>
         </View>
       </View>
-      <Facts facts={plannedFacts(s, zones)} ink="#fff" muted="#9AA1AD" />
+      <Facts facts={plannedFacts(s, zones)} ink={h.ink} muted={h.muted} gap={22} />
       {s.sport !== "strength" && (
-        <View style={st.fuel}>
+        <View style={[st.fuel, { borderTopColor: h.line }]}>
           <Pressable onPress={() => router.push("/fuel")} style={st.fuelCell} accessibilityRole="button" accessibilityLabel="Fuel before">
-            <Icon name="gel" size={22} color="#D6D9DF" />
-            <View><Text style={st.fuelK}>Before</Text><Text style={st.fuelV}>{f.before ? `${f.before} g carbs` : "Normal meal"}</Text></View>
-            <View style={st.fuelGo}><Icon name="chevron" size={13} color="#6B7280" stroke={2} /></View>
+            <Icon name="gel" size={18} color={h.sub} />
+            <View><Text style={[st.fuelK, { color: h.muted }]}>Before</Text><Text style={[st.fuelV, { color: h.ink }]}>{f.before ? `${f.before} g carbs` : "Normal Meal"}</Text></View>
+            <Icon name="chevron" size={12} color={h.chev} stroke={2} />
           </Pressable>
-          <View style={st.fuelDiv} />
+          <View style={[st.fuelDiv, { backgroundColor: h.line }]} />
           <Pressable onPress={() => router.push("/fuel")} style={st.fuelCell} accessibilityRole="button" accessibilityLabel="Fuel during">
-            <Icon name="bottle" size={22} color="#D6D9DF" />
-            <View><Text style={st.fuelK}>During</Text><Text style={st.fuelV}>{during}</Text></View>
-            <View style={st.fuelGo}><Icon name="chevron" size={13} color="#6B7280" stroke={2} /></View>
+            <Icon name="bottle" size={18} color={h.sub} />
+            <View><Text style={[st.fuelK, { color: h.muted }]}>During</Text><Text style={[st.fuelV, { color: h.ink }]}>{during}</Text></View>
+            <Icon name="chevron" size={12} color={h.chev} stroke={2} />
           </Pressable>
         </View>
       )}
-      <Pressable style={({ pressed }) => [st.start, pressed && { opacity: 0.7 }]} accessibilityRole="button" onPress={() => {}}>
-        <Icon name="play" size={14} color="#fff" stroke={2} />
-        <Text style={st.startText}>Start manually</Text>
-      </Pressable>
     </View>
+  );
+}
+
+/** Add an activity by hand, in the website's style: blue plus and a bold label. */
+export function AddManually({ c }: { c: Palette }) {
+  return (
+    <Pressable style={({ pressed }) => [st.add, { backgroundColor: c.surface, borderColor: c.line }, pressed && { opacity: 0.8 }]} accessibilityRole="button" onPress={() => {}}>
+      <View style={[st.plus, { backgroundColor: c.accent }]}><Icon name="plus" size={22} color="#fff" stroke={2.4} /></View>
+      <Text style={[st.addText, { color: c.ink }]}>Add Manually</Text>
+    </Pressable>
   );
 }
 
@@ -247,23 +262,42 @@ export function LastResult({ a, score, lthr, c }: { a: Activity; score: number |
 }
 
 // ---------- body this morning ----------
-export function BodyToday({ body, today, c }: { body: BodyRow[]; today: string; c: Palette }) {
+function Spark({ values, width, height, color, base }: { values: number[]; width: number; height: number; color: string; base: string }) {
+  if (values.length < 2) return <View style={{ height }} />;
+  const lo = Math.min(...values), hi = Math.max(...values), span = hi - lo || 1;
+  const pts = values.map((v, i) => [(i / (values.length - 1)) * (width - 4) + 2, height - 3 - ((v - lo) / span) * (height - 6)]);
+  const d = pts.map(([x, y], i) => `${i ? "L" : "M"} ${x.toFixed(1)} ${y.toFixed(1)}`).join(" ");
+  const [lx, ly] = pts[pts.length - 1];
+  return (
+    <Svg width={width} height={height}>
+      <Line x1={0} x2={width} y1={height - 1} y2={height - 1} stroke={base} strokeWidth={1} />
+      <Path d={d} stroke={color} strokeWidth={1.8} fill="none" strokeLinejoin="round" strokeLinecap="round" />
+      <Circle cx={lx} cy={ly} r={2.6} fill={color} />
+    </Svg>
+  );
+}
+
+export function BodyToday({ body, today, width, c }: { body: BodyRow[]; today: string; width: number; c: Palette }) {
   const t = body.find((b) => b.date === today);
   if (!t) return null;
   const prev = body.filter((b) => b.date < today);
+  const last14 = body.filter((b) => b.date <= today).slice(-14);
   const avg = (k: "hrv" | "rhr" | "sleep_score") => { const xs = prev.map((b) => b[k]).filter((x): x is number => x != null); return xs.length >= 5 ? Math.round(xs.reduce((s, x) => s + x, 0) / xs.length) : null; };
+  const series = (k: "hrv" | "rhr" | "sleep_score" | "sleep_h") => last14.map((b) => b[k]).filter((x): x is number => x != null);
   const tiles = [
-    t.sleep_score != null ? { k: "Sleep score", v: String(t.sleep_score), u: "", n: avg("sleep_score") } : t.sleep_h != null ? { k: "Sleep", v: `${Math.floor(t.sleep_h)}:${String(Math.round((t.sleep_h % 1) * 60)).padStart(2, "0")}`, u: "h", n: null } : null,
-    t.hrv != null ? { k: "HRV", v: String(t.hrv), u: "ms", n: avg("hrv") } : null,
-    t.rhr != null ? { k: "Resting HR", v: String(t.rhr), u: "bpm", n: avg("rhr") } : null,
-  ].filter(Boolean) as { k: string; v: string; u: string; n: number | null }[];
+    t.sleep_score != null ? { k: "Sleep Score", v: String(t.sleep_score), u: "", n: avg("sleep_score"), xs: series("sleep_score") } : t.sleep_h != null ? { k: "Sleep", v: `${Math.floor(t.sleep_h)}:${String(Math.round((t.sleep_h % 1) * 60)).padStart(2, "0")}`, u: "h", n: null, xs: series("sleep_h") } : null,
+    t.hrv != null ? { k: "HRV", v: String(t.hrv), u: "ms", n: avg("hrv"), xs: series("hrv") } : null,
+    t.rhr != null ? { k: "Resting HR", v: String(t.rhr), u: "bpm", n: avg("rhr"), xs: series("rhr") } : null,
+  ].filter(Boolean) as { k: string; v: string; u: string; n: number | null; xs: number[] }[];
+  const tileW = (width - 16) / 3 - 24;
   return (
     <View style={st.tiles}>
       {tiles.map((x) => (
         <View key={x.k} style={[st.tile, { backgroundColor: c.surface, borderColor: c.line }]}>
           <Text style={[st.fk, { color: c.muted }]}>{x.k}</Text>
           <Text style={[st.tileV, { color: c.ink }]}>{x.v}<Text style={[st.fu, { color: c.muted }]}>{x.u ? ` ${x.u}` : ""}</Text></Text>
-          <Text style={[st.tiny, { color: c.muted }]}>{x.n != null ? `normal ${x.n}` : " "}</Text>
+          <Spark values={x.xs} width={tileW} height={28} color={c.accent} base={c.line} />
+          <Text style={[st.tiny, { color: c.muted }]}>{x.n != null ? `Normal ${x.n}` : "Last 14 Days"}</Text>
         </View>
       ))}
     </View>
@@ -286,8 +320,8 @@ export function WeeklyVolume({ week, activities, width, c }: { week: Week; activ
     <View style={[st.block, { backgroundColor: c.surface, borderColor: c.line }]}>
       <View style={st.volHead}>
         <View>
-          <Text style={[st.h2, { color: c.ink }]}>Weekly volume</Text>
-          <Text style={[st.small, { color: c.muted }]}>Completed vs planned</Text>
+          <Text style={[st.h2, { color: c.ink }]}>Weekly Volume</Text>
+          <Text style={[st.small, { color: c.muted }]}>Completed vs Planned</Text>
         </View>
         <Text style={[st.volTotal, { color: c.ink }]}>{hm(done.reduce((a, b) => a + b, 0))}<Text style={[st.fu, { color: c.muted }]}> / {hm(planned.reduce((a, b) => a + b, 0))}</Text></Text>
       </View>
@@ -350,34 +384,35 @@ export function WeekAndRace({ sessions, load, race, phases, weekNo, c }: {
 }
 
 const st = StyleSheet.create({
-  strip: { flexDirection: "row", gap: 6 },
-  day: { flex: 1, alignItems: "center", gap: 3, paddingVertical: 9, borderRadius: radius.m, borderWidth: 1, borderColor: "transparent" },
-  dow: { fontSize: 12, fontWeight: "500" },
-  dnum: { fontSize: 18, fontWeight: "700" },
-  dicon: { height: 22, justifyContent: "center" },
+  strip: { flexDirection: "row", gap: 5 },
+  day: { flex: 1, alignItems: "center", paddingTop: 7, paddingBottom: 6, borderRadius: radius.m, borderWidth: 1, borderColor: "transparent" },
+  dow: { fontSize: 12, fontWeight: "500", lineHeight: 14 },
+  dnum: { fontSize: 17, fontWeight: "700", lineHeight: 21 },
+  dicon: { height: 18, justifyContent: "center", marginTop: 1 },
   card: { borderRadius: radius.xl, padding: space.l, gap: space.l },
-  tall: { paddingVertical: 22, paddingHorizontal: 20, gap: 22 },
+  topGap: { marginBottom: 26 },
+  lift: { shadowColor: "#000", shadowOpacity: 0.35, shadowRadius: 18, shadowOffset: { width: 0, height: 6 } },
   top: { flexDirection: "row", alignItems: "flex-start", gap: space.m },
   when: { color: "#9AA1AD", fontSize: 12, marginBottom: 2 },
   sport: { fontSize: 40, fontWeight: "800", letterSpacing: -1.2, lineHeight: 44 },
   device: { flexDirection: "row", alignItems: "center", gap: 8 },
-  connBtn: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 7, paddingLeft: 11, paddingRight: 8, borderRadius: radius.m, borderWidth: 1, borderColor: "rgba(255,255,255,0.18)", backgroundColor: "rgba(255,255,255,0.06)" },
+  connBtn: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 7, paddingLeft: 11, paddingRight: 8, borderRadius: radius.m, borderWidth: 1 },
   conn: { flexDirection: "row", alignItems: "center", gap: 6 },
   dot: { width: 7, height: 7, borderRadius: 4 },
-  connText: { color: "#fff", fontSize: 13, fontWeight: "600" },
-  devName: { color: "#9AA1AD", fontSize: 12, marginLeft: 13 },
+  connText: { fontSize: 13, fontWeight: "600" },
+  devName: { fontSize: 12, marginLeft: 13 },
   facts: { flexDirection: "row", flexWrap: "wrap", rowGap: 10 },
   fk: { fontSize: 12, letterSpacing: 0.2 },
-  fv: { fontSize: 20, fontWeight: "700", letterSpacing: -0.4, marginTop: 2 },
+  fv: { fontSize: 20, fontWeight: "700", letterSpacing: -0.4, marginTop: 1 },
   fu: { fontSize: 12, fontWeight: "500" },
-  fuel: { flexDirection: "row", alignItems: "center", borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "#2A2D35", paddingTop: 18 },
-  fuelCell: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 },
-  fuelGo: { marginLeft: 2 },
-  fuelDiv: { width: StyleSheet.hairlineWidth, alignSelf: "stretch", backgroundColor: "#2A2D35" },
-  fuelK: { color: "#9AA1AD", fontSize: 12 },
-  fuelV: { color: "#fff", fontSize: 15, fontWeight: "600" },
-  start: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, height: 48, borderRadius: radius.m, backgroundColor: "rgba(255,255,255,0.1)" },
-  startText: { color: "#fff", fontSize: 15, fontWeight: "600" },
+  fuel: { flexDirection: "row", alignItems: "center", borderTopWidth: StyleSheet.hairlineWidth, paddingTop: space.m },
+  fuelCell: { flex: 1, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 },
+  fuelDiv: { width: StyleSheet.hairlineWidth, alignSelf: "stretch" },
+  fuelK: { fontSize: 11 },
+  fuelV: { fontSize: 13, fontWeight: "600" },
+  add: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: space.m, paddingVertical: space.m, borderRadius: radius.l, borderWidth: StyleSheet.hairlineWidth },
+  plus: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center", shadowColor: "#2459FE", shadowOpacity: 0.28, shadowRadius: 8, shadowOffset: { width: 0, height: 4 } },
+  addText: { fontSize: 16, fontWeight: "600" },
   small: { fontSize: 13 },
   tiny: { fontSize: 11 },
   h2: { fontSize: 18, fontWeight: "700" },
@@ -391,7 +426,7 @@ const st = StyleSheet.create({
   lastU: { fontSize: 10, fontWeight: "500" },
   iconBox: { width: 58, height: 58, borderRadius: 29, alignItems: "center", justifyContent: "center" },
   tiles: { flexDirection: "row", gap: space.s },
-  tile: { flex: 1, padding: space.m, borderRadius: radius.l, borderWidth: StyleSheet.hairlineWidth, gap: 2 },
+  tile: { flex: 1, padding: space.m, borderRadius: radius.l, borderWidth: StyleSheet.hairlineWidth, gap: 3 },
   tileV: { fontSize: 22, fontWeight: "700", letterSpacing: -0.5 },
   block: { padding: space.l, borderRadius: radius.l, borderWidth: StyleSheet.hairlineWidth, gap: space.m },
   volHead: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start" },

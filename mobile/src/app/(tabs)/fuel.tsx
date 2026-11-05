@@ -4,7 +4,7 @@ import { Placeholder, Screen } from "@/components/Screen";
 export default function Fuel() {
   return (
     <Screen title="Fuel">
-      <Placeholder label="Fuel (to be designed)" h={320} />
+      <Placeholder label="Fuel (To Be Designed)" h={320} />
     </Screen>
   );
 }

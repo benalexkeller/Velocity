@@ -10,7 +10,7 @@ export default function Coach() {
     <Screen title="Coach" scroll={false}>
       <Placeholder label="Conversation" h={420} />
       <View style={[s.bar, { backgroundColor: c.surface2, borderColor: c.line }]}>
-        <TextInput style={[s.input, { color: c.ink }]} placeholder="Ask your coach" placeholderTextColor={c.muted} editable={false} />
+        <TextInput style={[s.input, { color: c.ink }]} placeholder="Ask Your Coach" placeholderTextColor={c.muted} editable={false} />
         <View style={[s.mic, { backgroundColor: c.accent }]}><Icon name="mic" size={18} color="#fff" /></View>
       </View>
     </Screen>

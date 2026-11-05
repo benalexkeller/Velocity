@@ -13,7 +13,7 @@ export default function Plan() {
   const week = data?.weeks.find((w) => w.sessions.some((x) => x.date === d)) ?? data?.weeks.find((w) => w.start > d);
   return (
     <Screen title="Plan">
-      <Placeholder label="Week calendar (Google Calendar style)" h={64} />
+      <Placeholder label="Week Calendar (Google Calendar Style)" h={64} />
       {week && <Text style={[type.small, { color: c.muted }]}>Week {week.week}, {week.phase}</Text>}
       {week?.sessions.filter((x) => x.sport !== "rest").map((x) => (
         <View key={x.id} style={[s.row, { borderColor: c.line }]}>

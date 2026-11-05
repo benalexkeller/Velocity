@@ -31,10 +31,10 @@ export default function ActivityScreen() {
               </View>
             ))}
           </View>
-          <Placeholder label="Route map" h={220} />
-          <Placeholder label="Pace over time" h={120} />
-          <Placeholder label="Heart rate over time" h={120} />
-          <Placeholder label="Elevation over time" h={120} />
+          <Placeholder label="Route Map" h={220} />
+          <Placeholder label="Pace Over Time" h={120} />
+          <Placeholder label="Heart Rate Over Time" h={120} />
+          <Placeholder label="Elevation Over Time" h={120} />
         </ScrollView>
       )}
     </SafeAreaView>

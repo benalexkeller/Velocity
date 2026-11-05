@@ -23,20 +23,20 @@ export default function Progress() {
       </View>
       {tab === "analysis" ? (
         <>
-          <Placeholder label="Training volume" h={140} />
+          <Placeholder label="Training Volume" h={140} />
           <View style={{ flexDirection: "row", gap: space.s }}>
-            <View style={{ flex: 1 }}><Placeholder label="Run score" h={110} /></View>
-            <View style={{ flex: 1 }}><Placeholder label="Bike score" h={110} /></View>
-            <View style={{ flex: 1 }}><Placeholder label="Swim score" h={110} /></View>
+            <View style={{ flex: 1 }}><Placeholder label="Run Score" h={110} /></View>
+            <View style={{ flex: 1 }}><Placeholder label="Bike Score" h={110} /></View>
+            <View style={{ flex: 1 }}><Placeholder label="Swim Score" h={110} /></View>
           </View>
-          <Placeholder label="More analysis" h={180} />
+          <Placeholder label="More Analysis" h={180} />
         </>
       ) : (
         <FlatList
           data={acts}
           keyExtractor={(a) => a.id}
           contentContainerStyle={{ paddingBottom: 120 }}
-          ListEmptyComponent={<Text style={{ color: c.muted }}>No activities yet</Text>}
+          ListEmptyComponent={<Text style={{ color: c.muted }}>No Activities Yet</Text>}
           renderItem={({ item: a }) => (
             <View style={[s.row, { borderColor: c.line }]}>
               <View style={{ flex: 1 }}>

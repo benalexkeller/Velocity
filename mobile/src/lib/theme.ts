@@ -24,6 +24,7 @@ const light = {
   tabBar: "#FFFFFF",
 };
 export type Palette = typeof light;
+export const LIGHT = light;
 
 const dark: Palette = {
   bg: "#0B0C0F",
