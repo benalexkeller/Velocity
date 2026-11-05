@@ -1,38 +1,54 @@
-// Today. Real data, plain layout: the session card is styled once PR's designs arrive
-// (planned: dark card with the watch; done: white card with distance, pace, heart rate and the score).
-import { StyleSheet, Text, View } from "react-native";
-import { fmtDur, today, ymd } from "@shared/format";
-import { Placeholder, Screen } from "@/components/Screen";
+// Today (PR's layout, 5 Nov 2026): a small week strip, the session card (dark before, white once done),
+// the last result, body this morning, training volume, then sessions / load / race with the phase bar.
+import { useMemo, useState } from "react";
+import { Text } from "react-native";
+import { createAnalysis } from "@shared/analysis";
+import { weekStatus, actualByDiscipline } from "@shared/data";
+import { dateFull, today as todayDate, ymd } from "@shared/format";
+import { Screen } from "@/components/Screen";
+import { BodyToday, LastResult, SessionCard, Volume, WeekAndRace, WeekStrip, mainOf } from "@/components/today";
 import { useAthlete } from "@/lib/athlete";
-import { radius, space, type, useTheme } from "@/lib/theme";
+import { type, useTheme } from "@/lib/theme";
 
 export default function Today() {
   const { c } = useTheme();
   const { data, loading } = useAthlete();
-  const d = ymd(today());
-  const sessions = (data?.weeks ?? []).flatMap((w) => w.sessions).filter((x) => x.date === d);
-  const race = data?.raw.race;
-  const days = race ? Math.ceil((new Date(race.date + "T00:00:00").getTime() - today().getTime()) / 864e5) : null;
+  const t = ymd(todayDate());
+  const [picked, setPicked] = useState(t);
+
+  const an = useMemo(() => (data ? createAnalysis(data.activities, data.weeks, { phases: data.phases }) : null), [data]);
+  if (!data) return <Screen title="Today">{loading ? <Text style={{ color: c.muted }}>Loading</Text> : null}</Screen>;
+
+  const week = data.weeks.find((w) => w.sessions.some((x) => x.date === t)) ?? data.weeks.find((w) => w.start > t) ?? data.weeks[data.weeks.length - 1];
+  const s = mainOf((week?.sessions ?? []).filter((x) => x.date === picked));
+  const scoreOf = (id: string | undefined, sport: string | undefined) => {
+    if (!an || !id || (sport !== "run" && sport !== "bike" && sport !== "swim")) return null;
+    const r = an.sessionScore(sport);
+    return r && r.activity.id === id ? r.score : null;
+  };
+
+  // the wearable shown on the card: a connected one, else the maker of the latest synced activity
+  const conn = (data.raw.devices ?? []).find((d) => d.status === "connected");
+  const lastSynced = [...data.activities].reverse().find((a) => a.source !== "manual");
+  const device = conn ? { key: conn.provider, status: "connected" as const } : lastSynced ? { key: lastSynced.source, status: "imported" as const } : { key: "garmin", status: "none" as const };
+
+  const heroId = s?.actual?.id;
+  const last = [...data.activities].reverse().find((a) => a.date <= t && a.id !== heroId);
+  const ws = week ? weekStatus(week, data.activities) : null;
+  const race = data.raw.race ? { name: data.raw.race.name, days: Math.max(0, Math.ceil((new Date(data.raw.race.date + "T00:00:00").getTime() - todayDate().getTime()) / 864e5)) } : null;
 
   return (
     <Screen title="Today">
-      {loading && !data && <Text style={{ color: c.muted }}>Loading</Text>}
-      {data && sessions.length === 0 && <Text style={[type.body, { color: c.muted }]}>Nothing planned today</Text>}
-      {sessions.map((x) => (
-        <View key={x.id} style={[s.card, { backgroundColor: x.status === "done" ? c.surface : c.hero, borderColor: c.line }]}>
-          <Text style={[type.tiny, { color: x.status === "done" ? c.muted : "#9AA1AD" }]}>{[x.start, fmtDur(x.min), x.intensity].filter(Boolean).join(" · ")}</Text>
-          <Text style={[type.title, { color: x.status === "done" ? c.ink : "#fff" }]}>{x.title}</Text>
-          <Text style={[type.small, { color: x.status === "done" ? c.ink2 : "#D6D9DF" }]}>{x.detail}</Text>
-          {x.actual && <Text style={[type.small, { color: c.ok }]}>Done: {fmtDur(x.actual.min)}{x.actual.hr ? `, ${x.actual.hr} bpm` : ""}</Text>}
-        </View>
-      ))}
-      {race && days != null && <Text style={[type.small, { color: c.muted }]}>{race.name}: {days} days</Text>}
-      <Placeholder label="Fuel for this session" h={72} />
-      <Placeholder label="Tomorrow and this week" h={96} />
+      {week && <WeekStrip week={week} selected={picked} today={t} onPick={setPicked} c={c} />}
+      <SessionCard
+        s={s} label={picked === t ? null : dateFull(picked)} zones={data.raw.profile?.zones ?? null}
+        device={device} weightKg={data.raw.weightKg ?? 70} score={scoreOf(s?.actual?.id, s?.actual?.sport)} c={c}
+      />
+      {last && <LastResult a={last} score={scoreOf(last.id, last.sport)} c={c} />}
+      <BodyToday body={data.raw.body ?? []} today={t} c={c} />
+      {ws && week && <Volume done={ws.actualH} planned={ws.plannedH} bySport={actualByDiscipline(week, data.activities)} c={c} />}
+      {ws && <WeekAndRace sessions={{ done: ws.done, total: ws.total }} load={ws.load} race={race} phases={data.phases} weekNo={week?.week ?? null} c={c} />}
+      {!week && <Text style={[type.body, { color: c.muted }]}>No plan yet</Text>}
     </Screen>
   );
 }
-
-const s = StyleSheet.create({
-  card: { borderRadius: radius.xl, borderWidth: StyleSheet.hairlineWidth, padding: space.l, gap: space.xs, minHeight: 168, justifyContent: "flex-end" },
-});

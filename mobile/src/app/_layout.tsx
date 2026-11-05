@@ -17,6 +17,7 @@ function Areas() {
         <Stack.Protected guard={!!session}>
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="profile" options={{ presentation: "modal" }} />
+          <Stack.Screen name="activity/[id]" />
         </Stack.Protected>
         <Stack.Protected guard={!session}>
           <Stack.Screen name="sign-in" />
