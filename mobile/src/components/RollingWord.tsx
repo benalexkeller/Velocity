@@ -1,5 +1,5 @@
 // "Built for ___" on the welcome screen: the word rolls through who Velocity is for, slow enough to read for
-// the first several, then faster and faster (each word tipping over like a drum), snaps onto the last word,
+// the first several (1.2 s, easing down), then faster and faster (each word tipping over like a drum), snaps onto the last word,
 // holds, and starts again. The box is the last word's width, so the words before it never move; every word
 // starts at the same left edge and longer ones run on to the right. With Reduce Motion on, only the last word shows.
 import { useFocusEffect } from "expo-router";
@@ -18,7 +18,7 @@ interface Props {
   lineHeight: number;
 }
 
-export function RollingWord({ words, slow = 850, fast = 60, curve = 1.4, rest = 3000, style, lineHeight, onMeasure }: Props) {
+export function RollingWord({ words, slow = 1200, fast = 70, curve = 1.6, rest = 3000, style, lineHeight, onMeasure }: Props) {
   const reduced = useReducedMotion();
   const last = words.length - 1;
   const [width, setWidth] = useState<Record<string, number>>({});
@@ -55,7 +55,7 @@ export function RollingWord({ words, slow = 850, fast = 60, curve = 1.4, rest = 
     const step = () => {
       const next = (i + 1) % words.length;
       const land = next === last;
-      const ms = next === 0 ? 340 : Math.max(45, Math.min(320, hold(i) * 0.7));
+      const ms = next === 0 ? 380 : Math.max(45, Math.min(380, hold(i) * 0.7));
       const inc = 1 - front.current;
       pending.current = { slot: inc, ms, land };
       setSlots((s) => { const n: [string, string] = [s[0], s[1]]; n[inc] = words[next]; return n; });
