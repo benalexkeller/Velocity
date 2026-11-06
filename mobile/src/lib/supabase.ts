@@ -15,6 +15,7 @@ export const supabase: SupabaseClient | null = CONFIGURED
         autoRefreshToken: true,
         persistSession: true,
         detectSessionInUrl: false,
+        flowType: "pkce", // Google sign-in comes back with a one-time code the app swaps for a session
         lock: processLock,
       },
     })
@@ -25,4 +26,17 @@ if (supabase && Platform.OS !== "web") {
     if (state === "active") supabase.auth.startAutoRefresh();
     else supabase.auth.stopAutoRefresh();
   });
+}
+
+/** Finishes a sign-in that came back to the app: a one-time code (PKCE), or tokens in the link (older flow). */
+export async function finishSignIn(url: string) {
+  if (!supabase) return false;
+  // read the link by hand: app links (velocity://, exp://) are not web addresses
+  const query = url.split("#")[0].split("?")[1] ?? "", hash = url.split("#")[1] ?? "";
+  const get = (s: string, k: string) => { const m = s.match(new RegExp(`(?:^|&)${k}=([^&]+)`)); return m ? decodeURIComponent(m[1]) : null; };
+  const code = get(query, "code");
+  if (code) return !(await supabase.auth.exchangeCodeForSession(code)).error;
+  const access_token = get(hash, "access_token"), refresh_token = get(hash, "refresh_token");
+  if (access_token && refresh_token) return !(await supabase.auth.setSession({ access_token, refresh_token })).error;
+  return false;
 }

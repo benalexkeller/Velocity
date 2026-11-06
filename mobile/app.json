@@ -25,11 +25,23 @@
       "output": "single"
     },
     "plugins": [
-      "expo-router"
+      "expo-router",
+      "expo-web-browser"
     ],
     "scheme": "velocity",
     "experiments": {
       "typedRoutes": true
+    },
+    "runtimeVersion": {
+      "policy": "sdkVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/3a01a5d1-31c6-4f50-8cee-70b2ee78164c"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "3a01a5d1-31c6-4f50-8cee-70b2ee78164c"
+      }
     }
   }
 }
