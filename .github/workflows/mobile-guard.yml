@@ -1,0 +1,20 @@
+# Keeps the phone app and the website apart: a pull request from a mobile-… branch may only change files in mobile/.
+name: mobile-guard
+on:
+  pull_request:
+    branches: [main]
+jobs:
+  only-mobile:
+    if: startsWith(github.head_ref, 'mobile-')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Fail if files outside mobile/ changed
+        run: |
+          outside=$(git diff --name-only origin/${{ github.base_ref }}...HEAD | grep -v '^mobile/' || true)
+          if [ -n "$outside" ]; then
+            echo "This app pull request changes website files:"; echo "$outside"
+            echo "Website files change only in a website pull request."; exit 1
+          fi
