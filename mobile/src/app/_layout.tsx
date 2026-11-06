@@ -24,7 +24,6 @@ function Areas() {
         <Stack.Protected guard={!session}>
           <Stack.Screen name="sign-in" />
         </Stack.Protected>
-        <Stack.Screen name="auth" />
       </Stack>
     </>
   );

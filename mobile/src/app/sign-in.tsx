@@ -1,5 +1,5 @@
 // Sign-in and sign-up: one of the few places the brand voice speaks. Same accounts as velocityathletes.com.
-// Google sign-in comes later (it needs the app's own sign-in return address set up in Supabase).
+// Email and password, or Google (Supabase opens Google in an in-app browser and the app finishes with a one-time code).
 import { makeRedirectUri } from "expo-auth-session";
 import * as WebBrowser from "expo-web-browser";
 import { useState } from "react";
@@ -74,7 +74,7 @@ export default function SignIn() {
           {msg && <Text style={[s.msg, msg.bad && { color: C.danger }]}>{msg.text}</Text>}
           {!CONFIGURED && <Text style={[s.msg, { color: C.danger }]}>Supabase settings missing (mobile/.env.local)</Text>}
           <Pressable style={({ pressed }) => [s.btn, (pressed || busy) && { opacity: 0.8 }]} onPress={go} disabled={busy || !email || !password}>
-            {busy ? <ActivityIndicator color="#fff" /> : <Text style={s.btnText}>{mode === "in" ? "Sign in" : "Create account"}</Text>}
+            {busy ? <ActivityIndicator color="#fff" /> : <Text style={s.btnText}>{mode === "in" ? "Sign In" : "Create Account"}</Text>}
           </Pressable>
           <View style={s.or}><View style={s.orLine} /><Text style={s.orText}>or</Text><View style={s.orLine} /></View>
           <Pressable style={({ pressed }) => [s.google, pressed && { opacity: 0.85 }]} onPress={google} accessibilityRole="button">
