@@ -30,6 +30,13 @@ const SHAPES: Record<string, Shape> = {
   calendar: { d: ["M4 6h16v14H4zM4 10h16M8 3v4M16 3v4"] },
   calendarPlus: { d: ["M4 6h16v14H4zM4 10h16M8 3v4M16 3v4", "M12 12.5v5M9.5 15h5"] },
   bolt: { d: ["M13 3 5 13.5h6l-1 7.5 8-10.5h-6z"] },
+  bed: { d: ["M3.5 18.5v-12M3.5 14.5h17v4M20.5 18.5v-4a3 3 0 0 0-3-3h-7v3"], c: [[7, 12, 1.6]] },
+  pulse: { d: ["M3 12.5h4l2.2-5.5 4.2 10.5 2.3-5H21"] },
+  heart: { d: ["M12 19.8s-7.2-4.5-7.2-10a4.1 4.1 0 0 1 7.2-2.7 4.1 4.1 0 0 1 7.2 2.7c0 5.5-7.2 10-7.2 10z"] },
+  scale: { d: ["M6 4.5h12a1.5 1.5 0 0 1 1.5 1.5v12a1.5 1.5 0 0 1-1.5 1.5H6A1.5 1.5 0 0 1 4.5 18V6A1.5 1.5 0 0 1 6 4.5zM8.5 10a3.5 3.5 0 0 1 7 0M12 10l1.2-1.8"] },
+  medal: { d: ["M9.6 13.6 8.2 20.5l3.8-2 3.8 2-1.4-6.9"], c: [[12, 9, 4.6]] },
+  route: { d: ["M6 19a2 2 0 1 0 0-.01M18 5a2 2 0 1 0 0-.01M6 17V9.5A3.5 3.5 0 0 1 9.5 6h1M18 7v7.5a3.5 3.5 0 0 1-3.5 3.5h-1"] },
+  trend: { d: ["M3.5 16.5 9 11l3.5 3.5 7-7.5M15 7h4.5v4.5"] },
 };
 export type IconName = keyof typeof SHAPES;
 export const sportIcon = (sport: string): IconName => (sport === "brick" ? "bike" : sport in SHAPES ? sport : "run");

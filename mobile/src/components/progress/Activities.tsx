@@ -5,10 +5,7 @@ import { Pressable, SectionList, StyleSheet, Text, View } from "react-native";
 import type { Activity } from "@shared/data";
 import { DAYS, fmtHMS, fmtPace, fromYmd } from "@shared/format";
 import { fmtDist, fmtSpeed, runPace, swimDist, swimPace } from "@shared/units";
-import { AddActivityBody } from "../AddActivity";
-import { Icon } from "../Icon";
 import { RouteThumb } from "../RouteThumb";
-import { Sheet } from "../Sheet";
 import { SportIcon } from "../SportIcon";
 import { RangePills } from "./charts";
 import { useAthlete } from "@/lib/athlete";
@@ -29,8 +26,6 @@ export function Activities() {
   const { c, dark } = useTheme();
   const { data } = useAthlete();
   const [f, setF] = useState<F>("all");
-  const [adding, setAdding] = useState(false);
-  const [toast, setToast] = useState<string | null>(null);
   const sections = useMemo(() => {
     const acts = [...(data?.activities ?? [])].reverse().filter((a) => f === "all" || (f === "other" ? !["swim", "bike", "run"].includes(a.sport) : a.sport === f));
     const out: { title: string; total: number; data: Activity[] }[] = [];
@@ -45,9 +40,6 @@ export function Activities() {
   return (
     <View style={{ flex: 1 }}>
       <View style={st.filter}>
-        <Pressable onPress={() => setAdding(true)} style={({ pressed }) => [st.plus, { backgroundColor: c.surface2 }, pressed && { opacity: 0.7 }]} accessibilityRole="button" accessibilityLabel="Add activity">
-          <Icon name="plus" size={16} color={c.ink} stroke={2.2} />
-        </Pressable>
         <RangePills options={[{ k: "all", label: "All" }, { k: "swim", label: "Swim" }, { k: "bike", label: "Bike" }, { k: "run", label: "Run" }, { k: "other", label: "Other" }]} value={f} onChange={setF} />
       </View>
       <SectionList
@@ -87,10 +79,6 @@ export function Activities() {
           );
         }}
       />
-      {toast && <View style={[st.toast, { backgroundColor: dark ? "#F3F4F6" : "#101114" }]}><Text style={[st.toastText, { color: dark ? "#101114" : "#fff" }]}>{toast}</Text></View>}
-      <Sheet open={adding} onClose={() => setAdding(false)}>
-        <AddActivityBody onClose={() => setAdding(false)} onDone={(msg) => { setAdding(false); setToast(msg); setTimeout(() => setToast(null), 3000); }} />
-      </Sheet>
     </View>
   );
 }
