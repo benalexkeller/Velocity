@@ -28,7 +28,7 @@ const haptic = (kind: "lift" | "tick" | "drop") => {
 export function blockInk(dark: boolean) {
   return {
     plan: { bg: dark ? "#17244A" : "#E5F0FE", line: dark ? "#4C7BFF" : "#2459FE", ink: dark ? "#F3F4F6" : "#101114", icon: dark ? "#7FA6F5" : "#2459FE", sub: dark ? "#B8C2D6" : "#3D4150" },
-    done: { bg: dark ? "#F3F4F6" : "#2C2D31", line: dark ? "#9AA1AD" : "rgba(255,255,255,0.55)", ink: dark ? "#101114" : "#FFFFFF", icon: dark ? "#101114" : "#FFFFFF", sub: dark ? "#3D4150" : "rgba(255,255,255,0.75)" },
+    done: { bg: dark ? "#F3F4F6" : "#2C2D31", line: dark ? "#F3F4F6" : "#2C2D31", ink: dark ? "#101114" : "#FFFFFF", icon: dark ? "#101114" : "#FFFFFF", sub: dark ? "#3D4150" : "rgba(255,255,255,0.75)" },
     other: { bg: dark ? "#22252C" : "#EEF0F3", line: dark ? "#4A4F5A" : "#B9BDC6", ink: dark ? "#D6D9DF" : "#3D4150", icon: dark ? "#9AA1AD" : "#6B7280", sub: dark ? "#9AA1AD" : "#6B7280" },
     clash: { bg: dark ? "#3A1714" : "#FDECEC", line: "#D92D20", ink: dark ? "#FFD7D2" : "#7A1A12", icon: "#D92D20", sub: dark ? "#FFB4AB" : "#B42318" },
   };
@@ -75,19 +75,19 @@ function SessionBlock({ p, colW, col, minCol, maxCol, selected, clash, draggable
   const anim = useAnimatedStyle(() => ({
     transform: [{ translateX: tx.value }, { translateY: ty.value }, { scale: 1 + lift.value * 0.03 }],
     zIndex: lift.value > 0 ? 50 : 1,
-    shadowOpacity: lift.value * 0.25,
+    ...(lift.value > 0 ? { shadowColor: "#000", shadowRadius: 10, shadowOffset: { width: 0, height: 6 }, shadowOpacity: lift.value * 0.25 } : {}),
   }));
   const w = (colW - 4) / p.of;
   const h = Math.max(20, (dur / 60) * HOUR - 2);
-  const showSub = h >= 32;
+  const showSub = h >= 28; // tall enough: icon above the minutes; too narrow: icon only
+  const mins = s.actual?.min ?? s.min;
   return (
     <GestureDetector gesture={gesture}>
       <Animated.View style={[st.block, { top: (p.start / 60) * HOUR + 1, height: h, left: 2 + p.lane * w, width: w - 1, backgroundColor: ink.bg, borderLeftColor: ink.line, opacity: missed ? 0.45 : 1 }, selected && { borderColor: dark ? "#7FA6F5" : "#2459FE", borderWidth: 2, borderLeftWidth: 3 }, anim]}>
-        <View style={st.bRow}>
-          {colW >= 38 && <SportIcon sport={s.sport} size={11} color={ink.icon} />}
-          <Text style={[st.bTitle, { color: ink.ink }]} numberOfLines={1}>{s.title}</Text>
+        <View style={[st.bRow, showSub && { flexDirection: "column", alignItems: "flex-start", gap: 1 }]}>
+          <SportIcon sport={s.sport} size={12} color={ink.icon} />
+          {w >= 30 && <Text style={[st.bTitle, { color: ink.ink }]} numberOfLines={1}>{w > 60 ? `${mins} min` : `${mins}m`}</Text>}
         </View>
-        {showSub && <Text style={[st.bSub, { color: ink.sub }]} numberOfLines={1}>{done ? `${s.actual!.min} min` : `${s.min} min`}</Text>}
         {isKey(s) && !done && colW >= 44 && <View style={st.key}><Icon name="bolt" size={10} color={ink.icon} stroke={2} /></View>}
       </Animated.View>
     </GestureDetector>
@@ -101,7 +101,7 @@ function EventBlock({ p, colW, selected, onTap }: { p: Placed & { lane: number; 
   const w = (colW - 4) / p.of, h = Math.max(16, ((p.end - p.start) / 60) * HOUR - 2);
   return (
     <GestureDetector gesture={tap}>
-      <View style={[st.block, st.event, { top: (p.start / 60) * HOUR + 1, height: h, left: 2 + p.lane * w, width: w - 1, backgroundColor: ink.bg, borderLeftColor: p.e!.color ?? ink.line }, selected && { borderColor: ink.line, borderWidth: 1.5, borderLeftWidth: 3 }]}>
+      <View style={[st.block, st.event, { top: (p.start / 60) * HOUR + 1, height: h, left: 2 + p.lane * w, width: w - 1, backgroundColor: ink.bg }, selected && { borderColor: ink.line, borderWidth: 1.5 }]}>
         <Text style={[st.eTitle, { color: ink.ink }]} numberOfLines={h >= 30 ? 2 : 1}>{p.e!.title || "Busy"}</Text>
       </View>
     </GestureDetector>
@@ -241,11 +241,10 @@ const st = StyleSheet.create({
   hour: { position: "absolute", right: 6, fontSize: 10, fontVariant: ["tabular-nums"] },
   line: { position: "absolute", left: 0, right: 0, height: StyleSheet.hairlineWidth },
   col: { height: 24 * HOUR, borderLeftWidth: StyleSheet.hairlineWidth },
-  block: { position: "absolute", borderRadius: 6, borderLeftWidth: 3, paddingHorizontal: 4, paddingVertical: 3, overflow: "hidden", shadowColor: "#000", shadowRadius: 10, shadowOffset: { width: 0, height: 6 } },
-  event: { paddingVertical: 2 },
+  block: { position: "absolute", borderRadius: 6, borderLeftWidth: 3, paddingHorizontal: 4, paddingVertical: 2, overflow: "hidden" },
+  event: { paddingVertical: 2, borderLeftWidth: 0 },
   bRow: { flexDirection: "row", alignItems: "center", gap: 3 },
-  bTitle: { fontSize: 11, fontWeight: "600", flexShrink: 1 },
-  bSub: { fontSize: 10, marginTop: 1 },
+  bTitle: { fontSize: 10.5, fontWeight: "600", flexShrink: 1, fontVariant: ["tabular-nums"] },
   key: { position: "absolute", top: 3, right: 3 },
   eTitle: { fontSize: 10, fontWeight: "500" },
   now: { position: "absolute", left: 0, right: 0, height: 2, zIndex: 40 },
