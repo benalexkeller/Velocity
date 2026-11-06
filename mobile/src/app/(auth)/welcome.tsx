@@ -2,6 +2,7 @@
 // Winners. Create an Account or Sign In; the same accounts as velocityathletes.com.
 import { router } from "expo-router";
 import * as WebBrowser from "expo-web-browser";
+import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { Mark } from "@/components/Mark";
@@ -9,8 +10,8 @@ import { RollingWord } from "@/components/RollingWord";
 import { API } from "@/lib/calendar";
 import { LIGHT, useTheme } from "@/lib/theme";
 
-// who it is for first (readable), then the mindset (a blur by then), landing on the last
-export const WORDS = ["Athletes", "Runners", "Cyclists", "Swimmers", "Triathletes", "Early Risers", "Planners", "Racers", "Finishers", "Competitors", "Underdogs", "Champions", "Winners"];
+// who it is for first, then the mindset (readable for about nine words, then a blur), landing on the last
+export const WORDS = ["Athletes", "Runners", "Cyclists", "Swimmers", "Triathletes", "Early Risers", "Planners", "Racers", "Finishers", "Competitors", "Contenders", "Underdogs", "Grinders", "Closers", "Champions", "Winners"];
 
 const LINE = 40;
 
@@ -18,6 +19,10 @@ export default function Welcome() {
   const { c, dark } = useTheme();
   const blue = LIGHT.accent;
   const open = (path: string) => WebBrowser.openBrowserAsync(`${API}${path}`).catch(() => {});
+  // "Built for Winners" is centred and never moves; longer words run on to the right. On a narrow phone the
+  // line shifts left just enough for the longest word to fit.
+  const [fit, setFit] = useState({ space: 0, row: 0, over: 0 });
+  const shift = fit.space && fit.row ? Math.max(0, fit.over - (fit.space - fit.row) / 2) : 0;
   return (
     <SafeAreaView style={[s.page, { backgroundColor: c.bg }]}>
       <View style={{ flex: 1.15 }} />
@@ -26,9 +31,11 @@ export default function Welcome() {
         <Text style={[s.name, { color: c.ink }]}>Velocity</Text>
       </View>
       <View style={{ flex: 1.5 }} />
-      <View style={s.lineRow}>
-        <Text style={[s.line, { color: c.ink, lineHeight: LINE }]}>Built for</Text>
-        <RollingWord words={WORDS} style={{ ...s.line, color: blue }} lineHeight={LINE} />
+      <View style={s.lineSpace} onLayout={(e) => { const w = e.nativeEvent.layout.width; setFit((f) => ({ ...f, space: w })); }}>
+        <View style={[s.lineRow, { transform: [{ translateX: -shift }] }]} onLayout={(e) => { const w = e.nativeEvent.layout.width; setFit((f) => ({ ...f, row: w })); }}>
+          <Text style={[s.line, { color: c.ink, lineHeight: LINE }]}>Built for</Text>
+          <RollingWord words={WORDS} style={{ ...s.line, color: blue }} lineHeight={LINE} onMeasure={(last, longest) => setFit((f) => ({ ...f, over: longest - last }))} />
+        </View>
       </View>
       <View style={{ flex: 1.2 }} />
       <View style={s.actions}>
@@ -52,7 +59,8 @@ const s = StyleSheet.create({
   page: { flex: 1, paddingHorizontal: 22 },
   brand: { alignItems: "center", gap: 14 },
   name: { fontSize: 40, fontWeight: "800", letterSpacing: -1 },
-  lineRow: { flexDirection: "row", justifyContent: "center", alignItems: "center", gap: 9 },
+  lineSpace: { marginHorizontal: -10, alignItems: "center" },
+  lineRow: { flexDirection: "row", alignItems: "center", gap: 9 },
   line: { fontSize: 31, fontWeight: "800", letterSpacing: -0.8 },
   actions: { gap: 12, paddingBottom: 8 },
   btn: { height: 56, borderRadius: 16, alignItems: "center", justifyContent: "center" },

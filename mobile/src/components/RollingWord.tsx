@@ -1,6 +1,7 @@
-// "Built for ___" on the welcome screen: the word rolls through who Velocity is for, slow enough to read at
-// first, faster and faster (each word tipping over like a drum), then snaps onto the last word, holds, and starts again. The line stays centred:
-// the word's box eases to each word's width. With Reduce Motion on, only the last word shows.
+// "Built for ___" on the welcome screen: the word rolls through who Velocity is for, slow enough to read for
+// the first several, then faster and faster (each word tipping over like a drum), snaps onto the last word,
+// holds, and starts again. The box is the last word's width, so the words before it never move; every word
+// starts at the same left edge and longer ones run on to the right. With Reduce Motion on, only the last word shows.
 import { useFocusEffect } from "expo-router";
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
 import { StyleSheet, Text, View, type TextStyle } from "react-native";
@@ -8,14 +9,16 @@ import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, w
 
 interface Props {
   words: string[];        // rolled through in order; the last one is where it lands
-  first?: number;         // ms the first word stays
-  speedUp?: number;       // each next word stays this share of the one before
+  slow?: number;          // ms the first word stays
+  fast?: number;          // ms the word before the last one stays
+  curve?: number;         // above 1: stays slow for longer, then speeds up harder
   rest?: number;          // ms the last word stays before starting again
+  onMeasure?: (last: number, longest: number) => void; // widths of the last and the longest word
   style: TextStyle;       // font of the rolling word (colour included)
   lineHeight: number;
 }
 
-export function RollingWord({ words, first = 800, speedUp = 0.8, rest = 3000, style, lineHeight }: Props) {
+export function RollingWord({ words, slow = 850, fast = 60, curve = 1.4, rest = 3000, style, lineHeight, onMeasure }: Props) {
   const reduced = useReducedMotion();
   const last = words.length - 1;
   const [width, setWidth] = useState<Record<string, number>>({});
@@ -25,7 +28,6 @@ export function RollingWord({ words, first = 800, speedUp = 0.8, rest = 3000, st
   const front = useRef(0);
   const pending = useRef<{ slot: number; ms: number; land: boolean } | null>(null);
   const a = useSharedValue(0), b = useSharedValue(1); // 0 shown, 1 below, -1 gone above
-  const box = useSharedValue(0);
   const pos = [a, b];
 
   // start each roll once the incoming word is on screen (hidden below), so no old word flashes
@@ -46,18 +48,17 @@ export function RollingWord({ words, first = 800, speedUp = 0.8, rest = 3000, st
 
   useFocusEffect(useCallback(() => {
     if (!measured || reduced) return;
-    box.value = width[words[0]];
-    const hold = (i: number) => (i === last ? rest : Math.round(first * Math.pow(speedUp, i)));
+    onMeasure?.(width[words[last]], Math.max(...words.map((w) => width[w])));
+    const hold = (i: number) => (i === last ? rest : Math.round(fast + (slow - fast) * Math.pow(1 - i / (last - 1), curve)));
     let i = 0;
     let timer: ReturnType<typeof setTimeout>;
     const step = () => {
       const next = (i + 1) % words.length;
       const land = next === last;
-      const ms = next === 0 ? 300 : Math.max(45, Math.min(300, hold(i) * 0.7));
+      const ms = next === 0 ? 340 : Math.max(45, Math.min(320, hold(i) * 0.7));
       const inc = 1 - front.current;
       pending.current = { slot: inc, ms, land };
       setSlots((s) => { const n: [string, string] = [s[0], s[1]]; n[inc] = words[next]; return n; });
-      box.value = withTiming(width[words[next]], { duration: land ? 260 : Math.max(ms * 1.6, 160), easing: Easing.out(Easing.cubic) });
       i = next;
       timer = setTimeout(step, hold(next));
     };
@@ -65,7 +66,6 @@ export function RollingWord({ words, first = 800, speedUp = 0.8, rest = 3000, st
     return () => clearTimeout(timer);
   }, [measured, reduced])); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const boxStyle = useAnimatedStyle(() => ({ width: box.value }));
   const sA = useSlot(a, lineHeight), sB = useSlot(b, lineHeight);
 
   if (reduced) return <Text style={[style, { lineHeight }]}>{words[last]}</Text>;
@@ -77,10 +77,10 @@ export function RollingWord({ words, first = 800, speedUp = 0.8, rest = 3000, st
           <Text key={w} style={[style, { lineHeight }]} onLayout={(e) => { const v = Math.ceil(e.nativeEvent.layout.width); setWidth((m) => (m[w] === v ? m : { ...m, [w]: v })); }}>{w}</Text>
         ))}
       </View>
-      <Animated.View style={[{ height: lineHeight, opacity: measured ? 1 : 0 }, boxStyle]} accessibilityLabel={words[last]}>
+      <View style={{ width: width[words[last]] ?? 0, height: lineHeight, opacity: measured ? 1 : 0 }} accessibilityLabel={words[last]}>
         <Animated.Text style={[style, st.slot, { lineHeight, width: (width[slots[0]] ?? 0) + 2 }, sA]}>{slots[0]}</Animated.Text>
         <Animated.Text style={[style, st.slot, { lineHeight, width: (width[slots[1]] ?? 0) + 2 }, sB]}>{slots[1]}</Animated.Text>
-      </Animated.View>
+      </View>
     </>
   );
 }
