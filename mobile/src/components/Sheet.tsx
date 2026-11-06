@@ -10,7 +10,7 @@ import { useTheme } from "@/lib/theme";
 const SPRING = { damping: 26, stiffness: 260, mass: 0.9 };
 
 /** Closable sheet that fits its content. `open` false slides it away; onClose fires once it is gone. */
-export function Sheet({ open, onClose, children }: { open: boolean; onClose: () => void; children: ReactNode }) {
+export function Sheet({ open, onClose, children, dim = false }: { open: boolean; onClose: () => void; children: ReactNode; dim?: boolean }) {
   const { c, dark } = useTheme();
   const [h, setH] = useState(0);
   const y = useSharedValue(800);
@@ -32,7 +32,7 @@ export function Sheet({ open, onClose, children }: { open: boolean; onClose: () 
   const dimStyle = useAnimatedStyle(() => ({ opacity: h ? interpolate(y.value, [0, h], [1, 0], "clamp") : 0 }));
   return (
     <View style={StyleSheet.absoluteFill} pointerEvents={open ? "box-none" : "none"}>
-      <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: dark ? "rgba(0,0,0,0.35)" : "rgba(16,17,20,0.10)" }, dimStyle]}>
+      <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: dim ? (dark ? "rgba(0,0,0,0.35)" : "rgba(16,17,20,0.10)") : "transparent" }, dimStyle]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={close} accessibilityLabel="Close" />
       </Animated.View>
       <GestureDetector gesture={pan}>

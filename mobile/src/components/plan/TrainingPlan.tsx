@@ -2,8 +2,8 @@
 // the phases under it, and a sheet with the chosen week: hours per sport filling as the work gets done, and each day.
 import { useMemo, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
-import Svg, { Rect } from "react-native-svg";
-import { actualByDiscipline, plannedByDiscipline, type Session, type Week } from "@shared/data";
+import Svg, { Circle, Rect } from "react-native-svg";
+import { actualByDiscipline, plannedByDiscipline, type Phase, type Session, type Week } from "@shared/data";
 import { DAYS, addDays, fmtDur, fromYmd, today as todayDate, ymd } from "@shared/format";
 import { Icon } from "../Icon";
 import { SnapSheet } from "../Sheet";
@@ -61,41 +61,112 @@ function PhaseStrip({ weeks, cur, width, c }: { weeks: Week[]; cur: number; widt
   weeks.forEach((w, i) => { const name = w.phaseShort.split(" ")[0]; const g = groups[groups.length - 1]; if (g && g.name === name) g.n++; else groups.push({ name, n: 1, from: i }); });
   const slot = width / weeks.length;
   return (
-    <View style={{ flexDirection: "row", gap: 2, marginTop: 4 }}>
-      {groups.map((g) => {
-        const on = cur >= g.from && cur < g.from + g.n;
-        return (
-          <View key={g.from} style={{ width: g.n * slot - 2 }}>
-            <View style={{ height: 4, borderRadius: 2, backgroundColor: on ? c.accent : c.line }} />
-            {g.n * slot > 36 && <Text style={[st.phaseLab, { color: on ? c.ink : c.muted }]} numberOfLines={1}>{g.name}</Text>}
-          </View>
-        );
-      })}
+    <View style={{ marginTop: 2 }}>
+      <View style={{ flexDirection: "row", gap: 2 }}>
+        {groups.map((g) => <View key={g.from} style={{ width: g.n * slot - 2, height: 4, borderRadius: 2, backgroundColor: c.line }} />)}
+      </View>
+      {/* this week, right under its bar */}
+      <View style={{ position: "absolute", top: 0, left: cur * slot + 1, width: Math.max(4, slot - 3), height: 4, borderRadius: 2, backgroundColor: c.accent }} />
+      <View style={{ flexDirection: "row", gap: 2, marginTop: 3 }}>
+        {groups.map((g) => {
+          const on = cur >= g.from && cur < g.from + g.n;
+          return <View key={g.from} style={{ width: g.n * slot - 2 }}>{g.n * slot > 36 && <Text style={[st.phaseLab, { color: on ? c.ink : c.muted, fontWeight: on ? "600" : "400" }]} numberOfLines={1}>{g.name}</Text>}</View>;
+        })}
+      </View>
     </View>
   );
 }
 
-function DayRow({ date, s, first, today, zones, c, dark }: { date: string; s: Session | null; first: boolean; today: string; zones: Record<string, Record<string, string>> | null; c: Palette; dark: boolean }) {
+/** One line a coach would say about each block of the plan. */
+const PHASE_TEXT: Record<string, string> = {
+  "Base 1": "You're building the habit. Every session is easy on purpose, so you can train most days without breaking down.",
+  "Base 2": "Same easy effort, longer sessions. The long ride and long run grow each week, with a lighter week to absorb it.",
+  "Base 3": "Hills and tempo come in, and you start eating on every long ride. The engine gets stronger, not just bigger.",
+  "Build 1": "Now it gets specific: intervals at race effort and your first bricks, so running off the bike starts to feel normal.",
+  "Build 2": "The biggest weeks of the plan. Long efforts at race pace, with race-day fueling rehearsed every Saturday.",
+  "Peak": "The dress rehearsal: a full race simulation, your longest run and heat preparation, then the load comes down.",
+  "Taper": "Volume drops, sharpness stays. Short efforts keep you fast while your body soaks up months of work.",
+  "Base": "Easy volume in all three sports. The long sessions get a little longer each week.",
+  "Build": "Race-effort intervals and bricks on top of the long sessions.",
+};
+
+function Ring({ pct, size, c, on }: { pct: number; size: number; c: Palette; on: boolean }) {
+  const w = 3.5, r = (size - w) / 2, C = 2 * Math.PI * r;
+  return (
+    <Svg width={size} height={size}>
+      <Circle cx={size / 2} cy={size / 2} r={r} stroke={c.line} strokeWidth={w} fill="none" />
+      {pct > 0 && <Circle cx={size / 2} cy={size / 2} r={r} stroke={on ? c.accent : c.ink2} strokeWidth={w} fill="none" strokeLinecap="round" strokeDasharray={`${C * Math.min(1, pct)} ${C}`} transform={`rotate(-90 ${size / 2} ${size / 2})`} />}
+    </Svg>
+  );
+}
+
+function PhaseRow({ p, today, on, open, onToggle, c }: { p: Phase; today: string; on: boolean; open: boolean; onToggle: () => void; c: Palette }) {
+  const hours = p.weeks.map((w) => w.plannedMin / 60);
+  const total = hours.reduce((a, b) => a + b, 0);
+  const done = p.weeks.reduce((n, w) => n + Math.min(1, Math.max(0, (fromYmd(today).getTime() - fromYmd(w.start).getTime()) / (7 * 864e5))), 0);
+  const top = Math.max(...hours, 1);
+  return (
+    <Pressable onPress={onToggle} style={[st.phase, { borderColor: c.line }]} accessibilityRole="button" accessibilityState={{ expanded: open }}>
+      <View style={st.phaseHead}>
+        <Ring pct={done / p.weeks.length} size={30} c={c} on={on} />
+        <View style={{ flex: 1 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 6 }}>
+            <Text style={[st.phaseName, { color: c.ink }]}>{p.short}</Text>
+            {on && <Text style={[st.now, { color: c.accent }]}>Now</Text>}
+          </View>
+          <Text style={[st.phaseMeta, { color: c.muted }]}>{p.from === p.to ? `W${p.from}` : `W${p.from} to W${p.to}`}</Text>
+        </View>
+        <View style={st.mini}>
+          {hours.map((h, i) => <View key={i} style={{ flex: 1, height: Math.max(2, (h / top) * 22), borderRadius: 1.5, backgroundColor: on ? c.accent : c.ink2, opacity: on ? 0.85 : 0.35 }} />)}
+        </View>
+        <View style={{ width: 52, alignItems: "flex-end" }}>
+          <Text style={[st.peak, { color: c.ink }]}>{p.peakHours.toFixed(1)} h</Text>
+          <Text style={[st.phaseMeta, { color: c.muted }]}>Peak</Text>
+        </View>
+        <Icon name="down" size={14} color={c.muted} stroke={2.2} />
+      </View>
+      {open && (
+        <View style={st.phaseOpen}>
+          <View style={st.phaseNums}>
+            <View><Text style={[st.numV, { color: c.ink }]}>{p.weeks.length}</Text><Text style={[st.phaseMeta, { color: c.muted }]}>Weeks</Text></View>
+            <View><Text style={[st.numV, { color: c.ink }]}>{Math.round(total)} h</Text><Text style={[st.phaseMeta, { color: c.muted }]}>Planned</Text></View>
+            <View><Text style={[st.numV, { color: c.ink }]}>{(total / p.weeks.length).toFixed(1)} h</Text><Text style={[st.phaseMeta, { color: c.muted }]}>Per Week</Text></View>
+            <View><Text style={[st.numV, { color: c.ink }]}>{Math.round((done / p.weeks.length) * 100)}%</Text><Text style={[st.phaseMeta, { color: c.muted }]}>Through</Text></View>
+          </View>
+          <Text style={[st.phaseText, { color: c.ink2 }]}>{PHASE_TEXT[p.short] ?? PHASE_TEXT[p.short.split(" ")[0]] ?? p.purpose}</Text>
+        </View>
+      )}
+    </Pressable>
+  );
+}
+
+function SessionLine({ s, today, zones, c, dark }: { s: Session; today: string; zones: Record<string, Record<string, string>> | null; c: Palette; dark: boolean }) {
+  const done = !!s.actual, missed = !done && s.date < today;
+  return (
+    <View style={st.line}>
+      <View style={[st.chip, { backgroundColor: done ? (dark ? "#F3F4F6" : "#2C2D31") : missed ? c.surface2 : c.accentSoft }]}>
+        <SportIcon sport={s.sport} size={14} color={done ? (dark ? "#101114" : "#fff") : missed ? c.muted : c.accent} />
+      </View>
+      <Text style={[st.rowName, { color: missed ? c.muted : c.ink }]}>{s.title}</Text>
+      <Text style={[st.rowSub, { color: c.muted }]} numberOfLines={1}>{fmtDur(s.actual?.min ?? s.min)}, Zone {zoneOfSession(s, zones)}</Text>
+      <View style={{ width: 18, alignItems: "flex-end" }}>
+        {done ? <Icon name="check" size={16} color={c.ok} stroke={2.6} /> : isKey(s) ? <Icon name="bolt" size={13} color={c.ink2} stroke={2} /> : null}
+      </View>
+    </View>
+  );
+}
+
+function DayRow({ date, ss, today, zones, c, dark }: { date: string; ss: Session[]; today: string; zones: Record<string, Record<string, string>> | null; c: Palette; dark: boolean }) {
   const d = fromYmd(date), isT = date === today;
-  const done = !!s?.actual, missed = !!s && !done && date < today;
   return (
     <View style={[st.row, { borderColor: c.line }, isT && { backgroundColor: c.accentSoft }]}>
       {isT && <View style={[st.todayBar, { backgroundColor: c.accent }]} />}
-      <Text style={[st.rowDate, { color: isT ? c.accent : c.muted, fontWeight: isT ? "700" : "500" }]}>{first ? `${DAYS[(d.getDay() + 6) % 7]} ${d.getDate()}` : ""}</Text>
-      {s ? (
-        <>
-          <View style={[st.chip, { backgroundColor: done ? (dark ? "#F3F4F6" : "#2C2D31") : missed ? c.surface2 : c.accentSoft }]}>
-            <SportIcon sport={s.sport} size={14} color={done ? (dark ? "#101114" : "#fff") : missed ? c.muted : c.accent} />
-          </View>
-          <Text style={[st.rowName, { color: missed ? c.muted : c.ink }]}>{s.title}</Text>
-          <Text style={[st.rowSub, { color: c.muted }]} numberOfLines={1}>{fmtDur(s.actual?.min ?? s.min)}, Zone {zoneOfSession(s, zones)}</Text>
-          <View style={{ width: 18, alignItems: "flex-end" }}>
-            {done ? <Icon name="check" size={16} color={c.ok} stroke={2.6} /> : isKey(s) ? <Icon name="bolt" size={13} color={c.ink2} stroke={2} /> : null}
-          </View>
-        </>
-      ) : (
-        <View style={[st.rest, { backgroundColor: c.surface2 }]}><Text style={[st.restText, { color: c.muted }]}>Rest</Text></View>
-      )}
+      <Text style={[st.rowDate, { color: isT ? c.accent : c.muted, fontWeight: isT ? "700" : "500" }]}>{`${DAYS[(d.getDay() + 6) % 7]} ${d.getDate()}`}</Text>
+      <View style={{ flex: 1 }}>
+        {ss.length
+          ? ss.map((s) => <SessionLine key={s.id} s={s} today={today} zones={zones} c={c} dark={dark} />)
+          : <View style={st.line}><View style={[st.rest, { backgroundColor: c.surface2 }]}><Text style={[st.restText, { color: c.muted }]}>Rest</Text></View></View>}
+      </View>
     </View>
   );
 }
@@ -110,6 +181,7 @@ export function TrainingPlan() {
   const t = ymd(todayDate());
   const cur = Math.max(0, weeks.findIndex((w) => t >= w.start && t <= ymd(addDays(fromYmd(w.start), 6))));
   const [sel, setSel] = useState<number | null>(null);
+  const [openPhase, setOpenPhase] = useState<number | null>(null);
   const si = sel ?? cur;
   const w = weeks[si];
   const zones = data?.raw.profile?.zones ?? null;
@@ -134,26 +206,12 @@ export function TrainingPlan() {
           </View>
         </View>
         <Chart weeks={weeks} cur={cur} sel={si} onPick={(i) => { setSel(i); setExpanded(true); }} width={chartW} c={c} other={other} />
-        <PhaseStrip weeks={weeks} cur={si} width={chartW} c={c} />
+        <PhaseStrip weeks={weeks} cur={cur} width={chartW} c={c} />
 
         <Text style={[st.h2, { color: c.ink, marginTop: 28, marginBottom: 6 }]}>Phases</Text>
-        {(data?.phases ?? []).map((p) => {
-          const on = w.week >= p.from && w.week <= p.to;
-          return (
-            <View key={p.from} style={[st.phase, { borderColor: c.line }]}>
-              <View style={[st.phaseBar, { backgroundColor: on ? c.accent : c.line }]} />
-              <View style={{ flex: 1, gap: 3 }}>
-                <View style={st.phaseHead}>
-                  <Text style={[st.phaseName, { color: c.ink }]}>{p.short}</Text>
-                  {on && <Text style={[st.now, { color: c.accent }]}>Now</Text>}
-                  <View style={{ flex: 1 }} />
-                  <Text style={[st.phaseMeta, { color: c.muted }]}>{p.from === p.to ? `Week ${p.from}` : `Weeks ${p.from} to ${p.to}`}, up to {p.peakHours.toFixed(1)} h</Text>
-                </View>
-                {!!p.purpose && <Text style={[st.phaseText, { color: c.ink2 }]}>{p.purpose}</Text>}
-              </View>
-            </View>
-          );
-        })}
+        {(data?.phases ?? []).map((p) => (
+          <PhaseRow key={p.from} p={p} today={t} on={weeks[cur] ? weeks[cur].week >= p.from && weeks[cur].week <= p.to : false} open={openPhase === p.from} onToggle={() => setOpenPhase((x) => (x === p.from ? null : p.from))} c={c} />
+        ))}
       </ScrollView>
 
       {h > 0 && (
@@ -182,10 +240,7 @@ export function TrainingPlan() {
               })}
             </View>
             <View style={[st.list, { borderColor: c.line }]}>
-              {days.flatMap((d) => {
-                const ss = w.sessions.filter((s) => s.date === d && s.sport !== "rest");
-                return ss.length ? ss.map((s, i) => <DayRow key={s.id} date={d} s={s} first={i === 0} today={t} zones={zones} c={c} dark={dark} />) : [<DayRow key={d} date={d} s={null} first today={t} zones={zones} c={c} dark={dark} />];
-              })}
+              {days.map((d) => <DayRow key={d} date={d} ss={w.sessions.filter((s) => s.date === d && s.sport !== "rest")} today={t} zones={zones} c={c} dark={dark} />)}
             </View>
           </ScrollView>
         </SnapSheet>
@@ -206,13 +261,17 @@ const st = StyleSheet.create({
   yTop: { position: "absolute", top: -2, left: 0, fontSize: 10, zIndex: 2 },
   xLab: { position: "absolute", width: 28, textAlign: "center", fontSize: 10 },
   phaseLab: { fontSize: 10, marginTop: 3 },
-  phase: { flexDirection: "row", gap: 12, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
-  phaseBar: { width: 3, borderRadius: 2 },
-  phaseHead: { flexDirection: "row", alignItems: "center", gap: 8 },
+  phase: { paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  phaseHead: { flexDirection: "row", alignItems: "center", gap: 12 },
   phaseName: { fontSize: 15, fontWeight: "600" },
   now: { fontSize: 11, fontWeight: "700" },
-  phaseMeta: { fontSize: 12 },
-  phaseText: { fontSize: 13, lineHeight: 18 },
+  phaseMeta: { fontSize: 11, marginTop: 1 },
+  mini: { width: 64, height: 22, flexDirection: "row", alignItems: "flex-end", gap: 2 },
+  peak: { fontSize: 14, fontWeight: "700" },
+  phaseOpen: { paddingLeft: 42, paddingTop: 12, gap: 10 },
+  phaseNums: { flexDirection: "row", gap: 22 },
+  numV: { fontSize: 16, fontWeight: "700" },
+  phaseText: { fontSize: 14, lineHeight: 20 },
   sheetHead: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingBottom: 12 },
   week: { fontSize: 26, fontWeight: "800", letterSpacing: -0.6 },
   of: { fontSize: 17, fontWeight: "500" },
@@ -227,7 +286,8 @@ const st = StyleSheet.create({
   cardOf: { fontSize: 12 },
   track: { height: 4, borderRadius: 2, marginTop: 8, overflow: "hidden" },
   list: { borderRadius: 12, borderWidth: StyleSheet.hairlineWidth, overflow: "hidden" },
-  row: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12, height: 46, borderBottomWidth: StyleSheet.hairlineWidth },
+  row: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 12, paddingVertical: 4, minHeight: 46, borderBottomWidth: StyleSheet.hairlineWidth },
+  line: { flexDirection: "row", alignItems: "center", gap: 10, height: 38 },
   todayBar: { position: "absolute", left: 0, top: 0, bottom: 0, width: 3 },
   rowDate: { width: 50, fontSize: 13 },
   chip: { width: 28, height: 28, borderRadius: 14, alignItems: "center", justifyContent: "center" },
