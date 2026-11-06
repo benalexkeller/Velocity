@@ -168,25 +168,26 @@ export function StackBars({ buckets, width, height = 160, colors, c }: { buckets
 }
 
 /** The score as a wide white arc on blue: track, filled part, a knob at the end, 0 and 100 at the ends. */
-export function ScoreArc({ score, label, size = 250 }: { score: number | null; label: string; size?: number }) {
-  const w = 8, r = size / 2 - 16, cx = size / 2, cy = size / 2 + 8;
+export function ScoreArc({ score, label, size = 240 }: { score: number | null; label: string; size?: number }) {
+  // a half circle, open at the bottom: 0 at the left end, 100 at the right
+  const w = 8, r = size / 2 - 16, cx = size / 2, cy = r + 14;
   const at = (deg: number) => { const a = ((deg - 90) * Math.PI) / 180; return [cx + r * Math.cos(a), cy + r * Math.sin(a)]; };
-  const arc = (a: number, b: number) => { const [x1, y1] = at(a), [x2, y2] = at(b); return `M ${x1} ${y1} A ${r} ${r} 0 ${b - a > 180 ? 1 : 0} 1 ${x2} ${y2}`; };
-  const end = -115 + (230 * Math.max(0, Math.min(100, score ?? 0))) / 100;
-  const [kx, ky] = at(end), [sx, sy] = at(-115), [ex, ey] = at(115);
-  const h = Math.round(cy + r * Math.sin((25 * Math.PI) / 180) + 30); // room for the arc ends and the 0 and 100
+  const arc = (a: number, b: number) => { const [x1, y1] = at(a), [x2, y2] = at(b); return `M ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2}`; };
+  const end = -90 + (180 * Math.max(0, Math.min(100, score ?? 0))) / 100;
+  const [kx, ky] = at(end), [sx, sy] = at(-90), [ex, ey] = at(90);
+  const h = Math.round(cy + 24);
   return (
     <View style={{ width: size, height: h, alignItems: "center" }}>
       <Svg width={size} height={h} style={StyleSheet.absoluteFill}>
-        <Path d={arc(-115, 115)} stroke="rgba(255,255,255,0.32)" strokeWidth={w} fill="none" strokeLinecap="round" />
-        {score != null && <Path d={arc(-115, end)} stroke="#FFFFFF" strokeWidth={w} fill="none" strokeLinecap="round" />}
+        <Path d={arc(-90, 90)} stroke="rgba(255,255,255,0.32)" strokeWidth={w} fill="none" strokeLinecap="round" />
+        {score != null && score > 0 && <Path d={arc(-90, end)} stroke="#FFFFFF" strokeWidth={w} fill="none" strokeLinecap="round" />}
         {score != null && <Circle cx={kx} cy={ky} r={13} fill="rgba(255,255,255,0.28)" />}
         {score != null && <Circle cx={kx} cy={ky} r={7.5} fill="#FFFFFF" />}
-        <SvgText x={sx} y={sy + 22} fontSize={12} fill="rgba(255,255,255,0.85)" textAnchor="middle" fontFamily={FONT}>0</SvgText>
-        <SvgText x={ex} y={ey + 22} fontSize={12} fill="rgba(255,255,255,0.85)" textAnchor="middle" fontFamily={FONT}>100</SvgText>
+        <SvgText x={sx} y={sy + 20} fontSize={12} fill="rgba(255,255,255,0.85)" textAnchor="middle" fontFamily={FONT}>0</SvgText>
+        <SvgText x={ex} y={ey + 20} fontSize={12} fill="rgba(255,255,255,0.85)" textAnchor="middle" fontFamily={FONT}>100</SvgText>
       </Svg>
-      <Text style={{ color: "#fff", fontSize: 64, fontWeight: "800", letterSpacing: -2, marginTop: size * 0.24 }}>{score ?? "-"}</Text>
-      <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 17, fontWeight: "500", marginTop: -4 }}>{label}</Text>
+      <Text style={{ color: "#fff", fontSize: 58, fontWeight: "800", letterSpacing: -2, marginTop: r * 0.42 }}>{score ?? "-"}</Text>
+      <Text style={{ color: "rgba(255,255,255,0.9)", fontSize: 16, fontWeight: "500", marginTop: -4 }}>{label}</Text>
     </View>
   );
 }

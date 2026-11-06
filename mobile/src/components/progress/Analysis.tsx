@@ -207,8 +207,8 @@ export function Analysis() {
 }
 
 const st = StyleSheet.create({
-  hero: { alignItems: "center", paddingTop: 14, paddingBottom: 46 },
-  seg: { flexDirection: "row", backgroundColor: "rgba(255,255,255,0.18)", borderRadius: 20, padding: 3, marginBottom: 8 },
+  hero: { alignItems: "center", paddingTop: 12, paddingBottom: 40 },
+  seg: { flexDirection: "row", backgroundColor: "rgba(255,255,255,0.18)", borderRadius: 20, padding: 3, marginBottom: 2 },
   segBtn: { paddingHorizontal: 22, paddingVertical: 6, borderRadius: 17 },
   segText: { fontSize: 15, fontWeight: "600" },
   card: { marginHorizontal: 16, marginTop: -34, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, padding: 14, gap: 14, shadowColor: "#000", shadowOpacity: 0.06, shadowRadius: 14, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
