@@ -31,7 +31,8 @@ export function Sheet({ open, onClose, children, dim = false }: { open: boolean;
   const sheetStyle = useAnimatedStyle(() => ({ transform: [{ translateY: y.value }] }));
   const dimStyle = useAnimatedStyle(() => ({ opacity: h ? interpolate(y.value, [0, h], [1, 0], "clamp") : 0 }));
   return (
-    <View style={StyleSheet.absoluteFill} pointerEvents={open ? "box-none" : "none"}>
+    // clipped to the screen area, so a closed sheet never shows below it (around the floating tab bar)
+    <View style={[StyleSheet.absoluteFill, { overflow: "hidden" }]} pointerEvents={open ? "box-none" : "none"}>
       <Animated.View style={[StyleSheet.absoluteFill, { backgroundColor: dim ? (dark ? "rgba(0,0,0,0.35)" : "rgba(16,17,20,0.10)") : "transparent" }, dimStyle]}>
         <Pressable style={StyleSheet.absoluteFill} onPress={close} accessibilityLabel="Close" />
       </Animated.View>
