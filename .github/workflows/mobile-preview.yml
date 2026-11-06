@@ -1,0 +1,42 @@
+# Publishes the phone app to Expo (channel "preview") so it opens in Expo Go on PR's phone.
+# Runs when app files change on main or a mobile-... branch, or by hand (Actions, mobile-preview, Run workflow).
+# Needs two repository secrets: EXPO_TOKEN (Expo access token) and EXPO_PUBLIC_SUPABASE_ANON_KEY (public key).
+name: mobile-preview
+on:
+  push:
+    branches: [main, "mobile-*"]
+    paths: ["mobile/**"]
+  workflow_dispatch:
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: mobile/package-lock.json
+      - run: npm ci
+      - name: Publish to Expo
+        env:
+          EXPO_TOKEN: ${{ secrets.EXPO_TOKEN }}
+          EXPO_PUBLIC_SUPABASE_URL: https://hngrtoufmjauqdkhncbp.supabase.co
+          EXPO_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          MSG="$(git log -1 --pretty=%s)"
+          npx --yes eas-cli@latest update --channel preview --message "$MSG" --non-interactive
+      - name: Link for Expo Go
+        run: |
+          url="https://qr.expo.dev/eas-update?projectId=3a01a5d1-31c6-4f50-8cee-70b2ee78164c&runtimeVersion=exposdk:58.0.0&channel=preview"
+          {
+            echo "### Open Velocity in Expo Go"
+            echo "Scan this with the iPhone camera:"
+            echo ""
+            echo "![QR code]($url)"
+            echo ""
+            echo "Or open on the phone: $(curl -s "$url&format=url")"
+          } >> "$GITHUB_STEP_SUMMARY"
