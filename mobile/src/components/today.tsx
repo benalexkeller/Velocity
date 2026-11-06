@@ -220,9 +220,9 @@ export function SessionCard({ s, label, zones, device, weightKg, score, c }: {
 }
 
 /** Add an activity by hand, in the website's style: blue plus and a bold label. */
-export function AddManually({ c }: { c: Palette }) {
+export function AddManually({ c, onPress }: { c: Palette; onPress: () => void }) {
   return (
-    <Pressable style={({ pressed }) => [st.add, { backgroundColor: c.surface, borderColor: c.line }, pressed && { opacity: 0.8 }]} accessibilityRole="button" onPress={() => {}}>
+    <Pressable style={({ pressed }) => [st.add, { backgroundColor: c.surface, borderColor: c.line }, pressed && { opacity: 0.8 }]} accessibilityRole="button" onPress={onPress}>
       <View style={[st.plus, { backgroundColor: c.accent }]}><Icon name="plus" size={22} color="#fff" stroke={2.4} /></View>
       <Text style={[st.addText, { color: c.ink }]}>Add Manually</Text>
     </Pressable>

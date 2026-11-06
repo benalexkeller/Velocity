@@ -117,8 +117,9 @@ async function fetchRaw(uid: string): Promise<Raw> {
   };
 }
 
-type Ctx = { data: AthleteData | null; loading: boolean; offline: boolean; refresh: () => Promise<void>; moveSession: (id: string, date: string, start: string) => Promise<boolean> };
-const AthleteCtx = createContext<Ctx>({ data: null, loading: true, offline: false, refresh: async () => {}, moveSession: async () => false });
+export type NewActivity = { date: string; start: string; sport: Activity["sport"]; name: string; min: number; mi?: number; yd?: number; hr?: number };
+type Ctx = { data: AthleteData | null; loading: boolean; offline: boolean; refresh: () => Promise<void>; moveSession: (id: string, date: string, start: string) => Promise<boolean>; addActivity: (a: NewActivity) => Promise<boolean> };
+const AthleteCtx = createContext<Ctx>({ data: null, loading: true, offline: false, refresh: async () => {}, moveSession: async () => false, addActivity: async () => false });
 
 export function AthleteProvider({ children }: { children: ReactNode }) {
   const { session } = useAuth();
@@ -157,8 +158,28 @@ export function AthleteProvider({ children }: { children: ReactNode }) {
     return true;
   }, [uid, raw]);
 
+  /** Logs an activity by hand (same row as the website's manual log), shown at once and saved to activities. */
+  const addActivity = useCallback(async (a: NewActivity) => {
+    if (!uid || !raw || !supabase) return false;
+    const row = {
+      user_id: uid, id: `manual-${Date.now()}`, date: a.date, start: a.start, sport: a.sport, name: a.name, min: a.min,
+      mi: a.mi ?? null, yd: a.yd ?? null, hr: a.hr ?? null,
+      pace_s: a.sport === "run" && a.mi ? Math.round((a.min * 60) / a.mi) : null,
+      mph: a.sport === "bike" && a.mi ? +(a.mi / (a.min / 60)).toFixed(1) : null,
+      p100_s: a.sport === "swim" && a.yd ? Math.round((a.min * 60) / (a.yd / 100)) : null,
+      source: "manual", excluded: false,
+    };
+    const before = raw;
+    const next = { ...raw, activities: [...raw.activities, row].sort((x, y) => String(x.date).localeCompare(String(y.date))) };
+    setRaw(next);
+    const { error } = await supabase.from("activities").insert(row);
+    if (error) { setRaw(before); return false; }
+    AsyncStorage.setItem(KEY(uid), JSON.stringify(next)).catch(() => {});
+    return true;
+  }, [uid, raw]);
+
   const data = useMemo(() => (raw ? shape(raw) : null), [raw]);
-  return <AthleteCtx.Provider value={{ data, loading, offline, refresh, moveSession }}>{children}</AthleteCtx.Provider>;
+  return <AthleteCtx.Provider value={{ data, loading, offline, refresh, moveSession, addActivity }}>{children}</AthleteCtx.Provider>;
 }
 
 export const useAthlete = () => useContext(AthleteCtx);

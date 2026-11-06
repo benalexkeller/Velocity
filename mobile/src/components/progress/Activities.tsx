@@ -5,6 +5,10 @@ import { Pressable, SectionList, StyleSheet, Text, View } from "react-native";
 import type { Activity } from "@shared/data";
 import { DAYS, fmtHMS, fmtPace, fromYmd } from "@shared/format";
 import { fmtDist, fmtSpeed, runPace, swimDist, swimPace } from "@shared/units";
+import { AddActivityBody } from "../AddActivity";
+import { Icon } from "../Icon";
+import { RouteThumb } from "../RouteThumb";
+import { Sheet } from "../Sheet";
 import { SportIcon } from "../SportIcon";
 import { RangePills } from "./charts";
 import { useAthlete } from "@/lib/athlete";
@@ -19,12 +23,14 @@ const factsOf = (a: Activity) => [
   fmtHMS(a.min),
   a.pace_s ? `${fmtPace(runPace(a.pace_s).s)} ${runPace(a.pace_s).u}` : a.mph ? fmtSpeed(a.mph) : a.p100_s ? `${fmtPace(swimPace(a.p100_s).s)} ${swimPace(a.p100_s).u}` : null,
   a.hr ? `${a.hr} bpm` : null,
-].filter(Boolean) as string[];
+].filter(Boolean).slice(0, 3) as string[]; // three facts fit beside the map; the rest is one tap away
 
 export function Activities() {
   const { c, dark } = useTheme();
   const { data } = useAthlete();
   const [f, setF] = useState<F>("all");
+  const [adding, setAdding] = useState(false);
+  const [toast, setToast] = useState<string | null>(null);
   const sections = useMemo(() => {
     const acts = [...(data?.activities ?? [])].reverse().filter((a) => f === "all" || (f === "other" ? !["swim", "bike", "run"].includes(a.sport) : a.sport === f));
     const out: { title: string; total: number; data: Activity[] }[] = [];
@@ -39,6 +45,9 @@ export function Activities() {
   return (
     <View style={{ flex: 1 }}>
       <View style={st.filter}>
+        <Pressable onPress={() => setAdding(true)} style={({ pressed }) => [st.plus, { backgroundColor: c.surface2 }, pressed && { opacity: 0.7 }]} accessibilityRole="button" accessibilityLabel="Add activity">
+          <Icon name="plus" size={16} color={c.ink} stroke={2.2} />
+        </Pressable>
         <RangePills options={[{ k: "all", label: "All" }, { k: "swim", label: "Swim" }, { k: "bike", label: "Bike" }, { k: "run", label: "Run" }, { k: "other", label: "Other" }]} value={f} onChange={setF} />
       </View>
       <SectionList
@@ -73,22 +82,30 @@ export function Activities() {
                   ))}
                 </View>
               </View>
+              <RouteThumb route={a.route} sport={a.sport} size={58} />
             </Pressable>
           );
         }}
       />
+      {toast && <View style={[st.toast, { backgroundColor: dark ? "#F3F4F6" : "#101114" }]}><Text style={[st.toastText, { color: dark ? "#101114" : "#fff" }]}>{toast}</Text></View>}
+      <Sheet open={adding} onClose={() => setAdding(false)}>
+        <AddActivityBody onClose={() => setAdding(false)} onDone={(msg) => { setAdding(false); setToast(msg); setTimeout(() => setToast(null), 3000); }} />
+      </Sheet>
     </View>
   );
 }
 
 const st = StyleSheet.create({
-  filter: { paddingHorizontal: 16, paddingVertical: 10, alignItems: "flex-start" },
+  filter: { flexDirection: "row", alignItems: "center", gap: 10, paddingHorizontal: 16, paddingVertical: 10 },
+  plus: { width: 30, height: 30, borderRadius: 15, alignItems: "center", justifyContent: "center" },
+  toast: { position: "absolute", left: 16, right: 16, bottom: 104, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 14 },
+  toastText: { fontSize: 14, fontWeight: "500" },
   empty: { padding: 24, textAlign: "center" },
   head: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", paddingHorizontal: 16, paddingTop: 12, paddingBottom: 6 },
   headText: { fontSize: 17, fontWeight: "700" },
   headSub: { fontSize: 12 },
-  row: { flexDirection: "row", gap: 12, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
-  chip: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", marginTop: 2 },
+  row: { flexDirection: "row", alignItems: "center", gap: 12, paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: StyleSheet.hairlineWidth },
+  chip: { width: 36, height: 36, borderRadius: 18, alignItems: "center", justifyContent: "center", alignSelf: "flex-start", marginTop: 2 },
   top: { flexDirection: "row", alignItems: "baseline", justifyContent: "space-between", gap: 8 },
   name: { fontSize: 16, fontWeight: "700", flexShrink: 1 },
   when: { fontSize: 12 },
