@@ -1,4 +1,4 @@
-// Root of the app: sign-in state, the athlete's data, and the two areas (sign-in, and the tabs once signed in).
+// Root of the app: sign-in state, the athlete's data, and the two areas (welcome and sign-in, and the tabs once signed in).
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
@@ -15,14 +15,14 @@ function Areas() {
     <>
       <StatusBar style={dark ? "light" : "dark"} />
       <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.bg } }}>
-        <Stack.Protected guard={!!session}>
+        <Stack.Protected guard={!!session} redirectTo="/welcome">
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="profile" options={{ presentation: "modal" }} />
           <Stack.Screen name="activity/[id]" />
           <Stack.Screen name="session/[id]" />
         </Stack.Protected>
-        <Stack.Protected guard={!session}>
-          <Stack.Screen name="sign-in" />
+        <Stack.Protected guard={!session} redirectTo="/">
+          <Stack.Screen name="(auth)" />
         </Stack.Protected>
       </Stack>
     </>
