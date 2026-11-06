@@ -15,7 +15,9 @@ import { busyOn, clashOf, isKey, lanes, toHm, toMin } from "./blocks";
 import type { OtherEvent } from "@/lib/calendar";
 import { useTheme } from "@/lib/theme";
 
-const HOUR = 50, GUT = 44, STEP = 15;
+const HOUR = 50, GUT = 44, STEP = 15, STRIP = 6;
+/** Names short enough for a week column. */
+const SHORT: Record<string, string> = { run: "Run", bike: "Bike", swim: "Swim", brick: "Brick", strength: "Gym" };
 const AScroll = Animated.createAnimatedComponent(GHScrollView);
 const haptic = (kind: "lift" | "tick" | "drop") => {
   if (Platform.OS === "web") return;
@@ -34,7 +36,7 @@ export function blockInk(dark: boolean) {
   };
 }
 
-type Placed = { start: number; end: number; s?: Session; e?: OtherEvent };
+type Placed = { start: number; end: number; s?: Session; e?: OtherEvent; strip?: boolean };
 
 function SessionBlock({ p, colW, col, minCol, maxCol, selected, clash, draggable, missed, onTap, onLift, onMove, onDrop }: {
   p: Placed & { lane: number; of: number }; colW: number; col: number; minCol: number; maxCol: number; selected: boolean; clash: boolean; draggable: boolean; missed: boolean;
@@ -77,17 +79,21 @@ function SessionBlock({ p, colW, col, minCol, maxCol, selected, clash, draggable
     zIndex: lift.value > 0 ? 50 : 1,
     ...(lift.value > 0 ? { shadowColor: "#000", shadowRadius: 10, shadowOffset: { width: 0, height: 6 }, shadowOpacity: lift.value * 0.25 } : {}),
   }));
-  const w = (colW - 4) / p.of;
+  const room = colW - 4 - (p.strip ? STRIP + 1 : 0);
+  const w = room / p.of;
   const h = Math.max(20, (dur / 60) * HOUR - 2);
-  const showSub = h >= 28; // tall enough: icon above the minutes; too narrow: icon only
+  const two = h >= 28; // tall enough for the minutes under the name
   const mins = s.actual?.min ?? s.min;
+  const wide = w > 70;
   return (
     <GestureDetector gesture={gesture}>
       <Animated.View style={[st.block, { top: (p.start / 60) * HOUR + 1, height: h, left: 2 + p.lane * w, width: w - 1, backgroundColor: ink.bg, borderLeftColor: ink.line, opacity: missed ? 0.45 : 1 }, selected && { borderColor: dark ? "#7FA6F5" : "#2459FE", borderWidth: 2, borderLeftWidth: 3 }, anim]}>
-        <View style={[st.bRow, showSub && { flexDirection: "column", alignItems: "flex-start", gap: 1 }]}>
-          <SportIcon sport={s.sport} size={12} color={ink.icon} />
-          {w >= 30 && <Text style={[st.bTitle, { color: ink.ink }]} numberOfLines={1}>{w > 60 ? `${mins} min` : `${mins}m`}</Text>}
+        <View style={st.bRow}>
+          {wide && <SportIcon sport={s.sport} size={12} color={ink.icon} />}
+          <Text style={[st.bTitle, { color: ink.ink }]} numberOfLines={1}>{w < 26 ? (SHORT[s.sport] ?? s.title).slice(0, 1) : SHORT[s.sport] ?? s.title}</Text>
+          {!two && w >= 60 && <Text style={[st.bMin, { color: ink.sub }]} numberOfLines={1}>{mins}m</Text>}
         </View>
+        {two && w >= 26 && <Text style={[st.bMin, { color: ink.sub }]} numberOfLines={1}>{wide ? `${mins} min` : `${mins}m`}</Text>}
         {isKey(s) && !done && colW >= 44 && <View style={st.key}><Icon name="bolt" size={10} color={ink.icon} stroke={2} /></View>}
       </Animated.View>
     </GestureDetector>
@@ -99,6 +105,13 @@ function EventBlock({ p, colW, selected, onTap }: { p: Placed & { lane: number; 
   const ink = blockInk(dark).other;
   const tap = useTapGesture({ runOnJS: true, onActivate: () => onTap() });
   const w = (colW - 4) / p.of, h = Math.max(16, ((p.end - p.start) / 60) * HOUR - 2);
+  if (p.strip) {
+    return (
+      <GestureDetector gesture={tap}>
+        <View hitSlop={{ left: 8, right: 4 }} style={[st.strip, { top: (p.start / 60) * HOUR + 1, height: h, backgroundColor: selected ? ink.line : ink.bg }]} />
+      </GestureDetector>
+    );
+  }
   return (
     <GestureDetector gesture={tap}>
       <View style={[st.block, st.event, { top: (p.start / 60) * HOUR + 1, height: h, left: 2 + p.lane * w, width: w - 1, backgroundColor: ink.bg }, selected && { borderColor: ink.line, borderWidth: 1.5 }]}>
@@ -197,7 +210,16 @@ export function TimeGrid({ days, perScreen, startIndex, sessions, events, today,
               onMomentumScrollEnd={(e) => report(e.nativeEvent.contentOffset.x)} onScrollEndDrag={(e) => report(e.nativeEvent.contentOffset.x)}
             >
               {days.map((d, col) => {
-                const placed = lanes(byDay.get(d) ?? []);
+                // sessions keep the column; an event that overlaps one becomes a thin strip at its edge
+                const all = byDay.get(d) ?? [];
+                const ss = all.filter((p) => p.s), es = all.filter((p) => p.e);
+                const hits = (a: Placed, b: Placed) => a.start < b.end && a.end > b.start;
+                const strips = es.filter((e) => ss.some((x) => hits(x, e)));
+                const placed = [
+                  ...lanes(ss.map((x) => ({ ...x, strip: strips.some((e) => hits(x, e)) }))),
+                  ...lanes(es.filter((e) => !strips.includes(e))),
+                  ...strips.map((e) => ({ ...e, strip: true, lane: 0, of: 1 })),
+                ];
                 return (
                   <View key={d} style={[st.col, { width: colW, borderLeftColor: c.line }, d === today && { backgroundColor: dark ? "rgba(76,123,255,0.06)" : "rgba(36,89,254,0.035)" }]}>
                     {placed.map((p) => p.s ? (
@@ -244,7 +266,9 @@ const st = StyleSheet.create({
   block: { position: "absolute", borderRadius: 6, borderLeftWidth: 3, paddingHorizontal: 4, paddingVertical: 2, overflow: "hidden" },
   event: { paddingVertical: 2, borderLeftWidth: 0 },
   bRow: { flexDirection: "row", alignItems: "center", gap: 3 },
-  bTitle: { fontSize: 10.5, fontWeight: "600", flexShrink: 1, fontVariant: ["tabular-nums"] },
+  bTitle: { fontSize: 11, fontWeight: "600", flexShrink: 1 },
+  bMin: { fontSize: 10, fontVariant: ["tabular-nums"], marginTop: 1 },
+  strip: { position: "absolute", right: 1, width: STRIP, borderRadius: 3 },
   key: { position: "absolute", top: 3, right: 3 },
   eTitle: { fontSize: 10, fontWeight: "500" },
   now: { position: "absolute", left: 0, right: 0, height: 2, zIndex: 40 },
