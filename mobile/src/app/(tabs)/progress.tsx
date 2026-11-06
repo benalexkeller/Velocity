@@ -1,5 +1,5 @@
 // Progress: two tabs under the title. Analysis (score, last four weeks, volume, body, performance) and Activities
-// (the archive). The plus in the top right adds an activity by hand.
+// (the archive). The plus in the top left adds an activity by hand.
 import { useState } from "react";
 import { Pressable, StyleSheet, Text, View } from "react-native";
 import { AddActivityBody } from "@/components/AddActivity";
@@ -23,7 +23,7 @@ export default function Progress() {
   );
   return (
     <View style={{ flex: 1 }}>
-      <Screen title="Progress" scroll={false} bleed right={plus}>
+      <Screen title="Progress" scroll={false} bleed left={plus}>
         <TopTabs tabs={[{ k: "analysis", label: "Analysis" }, { k: "activities", label: "Activities" }]} value={tab} onChange={setTab} />
         <View style={{ flex: 1 }}>{tab === "analysis" ? <Analysis /> : <Activities />}</View>
       </Screen>
