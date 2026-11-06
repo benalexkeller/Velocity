@@ -21,6 +21,13 @@ const SHAPES: Record<string, Shape> = {
   chevron: { d: ["M9 6l6 6-6 6"] },
   plus: { d: ["M12 5v14M5 12h14"] },
   check: { d: ["M5 12.5l4.5 4.5L19 7.5"] },
+  menu: { d: ["M4 7h16M4 12h16M4 17h16"] },
+  down: { d: ["M6 9l6 6 6-6"] },
+  back: { d: ["M15 6l-6 6 6 6"] },
+  close: { d: ["M6 6l12 12M18 6 6 18"] },
+  calendar: { d: ["M4 6h16v14H4zM4 10h16M8 3v4M16 3v4"] },
+  calendarPlus: { d: ["M4 6h16v14H4zM4 10h16M8 3v4M16 3v4", "M12 12.5v5M9.5 15h5"] },
+  bolt: { d: ["M13 3 5 13.5h6l-1 7.5 8-10.5h-6z"] },
 };
 export type IconName = keyof typeof SHAPES;
 export const sportIcon = (sport: string): IconName => (sport === "brick" ? "bike" : sport in SHAPES ? sport : "run");

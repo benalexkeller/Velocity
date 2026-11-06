@@ -1,6 +1,7 @@
 // Root of the app: sign-in state, the athlete's data, and the two areas (sign-in, and the tabs once signed in).
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
+import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { AthleteProvider } from "@/lib/athlete";
 import { AuthProvider, useAuth } from "@/lib/auth";
@@ -18,6 +19,7 @@ function Areas() {
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="profile" options={{ presentation: "modal" }} />
           <Stack.Screen name="activity/[id]" />
+          <Stack.Screen name="session/[id]" />
         </Stack.Protected>
         <Stack.Protected guard={!session}>
           <Stack.Screen name="sign-in" />
@@ -29,12 +31,14 @@ function Areas() {
 
 export default function RootLayout() {
   return (
-    <SafeAreaProvider>
-      <AuthProvider>
-        <AthleteProvider>
-          <Areas />
-        </AthleteProvider>
-      </AuthProvider>
-    </SafeAreaProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <SafeAreaProvider>
+        <AuthProvider>
+          <AthleteProvider>
+            <Areas />
+          </AthleteProvider>
+        </AuthProvider>
+      </SafeAreaProvider>
+    </GestureHandlerRootView>
   );
 }

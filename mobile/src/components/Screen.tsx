@@ -7,11 +7,11 @@ import { Icon } from "./Icon";
 import { useAthlete } from "@/lib/athlete";
 import { space, type, useTheme } from "@/lib/theme";
 
-export function Screen({ title, children, scroll = true, brand = false, right }: { title: string; children: ReactNode; scroll?: boolean; brand?: boolean; right?: ReactNode }) {
+export function Screen({ title, children, scroll = true, brand = false, right, bleed = false }: { title: string; children: ReactNode; scroll?: boolean; brand?: boolean; right?: ReactNode; bleed?: boolean }) {
   const { c } = useTheme();
   const { offline, data } = useAthlete();
   const initials = (data?.raw.profile?.name ?? "").split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("");
-  const body = <View style={[s.body, !scroll && { flex: 1 }]}>{children}</View>;
+  const body = <View style={[s.body, !scroll && { flex: 1 }, bleed && { paddingHorizontal: 0, gap: 0 }]}>{children}</View>;
   return (
     <SafeAreaView edges={["top"]} style={[s.page, { backgroundColor: c.bg }]}>
       <View style={s.head}>
