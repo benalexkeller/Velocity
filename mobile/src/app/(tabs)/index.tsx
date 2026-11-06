@@ -1,8 +1,7 @@
 // Today (PR's layout, 5 Nov 2026): a small week strip, the session card (dark before, white once done),
 // the last result, body this morning, training volume, then sessions / load / race with the phase bar.
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { Text, useWindowDimensions } from "react-native";
-import { createAnalysis } from "@shared/analysis";
 import { weekStatus } from "@shared/data";
 import { dateFull, today as todayDate, ymd } from "@shared/format";
 import { Screen } from "@/components/Screen";
@@ -17,7 +16,7 @@ export default function Today() {
   const [picked, setPicked] = useState(t);
   const { width } = useWindowDimensions();
 
-  const an = useMemo(() => (data ? createAnalysis(data.activities, data.weeks, { phases: data.phases }) : null), [data]);
+  const an = data?.an ?? null;
   if (!data) return <Screen title="Today" brand>{loading ? <Text style={{ color: c.muted }}>Loading</Text> : null}</Screen>;
 
   const week = data.weeks.find((w) => w.sessions.some((x) => x.date === t)) ?? data.weeks.find((w) => w.start > t) ?? data.weeks[data.weeks.length - 1];

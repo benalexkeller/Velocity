@@ -6,13 +6,15 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState, t
 import { SPORT_LABEL, buildWeeks, fitsSession, intensityOf, isRaceDay, isTraining, phasesOf, sportOf, statusOf, whyOf, type Activity, type Availability, type Phase, type PlanWeekJson, type Session, type Sport, type Week } from "@shared/data";
 import { addDays, fromYmd } from "@shared/format";
 import { localize, setUnits } from "@shared/units";
+import { createAnalysis } from "@shared/analysis";
+import { athleteOf, type Athlete, type Profile, type Race } from "@shared/athlete";
 import { useAuth } from "./auth";
 import { supabase } from "./supabase";
 
 type Row = Record<string, unknown>;
 interface Raw {
-  profile: { name?: string; units?: "imperial" | "metric"; timezone?: string; availability?: Availability; zones?: Record<string, Record<string, string>> | null } | null;
-  race: { name: string; date: string; distance?: string; goal?: string } | null;
+  profile: (Partial<Profile> & { name?: string | null; units?: "imperial" | "metric"; timezone?: string; availability?: Availability | null; zones?: Record<string, Record<string, string>> | null }) | null;
+  race: (Partial<Race> & { name: string; date: string }) | null;
   plan: PlanWeekJson[];
   activities: Row[];
   body: BodyRow[];
@@ -25,8 +27,9 @@ interface Raw {
 export interface Patch { date?: string; start?: string; min?: number; sport?: Sport; intensity?: string; text?: string; deleted?: boolean; locked?: boolean }
 interface Added { id: string; date: string; start?: string; min: number; sport: Sport; intensity: string; text: string }
 export interface PlanState { patches: Record<string, Patch>; added: Added[] }
-export interface BodyRow { date: string; rhr: number | null; hrv: number | null; sleep_h: number | null; sleep_score: number | null }
-export interface AthleteData { raw: Raw; weeks: Week[]; phases: Phase[]; activities: Activity[] }
+export interface BodyRow { date: string; rhr: number | null; hrv: number | null; sleep_h: number | null; sleep_score: number | null; stress?: number | null; vo2?: number | null }
+export type Analysis = ReturnType<typeof createAnalysis>;
+export interface AthleteData { raw: Raw; weeks: Week[]; phases: Phase[]; activities: Activity[]; athlete: Athlete; an: Analysis }
 
 const KEY = (uid: string) => `velocity.cache.v1.${uid}`;
 
@@ -82,19 +85,24 @@ function shape(raw: Raw): AthleteData {
     }).sort((a, b) => a.dayIndex - b.dayIndex || (a.start ?? "").localeCompare(b.start ?? ""));
     return { ...w, sessions, plannedMin: sessions.reduce((n, x) => n + (x.min || 0), 0) - (w.race ? sessions.filter((x) => isRaceDay(x.text)).reduce((n, x) => n + x.min, 0) : 0) };
   });
-  return { raw, activities, weeks, phases: phasesOf(weeks) };
+  const phases = phasesOf(weeks);
+  // the website's athlete record and analysis (scores, volume, body, race projection) on the same data
+  const athlete = athleteOf(raw.profile ? ({ created_at: new Date().toISOString(), ...raw.profile } as Profile) : null, (raw.race as Race) ?? null, weeks[0]?.start ?? null);
+  const body = (raw.body ?? []).map((b) => ({ date: b.date, rhr: b.rhr ?? undefined, hrv: b.hrv ?? undefined, sleep_h: b.sleep_h != null ? Number(b.sleep_h) : undefined, sleep_score: b.sleep_score ?? undefined, stress: b.stress ?? undefined, vo2: b.vo2 != null ? Number(b.vo2) : undefined }));
+  const an = createAnalysis(activities, weeks, { phases, body: body as never, athlete });
+  return { raw, activities, weeks, phases, athlete, an };
 }
 
 async function fetchRaw(uid: string): Promise<Raw> {
   if (!supabase) throw new Error("Supabase is not set up");
   const since = new Date(Date.now() - 400 * 864e5).toISOString().slice(0, 10);
-  const since35 = new Date(Date.now() - 35 * 864e5).toISOString().slice(0, 10);
+  const since35 = new Date(Date.now() - 120 * 864e5).toISOString().slice(0, 10);
   const [p, r, pl, a, b, i, n, ps] = await Promise.all([
-    supabase.from("profiles").select("name, units, timezone, availability, zones").eq("id", uid).maybeSingle(),
-    supabase.from("races").select("name, date, distance, goal").eq("user_id", uid).maybeSingle(),
+    supabase.from("profiles").select("*").eq("id", uid).maybeSingle(),
+    supabase.from("races").select("*").eq("user_id", uid).maybeSingle(),
     supabase.from("plans").select("weeks").eq("user_id", uid).maybeSingle(),
     supabase.from("activities").select("*").eq("user_id", uid).gte("date", since).order("date"),
-    supabase.from("body_metrics").select("date, rhr, hrv, sleep_h, sleep_score").eq("user_id", uid).gte("date", since35).order("date"),
+    supabase.from("body_metrics").select("date, rhr, hrv, sleep_h, sleep_score, stress, vo2").eq("user_id", uid).gte("date", since35).order("date"),
     supabase.from("integrations").select("provider, status").eq("user_id", uid),
     supabase.from("nutrition_profile").select("weight_kg").eq("user_id", uid).maybeSingle(),
     supabase.from("plan_state").select("patches, added").eq("user_id", uid).maybeSingle(),
