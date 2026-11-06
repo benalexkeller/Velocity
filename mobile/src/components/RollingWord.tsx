@@ -1,6 +1,6 @@
 // "Built for ___" on the welcome screen: the word rolls through who Velocity is for, slow enough to read for
-// the first several (1.2 s, easing down), then faster and faster (each word tipping over like a drum), snaps onto the last word,
-// holds, and starts again. The box is the last word's width, so the words before it never move; every word
+// the first several (the first word 3 s, then 1.2 s easing down), then faster and faster (each word tipping over like a drum), snaps onto the last word,
+// holds it 10 s, and starts again. The box is the last word's width, so the words before it never move; every word
 // starts at the same left edge and longer ones run on to the right. With Reduce Motion on, only the last word shows.
 import { useFocusEffect } from "expo-router";
 import { useCallback, useLayoutEffect, useRef, useState } from "react";
@@ -9,7 +9,8 @@ import Animated, { Easing, useAnimatedStyle, useReducedMotion, useSharedValue, w
 
 interface Props {
   words: string[];        // rolled through in order; the last one is where it lands
-  slow?: number;          // ms the first word stays
+  first?: number;         // ms the first word stays
+  slow?: number;          // ms the second word stays (the curve starts here)
   fast?: number;          // ms the word before the last one stays
   curve?: number;         // above 1: stays slow for longer, then speeds up harder
   rest?: number;          // ms the last word stays before starting again
@@ -18,7 +19,7 @@ interface Props {
   lineHeight: number;
 }
 
-export function RollingWord({ words, slow = 1200, fast = 70, curve = 1.6, rest = 3000, style, lineHeight, onMeasure }: Props) {
+export function RollingWord({ words, first = 3000, slow = 1200, fast = 70, curve = 1.6, rest = 10000, style, lineHeight, onMeasure }: Props) {
   const reduced = useReducedMotion();
   const last = words.length - 1;
   const [width, setWidth] = useState<Record<string, number>>({});
@@ -49,7 +50,7 @@ export function RollingWord({ words, slow = 1200, fast = 70, curve = 1.6, rest =
   useFocusEffect(useCallback(() => {
     if (!measured || reduced) return;
     onMeasure?.(width[words[last]], Math.max(...words.map((w) => width[w])));
-    const hold = (i: number) => (i === last ? rest : Math.round(fast + (slow - fast) * Math.pow(1 - i / (last - 1), curve)));
+    const hold = (i: number) => (i === 0 ? first : i === last ? rest : Math.round(fast + (slow - fast) * Math.pow(1 - (i - 1) / (last - 2), curve)));
     let i = 0;
     let timer: ReturnType<typeof setTimeout>;
     const step = () => {
